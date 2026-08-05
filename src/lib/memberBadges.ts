@@ -25,7 +25,7 @@ export const GOLDEN_LOOFAH: BadgeDef = donationBadgeDef(
   DONATION_PRESETS.find((p) => p.badgeId === "golden_loofah")!
 );
 
-/** Unique paid-membership-tier badges (separate from donation tips). */
+/** Unique paid-membership-tier badges (separate from donation tips). Porch is base — no name badge. */
 export const TIER_BADGES: Record<HubPlanId, BadgeDef | null> = {
   porch_waver: null,
   cart_path_regular: {

@@ -35,6 +35,8 @@ export type TierDef = {
   shortLabel: string;
   tagline: string;
   blurb: string;
+  /** Badge graphic shown on My Space tier cards and next to names (paid tiers) */
+  badgeImage: string;
   /** Optional Stripe price env key suffix, e.g. HUB → STRIPE_PRICE_HUB */
   stripeEnvKey?: string;
 };
@@ -48,6 +50,7 @@ export const HUB_TIERS: TierDef[] = [
     tagline: "I wave. You wave. That’s the whole social contract.",
     blurb:
       "Free approved-neighbor energy. You’re in the club of people who live here — My Space shell, shortcuts, and yard-sale privileges when approved.",
+    badgeImage: "/graphics/badges/porch-waver.jpg",
   },
   {
     id: "cart_path_regular",
@@ -57,6 +60,7 @@ export const HUB_TIERS: TierDef[] = [
     tagline: "Knows which gate is which (most days).",
     blurb:
       "Your daily dashboard: Villages weather, starred clubs, and the investment board — the cart-path commute of membership.",
+    badgeImage: "/graphics/badges/cart-path-regular.jpg",
     stripeEnvKey: "HUB",
   },
   {
@@ -67,6 +71,7 @@ export const HUB_TIERS: TierDef[] = [
     tagline: "Screened-in serenity with a side of spreadsheets.",
     blurb:
       "Everything on the cart path, plus health check-ins, pet schedule, and a personal calendar board — lanai life, optimized.",
+    badgeImage: "/graphics/badges/lanai-legend.jpg",
     stripeEnvKey: "PLUS",
   },
   {
@@ -77,6 +82,7 @@ export const HUB_TIERS: TierDef[] = [
     tagline: "Front row at the square. Metaphorically. Parking still chaos.",
     blurb:
       "Top of the cart parade: every unlock, early-access lounge, and a badge that says you take this retirement reboot seriously (but not too seriously).",
+    badgeImage: "/graphics/badges/square-royalty.jpg",
     stripeEnvKey: "PATRON",
   },
 ];

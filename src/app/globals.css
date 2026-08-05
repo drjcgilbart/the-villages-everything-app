@@ -1484,6 +1484,29 @@ a.my-space-link-card:hover {
   margin-bottom: 0.5rem;
 }
 
+.ms-tier-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: center;
+}
+
+.ms-tier-badge-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 0.15rem 0 0.65rem;
+}
+
+.ms-tier-badge-img {
+  width: 5.5rem;
+  height: 5.5rem;
+  object-fit: cover;
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(28, 36, 48, 0.14);
+  border: 1px solid rgba(28, 36, 48, 0.1);
+  background: #fff;
+}
+
 .ms-tier-card h3 {
   margin: 0.45rem 0 0.25rem;
   font-family: var(--font-display), Georgia, serif;
@@ -1493,6 +1516,11 @@ a.my-space-link-card:hover {
 .ms-tier-card.is-current {
   border-color: rgba(232, 184, 74, 0.75);
   box-shadow: 0 0 0 2px rgba(232, 184, 74, 0.25);
+}
+
+.ms-tier-card.is-current .ms-tier-badge-img {
+  box-shadow: 0 0 0 3px rgba(232, 184, 74, 0.45),
+    0 8px 22px rgba(28, 36, 48, 0.12);
 }
 
 .ms-tier-tagline {
@@ -1506,11 +1534,16 @@ a.my-space-link-card:hover {
   margin: 0 0 0.75rem;
   font-size: 0.88rem;
   color: var(--muted);
+  flex: 1;
 }
 
 .ms-tier-card .btn {
   margin-right: 0.35rem;
   margin-bottom: 0.35rem;
+}
+
+.ms-tier-card .pill {
+  align-self: center;
 }
 
 .ms-locked {

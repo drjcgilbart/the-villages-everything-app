@@ -251,6 +251,17 @@ export function MySpaceDashboard() {
                 key={t.id}
                 className={`about-panel ms-tier-card ${current ? "is-current" : ""} ${unlocked ? "is-unlocked" : ""}`}
               >
+                <div className="ms-tier-badge-wrap">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={t.badgeImage}
+                    alt={`${t.label} badge`}
+                    title={t.tagline}
+                    width={96}
+                    height={96}
+                    className="ms-tier-badge-img"
+                  />
+                </div>
                 <span className="pill">
                   {current ? "Your plan" : unlocked ? "Included" : t.shortLabel}
                 </span>
