@@ -95,8 +95,8 @@ export function VillageNeighborsSection({
                           src={b.image}
                           alt={b.label}
                           title={b.title}
-                          width={22}
-                          height={22}
+                          width={40}
+                          height={40}
                           className="member-badge"
                           loading="lazy"
                         />
