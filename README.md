@@ -65,6 +65,18 @@ ADMIN_PASSWORD=changeme
 
 **Change this before the site goes live.**
 
+### Private beta (whole site password)
+
+To lock the entire site behind a shared tester password:
+
+```
+SITE_PASSWORD=your-beta-password-here
+```
+
+- Visitors hit `/beta-gate` until they enter the password (cookie lasts ~30 days).  
+- Leave `SITE_PASSWORD` empty or remove it to open the site to the public.  
+- Use a **different** password from `ADMIN_PASSWORD` so testers can’t open Studio.
+
 ### Donations (Buy me a cup of Joe)
 
 Visitors can tip via `/donate` (mascot CTA on home, About, topics, and a floating button site-wide).

@@ -81,10 +81,20 @@ In Vercel → Project → **Settings** → **Environment Variables**, add at lea
 | `ADMIN_PASSWORD` | a strong new password (not `changeme`) |
 | `ADMIN_SECRET` | a long random string |
 | `NEXT_PUBLIC_SITE_URL` | `https://www.thevillageseverythingapp.com` |
+| `SITE_PASSWORD` | shared beta password for testers (omit or leave empty for full public access) |
 | `STRIPE_SECRET_KEY` | your **live** Stripe secret key (if donations) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | your **live** publishable key |
 
 Then **Redeploy** (Deployments → ⋮ → Redeploy) so they take effect.
+
+### Private beta (site-wide password)
+
+1. Set `SITE_PASSWORD` in Vercel → Environment Variables (Production).  
+2. Redeploy.  
+3. Anyone who opens the site is sent to `/beta-gate` until they enter that password.  
+4. When you’re ready to go fully public: **delete** `SITE_PASSWORD` (or clear its value) and redeploy.
+
+Optional: `SITE_GATE_SECRET` — separate string used only to sign the unlock cookie (defaults to `ADMIN_SECRET` / `SITE_PASSWORD`).
 
 ---
 
