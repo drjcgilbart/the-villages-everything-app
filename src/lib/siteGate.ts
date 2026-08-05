@@ -15,20 +15,17 @@ export function getSitePassword(): string {
   return (process.env.SITE_PASSWORD || "").trim();
 }
 
-function signingSecret(): string {
-  return (
-    process.env.SITE_GATE_SECRET ||
-    process.env.ADMIN_SECRET ||
-    getSitePassword() ||
-    "site-gate-dev"
-  );
-}
-
-/** HMAC token for a given password (must match middleware Web Crypto). */
+/**
+ * Unlock token derived only from SITE_PASSWORD (no secondary secret).
+ * Must match the Edge middleware implementation in src/middleware.ts.
+ *
+ * Using plain SHA-256 of a fixed prefix + password avoids Node HMAC vs
+ * Web Crypto key-import mismatches and env fallback differences.
+ */
 export function siteGateTokenForPassword(password: string): string {
   return crypto
-    .createHmac("sha256", signingSecret())
-    .update(`site-gate:${password}`)
+    .createHash("sha256")
+    .update(`tvh-site-gate-v1:${password}`, "utf8")
     .digest("hex");
 }
 
@@ -42,6 +39,7 @@ export function siteGateCookieOptions(maxAgeSec = 60 * 60 * 24 * 30) {
     value: expectedSiteGateToken(),
     httpOnly: true,
     sameSite: "lax" as const,
+    // Always set Secure in production builds (site is HTTPS on Vercel)
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: maxAgeSec,

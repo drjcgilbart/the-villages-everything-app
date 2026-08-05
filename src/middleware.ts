@@ -4,17 +4,11 @@ import type { NextRequest } from "next/server";
 /** Keep in sync with SITE_GATE_COOKIE in src/lib/siteGate.ts */
 const SITE_GATE_COOKIE = "tvh_site_gate";
 
-async function hmacHex(secret: string, message: string): Promise<string> {
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
-  return Array.from(new Uint8Array(sig))
+/** Keep in sync with siteGateTokenForPassword in src/lib/siteGate.ts */
+async function siteGateToken(password: string): Promise<string> {
+  const data = new TextEncoder().encode(`tvh-site-gate-v1:${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
@@ -24,7 +18,6 @@ function isPublicAsset(pathname: string): boolean {
   if (pathname === "/favicon.ico") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname === "/sitemap.xml") return true;
-  // Static files under /public
   if (
     pathname.startsWith("/graphics/") ||
     pathname.startsWith("/music/") ||
@@ -43,7 +36,6 @@ function isPublicAsset(pathname: string): boolean {
 
 export async function middleware(req: NextRequest) {
   const password = (process.env.SITE_PASSWORD || "").trim();
-  // Gate off when password not configured
   if (!password) {
     return NextResponse.next();
   }
@@ -68,14 +60,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const secret =
-    process.env.SITE_GATE_SECRET ||
-    process.env.ADMIN_SECRET ||
-    password;
-  const expected = await hmacHex(secret, `site-gate:${password}`);
+  const expected = await siteGateToken(password);
   const cookie = req.cookies.get(SITE_GATE_COOKIE)?.value;
 
-  if (cookie && cookie.length === expected.length && cookie === expected) {
+  if (cookie && cookie === expected) {
     return NextResponse.next();
   }
 
@@ -95,11 +83,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Run on all paths except Next internals and common static extensions.
-     * (Double-checked again inside middleware.)
-     */
-    "/((?!_next/static|_next/image).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

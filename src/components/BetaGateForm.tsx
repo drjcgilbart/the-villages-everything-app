@@ -1,10 +1,9 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 export function BetaGateForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
 
@@ -20,18 +19,26 @@ export function BetaGateForm() {
       const res = await fetch("/api/site-gate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ password }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        ok?: boolean;
+      };
+
       if (!res.ok) {
         setError(data.error || "Incorrect password");
         setBusy(false);
         return;
       }
-      // Full navigation so middleware sees the new cookie
-      const target = from.startsWith("/") && !from.startsWith("//") ? from : "/";
-      router.replace(target);
-      router.refresh();
+
+      // Hard navigation so the browser sends the new Set-Cookie on the next request.
+      // Soft router.replace often left the button stuck on "Checking…" and/or
+      // bounced back to the gate when the unlock cookie was not yet applied.
+      const target =
+        from.startsWith("/") && !from.startsWith("//") ? from : "/";
+      window.location.assign(target);
     } catch {
       setError("Could not reach the server. Try again.");
       setBusy(false);
@@ -55,7 +62,11 @@ export function BetaGateForm() {
         />
       </label>
       {error && <p className="beta-gate-error">{error}</p>}
-      <button type="submit" className="btn btn-primary" disabled={busy || !password}>
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={busy || !password}
+      >
         {busy ? "Checking…" : "Enter the Hub"}
       </button>
     </form>

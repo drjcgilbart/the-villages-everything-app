@@ -39,9 +39,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
   }
 
-  const res = NextResponse.json({ ok: true });
   const cookie = siteGateCookieOptions();
-  res.cookies.set(cookie.name, cookie.value, {
+  const res = NextResponse.json({
+    ok: true,
+    // Helps debug “accepted but still gated” without leaking the password
+    cookieSet: true,
+  });
+  res.cookies.set({
+    name: cookie.name,
+    value: cookie.value,
     httpOnly: cookie.httpOnly,
     sameSite: cookie.sameSite,
     secure: cookie.secure,
