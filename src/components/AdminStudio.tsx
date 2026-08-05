@@ -2,19 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Photo, Post, PostType, SiteContent, Video, VideoSource } from "@/lib/types";
-import { AdminDiningPanel } from "@/components/AdminDiningPanel";
-import { AdminMembersPanel } from "@/components/AdminMembersPanel";
-import { AdminRealEstatePanel } from "@/components/AdminRealEstatePanel";
-import { AdminYardSalePanel } from "@/components/AdminYardSalePanel";
-
-type Tab =
-  | "members"
-  | "posts"
-  | "videos"
-  | "photos"
-  | "yard"
-  | "dining"
-  | "realestate";
+type Tab = "posts" | "videos" | "photos";
 
 type PostForm = {
   id: string;
@@ -107,7 +95,7 @@ function photoImagesFromEntry(p: Photo): PhotoFormImage[] {
 export function AdminStudio() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
-  const [tab, setTab] = useState<Tab>("members");
+  const [tab, setTab] = useState<Tab>("posts");
   const [content, setContent] = useState<SiteContent | null>(null);
   const [postForm, setPostForm] = useState<PostForm>(emptyPost);
   const [videoForm, setVideoForm] = useState<VideoForm>(emptyVideo);
@@ -456,24 +444,27 @@ export function AdminStudio() {
           <div>
             <h1>Creator Studio</h1>
             <p style={{ margin: 0, color: "var(--muted)" }}>
-              Post like a YouTube channel owner — blogs, videos, photos, embeds, uploads.
+              Publish blogs, videos, and photos. Membership approvals and site
+              moderation live in the{" "}
+              <a href="/admin" className="text-link">
+                Admin Portal
+              </a>
+              .
             </p>
           </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={logout}>
-            Sign out
-          </button>
+          <div className="admin-portal-header-actions">
+            <a href="/admin" className="btn btn-ghost btn-sm">
+              Admin Portal
+            </a>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={logout}>
+              Sign out
+            </button>
+          </div>
         </div>
 
         {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
 
         <div className="admin-tabs">
-          <button
-            type="button"
-            className={tab === "members" ? "active" : ""}
-            onClick={() => setTab("members")}
-          >
-            Members
-          </button>
           <button type="button" className={tab === "posts" ? "active" : ""} onClick={() => setTab("posts")}>
             Blog &amp; Video episodes
           </button>
@@ -483,21 +474,7 @@ export function AdminStudio() {
           <button type="button" className={tab === "videos" ? "active" : ""} onClick={() => setTab("videos")}>
             Videos
           </button>
-          <button type="button" className={tab === "yard" ? "active" : ""} onClick={() => setTab("yard")}>
-            Yard Sale
-          </button>
-          <button type="button" className={tab === "dining" ? "active" : ""} onClick={() => setTab("dining")}>
-            Dining
-          </button>
-          <button type="button" className={tab === "realestate" ? "active" : ""} onClick={() => setTab("realestate")}>
-            Real Estate
-          </button>
         </div>
-
-        {tab === "members" && <AdminMembersPanel />}
-        {tab === "yard" && <AdminYardSalePanel />}
-        {tab === "dining" && <AdminDiningPanel />}
-        {tab === "realestate" && <AdminRealEstatePanel />}
 
         {tab === "posts" && (
           <>

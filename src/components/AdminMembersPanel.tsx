@@ -143,9 +143,8 @@ export function AdminMembersPanel() {
     <div>
       <h2 style={{ marginTop: 0 }}>Hub members</h2>
       <p className="panel-hint">
-        Approve membership requests here — this is the main admin queue for
-        sign-ups (My Space, Yard Sale, forums badges, and more). Set each
-        member&apos;s plan and badges without opening Yard Sale.
+        This is your membership queue — approve sign-ups for My Space, Yard
+        Sale, forum badges, and more. Set plan tiers and Golden Loofah here.
       </p>
 
       <div className="dining-summary-stats" style={{ marginBottom: "1.25rem" }}>

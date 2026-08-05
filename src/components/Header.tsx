@@ -67,7 +67,7 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            <Link href="/admin" className="utility-studio">
+            <Link href="/studio" className="utility-studio">
               Studio
             </Link>
           </nav>

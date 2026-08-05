@@ -74,8 +74,8 @@ export function AdminYardSalePanel() {
       <h2 style={{ marginTop: 0 }}>Community Yard Sale listings</h2>
       <p className="panel-hint">
         Approve item listings here before they go public.{" "}
-        <strong>Membership requests</strong> (approve people) are on the{" "}
-        <strong>Members</strong> tab at the top of Studio.
+        <strong>Membership requests</strong> are on the{" "}
+        <strong>Members</strong> tab in this Admin Portal.
       </p>
       {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
 
