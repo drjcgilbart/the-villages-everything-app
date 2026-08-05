@@ -1,4 +1,10 @@
 import {
+  DONATION_BADGE_ORDER,
+  donationBadgeById,
+  donationBadgeDef,
+  DONATION_PRESETS,
+} from "./donations";
+import {
   effectivePlan,
   isPaidPlan,
   normalizePlan,
@@ -12,18 +18,13 @@ import type { BadgeDef } from "./memberBadgeTypes";
 export type { BadgeDef } from "./memberBadgeTypes";
 
 /**
- * Golden Loofah — only earned via highest “Buy me a cup of Joe” donation
- * ($25+ / Golden Loofah tier). Sparkly shower mesh pouf, not a freebie.
+ * Golden Loofah — top “Buy me a cup of Joe” donation tier ($25+).
  */
-export const GOLDEN_LOOFAH: BadgeDef = {
-  id: "golden_loofah",
-  label: "Golden Loofah",
-  title:
-    "Golden Loofah — highly coveted. Earned by donating at the top “Buy me a cup of Joe” tier. Scrubbing the day clean, one sparkly mesh pouf at a time.",
-  image: "/graphics/badges/golden-loofah.jpg",
-};
+export const GOLDEN_LOOFAH: BadgeDef = donationBadgeDef(
+  DONATION_PRESETS.find((p) => p.badgeId === "golden_loofah")!
+);
 
-/** Unique paid-membership-tier badges (separate from Golden Loofah). */
+/** Unique paid-membership-tier badges (separate from donation tips). */
 export const TIER_BADGES: Record<HubPlanId, BadgeDef | null> = {
   porch_waver: null,
   cart_path_regular: {
@@ -59,9 +60,14 @@ export function badgesForMemberRecord(
   const planId = effectivePlan(spacePlan);
   const badges: BadgeDef[] = [];
 
-  // Golden Loofah only if earned via top donation tier
-  if (space.goldenLoofah) {
-    badges.push(GOLDEN_LOOFAH);
+  // Donation tip badges (cup of joe → golden loofah), display order humble → flashy
+  const earned = new Set(space.donationBadges || []);
+  if (space.goldenLoofah) earned.add("golden_loofah");
+  for (const id of DONATION_BADGE_ORDER) {
+    if (earned.has(id)) {
+      const def = donationBadgeById(id);
+      if (def) badges.push(def);
+    }
   }
 
   if (isPaidPlan(planId)) {
@@ -87,8 +93,7 @@ export function findMemberByDisplayName(name: string): Member | null {
 
 /**
  * Resolve badges for a displayed author name and/or known member id.
- * Golden Loofah only if they earned it via top cup-of-Joe donation.
- * Paid membership tiers add their unique badge.
+ * Includes donation-tier badges and paid membership plan badges.
  */
 export function resolveAuthorBadges(opts: {
   memberId?: string | null;
@@ -107,7 +112,7 @@ export function resolveAuthorBadges(opts: {
 
 export function allBadgeCatalog(): BadgeDef[] {
   return [
-    GOLDEN_LOOFAH,
+    ...DONATION_PRESETS.map(donationBadgeDef),
     TIER_BADGES.cart_path_regular!,
     TIER_BADGES.lanai_legend!,
     TIER_BADGES.square_royalty!,

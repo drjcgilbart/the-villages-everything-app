@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { awardsGoldenLoofah, parseDonationAmount } from "@/lib/donations";
+import {
+  donationBadgeById,
+  donationTierForAmount,
+  parseDonationAmount,
+} from "@/lib/donations";
 import { getSessionMember } from "@/lib/memberAuth";
-import { grantGoldenLoofah, getMemberSpace } from "@/lib/memberSpace";
+import { getMemberSpace, grantDonationBadge } from "@/lib/memberSpace";
 import { getStripe, stripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
 /**
- * After Stripe donation checkout, verify payment and award Golden Loofah
- * when amount qualifies (highest cup-of-Joe tier).
+ * After Stripe donation checkout, verify payment and award the matching
+ * cup-of-Joe tier badge (Cup of Joe / Latte / Brunch / Golden Loofah).
  */
 export async function POST(req: NextRequest) {
   if (!stripeConfigured()) {
@@ -38,19 +42,21 @@ export async function POST(req: NextRequest) {
       ? session.amount_total / 100
       : null);
 
-  const wantsLoofah =
-    session.metadata?.awards_golden_loofah === "1" ||
-    (amountUsd != null && awardsGoldenLoofah(amountUsd));
+  const metaBadge = String(session.metadata?.badge_id || "").trim();
+  const fromAmount =
+    amountUsd != null ? donationTierForAmount(amountUsd)?.badgeId : null;
+  const badgeId = metaBadge || fromAmount || null;
 
-  if (!wantsLoofah) {
+  if (!badgeId) {
     return NextResponse.json({
       ok: true,
-      goldenLoofah: false,
+      badgeId: null,
       amountUsd,
       message: "Thanks for the tip!",
     });
   }
 
+  const badge = donationBadgeById(badgeId);
   const member = await getSessionMember();
   const metaMemberId = String(session.metadata?.memberId || "").trim();
   const memberId = member?.id || metaMemberId || null;
@@ -58,16 +64,14 @@ export async function POST(req: NextRequest) {
   if (!memberId) {
     return NextResponse.json({
       ok: true,
-      goldenLoofah: false,
+      badgeId,
+      badgeLabel: badge?.label || null,
       pendingClaim: true,
       amountUsd,
-      message:
-        "Payment received. Sign in with the same Hub account and reopen this thank-you page to claim your Golden Loofah.",
+      message: `Payment received. Sign in with your Hub account and reopen this page to claim your ${badge?.label || "donation"} badge.`,
     });
   }
 
-  // If signed in as a different member than checkout, prefer session member
-  // only when metadata matches or metadata empty
   if (member && metaMemberId && member.id !== metaMemberId) {
     return NextResponse.json(
       {
@@ -78,17 +82,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const alreadyHad = !!getMemberSpace(memberId).goldenLoofah;
-  const space = grantGoldenLoofah(memberId);
+  const before = getMemberSpace(memberId);
+  const alreadyHad = (before.donationBadges || []).includes(badgeId);
+  const space = grantDonationBadge(memberId, badgeId);
+
   return NextResponse.json({
     ok: true,
-    goldenLoofah: true,
+    badgeId,
+    badgeLabel: badge?.label || null,
+    badgeImage: badge?.image || null,
     amountUsd,
     memberId,
-    goldenLoofahAt: space.goldenLoofahAt,
+    donationBadges: space.donationBadges || [],
     alreadyHad,
     message: alreadyHad
-      ? "You already hold the Golden Loofah. Shine on."
-      : "Golden Loofah unlocked! It now appears next to your name across the Hub.",
+      ? `You already hold the ${badge?.label || "badge"}. Shine on.`
+      : `${badge?.label || "Badge"} unlocked! It now appears next to your name across the Hub.`,
   });
 }

@@ -27,8 +27,13 @@ export type MemberSpaceRecord = {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   /**
-   * Golden Loofah badge — only via highest “Buy me a cup of Joe” donation tier
-   * ($25+). Permanent once earned.
+   * Donation badges earned via “Buy me a cup of Joe” tiers
+   * (cup_of_joe | fancy_latte | early_bird_brunch | golden_loofah).
+   */
+  donationBadges?: string[];
+  /**
+   * @deprecated use donationBadges includes golden_loofah
+   * Kept for older records — normalized on read.
    */
   goldenLoofah?: boolean;
   goldenLoofahAt?: string | null;
@@ -43,7 +48,20 @@ function empty(): SpaceFile {
   return { spaces: [], updatedAt: null };
 }
 
+function normalizeDonationBadges(raw: Partial<MemberSpaceRecord>): string[] {
+  const set = new Set<string>();
+  if (Array.isArray(raw.donationBadges)) {
+    for (const id of raw.donationBadges) {
+      if (id) set.add(String(id));
+    }
+  }
+  // Legacy field
+  if (raw.goldenLoofah) set.add("golden_loofah");
+  return [...set];
+}
+
 function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPlan }): MemberSpaceRecord {
+  const donationBadges = normalizeDonationBadges(raw);
   return {
     memberId: String(raw.memberId || ""),
     plan: normalizePlan(raw.plan),
@@ -54,7 +72,8 @@ function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPla
     updatedAt: raw.updatedAt || new Date().toISOString(),
     stripeCustomerId: raw.stripeCustomerId,
     stripeSubscriptionId: raw.stripeSubscriptionId,
-    goldenLoofah: !!raw.goldenLoofah,
+    donationBadges,
+    goldenLoofah: donationBadges.includes("golden_loofah"),
     goldenLoofahAt: raw.goldenLoofahAt || null,
   };
 }
@@ -109,6 +128,7 @@ export function updateMemberSpace(
       | "spaceTitle"
       | "stripeCustomerId"
       | "stripeSubscriptionId"
+      | "donationBadges"
       | "goldenLoofah"
       | "goldenLoofahAt"
     >
@@ -121,6 +141,7 @@ export function updateMemberSpace(
       memberId,
       plan: "porch_waver",
       favoriteClubIds: [],
+      donationBadges: [],
       updatedAt: new Date().toISOString(),
     };
     data.spaces.push(rec);
@@ -141,15 +162,31 @@ export function updateMemberSpace(
   if (patch.stripeSubscriptionId !== undefined) {
     rec.stripeSubscriptionId = patch.stripeSubscriptionId;
   }
-  if (patch.goldenLoofah !== undefined) {
-    rec.goldenLoofah = !!patch.goldenLoofah;
+  if (patch.donationBadges) {
+    rec.donationBadges = [...new Set(patch.donationBadges.map(String))];
+    rec.goldenLoofah = rec.donationBadges.includes("golden_loofah");
     if (rec.goldenLoofah && !rec.goldenLoofahAt) {
-      rec.goldenLoofahAt =
-        patch.goldenLoofahAt || new Date().toISOString();
+      rec.goldenLoofahAt = new Date().toISOString();
     }
-    if (!rec.goldenLoofah) {
+    if (!rec.goldenLoofah) rec.goldenLoofahAt = null;
+  }
+  if (patch.goldenLoofah !== undefined) {
+    const badges = new Set(
+      Array.isArray(rec.donationBadges) ? rec.donationBadges.map(String) : []
+    );
+    if (patch.goldenLoofah) {
+      badges.add("golden_loofah");
+      rec.goldenLoofah = true;
+      if (!rec.goldenLoofahAt) {
+        rec.goldenLoofahAt =
+          patch.goldenLoofahAt || new Date().toISOString();
+      }
+    } else {
+      badges.delete("golden_loofah");
+      rec.goldenLoofah = false;
       rec.goldenLoofahAt = null;
     }
+    rec.donationBadges = [...badges];
   }
   if (patch.goldenLoofahAt !== undefined && rec.goldenLoofah) {
     rec.goldenLoofahAt = patch.goldenLoofahAt;
@@ -159,14 +196,26 @@ export function updateMemberSpace(
   return normalizeRecord(rec);
 }
 
+/** Award a donation-tier badge (idempotent; stacks with others). */
+export function grantDonationBadge(
+  memberId: string,
+  badgeId: string
+): MemberSpaceRecord {
+  const existing = getMemberSpace(memberId);
+  const badges = new Set(existing.donationBadges || []);
+  if (badges.has(badgeId)) return existing;
+  badges.add(badgeId);
+  return updateMemberSpace(memberId, {
+    donationBadges: [...badges],
+    ...(badgeId === "golden_loofah"
+      ? { goldenLoofah: true, goldenLoofahAt: new Date().toISOString() }
+      : {}),
+  });
+}
+
 /** Award Golden Loofah (idempotent). */
 export function grantGoldenLoofah(memberId: string): MemberSpaceRecord {
-  const existing = getMemberSpace(memberId);
-  if (existing.goldenLoofah) return existing;
-  return updateMemberSpace(memberId, {
-    goldenLoofah: true,
-    goldenLoofahAt: new Date().toISOString(),
-  });
+  return grantDonationBadge(memberId, "golden_loofah");
 }
 
 /** True if plan is Cart Path Regular or higher (legacy “subscriber”). */
@@ -202,6 +251,7 @@ export function publicSpacePayload(space: MemberSpaceRecord) {
     isSubscriber: isPaidPlan(plan),
     goldenLoofah: !!space.goldenLoofah,
     goldenLoofahAt: space.goldenLoofahAt || null,
+    donationBadges: space.donationBadges || [],
     features,
     tier: {
       id: tier.id,

@@ -9,9 +9,11 @@ export function DonateSuccessClient() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const [status, setStatus] = useState<
-    "idle" | "checking" | "loofah" | "thanks" | "claim" | "error"
+    "idle" | "checking" | "badge" | "thanks" | "claim" | "error"
   >("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [badgeLabel, setBadgeLabel] = useState<string | null>(null);
+  const [badgeImage, setBadgeImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionId) {
@@ -33,9 +35,13 @@ export function DonateSuccessClient() {
           setMessage(data.error || "Could not verify donation");
           return;
         }
-        if (data.goldenLoofah) {
-          setStatus("loofah");
-          setMessage(data.message || "Golden Loofah unlocked!");
+        if (data.badgeId) {
+          setBadgeLabel(data.badgeLabel || data.badgeId);
+          setBadgeImage(data.badgeImage || null);
+        }
+        if (data.badgeId && !data.pendingClaim) {
+          setStatus("badge");
+          setMessage(data.message || "Badge unlocked!");
         } else if (data.pendingClaim) {
           setStatus("claim");
           setMessage(data.message);
@@ -47,7 +53,9 @@ export function DonateSuccessClient() {
       .catch(() => {
         if (!cancelled) {
           setStatus("error");
-          setMessage("Could not verify donation. Your payment may still have gone through.");
+          setMessage(
+            "Could not verify donation. Your payment may still have gone through."
+          );
         }
       });
     return () => {
@@ -55,37 +63,44 @@ export function DonateSuccessClient() {
     };
   }, [sessionId]);
 
+  const heroImg =
+    status === "badge" && badgeImage
+      ? badgeImage
+      : status === "claim" && badgeImage
+        ? badgeImage
+        : "/graphics/mascot-logo.jpg";
+
   return (
     <div className="shell page-hero-grid">
       <div>
         <span className="kicker">
-          {status === "loofah"
-            ? "Badge earned · scrub responsibly"
+          {status === "badge"
+            ? "Badge earned · tip jar hero"
             : "Transaction complete · vibe elevated"}
         </span>
         <h1>
-          {status === "loofah"
-            ? "You earned the Golden Loofah!"
+          {status === "badge"
+            ? `You earned ${badgeLabel || "a tip badge"}!`
             : "You kept the lights on!"}
         </h1>
         <p>
           {status === "checking" && "Confirming your tip with Stripe…"}
-          {status === "loofah" &&
+          {status === "badge" &&
             (message ||
-              "The highly coveted Golden Loofah now appears next to your name in forums, yard sale, and across the Hub.")}
+              "Your donation badge now appears next to your name in forums, yard sale, and across the Hub.")}
           {status === "thanks" &&
             (message ||
               "Thank you for the cup of Joe. Your tip helps this retirement reboot stay online, weird, and caffeinated.")}
           {status === "claim" &&
             (message ||
-              "Sign in as a Hub member and revisit this page to claim your Golden Loofah.")}
+              "Sign in as a Hub member and revisit this page to claim your badge.")}
           {status === "error" && (message || "Something went wrong verifying the tip.")}
           {status === "idle" && "Thank you for supporting The Villages Hub."}
         </p>
-        {status === "loofah" && (
+        {status === "badge" && (
           <p className="panel-hint">
-            Look for the sparkly shower loofah next to your display name wherever
-            you post as a member.
+            Look for your tip badge next to your display name wherever you post
+            as a member.
           </p>
         )}
         <div className="hero-actions" style={{ marginTop: "1.25rem" }}>
@@ -94,14 +109,18 @@ export function DonateSuccessClient() {
               Sign in to claim badge
             </Link>
           )}
-          {status === "loofah" && (
+          {status === "badge" && (
             <Link href="/my-space" className="btn btn-primary">
               Open My Space
             </Link>
           )}
           <Link
             href="/"
-            className={status === "loofah" || status === "claim" ? "btn btn-ghost" : "btn btn-primary"}
+            className={
+              status === "badge" || status === "claim"
+                ? "btn btn-ghost"
+                : "btn btn-primary"
+            }
           >
             Back home
           </Link>
@@ -112,14 +131,10 @@ export function DonateSuccessClient() {
       </div>
       <div className="page-hero-art">
         <Image
-          src={
-            status === "loofah"
-              ? "/graphics/badges/golden-loofah.jpg"
-              : "/graphics/mascot-logo.jpg"
-          }
+          src={heroImg}
           alt={
-            status === "loofah"
-              ? "Golden Loofah badge — sparkly shower mesh pouf"
+            badgeLabel
+              ? `${badgeLabel} donation badge`
               : "Grateful golf-ball mascot"
           }
           width={260}

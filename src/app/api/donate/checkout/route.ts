@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  awardsGoldenLoofah,
-  GOLDEN_LOOFAH_MIN_USD,
+  donationTierForAmount,
   parseDonationAmount,
   usdToCents,
 } from "@/lib/donations";
@@ -37,27 +36,26 @@ export async function POST(req: Request) {
 
   const base = siteBaseUrl();
   const amountCents = usdToCents(amountUsd);
-  const loofah = awardsGoldenLoofah(amountUsd);
+  const tier = donationTierForAmount(amountUsd);
   const sessionMember = await getSessionMember();
 
-  if (loofah && !sessionMember) {
+  // Any badge-earning tip requires a signed-in Hub member account
+  if (tier && !sessionMember) {
     return NextResponse.json(
       {
-        error:
-          "Sign in as a Hub member before donating at the Golden Loofah tier ($" +
-          GOLDEN_LOOFAH_MIN_USD +
-          "+) so we can attach the badge to your account.",
-        code: "MEMBER_REQUIRED_FOR_LOOFAH",
+        error: `Sign in as a Hub member before donating at the ${tier.label} tier ($${tier.amountUsd}+) so we can put the badge next to your name.`,
+        code: "MEMBER_REQUIRED_FOR_BADGE",
+        badgeId: tier.badgeId,
       },
       { status: 401 }
     );
   }
 
-  const productName = loofah
-    ? "Golden Loofah — Buy me a cup of Joe"
+  const productName = tier
+    ? `${tier.label} — Buy me a cup of Joe`
     : "Cup of Joe — Keep the lights on";
-  const productDescription = loofah
-    ? `Top-tier tip ($${amountUsd.toFixed(2)}) for The Villages Hub — unlocks the highly coveted Golden Loofah badge next to your name.`
+  const productDescription = tier
+    ? `Tip ($${amountUsd.toFixed(2)}) for The Villages Hub — unlocks the “${tier.label}” badge next to your member name.`
     : "A tip for The Villages Hub — hosting, coffee, and golf-cart energy.";
 
   try {
@@ -76,8 +74,8 @@ export async function POST(req: Request) {
               name: productName,
               description: productDescription,
               images: [
-                loofah
-                  ? `${base}/graphics/badges/golden-loofah.jpg`
+                tier
+                  ? `${base}${tier.badgeImage}`
                   : `${base}/graphics/mascot-logo.jpg`,
               ],
               tax_code: "txcd_10000000",
@@ -90,7 +88,8 @@ export async function POST(req: Request) {
       metadata: {
         purpose: "site-donation",
         amount_usd: String(amountUsd),
-        awards_golden_loofah: loofah ? "1" : "0",
+        badge_id: tier?.badgeId || "",
+        awards_golden_loofah: tier?.badgeId === "golden_loofah" ? "1" : "0",
         memberId: sessionMember?.id || "",
       },
     });
@@ -104,7 +103,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       url: session.url,
-      awardsGoldenLoofah: loofah,
+      badgeId: tier?.badgeId || null,
+      badgeLabel: tier?.label || null,
     });
   } catch (err) {
     const message =

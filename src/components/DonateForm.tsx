@@ -4,11 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  awardsGoldenLoofah,
+  donationTierForAmount,
   DONATION_MAX_USD,
   DONATION_MIN_USD,
   DONATION_PRESETS,
-  GOLDEN_LOOFAH_MIN_USD,
   parseDonationAmount,
 } from "@/lib/donations";
 
@@ -30,8 +29,8 @@ export function DonateForm({
     return preset ? preset.amountUsd : null;
   }, [selected, custom]);
 
-  const loofahEligible =
-    amountUsd != null && awardsGoldenLoofah(amountUsd);
+  const earnedTier =
+    amountUsd != null ? donationTierForAmount(amountUsd) : null;
 
   async function checkout() {
     setError(null);
@@ -65,10 +64,10 @@ export function DonateForm({
         code?: string;
       };
       if (!res.ok || !data.url) {
-        if (data.code === "MEMBER_REQUIRED_FOR_LOOFAH") {
+        if (data.code === "MEMBER_REQUIRED_FOR_BADGE") {
           throw new Error(
             data.error ||
-              `Sign in first to earn the Golden Loofah ($${GOLDEN_LOOFAH_MIN_USD}+).`
+              "Sign in as a Hub member first so we can attach your tip badge."
           );
         }
         throw new Error(data.error || "Could not start checkout");
@@ -84,25 +83,23 @@ export function DonateForm({
     <div className="donate-form">
       <div className="donate-presets" role="list">
         {DONATION_PRESETS.map((p) => {
-          const isLoofah = "awardsGoldenLoofah" in p && p.awardsGoldenLoofah;
+          const isTop = p.badgeId === "golden_loofah";
           return (
             <button
               key={p.id}
               type="button"
               role="listitem"
-              className={`donate-preset ${selected === p.id ? "active" : ""} ${isLoofah ? "donate-preset-loofah" : ""}`}
+              className={`donate-preset ${selected === p.id ? "active" : ""} ${isTop ? "donate-preset-loofah" : ""}`}
               onClick={() => setSelected(p.id)}
             >
-              {isLoofah && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src="/graphics/badges/golden-loofah.jpg"
-                  alt=""
-                  className="donate-preset-badge"
-                  width={40}
-                  height={40}
-                />
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.badgeImage}
+                alt=""
+                className="donate-preset-badge"
+                width={56}
+                height={56}
+              />
               <strong>${p.amountUsd}</strong>
               <span>{p.label}</span>
               <em>{p.blurb}</em>
@@ -117,9 +114,7 @@ export function DonateForm({
         >
           <strong>Custom</strong>
           <span>Your amount</span>
-          <em>
-            ${GOLDEN_LOOFAH_MIN_USD}+ earns Golden Loofah
-          </em>
+          <em>$3+ earns a tip badge</em>
         </button>
       </div>
 
@@ -142,24 +137,27 @@ export function DonateForm({
         </div>
       )}
 
-      {loofahEligible && (
+      {earnedTier && (
         <div className="donate-loofah-callout about-panel">
           <Image
-            src="/graphics/badges/golden-loofah.jpg"
-            alt="Golden Loofah — sparkly shower mesh pouf badge"
+            src={earnedTier.badgeImage}
+            alt={`${earnedTier.label} badge`}
             width={72}
             height={72}
             className="donate-loofah-img"
           />
           <div>
-            <strong>Golden Loofah unlocked at this amount</strong>
+            <strong>{earnedTier.label} badge at this amount</strong>
             <p style={{ margin: "0.25rem 0 0", color: "var(--muted)" }}>
-              Highest “Buy me a cup of Joe” tier. You must be{" "}
+              Sign in as a Hub member so this funny badge shows next to your
+              name site-wide.{" "}
               <Link href="/yard-sale/login" className="text-link">
-                signed in
-              </Link>{" "}
-              so the sparkly shower loofah badge attaches to your member name
-              site-wide.
+                Member sign-in
+              </Link>
+              {" · "}
+              <Link href="/yard-sale/join" className="text-link">
+                Request membership
+              </Link>
             </p>
           </div>
         </div>
@@ -176,16 +174,16 @@ export function DonateForm({
         {busy
           ? "Opening checkout…"
           : amountUsd != null
-            ? loofahEligible
-              ? `Donate $${amountUsd.toFixed(2)} · claim Golden Loofah`
+            ? earnedTier
+              ? `Donate $${amountUsd.toFixed(2)} · claim ${earnedTier.label}`
               : `Donate $${amountUsd.toFixed(2)}`
             : "Donate"}
       </button>
 
       <p className="donate-secure-note">
-        Secure checkout powered by Stripe. Tips go toward hosting, tools, coffee,
-        and keeping this reboot online. The Golden Loofah badge is only awarded
-        for tips of ${GOLDEN_LOOFAH_MIN_USD}+ while signed in as a Hub member.
+        Secure checkout powered by Stripe. Each tip tier has its own badge —
+        Cup of Joe ($3), Fancy Latte ($5), Early-Bird Brunch ($10), and Golden
+        Loofah ($25). Sign in first so badges attach to your account.
       </p>
     </div>
   );
