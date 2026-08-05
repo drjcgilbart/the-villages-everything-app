@@ -1,0 +1,144 @@
+{
+  "listings": [
+    {
+      "id": "list-seed-1",
+      "title": "Designer villa near Eastport energy",
+      "village": "Edenfield",
+      "address": "Eastport area",
+      "price": 489000,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1850,
+      "propertyType": "designer",
+      "status": "active",
+      "summary": "Sample featured listing — replace with a live MLS link. Open floor plan, golf-cart garage, and easy cart access to Eastport.",
+      "listingUrl": "https://www.realtor.com/realestateandhomes-search/The-Villages_FL",
+      "agentId": "agent-seed-1",
+      "featured": true,
+      "createdAt": "2026-08-05T11:56:09.819Z",
+      "updatedAt": "2026-08-05T11:56:44.430Z"
+    },
+    {
+      "id": "list-seed-2",
+      "title": "Courtyard villa · Lake Sumter side",
+      "village": "Virginia Trace",
+      "price": 365000,
+      "beds": 2,
+      "baths": 2,
+      "sqft": 1420,
+      "propertyType": "courtyard",
+      "status": "active",
+      "summary": "Sample listing for the hub — cozy courtyard living with southern exposure potential. Swap in real photos and MLS URL.",
+      "listingUrl": "https://www.zillow.com/the-villages-fl/",
+      "agentId": "agent-seed-2",
+      "featured": true,
+      "createdAt": "2026-08-05T11:56:09.819Z",
+      "updatedAt": "2026-08-05T11:56:44.430Z"
+    },
+    {
+      "id": "list-seed-3",
+      "title": "Classic ranch near Spanish Springs",
+      "village": "Mira Mesa",
+      "price": 329000,
+      "beds": 2,
+      "baths": 2,
+      "sqft": 1380,
+      "propertyType": "ranch",
+      "status": "pending",
+      "summary": "Historic-side sample listing — mature landscaping energy. Mark sold/pending from Studio when you go live with real inventory.",
+      "agentId": "agent-seed-3",
+      "featured": false,
+      "createdAt": "2026-08-05T11:56:09.819Z",
+      "updatedAt": "2026-08-05T11:56:44.430Z"
+    }
+  ],
+  "agents": [
+    {
+      "id": "agent-seed-1",
+      "name": "Jordan Hale",
+      "brokerage": "Sunshine Cart Realty",
+      "phone": "(352) 555-0142",
+      "email": "jordan@example.com",
+      "website": "",
+      "bio": "Helping buyers and sellers navigate The Villages map — from Edenfield to the historic side — without the hard sell.",
+      "specialties": [
+        "Buyers",
+        "Sellers",
+        "Eastport",
+        "55+ communities"
+      ],
+      "tier": "preferred",
+      "acceptsLeads": true,
+      "active": true,
+      "createdAt": "2026-08-05T11:56:09.819Z"
+    },
+    {
+      "id": "agent-seed-2",
+      "name": "Sam Rivera",
+      "brokerage": "Lake Sumter Homes",
+      "phone": "(352) 555-0198",
+      "email": "sam@example.com",
+      "bio": "Local specialist for villa living, golf-course homes, and stress-free seller prep.",
+      "specialties": [
+        "Villas",
+        "Golf course homes",
+        "Downsizing"
+      ],
+      "tier": "featured",
+      "acceptsLeads": true,
+      "active": true,
+      "createdAt": "2026-08-05T11:56:09.819Z"
+    },
+    {
+      "id": "agent-seed-3",
+      "name": "Pat Morgan",
+      "brokerage": "Friendly Hometown Realty",
+      "phone": "(352) 555-0110",
+      "email": "pat@example.com",
+      "bio": "First-time Villager? I'll translate the villages, rec centers, and bond talk into plain English.",
+      "specialties": [
+        "Relocating buyers",
+        "New construction"
+      ],
+      "tier": "listed",
+      "acceptsLeads": true,
+      "active": true,
+      "createdAt": "2026-08-05T11:56:09.819Z"
+    }
+  ],
+  "leads": [],
+  "market": {
+    "lastRefreshedAt": "2026-08-05T11:56:44.430Z",
+    "lastRefreshSource": "manual",
+    "headline": "2 featured active homes on this site · avg featured ask ~$427,000",
+    "notes": [
+      "Snapshot refreshed on demand.",
+      "1 pending featured listing in the site catalog.",
+      "Live market buttons always open current public search results for The Villages, FL.",
+      "Partner agents can sponsor featured placement and receive buyer/seller leads from this page."
+    ],
+    "liveSearches": [
+      {
+        "label": "Homes for sale · The Villages",
+        "description": "Broad market search (opens live results)",
+        "url": "https://www.realtor.com/realestateandhomes-search/The-Villages_FL"
+      },
+      {
+        "label": "New construction",
+        "description": "Newer inventory and builder product",
+        "url": "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/type-single-family-home,condo/keyword-new"
+      },
+      {
+        "label": "Under $400k",
+        "description": "Entry and mid-range filter snapshot",
+        "url": "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/price-na-400000"
+      },
+      {
+        "label": "Zillow · The Villages",
+        "description": "Alternate live feed of current listings",
+        "url": "https://www.zillow.com/the-villages-fl/"
+      }
+    ]
+  },
+  "updatedAt": "2026-08-05T11:56:44.430Z"
+}

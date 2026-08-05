@@ -1,0 +1,17 @@
+{
+  "members": [
+    {
+      "id": "mem-msev5grm-6359fd",
+      "name": "Jonathan Gilbart",
+      "email": "dr.gilbart@comcast.net",
+      "passwordHash": "2c17099de041f1d85b185316d12c4e72:bc536b547db311d4005b522c683c92e7dbeb161e83d6fec3702585a79063beb15f84b83949ff9ed27844547dfbaeba6741ba4f9823f9d8fd44e0cc9515b24b9d",
+      "phone": "240-440-4371",
+      "village": "Eastport",
+      "status": "pending",
+      "createdAt": "2026-08-04T16:19:25.113Z",
+      "approvedAt": null
+    }
+  ],
+  "listings": [],
+  "updatedAt": "2026-08-04T16:19:25.113Z"
+}

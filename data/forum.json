@@ -1,0 +1,121 @@
+{
+  "categories": [
+    {
+      "id": "cat-welcome",
+      "slug": "new-to-the-villages",
+      "title": "New to The Villages",
+      "description": "Just arrived (or still packing)? Ask anything — cart rules, villages, rec passes, and “why does every street sound like a country club?”",
+      "emoji": "🌴",
+      "order": 1
+    },
+    {
+      "id": "cat-dining",
+      "slug": "dining-and-food",
+      "title": "Dining & Food",
+      "description": "Early-bird intel, “where should we eat?”, kitchen disasters, and sacred opinions about tacos.",
+      "emoji": "🍽️",
+      "order": 2
+    },
+    {
+      "id": "cat-golf",
+      "slug": "golf-and-carts",
+      "title": "Golf & Cart Life",
+      "description": "Courses, mishits, cart decorations, traffic at 9 a.m., and the philosophy of “just one more hole.”",
+      "emoji": "⛳",
+      "order": 3
+    },
+    {
+      "id": "cat-clubs",
+      "slug": "clubs-and-hobbies",
+      "title": "Clubs & Hobbies",
+      "description": "Finding your people — cards, crafts, music, weirdly specific clubs, and first-meeting nerves.",
+      "emoji": "🎯",
+      "order": 4
+    },
+    {
+      "id": "cat-health",
+      "slug": "health-and-wellness",
+      "title": "Health & Wellness",
+      "description": "Walking goals, doctors, sleep, “I went to the rec center on purpose,” and cheering each other on.",
+      "emoji": "💪",
+      "order": 5
+    },
+    {
+      "id": "cat-squares",
+      "slug": "squares-and-events",
+      "title": "Squares, Music & Events",
+      "description": "Which square tonight? Bands, dancing, holidays, and “meet us by the fountain.”",
+      "emoji": "🎶",
+      "order": 6
+    },
+    {
+      "id": "cat-homes",
+      "slug": "homes-and-moving",
+      "title": "Homes & Moving",
+      "description": "Buying, selling, building, downsizing, and surviving the great furniture debate.",
+      "emoji": "🏠",
+      "order": 7
+    },
+    {
+      "id": "cat-neighbors",
+      "slug": "village-life",
+      "title": "Village Life & Neighbors",
+      "description": "HOA questions (keep it kind), pets, lost-and-found, and the soft magic of a good wave from a cart.",
+      "emoji": "🤝",
+      "order": 8
+    },
+    {
+      "id": "cat-tech",
+      "slug": "tech-help",
+      "title": "Tech Help",
+      "description": "Phones, streaming, printers that hate us, and “how do I get this off my screen?”",
+      "emoji": "📱",
+      "order": 9
+    },
+    {
+      "id": "cat-watercooler",
+      "slug": "water-cooler",
+      "title": "Water Cooler",
+      "description": "Off-topic, jokes, grandkid brags, weather complaints, and pure cart-path chatter.",
+      "emoji": "☕",
+      "order": 10
+    }
+  ],
+  "threads": [
+    {
+      "id": "thread-seed-1",
+      "categoryId": "cat-welcome",
+      "title": "Week one: what I wish someone told me",
+      "authorName": "CartNewbie",
+      "body": "Three roundabouts later… any tips for not getting lost on the way to Spanish Springs? Asking for a friend (me).",
+      "createdAt": "2026-08-03T12:29:02.731Z",
+      "updatedAt": "2026-08-04T12:29:02.731Z"
+    },
+    {
+      "id": "thread-seed-2",
+      "categoryId": "cat-dining",
+      "title": "Best early-bird that still feels special?",
+      "authorName": "DinnerDetective",
+      "body": "Not looking for fancy — just good food before 5 without feeling like we rushed a wedding.",
+      "createdAt": "2026-08-02T12:29:02.731Z",
+      "updatedAt": "2026-08-04T12:29:02.731Z"
+    }
+  ],
+  "replies": [
+    {
+      "id": "reply-seed-1",
+      "threadId": "thread-seed-1",
+      "authorName": "LongTimer",
+      "body": "Phone GPS is not optional the first month. Also: every gate looks the same at dusk. Welcome!",
+      "createdAt": "2026-08-04T12:29:02.731Z"
+    },
+    {
+      "id": "reply-seed-2",
+      "threadId": "thread-seed-2",
+      "authorName": "EarlyBirdEddie",
+      "body": "If they have outdoor seating and a fish sandwich, I’m in. Check the Dining ratings on this hub too!",
+      "createdAt": "2026-08-04T12:29:02.731Z"
+    }
+  ],
+  "updatedAt": "2026-08-05T12:29:02.731Z"
+}

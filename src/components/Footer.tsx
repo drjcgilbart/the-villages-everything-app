@@ -1,0 +1,71 @@
+import Link from "next/link";
+import { MAIN_TOPICS, COMMUNITY_RESOURCES } from "@/lib/topics";
+import { SITE } from "@/lib/content";
+
+export function Footer() {
+  return (
+    <footer className="site-footer">
+      <div className="footer-top-art" aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/graphics/divider-waves.svg" alt="" />
+      </div>
+      <div className="shell footer-inner">
+        <div className="footer-brand-row">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/graphics/mascot-logo.jpg"
+            alt=""
+            className="footer-mascot"
+            width={56}
+            height={56}
+          />
+          <div>
+            <strong className="footer-brand">{SITE.name}</strong>
+            <p className="footer-sub">{SITE.subtitle}</p>
+          </div>
+        </div>
+
+        <div className="footer-groups">
+          <div className="footer-group">
+            <strong>Main topics</strong>
+            <div className="footer-group-links">
+              {MAIN_TOPICS.map((t) => (
+                <Link key={t.href} href={t.href}>
+                  {t.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="footer-group">
+            <strong>Community Resources</strong>
+            <div className="footer-group-links">
+              {COMMUNITY_RESOURCES.map((t) => (
+                <Link key={t.href} href={t.href}>
+                  {t.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="footer-group">
+            <strong>My Retirement Reboot</strong>
+            <div className="footer-group-links">
+              <Link href="/about">Overview</Link>
+              <Link href="/blog">Blog</Link>
+              <Link href="/photos">Photos</Link>
+              <Link href="/videos">Videos</Link>
+              <Link href="/donate">Buy me a cup of Joe</Link>
+              <Link href="/admin">Studio</Link>
+            </div>
+          </div>
+        </div>
+
+        <p className="footer-note">
+          Original site graphics created for this project (not stock photos). Not
+          affiliated with The Villages® brand or developer. Just one person
+          living the plot twist — and building a map for the rest of us. ©{" "}
+          {new Date().getFullYear()}
+        </p>
+      </div>
+    </footer>
+  );
+}
