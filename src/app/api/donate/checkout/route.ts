@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  donationTierForAmount,
+  donationBadgeForCheckout,
   parseDonationAmount,
   usdToCents,
 } from "@/lib/donations";
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { amountUsd?: unknown } = {};
+  let body: { amountUsd?: unknown; isCustom?: unknown } = {};
   try {
     body = await req.json();
   } catch {
@@ -34,28 +34,33 @@ export async function POST(req: Request) {
     );
   }
 
+  const isCustom = body.isCustom === true || body.isCustom === "true";
   const base = siteBaseUrl();
   const amountCents = usdToCents(amountUsd);
-  const tier = donationTierForAmount(amountUsd);
+  const earned = donationBadgeForCheckout({ amountUsd, isCustom });
   const sessionMember = await getSessionMember();
 
-  // Any badge-earning tip requires a signed-in Hub member account
-  if (tier && !sessionMember) {
+  if (earned && !sessionMember) {
     return NextResponse.json(
       {
-        error: `Sign in as a Hub member before donating at the ${tier.label} tier ($${tier.amountUsd}+) so we can put the badge next to your name.`,
+        error: `Sign in as a Hub member before donating at the ${earned.def.label} tier so we can put the badge next to your name.`,
         code: "MEMBER_REQUIRED_FOR_BADGE",
-        badgeId: tier.badgeId,
+        badgeId: earned.badgeId,
       },
       { status: 401 }
     );
   }
 
-  const productName = tier
-    ? `${tier.label} — Buy me a cup of Joe`
+  const productName = earned
+    ? `${earned.def.label} — Buy me a cup of Joe`
     : "Cup of Joe — Keep the lights on";
-  const productDescription = tier
-    ? `Tip ($${amountUsd.toFixed(2)}) for The Villages Hub — unlocks the “${tier.label}” badge next to your member name.`
+  const productDescription = earned
+    ? `Tip ($${amountUsd.toFixed(2)}) for The Villages Hub — unlocks the “${earned.def.label}” badge${
+        earned.badgeId === "golden_loofah" ||
+        earned.badgeId === "custom_star_loofah"
+          ? " and queues you for Square Royalty (1 year) pending admin approval"
+          : ""
+      }.`
     : "A tip for The Villages Hub — hosting, coffee, and golf-cart energy.";
 
   try {
@@ -74,8 +79,8 @@ export async function POST(req: Request) {
               name: productName,
               description: productDescription,
               images: [
-                tier
-                  ? `${base}${tier.badgeImage}`
+                earned
+                  ? `${base}${earned.def.badgeImage}`
                   : `${base}/graphics/mascot-logo.jpg`,
               ],
               tax_code: "txcd_10000000",
@@ -88,8 +93,13 @@ export async function POST(req: Request) {
       metadata: {
         purpose: "site-donation",
         amount_usd: String(amountUsd),
-        badge_id: tier?.badgeId || "",
-        awards_golden_loofah: tier?.badgeId === "golden_loofah" ? "1" : "0",
+        is_custom: isCustom ? "1" : "0",
+        badge_id: earned?.badgeId || "",
+        awards_golden_loofah:
+          earned?.badgeId === "golden_loofah" ||
+          earned?.badgeId === "custom_star_loofah"
+            ? "1"
+            : "0",
         memberId: sessionMember?.id || "",
       },
     });
@@ -103,8 +113,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       url: session.url,
-      badgeId: tier?.badgeId || null,
-      badgeLabel: tier?.label || null,
+      badgeId: earned?.badgeId || null,
+      badgeLabel: earned?.def.label || null,
     });
   } catch (err) {
     const message =

@@ -55,11 +55,13 @@ export default async function DonatePage({
               enter your own amount, then you&apos;ll finish securely on Stripe.
             </p>
             <p style={{ color: "var(--muted)" }}>
-              Every tip tier has a funny badge —{" "}
-              <strong>Cup of Joe</strong>, <strong>Fancy Latte</strong>,{" "}
-              <strong>Early-Bird Brunch</strong>, and the top-shelf{" "}
-              <strong>Golden Loofah</strong>. Sign in as a Hub member first so
-              badges attach next to your name site-wide.
+              Every tip tier has a funny badge — Cup of Joe, Fancy Latte,
+              Early-Bird Brunch, Golden Loofah, and the ultra{" "}
+              <strong>Custom Star Loofah</strong> (custom $25+ with extra
+              sparkles). Golden Loofah and Custom Star Loofah also nominate you
+              for <strong>Square Royalty</strong> (1 year) — the host approves
+              that in the Admin Portal. Sign in first so badges stick to your
+              name.
             </p>
 
             {canceled && (

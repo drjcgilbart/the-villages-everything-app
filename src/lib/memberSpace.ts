@@ -1,4 +1,5 @@
 import { readJsonFile, writeJsonFile } from "./dataFs";
+import { isTopTierDonationBadge } from "./donations";
 import {
   type AnyStoredPlan,
   type FeatureKey,
@@ -16,6 +17,17 @@ const SPACE_FILE = "member-space.json";
 /** @deprecated use HubPlanId — kept as alias for imports */
 export type HubPlan = HubPlanId;
 
+export type TopTierNominationStatus = "pending" | "approved" | "rejected";
+
+/** Queued for Square Royalty (1 year) after Golden Loofah / Custom Star Loofah tip. */
+export type TopTierNomination = {
+  status: TopTierNominationStatus;
+  source: string;
+  requestedAt: string;
+  proposedExpiresAt: string;
+  decidedAt?: string | null;
+};
+
 export type MemberSpaceRecord = {
   memberId: string;
   plan: HubPlanId;
@@ -28,7 +40,7 @@ export type MemberSpaceRecord = {
   stripeSubscriptionId?: string;
   /**
    * Donation badges earned via “Buy me a cup of Joe” tiers
-   * (cup_of_joe | fancy_latte | early_bird_brunch | golden_loofah).
+   * (cup_of_joe | fancy_latte | early_bird_brunch | golden_loofah | custom_star_loofah).
    */
   donationBadges?: string[];
   /**
@@ -37,6 +49,10 @@ export type MemberSpaceRecord = {
    */
   goldenLoofah?: boolean;
   goldenLoofahAt?: string | null;
+  /** When paid plan (e.g. Square Royalty) expires */
+  planExpiresAt?: string | null;
+  /** Top-tier membership nomination from big tip */
+  topTierNomination?: TopTierNomination | null;
 };
 
 type SpaceFile = {
@@ -60,11 +76,36 @@ function normalizeDonationBadges(raw: Partial<MemberSpaceRecord>): string[] {
   return [...set];
 }
 
+function normalizeTopTier(
+  raw: Partial<MemberSpaceRecord>
+): TopTierNomination | null {
+  const t = raw.topTierNomination;
+  if (!t || typeof t !== "object") return null;
+  if (!t.status || !t.requestedAt) return null;
+  return {
+    status: t.status,
+    source: String(t.source || "donation"),
+    requestedAt: t.requestedAt,
+    proposedExpiresAt: t.proposedExpiresAt || t.requestedAt,
+    decidedAt: t.decidedAt || null,
+  };
+}
+
 function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPlan }): MemberSpaceRecord {
   const donationBadges = normalizeDonationBadges(raw);
+  let plan = normalizePlan(raw.plan);
+  const planExpiresAt = raw.planExpiresAt || null;
+  // Expire Square Royalty (or any timed plan) when past date
+  if (
+    planExpiresAt &&
+    new Date(planExpiresAt).getTime() < Date.now() &&
+    plan === "square_royalty"
+  ) {
+    plan = "porch_waver";
+  }
   return {
     memberId: String(raw.memberId || ""),
-    plan: normalizePlan(raw.plan),
+    plan,
     favoriteClubIds: Array.isArray(raw.favoriteClubIds)
       ? raw.favoriteClubIds.map(String)
       : [],
@@ -73,8 +114,12 @@ function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPla
     stripeCustomerId: raw.stripeCustomerId,
     stripeSubscriptionId: raw.stripeSubscriptionId,
     donationBadges,
-    goldenLoofah: donationBadges.includes("golden_loofah"),
+    goldenLoofah:
+      donationBadges.includes("golden_loofah") ||
+      donationBadges.includes("custom_star_loofah"),
     goldenLoofahAt: raw.goldenLoofahAt || null,
+    planExpiresAt,
+    topTierNomination: normalizeTopTier(raw),
   };
 }
 
@@ -131,6 +176,8 @@ export function updateMemberSpace(
       | "donationBadges"
       | "goldenLoofah"
       | "goldenLoofahAt"
+      | "planExpiresAt"
+      | "topTierNomination"
     >
   >
 ): MemberSpaceRecord {
@@ -191,9 +238,82 @@ export function updateMemberSpace(
   if (patch.goldenLoofahAt !== undefined && rec.goldenLoofah) {
     rec.goldenLoofahAt = patch.goldenLoofahAt;
   }
+  if (patch.planExpiresAt !== undefined) {
+    rec.planExpiresAt = patch.planExpiresAt;
+  }
+  if (patch.topTierNomination !== undefined) {
+    rec.topTierNomination = patch.topTierNomination;
+  }
   rec.updatedAt = new Date().toISOString();
   saveMemberSpaces(data);
   return normalizeRecord(rec);
+}
+
+function plusOneYearIso(from = new Date()) {
+  const d = new Date(from);
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString();
+}
+
+/**
+ * Queue Square Royalty (1 year) for admin approval after a top donation badge.
+ * Does not auto-upgrade plan — admin must approve in the Admin Portal.
+ */
+export function nominateTopTierFromDonation(
+  memberId: string,
+  source: string
+): MemberSpaceRecord {
+  const existing = getMemberSpace(memberId);
+  const nom = existing.topTierNomination;
+  // Keep pending/approved as-is; re-open if previously rejected
+  if (nom?.status === "pending" || nom?.status === "approved") {
+    return existing;
+  }
+  const now = new Date();
+  return updateMemberSpace(memberId, {
+    topTierNomination: {
+      status: "pending",
+      source,
+      requestedAt: now.toISOString(),
+      proposedExpiresAt: plusOneYearIso(now),
+      decidedAt: null,
+    },
+  });
+}
+
+/** Admin: approve 1-year Square Royalty. */
+export function approveTopTierMembership(memberId: string): MemberSpaceRecord {
+  const now = new Date();
+  const expires = plusOneYearIso(now);
+  const existing = getMemberSpace(memberId);
+  return updateMemberSpace(memberId, {
+    plan: "square_royalty",
+    planExpiresAt: expires,
+    topTierNomination: {
+      status: "approved",
+      source: existing.topTierNomination?.source || "admin",
+      requestedAt:
+        existing.topTierNomination?.requestedAt || now.toISOString(),
+      proposedExpiresAt: expires,
+      decidedAt: now.toISOString(),
+    },
+  });
+}
+
+/** Admin: reject top-tier nomination (plan unchanged). */
+export function rejectTopTierMembership(memberId: string): MemberSpaceRecord {
+  const existing = getMemberSpace(memberId);
+  const now = new Date().toISOString();
+  return updateMemberSpace(memberId, {
+    topTierNomination: {
+      status: "rejected",
+      source: existing.topTierNomination?.source || "admin",
+      requestedAt: existing.topTierNomination?.requestedAt || now,
+      proposedExpiresAt:
+        existing.topTierNomination?.proposedExpiresAt || plusOneYearIso(),
+      decidedAt: now,
+    },
+  });
 }
 
 /** Award a donation-tier badge (idempotent; stacks with others). */
@@ -203,14 +323,21 @@ export function grantDonationBadge(
 ): MemberSpaceRecord {
   const existing = getMemberSpace(memberId);
   const badges = new Set(existing.donationBadges || []);
-  if (badges.has(badgeId)) return existing;
-  badges.add(badgeId);
-  return updateMemberSpace(memberId, {
-    donationBadges: [...badges],
-    ...(badgeId === "golden_loofah"
-      ? { goldenLoofah: true, goldenLoofahAt: new Date().toISOString() }
-      : {}),
-  });
+  const already = badges.has(badgeId);
+  if (!already) {
+    badges.add(badgeId);
+    updateMemberSpace(memberId, {
+      donationBadges: [...badges],
+      ...(badgeId === "golden_loofah" || badgeId === "custom_star_loofah"
+        ? { goldenLoofah: true, goldenLoofahAt: new Date().toISOString() }
+        : {}),
+    });
+  }
+  // Top donation badges always ensure a pending top-tier nomination exists
+  if (isTopTierDonationBadge(badgeId)) {
+    return nominateTopTierFromDonation(memberId, badgeId);
+  }
+  return getMemberSpace(memberId);
 }
 
 /** Award Golden Loofah (idempotent). */
@@ -252,6 +379,8 @@ export function publicSpacePayload(space: MemberSpaceRecord) {
     goldenLoofah: !!space.goldenLoofah,
     goldenLoofahAt: space.goldenLoofahAt || null,
     donationBadges: space.donationBadges || [],
+    planExpiresAt: space.planExpiresAt || null,
+    topTierNomination: space.topTierNomination || null,
     features,
     tier: {
       id: tier.id,

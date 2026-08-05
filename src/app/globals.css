@@ -1636,13 +1636,24 @@ a.my-space-link-card:hover {
   font-weight: 700;
 }
 
-.donate-preset-loofah {
+.donate-preset-loofah,
+.donate-preset-custom {
   border-color: rgba(232, 184, 74, 0.55);
   background: linear-gradient(
     145deg,
     rgba(232, 184, 74, 0.18),
     rgba(255, 253, 249, 0.95)
   );
+}
+
+.donate-preset-custom {
+  box-shadow: 0 0 0 1px rgba(232, 184, 74, 0.25),
+    0 8px 24px rgba(232, 184, 74, 0.15);
+}
+
+.donate-preset-badge-star {
+  box-shadow: 0 0 12px rgba(232, 184, 74, 0.55),
+    0 2px 10px rgba(28, 36, 48, 0.14);
 }
 
 .donate-preset-badge {

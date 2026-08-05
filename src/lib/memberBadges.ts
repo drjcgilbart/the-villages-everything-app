@@ -1,4 +1,5 @@
 import {
+  CUSTOM_STAR_LOOFAH,
   DONATION_BADGE_ORDER,
   donationBadgeById,
   donationBadgeDef,
@@ -113,6 +114,7 @@ export function resolveAuthorBadges(opts: {
 export function allBadgeCatalog(): BadgeDef[] {
   return [
     ...DONATION_PRESETS.map(donationBadgeDef),
+    donationBadgeDef(CUSTOM_STAR_LOOFAH),
     TIER_BADGES.cart_path_regular!,
     TIER_BADGES.lanai_legend!,
     TIER_BADGES.square_royalty!,

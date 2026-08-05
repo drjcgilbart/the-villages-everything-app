@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   donationBadgeById,
-  donationTierForAmount,
+  donationBadgeForCheckout,
+  isTopTierDonationBadge,
   parseDonationAmount,
 } from "@/lib/donations";
 import { getSessionMember } from "@/lib/memberAuth";
@@ -11,8 +12,8 @@ import { getStripe, stripeConfigured } from "@/lib/stripe";
 export const dynamic = "force-dynamic";
 
 /**
- * After Stripe donation checkout, verify payment and award the matching
- * cup-of-Joe tier badge (Cup of Joe / Latte / Brunch / Golden Loofah).
+ * After Stripe donation checkout, award the matching tip badge and, for
+ * Golden Loofah / Custom Star Loofah, queue Square Royalty (1yr) for admin.
  */
 export async function POST(req: NextRequest) {
   if (!stripeConfigured()) {
@@ -42,10 +43,13 @@ export async function POST(req: NextRequest) {
       ? session.amount_total / 100
       : null);
 
+  const isCustom = session.metadata?.is_custom === "1";
   const metaBadge = String(session.metadata?.badge_id || "").trim();
-  const fromAmount =
-    amountUsd != null ? donationTierForAmount(amountUsd)?.badgeId : null;
-  const badgeId = metaBadge || fromAmount || null;
+  const fromCheckout =
+    amountUsd != null
+      ? donationBadgeForCheckout({ amountUsd, isCustom })
+      : null;
+  const badgeId = metaBadge || fromCheckout?.badgeId || null;
 
   if (!badgeId) {
     return NextResponse.json({
@@ -66,6 +70,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       badgeId,
       badgeLabel: badge?.label || null,
+      badgeImage: badge?.image || null,
       pendingClaim: true,
       amountUsd,
       message: `Payment received. Sign in with your Hub account and reopen this page to claim your ${badge?.label || "donation"} badge.`,
@@ -85,6 +90,20 @@ export async function POST(req: NextRequest) {
   const before = getMemberSpace(memberId);
   const alreadyHad = (before.donationBadges || []).includes(badgeId);
   const space = grantDonationBadge(memberId, badgeId);
+  const topTier = isTopTierDonationBadge(badgeId);
+
+  let message = alreadyHad
+    ? `You already hold the ${badge?.label || "badge"}. Shine on.`
+    : `${badge?.label || "Badge"} unlocked! It now appears next to your name across the Hub.`;
+
+  if (topTier) {
+    message +=
+      space.topTierNomination?.status === "pending"
+        ? " You’ve also been submitted to the Admin Portal for Square Royalty membership (1 year) — pending host approval."
+        : space.topTierNomination?.status === "approved"
+          ? " Your Square Royalty membership is already approved."
+          : "";
+  }
 
   return NextResponse.json({
     ok: true,
@@ -95,8 +114,7 @@ export async function POST(req: NextRequest) {
     memberId,
     donationBadges: space.donationBadges || [],
     alreadyHad,
-    message: alreadyHad
-      ? `You already hold the ${badge?.label || "badge"}. Shine on.`
-      : `${badge?.label || "Badge"} unlocked! It now appears next to your name across the Hub.`,
+    topTierNomination: space.topTierNomination || null,
+    message,
   });
 }

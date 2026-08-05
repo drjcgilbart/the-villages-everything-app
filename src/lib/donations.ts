@@ -1,11 +1,12 @@
 import type { BadgeDef } from "./memberBadgeTypes";
 
-/** Donation tip tiers — each earns a permanent name badge when signed in. */
+/** Donation tip badges earned via “Buy me a cup of Joe”. */
 export type DonationBadgeId =
   | "cup_of_joe"
   | "fancy_latte"
   | "early_bird_brunch"
-  | "golden_loofah";
+  | "golden_loofah"
+  | "custom_star_loofah";
 
 export type DonationPreset = {
   id: string;
@@ -52,21 +53,36 @@ export const DONATION_PRESETS: DonationPreset[] = [
     id: "loofah",
     label: "Golden Loofah",
     amountUsd: 25,
-    blurb: "Highest tier · badge",
+    blurb: "Highest preset · badge",
     badgeId: "golden_loofah",
     badgeImage: "/graphics/badges/golden-loofah.jpg",
     badgeTitle:
-      "Golden Loofah — highly coveted sparkly shower pouf. Earned with a $25+ Buy me a cup of Joe tip.",
+      "Golden Loofah — highly coveted sparkly shower pouf. Earned with the $25 Golden Loofah preset.",
   },
 ];
 
-/** @deprecated use highest donation tier amount */
-export const GOLDEN_LOOFAH_MIN_USD = 25;
+/** Ultra Custom tip badge — more sparkles than Golden Loofah. */
+export const CUSTOM_STAR_LOOFAH: DonationPreset = {
+  id: "custom",
+  label: "Custom Star Loofah",
+  amountUsd: 25,
+  blurb: "Custom amount · max sparkle",
+  badgeId: "custom_star_loofah",
+  badgeImage: "/graphics/badges/donate-custom-star-loofah.jpg",
+  badgeTitle:
+    "Custom Star Loofah — even more impressive than Golden Loofah. Earned with a custom $25+ cup-of-Joe tip (stars and sparkles included).",
+};
 
+export const GOLDEN_LOOFAH_MIN_USD = 25;
 export const DONATION_MIN_USD = 1;
 export const DONATION_MAX_USD = 500;
 
-/** Presets sorted high → low for threshold matching */
+/** Badges that nominate the donor for Square Royalty (1 year) pending admin approval. */
+export const TOP_TIER_DONATION_BADGES: DonationBadgeId[] = [
+  "golden_loofah",
+  "custom_star_loofah",
+];
+
 const TIERS_DESC = [...DONATION_PRESETS].sort(
   (a, b) => b.amountUsd - a.amountUsd
 );
@@ -86,22 +102,48 @@ export function parseDonationAmount(raw: unknown): number | null {
   return rounded;
 }
 
-/** Highest donation tier the amount qualifies for (null if under $3). */
-export function donationTierForAmount(
-  amountUsd: number
-): DonationPreset | null {
+/**
+ * Resolve which badge a donation earns.
+ * Custom path + $25+ → Custom Star Loofah (ultra).
+ * Presets / non-custom → highest preset tier for the amount.
+ */
+export function donationBadgeForCheckout(opts: {
+  amountUsd: number;
+  isCustom: boolean;
+}): { badgeId: DonationBadgeId; def: DonationPreset } | null {
+  const { amountUsd, isCustom } = opts;
   if (!Number.isFinite(amountUsd)) return null;
+
+  if (isCustom && amountUsd >= GOLDEN_LOOFAH_MIN_USD) {
+    return { badgeId: "custom_star_loofah", def: CUSTOM_STAR_LOOFAH };
+  }
+
   for (const t of TIERS_DESC) {
-    if (amountUsd >= t.amountUsd) return t;
+    if (amountUsd >= t.amountUsd) {
+      return { badgeId: t.badgeId, def: t };
+    }
   }
   return null;
 }
 
-export function awardsGoldenLoofah(amountUsd: number): boolean {
-  return donationTierForAmount(amountUsd)?.badgeId === "golden_loofah";
+/** @deprecated use donationBadgeForCheckout */
+export function donationTierForAmount(
+  amountUsd: number
+): DonationPreset | null {
+  const r = donationBadgeForCheckout({ amountUsd, isCustom: false });
+  return r?.def || null;
 }
 
-export function donationBadgeDef(preset: DonationPreset): BadgeDef {
+export function awardsGoldenLoofah(amountUsd: number): boolean {
+  return amountUsd >= GOLDEN_LOOFAH_MIN_USD;
+}
+
+export function donationBadgeDef(
+  preset: Pick<
+    DonationPreset,
+    "badgeId" | "label" | "badgeTitle" | "badgeImage"
+  >
+): BadgeDef {
   return {
     id: preset.badgeId,
     label: preset.label,
@@ -111,8 +153,15 @@ export function donationBadgeDef(preset: DonationPreset): BadgeDef {
 }
 
 export function donationBadgeById(id: string): BadgeDef | null {
+  if (id === "custom_star_loofah") {
+    return donationBadgeDef(CUSTOM_STAR_LOOFAH);
+  }
   const p = DONATION_PRESETS.find((x) => x.badgeId === id);
   return p ? donationBadgeDef(p) : null;
+}
+
+export function isTopTierDonationBadge(badgeId: string): boolean {
+  return TOP_TIER_DONATION_BADGES.includes(badgeId as DonationBadgeId);
 }
 
 /** Order for display next to names (humble → flashy). */
@@ -121,4 +170,5 @@ export const DONATION_BADGE_ORDER: DonationBadgeId[] = [
   "fancy_latte",
   "early_bird_brunch",
   "golden_loofah",
+  "custom_star_loofah",
 ];

@@ -7,11 +7,21 @@ import type { HubPlanId } from "@/lib/membershipTiers";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 
+type TopTierNom = {
+  status: "pending" | "approved" | "rejected";
+  source: string;
+  requestedAt: string;
+  proposedExpiresAt: string;
+  decidedAt?: string | null;
+};
+
 type AdminMember = PublicMember & {
   plan?: HubPlanId | string;
   planLabel?: string;
+  planExpiresAt?: string | null;
   goldenLoofah?: boolean;
   badges?: BadgeDef[];
+  topTierNomination?: TopTierNom | null;
 };
 
 type TierOpt = { id: string; label: string; shortLabel: string; rank: number };
@@ -104,6 +114,31 @@ export function AdminMembersPanel() {
     }
   }
 
+  async function topTierAction(id: string, action: "approveTopTier" | "rejectTopTier") {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      if (Array.isArray(data.members)) setMembers(data.members);
+      else await load();
+      flash(
+        "ok",
+        action === "approveTopTier"
+          ? "Square Royalty approved for 1 year"
+          : "Top-tier nomination rejected"
+      );
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function resetMemberPassword(id: string, name: string) {
     const password = window.prompt(
       `New password for ${name} (min 6 characters):`,
@@ -137,24 +172,31 @@ export function AdminMembersPanel() {
   }
 
   const pendingMembers = members.filter((m) => m.status === "pending");
+  const topTierPending = members.filter(
+    (m) => m.topTierNomination?.status === "pending"
+  );
   const approvedCount = members.filter((m) => m.status === "approved").length;
 
   return (
     <div>
       <h2 style={{ marginTop: 0 }}>Hub members</h2>
       <p className="panel-hint">
-        This is your membership queue — approve sign-ups for My Space, Yard
-        Sale, forum badges, and more. Set plan tiers and Golden Loofah here.
+        Membership sign-ups, tip badges, and Square Royalty nominations from
+        Golden Loofah / Custom Star Loofah donations.
       </p>
 
       <div className="dining-summary-stats" style={{ marginBottom: "1.25rem" }}>
         <div className="stat">
           <strong>{pendingMembers.length}</strong>
-          <span>Pending requests</span>
+          <span>Pending sign-ups</span>
+        </div>
+        <div className="stat">
+          <strong>{topTierPending.length}</strong>
+          <span>Top-tier nominations</span>
         </div>
         <div className="stat">
           <strong>{approvedCount}</strong>
-          <span>Approved</span>
+          <span>Approved members</span>
         </div>
         <div className="stat">
           <strong>{members.length}</strong>
@@ -164,10 +206,65 @@ export function AdminMembersPanel() {
 
       {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
 
+      {topTierPending.length > 0 && (
+        <>
+          <h3>
+            Square Royalty nominations (1 year){" "}
+            <span className="pill pill-yard">
+              {topTierPending.length} pending
+            </span>
+          </h3>
+          <p className="panel-hint">
+            Triggered by Golden Loofah or Custom Star Loofah donations. Approve
+            to grant <strong>Square Royalty</strong> until the proposed date.
+          </p>
+          <div className="admin-list" style={{ marginBottom: "1.5rem" }}>
+            {topTierPending.map((m) => (
+              <div key={`top-${m.id}`} className="admin-item admin-item-pending">
+                <div>
+                  <strong className="member-name">
+                    <span className="member-name-text">{m.name}</span>
+                    <MemberBadgesRow badges={m.badges || []} />
+                  </strong>
+                  <span>
+                    {m.email}
+                    {m.village ? ` · ${m.village}` : ""}
+                    {" · Source: "}
+                    <strong>{m.topTierNomination?.source}</strong>
+                    {" · Until "}
+                    {m.topTierNomination?.proposedExpiresAt
+                      ? formatDate(m.topTierNomination.proposedExpiresAt)
+                      : "—"}
+                  </span>
+                </div>
+                <div className="admin-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={busy}
+                    onClick={() => topTierAction(m.id, "approveTopTier")}
+                  >
+                    Approve Square Royalty (1 yr)
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy}
+                    onClick={() => topTierAction(m.id, "rejectTopTier")}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {pendingMembers.length > 0 && (
         <>
           <h3>
-            Needs your approval{" "}
+            Sign-up requests{" "}
             <span className="pill pill-yard">{pendingMembers.length} pending</span>
           </h3>
           <div className="admin-list" style={{ marginBottom: "1.5rem" }}>
@@ -182,6 +279,7 @@ export function AdminMembersPanel() {
                 onPlan={setMemberPlan}
                 onLoofah={toggleGoldenLoofah}
                 onPassword={resetMemberPassword}
+                onTopTier={topTierAction}
               />
             ))}
           </div>
@@ -211,6 +309,7 @@ export function AdminMembersPanel() {
             onPlan={setMemberPlan}
             onLoofah={toggleGoldenLoofah}
             onPassword={resetMemberPassword}
+            onTopTier={topTierAction}
           />
         ))}
       </div>
@@ -227,6 +326,7 @@ function MemberAdminRow({
   onPlan,
   onLoofah,
   onPassword,
+  onTopTier,
 }: {
   m: AdminMember;
   tiers: TierOpt[];
@@ -236,7 +336,9 @@ function MemberAdminRow({
   onPlan: (id: string, plan: string) => void;
   onLoofah: (id: string, next: boolean) => void;
   onPassword: (id: string, name: string) => void;
+  onTopTier: (id: string, action: "approveTopTier" | "rejectTopTier") => void;
 }) {
+  const nom = m.topTierNomination;
   return (
     <div
       className={`admin-item ${emphasize ? "admin-item-pending" : ""}`}
@@ -261,7 +363,9 @@ function MemberAdminRow({
               <strong>{m.planLabel}</strong>
             </>
           ) : null}
-          {m.goldenLoofah ? " · Golden Loofah" : ""}
+          {m.planExpiresAt ? ` · plan until ${formatDate(m.planExpiresAt)}` : ""}
+          {nom?.status === "pending" ? " · Royalty nomination pending" : ""}
+          {nom?.status === "approved" ? " · Royalty nomination approved" : ""}
         </span>
       </div>
       <div className="admin-actions">
@@ -282,12 +386,22 @@ function MemberAdminRow({
             </select>
           </label>
         )}
+        {nom?.status === "pending" && (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={busy}
+            onClick={() => onTopTier(m.id, "approveTopTier")}
+          >
+            Approve Royalty (1 yr)
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-ghost btn-sm"
           disabled={busy}
           onClick={() => onLoofah(m.id, !m.goldenLoofah)}
-          title="Golden Loofah is normally earned via $25+ cup-of-Joe donation"
+          title="Grant Golden Loofah badge (also nominates for Square Royalty)"
         >
           {m.goldenLoofah ? "Remove Loofah" : "Grant Loofah"}
         </button>

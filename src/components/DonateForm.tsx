@@ -4,10 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  donationTierForAmount,
+  CUSTOM_STAR_LOOFAH,
+  donationBadgeForCheckout,
   DONATION_MAX_USD,
   DONATION_MIN_USD,
   DONATION_PRESETS,
+  GOLDEN_LOOFAH_MIN_USD,
   parseDonationAmount,
 } from "@/lib/donations";
 
@@ -23,14 +25,18 @@ export function DonateForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isCustom = selected === "custom";
+
   const amountUsd = useMemo(() => {
-    if (selected === "custom") return parseDonationAmount(custom);
+    if (isCustom) return parseDonationAmount(custom);
     const preset = DONATION_PRESETS.find((p) => p.id === selected);
     return preset ? preset.amountUsd : null;
-  }, [selected, custom]);
+  }, [selected, custom, isCustom]);
 
-  const earnedTier =
-    amountUsd != null ? donationTierForAmount(amountUsd) : null;
+  const earned =
+    amountUsd != null
+      ? donationBadgeForCheckout({ amountUsd, isCustom })
+      : null;
 
   async function checkout() {
     setError(null);
@@ -56,7 +62,7 @@ export function DonateForm({
       const res = await fetch("/api/donate/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amountUsd }),
+        body: JSON.stringify({ amountUsd, isCustom }),
       });
       const data = (await res.json()) as {
         url?: string;
@@ -109,12 +115,22 @@ export function DonateForm({
         <button
           type="button"
           role="listitem"
-          className={`donate-preset ${selected === "custom" ? "active" : ""}`}
+          className={`donate-preset donate-preset-custom ${selected === "custom" ? "active" : ""}`}
           onClick={() => setSelected("custom")}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={CUSTOM_STAR_LOOFAH.badgeImage}
+            alt=""
+            className="donate-preset-badge donate-preset-badge-star"
+            width={56}
+            height={56}
+          />
           <strong>Custom</strong>
           <span>Your amount</span>
-          <em>$3+ earns a tip badge</em>
+          <em>
+            ${GOLDEN_LOOFAH_MIN_USD}+ → Custom Star Loofah
+          </em>
         </button>
       </div>
 
@@ -129,34 +145,44 @@ export function DonateForm({
               min={DONATION_MIN_USD}
               max={DONATION_MAX_USD}
               step="0.01"
-              placeholder="5.00"
+              placeholder="25.00"
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
             />
           </div>
+          <p className="panel-hint" style={{ marginBottom: 0 }}>
+            Custom tips of ${GOLDEN_LOOFAH_MIN_USD}+ earn the ultra{" "}
+            <strong>Custom Star Loofah</strong> (more sparkles than the preset)
+            and queue you for Square Royalty (1 year) pending admin approval.
+          </p>
         </div>
       )}
 
-      {earnedTier && (
+      {earned && (
         <div className="donate-loofah-callout about-panel">
           <Image
-            src={earnedTier.badgeImage}
-            alt={`${earnedTier.label} badge`}
+            src={earned.def.badgeImage}
+            alt={`${earned.def.label} badge`}
             width={72}
             height={72}
             className="donate-loofah-img"
           />
           <div>
-            <strong>{earnedTier.label} badge at this amount</strong>
+            <strong>{earned.def.label} badge at this amount</strong>
             <p style={{ margin: "0.25rem 0 0", color: "var(--muted)" }}>
-              Sign in as a Hub member so this funny badge shows next to your
-              name site-wide.{" "}
+              Sign in as a Hub member so this badge shows next to your name
+              site-wide.
+              {(earned.badgeId === "golden_loofah" ||
+                earned.badgeId === "custom_star_loofah") && (
+                <>
+                  {" "}
+                  This tier also sends you to the{" "}
+                  <strong>Admin Portal</strong> for{" "}
+                  <strong>Square Royalty</strong> (1 year) approval.
+                </>
+              )}{" "}
               <Link href="/yard-sale/login" className="text-link">
                 Member sign-in
-              </Link>
-              {" · "}
-              <Link href="/yard-sale/join" className="text-link">
-                Request membership
               </Link>
             </p>
           </div>
@@ -174,16 +200,18 @@ export function DonateForm({
         {busy
           ? "Opening checkout…"
           : amountUsd != null
-            ? earnedTier
-              ? `Donate $${amountUsd.toFixed(2)} · claim ${earnedTier.label}`
+            ? earned
+              ? `Donate $${amountUsd.toFixed(2)} · claim ${earned.def.label}`
               : `Donate $${amountUsd.toFixed(2)}`
             : "Donate"}
       </button>
 
       <p className="donate-secure-note">
-        Secure checkout powered by Stripe. Each tip tier has its own badge —
-        Cup of Joe ($3), Fancy Latte ($5), Early-Bird Brunch ($10), and Golden
-        Loofah ($25). Sign in first so badges attach to your account.
+        Secure checkout powered by Stripe. Tip badges: Cup of Joe ($3), Fancy
+        Latte ($5), Early-Bird Brunch ($10), Golden Loofah ($25 preset), and
+        Custom Star Loofah (custom $25+ with extra sparkles). Golden Loofah and
+        Custom Star Loofah also request Square Royalty membership for 1 year —
+        the site host approves that in the Admin Portal.
       </p>
     </div>
   );

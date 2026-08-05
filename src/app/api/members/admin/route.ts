@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
 import {
+  approveTopTierMembership,
   getMemberSpace,
   grantGoldenLoofah,
   publicSpacePayload,
+  rejectTopTierMembership,
   updateMemberSpace,
 } from "@/lib/memberSpace";
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
@@ -28,7 +30,10 @@ function membersWithPlans() {
       ...m,
       plan: pub.plan,
       planLabel: pub.planLabel,
+      planExpiresAt: pub.planExpiresAt,
       goldenLoofah: pub.goldenLoofah,
+      donationBadges: pub.donationBadges,
+      topTierNomination: pub.topTierNomination,
       badges: full ? badgesForMemberRecord(full, space.plan) : [],
     };
   });
@@ -83,6 +88,29 @@ export async function POST(req: Request) {
       return NextResponse.json({
         memberId: id,
         goldenLoofah: !!getMemberSpace(id).goldenLoofah,
+        members: membersWithPlans(),
+      });
+    }
+
+    if (body.action === "approveTopTier") {
+      const id = String(body.id || "");
+      // Ensure account can use the site as a member
+      const mem = getMemberById(id);
+      if (mem && mem.status === "pending") {
+        setMemberStatus(id, "approved");
+      }
+      approveTopTierMembership(id);
+      return NextResponse.json({
+        memberId: id,
+        members: membersWithPlans(),
+      });
+    }
+
+    if (body.action === "rejectTopTier") {
+      const id = String(body.id || "");
+      rejectTopTierMembership(id);
+      return NextResponse.json({
+        memberId: id,
         members: membersWithPlans(),
       });
     }
