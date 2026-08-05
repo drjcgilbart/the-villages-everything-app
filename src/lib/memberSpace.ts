@@ -26,6 +26,12 @@ export type MemberSpaceRecord = {
   /** Stripe customer / subscription ids when wired */
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  /**
+   * Golden Loofah badge — only via highest “Buy me a cup of Joe” donation tier
+   * ($25+). Permanent once earned.
+   */
+  goldenLoofah?: boolean;
+  goldenLoofahAt?: string | null;
 };
 
 type SpaceFile = {
@@ -48,6 +54,8 @@ function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPla
     updatedAt: raw.updatedAt || new Date().toISOString(),
     stripeCustomerId: raw.stripeCustomerId,
     stripeSubscriptionId: raw.stripeSubscriptionId,
+    goldenLoofah: !!raw.goldenLoofah,
+    goldenLoofahAt: raw.goldenLoofahAt || null,
   };
 }
 
@@ -101,6 +109,8 @@ export function updateMemberSpace(
       | "spaceTitle"
       | "stripeCustomerId"
       | "stripeSubscriptionId"
+      | "goldenLoofah"
+      | "goldenLoofahAt"
     >
   >
 ): MemberSpaceRecord {
@@ -131,9 +141,32 @@ export function updateMemberSpace(
   if (patch.stripeSubscriptionId !== undefined) {
     rec.stripeSubscriptionId = patch.stripeSubscriptionId;
   }
+  if (patch.goldenLoofah !== undefined) {
+    rec.goldenLoofah = !!patch.goldenLoofah;
+    if (rec.goldenLoofah && !rec.goldenLoofahAt) {
+      rec.goldenLoofahAt =
+        patch.goldenLoofahAt || new Date().toISOString();
+    }
+    if (!rec.goldenLoofah) {
+      rec.goldenLoofahAt = null;
+    }
+  }
+  if (patch.goldenLoofahAt !== undefined && rec.goldenLoofah) {
+    rec.goldenLoofahAt = patch.goldenLoofahAt;
+  }
   rec.updatedAt = new Date().toISOString();
   saveMemberSpaces(data);
   return normalizeRecord(rec);
+}
+
+/** Award Golden Loofah (idempotent). */
+export function grantGoldenLoofah(memberId: string): MemberSpaceRecord {
+  const existing = getMemberSpace(memberId);
+  if (existing.goldenLoofah) return existing;
+  return updateMemberSpace(memberId, {
+    goldenLoofah: true,
+    goldenLoofahAt: new Date().toISOString(),
+  });
 }
 
 /** True if plan is Cart Path Regular or higher (legacy “subscriber”). */
@@ -167,6 +200,8 @@ export function publicSpacePayload(space: MemberSpaceRecord) {
     updatedAt: space.updatedAt,
     hasSpaceAccess: isPaidPlan(plan),
     isSubscriber: isPaidPlan(plan),
+    goldenLoofah: !!space.goldenLoofah,
+    goldenLoofahAt: space.goldenLoofahAt || null,
     features,
     tier: {
       id: tier.id,

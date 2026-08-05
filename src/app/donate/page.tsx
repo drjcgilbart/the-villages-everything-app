@@ -54,6 +54,11 @@ export default async function DonatePage({
               lifestyle brand. Tips are completely optional. Pick a preset or
               enter your own amount, then you&apos;ll finish securely on Stripe.
             </p>
+            <p style={{ color: "var(--muted)" }}>
+              <strong>Golden Loofah</strong> (highest tier, $25+) is the only way
+              to earn the sparkly shower-loofah badge next to your name — sign in
+              as a Hub member first so we can attach it.
+            </p>
 
             {canceled && (
               <div className="msg msg-err" style={{ marginBottom: "1rem" }}>

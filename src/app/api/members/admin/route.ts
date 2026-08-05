@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
   getMemberSpace,
+  grantGoldenLoofah,
   publicSpacePayload,
   updateMemberSpace,
 } from "@/lib/memberSpace";
@@ -24,6 +25,7 @@ function membersWithPlans() {
       ...m,
       plan: pub.plan,
       planLabel: pub.planLabel,
+      goldenLoofah: pub.goldenLoofah,
     };
   });
 }
@@ -63,6 +65,20 @@ export async function POST(req: Request) {
         memberId: id,
         plan,
         planLabel: publicSpacePayload(getMemberSpace(id)).planLabel,
+        members: membersWithPlans(),
+      });
+    }
+
+    if (body.action === "setGoldenLoofah") {
+      const id = String(body.id || "");
+      if (body.goldenLoofah === false) {
+        updateMemberSpace(id, { goldenLoofah: false, goldenLoofahAt: null });
+      } else {
+        grantGoldenLoofah(id);
+      }
+      return NextResponse.json({
+        memberId: id,
+        goldenLoofah: !!getMemberSpace(id).goldenLoofah,
         members: membersWithPlans(),
       });
     }

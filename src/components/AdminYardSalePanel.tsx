@@ -9,6 +9,7 @@ import type { HubPlanId } from "@/lib/membershipTiers";
 type AdminMember = PublicMember & {
   plan?: HubPlanId | string;
   planLabel?: string;
+  goldenLoofah?: boolean;
 };
 
 type TierOpt = { id: string; label: string; shortLabel: string; rank: number };
@@ -77,6 +78,30 @@ export function AdminYardSalePanel() {
       if (Array.isArray(data.members)) setMembers(data.members);
       else await load();
       flash("ok", `Plan set to ${data.planLabel || plan}`);
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleGoldenLoofah(id: string, next: boolean) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "setGoldenLoofah",
+          id,
+          goldenLoofah: next,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not update Golden Loofah");
+      if (Array.isArray(data.members)) setMembers(data.members);
+      else await load();
+      flash("ok", next ? "Golden Loofah granted" : "Golden Loofah removed");
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Failed");
     } finally {
@@ -188,6 +213,7 @@ export function AdminYardSalePanel() {
                     <strong>{m.planLabel}</strong>
                   </>
                 ) : null}
+                {m.goldenLoofah ? " · 🧽 Golden Loofah" : ""}
               </span>
             </div>
             <div className="admin-actions">
@@ -208,6 +234,15 @@ export function AdminYardSalePanel() {
                   </select>
                 </label>
               )}
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={busy}
+                onClick={() => toggleGoldenLoofah(m.id, !m.goldenLoofah)}
+                title="Golden Loofah is normally earned via $25+ cup-of-Joe donation"
+              >
+                {m.goldenLoofah ? "Remove Loofah" : "Grant Loofah"}
+              </button>
               {m.status !== "approved" && (
                 <button
                   type="button"

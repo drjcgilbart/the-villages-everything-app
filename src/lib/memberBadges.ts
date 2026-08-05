@@ -11,16 +11,19 @@ import type { BadgeDef } from "./memberBadgeTypes";
 
 export type { BadgeDef } from "./memberBadgeTypes";
 
-/** Always shown for any Hub member account we can identify. */
+/**
+ * Golden Loofah — only earned via highest “Buy me a cup of Joe” donation
+ * ($25+ / Golden Loofah tier). Sparkly shower mesh pouf, not a freebie.
+ */
 export const GOLDEN_LOOFAH: BadgeDef = {
   id: "golden_loofah",
   label: "Golden Loofah",
   title:
-    "Golden Loofah — official Hub member. Scrubbing the day clean, one cart path at a time.",
+    "Golden Loofah — highly coveted. Earned by donating at the top “Buy me a cup of Joe” tier. Scrubbing the day clean, one sparkly mesh pouf at a time.",
   image: "/graphics/badges/golden-loofah.jpg",
 };
 
-/** Unique paid-tier badges (Porch Waver keeps only the Golden Loofah). */
+/** Unique paid-membership-tier badges (separate from Golden Loofah). */
 export const TIER_BADGES: Record<HubPlanId, BadgeDef | null> = {
   porch_waver: null,
   cart_path_regular: {
@@ -48,13 +51,19 @@ export function badgesForMemberRecord(
   member: Pick<Member, "id" | "status">,
   plan?: string | null
 ): BadgeDef[] {
-  // Suspended/rejected still may show loofah lightly? Keep for pending+approved only.
   if (member.status === "rejected" || member.status === "suspended") {
     return [];
   }
-  const spacePlan = plan ?? getMemberSpace(member.id).plan;
+  const space = getMemberSpace(member.id);
+  const spacePlan = plan ?? space.plan;
   const planId = effectivePlan(spacePlan);
-  const badges: BadgeDef[] = [GOLDEN_LOOFAH];
+  const badges: BadgeDef[] = [];
+
+  // Golden Loofah only if earned via top donation tier
+  if (space.goldenLoofah) {
+    badges.push(GOLDEN_LOOFAH);
+  }
+
   if (isPaidPlan(planId)) {
     const tierBadge = TIER_BADGES[normalizePlan(planId)];
     if (tierBadge) badges.push(tierBadge);
@@ -70,15 +79,16 @@ export function findMemberByDisplayName(name: string): Member | null {
   if (q.length < 2) return null;
   const members = loadYardSale().members;
   return (
-    members.find((m) => m.name.trim().toLowerCase().replace(/\s+/g, " ") === q) ||
-    null
+    members.find(
+      (m) => m.name.trim().toLowerCase().replace(/\s+/g, " ") === q
+    ) || null
   );
 }
 
 /**
  * Resolve badges for a displayed author name and/or known member id.
- * Golden Loofah always appears for identifiable Hub members.
- * Paid tiers add their unique badge.
+ * Golden Loofah only if they earned it via top cup-of-Joe donation.
+ * Paid membership tiers add their unique badge.
  */
 export function resolveAuthorBadges(opts: {
   memberId?: string | null;

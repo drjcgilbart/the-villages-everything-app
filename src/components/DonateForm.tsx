@@ -1,10 +1,14 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
+  awardsGoldenLoofah,
   DONATION_MAX_USD,
   DONATION_MIN_USD,
   DONATION_PRESETS,
+  GOLDEN_LOOFAH_MIN_USD,
   parseDonationAmount,
 } from "@/lib/donations";
 
@@ -25,6 +29,9 @@ export function DonateForm({
     const preset = DONATION_PRESETS.find((p) => p.id === selected);
     return preset ? preset.amountUsd : null;
   }, [selected, custom]);
+
+  const loofahEligible =
+    amountUsd != null && awardsGoldenLoofah(amountUsd);
 
   async function checkout() {
     setError(null);
@@ -52,8 +59,18 @@ export function DonateForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amountUsd }),
       });
-      const data = (await res.json()) as { url?: string; error?: string };
+      const data = (await res.json()) as {
+        url?: string;
+        error?: string;
+        code?: string;
+      };
       if (!res.ok || !data.url) {
+        if (data.code === "MEMBER_REQUIRED_FOR_LOOFAH") {
+          throw new Error(
+            data.error ||
+              `Sign in first to earn the Golden Loofah ($${GOLDEN_LOOFAH_MIN_USD}+).`
+          );
+        }
         throw new Error(data.error || "Could not start checkout");
       }
       window.location.href = data.url;
@@ -66,19 +83,32 @@ export function DonateForm({
   return (
     <div className="donate-form">
       <div className="donate-presets" role="list">
-        {DONATION_PRESETS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="listitem"
-            className={`donate-preset ${selected === p.id ? "active" : ""}`}
-            onClick={() => setSelected(p.id)}
-          >
-            <strong>${p.amountUsd}</strong>
-            <span>{p.label}</span>
-            <em>{p.blurb}</em>
-          </button>
-        ))}
+        {DONATION_PRESETS.map((p) => {
+          const isLoofah = "awardsGoldenLoofah" in p && p.awardsGoldenLoofah;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              role="listitem"
+              className={`donate-preset ${selected === p.id ? "active" : ""} ${isLoofah ? "donate-preset-loofah" : ""}`}
+              onClick={() => setSelected(p.id)}
+            >
+              {isLoofah && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src="/graphics/badges/golden-loofah.jpg"
+                  alt=""
+                  className="donate-preset-badge"
+                  width={40}
+                  height={40}
+                />
+              )}
+              <strong>${p.amountUsd}</strong>
+              <span>{p.label}</span>
+              <em>{p.blurb}</em>
+            </button>
+          );
+        })}
         <button
           type="button"
           role="listitem"
@@ -87,7 +117,9 @@ export function DonateForm({
         >
           <strong>Custom</strong>
           <span>Your amount</span>
-          <em>You choose</em>
+          <em>
+            ${GOLDEN_LOOFAH_MIN_USD}+ earns Golden Loofah
+          </em>
         </button>
       </div>
 
@@ -110,6 +142,29 @@ export function DonateForm({
         </div>
       )}
 
+      {loofahEligible && (
+        <div className="donate-loofah-callout about-panel">
+          <Image
+            src="/graphics/badges/golden-loofah.jpg"
+            alt="Golden Loofah — sparkly shower mesh pouf badge"
+            width={72}
+            height={72}
+            className="donate-loofah-img"
+          />
+          <div>
+            <strong>Golden Loofah unlocked at this amount</strong>
+            <p style={{ margin: "0.25rem 0 0", color: "var(--muted)" }}>
+              Highest “Buy me a cup of Joe” tier. You must be{" "}
+              <Link href="/yard-sale/login" className="text-link">
+                signed in
+              </Link>{" "}
+              so the sparkly shower loofah badge attaches to your member name
+              site-wide.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && <div className="msg msg-err">{error}</div>}
 
       <button
@@ -121,13 +176,16 @@ export function DonateForm({
         {busy
           ? "Opening checkout…"
           : amountUsd != null
-            ? `Donate $${amountUsd.toFixed(2)}`
+            ? loofahEligible
+              ? `Donate $${amountUsd.toFixed(2)} · claim Golden Loofah`
+              : `Donate $${amountUsd.toFixed(2)}`
             : "Donate"}
       </button>
 
       <p className="donate-secure-note">
         Secure checkout powered by Stripe. Tips go toward hosting, tools, coffee,
-        and keeping this reboot online.
+        and keeping this reboot online. The Golden Loofah badge is only awarded
+        for tips of ${GOLDEN_LOOFAH_MIN_USD}+ while signed in as a Hub member.
       </p>
     </div>
   );
