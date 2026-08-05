@@ -3,10 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Photo, Post, PostType, SiteContent, Video, VideoSource } from "@/lib/types";
 import { AdminDiningPanel } from "@/components/AdminDiningPanel";
+import { AdminMembersPanel } from "@/components/AdminMembersPanel";
 import { AdminRealEstatePanel } from "@/components/AdminRealEstatePanel";
 import { AdminYardSalePanel } from "@/components/AdminYardSalePanel";
 
-type Tab = "posts" | "videos" | "photos" | "yard" | "dining" | "realestate";
+type Tab =
+  | "members"
+  | "posts"
+  | "videos"
+  | "photos"
+  | "yard"
+  | "dining"
+  | "realestate";
 
 type PostForm = {
   id: string;
@@ -99,7 +107,7 @@ function photoImagesFromEntry(p: Photo): PhotoFormImage[] {
 export function AdminStudio() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
-  const [tab, setTab] = useState<Tab>("posts");
+  const [tab, setTab] = useState<Tab>("members");
   const [content, setContent] = useState<SiteContent | null>(null);
   const [postForm, setPostForm] = useState<PostForm>(emptyPost);
   const [videoForm, setVideoForm] = useState<VideoForm>(emptyVideo);
@@ -459,6 +467,13 @@ export function AdminStudio() {
         {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
 
         <div className="admin-tabs">
+          <button
+            type="button"
+            className={tab === "members" ? "active" : ""}
+            onClick={() => setTab("members")}
+          >
+            Members
+          </button>
           <button type="button" className={tab === "posts" ? "active" : ""} onClick={() => setTab("posts")}>
             Blog &amp; Video episodes
           </button>
@@ -479,6 +494,7 @@ export function AdminStudio() {
           </button>
         </div>
 
+        {tab === "members" && <AdminMembersPanel />}
         {tab === "yard" && <AdminYardSalePanel />}
         {tab === "dining" && <AdminDiningPanel />}
         {tab === "realestate" && <AdminRealEstatePanel />}

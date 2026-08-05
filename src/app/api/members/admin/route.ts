@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { badgesForMemberRecord } from "@/lib/memberBadges";
 import {
   getMemberSpace,
   grantGoldenLoofah,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/memberSpace";
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
 import {
+  getMemberById,
   listMembers,
   setMemberPassword,
   setMemberStatus,
@@ -19,6 +21,7 @@ export const runtime = "nodejs";
 
 function membersWithPlans() {
   return listMembers().map((m) => {
+    const full = getMemberById(m.id);
     const space = getMemberSpace(m.id);
     const pub = publicSpacePayload(space);
     return {
@@ -26,6 +29,7 @@ function membersWithPlans() {
       plan: pub.plan,
       planLabel: pub.planLabel,
       goldenLoofah: pub.goldenLoofah,
+      badges: full ? badgesForMemberRecord(full, space.plan) : [],
     };
   });
 }

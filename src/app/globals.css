@@ -1584,6 +1584,15 @@ a.my-space-link-card:hover {
   max-width: 11rem;
 }
 
+.admin-item-pending {
+  border-color: rgba(232, 184, 74, 0.65);
+  background: linear-gradient(
+    145deg,
+    rgba(232, 184, 74, 0.12),
+    rgba(255, 253, 249, 0.98)
+  );
+}
+
 .donate-preset-loofah {
   border-color: rgba(232, 184, 74, 0.55);
   background: linear-gradient(
