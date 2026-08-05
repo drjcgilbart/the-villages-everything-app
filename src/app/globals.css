@@ -1584,6 +1584,54 @@ a.my-space-link-card:hover {
   max-width: 11rem;
 }
 
+/* Member badges (Golden Loofah + tier) next to display names */
+.member-name {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  vertical-align: middle;
+}
+
+.member-name-text {
+  display: inline;
+}
+
+.member-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  vertical-align: middle;
+}
+
+.member-badge {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 1px 4px rgba(28, 36, 48, 0.18);
+  border: 1px solid rgba(28, 36, 48, 0.08);
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.forum-post-head .member-name,
+.forum-op-meta .member-name,
+.forum-thread-meta .member-name {
+  font-weight: inherit;
+}
+
+h2.member-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+h2.member-name .member-badge {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
 @media (max-width: 720px) {
   .club-toolbar {
     grid-template-columns: 1fr;

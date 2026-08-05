@@ -493,6 +493,7 @@ export function addReview(input: {
   body: string;
   wouldReturn?: boolean;
   dish?: string;
+  authorMemberId?: string | null;
 }) {
   const data = loadDining();
   if (!data.restaurants.some((r) => r.id === input.restaurantId)) {
@@ -511,6 +512,7 @@ export function addReview(input: {
     id: uid("rev"),
     restaurantId: input.restaurantId,
     authorName,
+    authorMemberId: input.authorMemberId || null,
     rating,
     title,
     body,

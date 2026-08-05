@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { MemberName } from "@/components/MemberName";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { StarRating } from "@/components/StarRating";
 import {
@@ -260,7 +261,10 @@ export default function DiningPage() {
                   )}
                 </h3>
                 <p className="recent-review-meta">
-                  {review.authorName}
+                  <MemberName
+                    name={review.authorName}
+                    memberId={review.authorMemberId}
+                  />
                   {restaurant ? ` on ${restaurant.name}` : ""}
                   {review.dish ? ` · ordered ${review.dish}` : ""}
                 </p>

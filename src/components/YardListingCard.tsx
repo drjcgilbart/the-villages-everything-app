@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { MemberBadgesRow } from "@/components/MemberBadgesRow";
+import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import type { YardListing } from "@/lib/yardSaleTypes";
 import { CONDITION_LABELS, MEETUP_LABELS } from "@/lib/yardSaleTypes";
 import { formatDate } from "@/lib/format";
@@ -14,7 +16,12 @@ export function YardListingCard({
   listing,
 }: {
   listing: YardListing & {
-    seller?: { name?: string; village?: string } | null;
+    seller?: {
+      id?: string;
+      name?: string;
+      village?: string;
+      badges?: BadgeDef[];
+    } | null;
   };
 }) {
   const cover = listing.images?.[0];
@@ -50,7 +57,11 @@ export function YardListingCard({
         </div>
         {listing.seller?.name && (
           <p className="yard-seller">
-            Seller: {listing.seller.name}
+            Seller:{" "}
+            <span className="member-name">
+              <span className="member-name-text">{listing.seller.name}</span>
+              <MemberBadgesRow badges={listing.seller.badges || []} />
+            </span>
             {listing.seller.village ? ` · ${listing.seller.village}` : ""}
           </p>
         )}

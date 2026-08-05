@@ -13,6 +13,8 @@ export type ForumThread = {
   categoryId: string;
   title: string;
   authorName: string;
+  /** Hub member id when posted while signed in — powers badges */
+  authorMemberId?: string | null;
   /** Opening post body (first message) */
   body: string;
   createdAt: string;
@@ -26,6 +28,7 @@ export type ForumReply = {
   id: string;
   threadId: string;
   authorName: string;
+  authorMemberId?: string | null;
   body: string;
   createdAt: string;
   hidden?: boolean;

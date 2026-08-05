@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import { formatPrice } from "@/components/YardListingCard";
 import { ListingGallery } from "@/components/ListingGallery";
+import { withSellerBadges } from "@/lib/memberBadges";
 import {
   getListingById,
   listingWithSeller,
@@ -32,7 +34,7 @@ export default async function YardListingDetailPage({
   const { id } = await params;
   const raw = getListingById(id);
   if (!raw || raw.status !== "approved") notFound();
-  const listing = listingWithSeller(raw);
+  const listing = withSellerBadges(listingWithSeller(raw));
 
   return (
     <article>
@@ -94,8 +96,11 @@ export default async function YardListingDetailPage({
               <h2 style={{ marginTop: 0 }}>Connect with seller</h2>
               {listing.seller ? (
                 <>
-                  <p>
-                    <strong>{listing.seller.name}</strong>
+                  <p className="member-name">
+                    <strong className="member-name-text">
+                      {listing.seller.name || "Seller"}
+                    </strong>
+                    <MemberBadgesRow badges={listing.seller.badges || []} />
                     {listing.seller.village ? (
                       <span className="panel-hint"> · {listing.seller.village}</span>
                     ) : null}

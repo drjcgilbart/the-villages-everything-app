@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { createReply, getRepliesForThread, setReplyHidden } from "@/lib/forum";
+import { getSessionMember } from "@/lib/memberAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,12 @@ export async function POST(req: Request) {
     if (body.website || body.company) {
       return NextResponse.json({ ok: true });
     }
+    const session = await getSessionMember();
     const reply = createReply({
       threadId: String(body.threadId || ""),
-      authorName: String(body.authorName || ""),
+      authorName: String(body.authorName || session?.name || ""),
       body: String(body.body || ""),
+      authorMemberId: session?.id || null,
     });
     return NextResponse.json({ reply });
   } catch (err) {

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { MemberName } from "@/components/MemberName";
 import {
   categoryStats,
   forumSummary,
@@ -127,8 +128,12 @@ export default function ForumsPage() {
                       </span>
                       <h3>{thread.title}</h3>
                       <p className="forum-thread-meta">
-                        Started by {thread.authorName} · updated{" "}
-                        {formatDate(thread.updatedAt)}
+                        Started by{" "}
+                        <MemberName
+                          name={thread.authorName}
+                          memberId={thread.authorMemberId}
+                        />{" "}
+                        · updated {formatDate(thread.updatedAt)}
                       </p>
                     </div>
                     <span className="text-link">Chat →</span>

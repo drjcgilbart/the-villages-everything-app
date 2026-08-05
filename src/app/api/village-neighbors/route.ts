@@ -5,6 +5,7 @@ import {
   getNeighborsForVillage,
   setNeighborHidden,
 } from "@/lib/villageNeighbors";
+import { getSessionMember } from "@/lib/memberAuth";
 import { getVillageBySlug } from "@/lib/villages";
 
 export const dynamic = "force-dynamic";
@@ -31,17 +32,19 @@ export async function POST(req: Request) {
     if (!getVillageBySlug(villageSlug)) {
       return NextResponse.json({ error: "Unknown village" }, { status: 400 });
     }
+    const session = await getSessionMember();
     const interests = String(body.interests || "")
       .split(",")
       .map((t: string) => t.trim())
       .filter(Boolean);
     const neighbor = addVillageNeighbor({
       villageSlug,
-      displayName: body.displayName,
+      displayName: body.displayName || session?.name,
       areaNote: body.areaNote,
       bio: body.bio,
       interests,
       tenure: body.tenure,
+      memberId: session?.id || null,
     });
     return NextResponse.json({ neighbor });
   } catch (err) {

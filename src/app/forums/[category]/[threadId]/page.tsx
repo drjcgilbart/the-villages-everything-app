@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ReplyForm } from "@/components/ForumForms";
+import { MemberName } from "@/components/MemberName";
 import {
   getCategoryBySlug,
   getRepliesForThread,
@@ -59,7 +60,12 @@ export default async function ForumThreadPage({
           </div>
           <h1>{thread.title}</h1>
           <p className="forum-op-meta">
-            Started by <strong>{thread.authorName}</strong>
+            Started by{" "}
+            <MemberName
+              name={thread.authorName}
+              memberId={thread.authorMemberId}
+              as="strong"
+            />
             {thread.locked ? " · Locked" : ""}
           </p>
         </div>
@@ -70,7 +76,11 @@ export default async function ForumThreadPage({
           <div className="forum-chat">
             <div className="forum-post about-panel forum-post-op">
               <div className="forum-post-head">
-                <strong>{thread.authorName}</strong>
+                <MemberName
+                  name={thread.authorName}
+                  memberId={thread.authorMemberId}
+                  as="strong"
+                />
                 <time dateTime={thread.createdAt}>
                   {formatDate(thread.createdAt)}
                 </time>
@@ -85,7 +95,11 @@ export default async function ForumThreadPage({
             {replies.map((reply) => (
               <div key={reply.id} className="forum-post about-panel">
                 <div className="forum-post-head">
-                  <strong>{reply.authorName}</strong>
+                  <MemberName
+                    name={reply.authorName}
+                    memberId={reply.authorMemberId}
+                    as="strong"
+                  />
                   <time dateTime={reply.createdAt}>
                     {formatDate(reply.createdAt)}
                   </time>

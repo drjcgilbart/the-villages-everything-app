@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { YardListingCard } from "@/components/YardListingCard";
+import { withSellerBadges } from "@/lib/memberBadges";
 import { getApprovedListings, listingWithSeller } from "@/lib/yardSale";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Community Yard Sale" };
 
 export default function YardSalePage() {
-  const listings = getApprovedListings().map(listingWithSeller);
+  const listings = getApprovedListings()
+    .map(listingWithSeller)
+    .map(withSellerBadges);
 
   return (
     <>

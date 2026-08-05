@@ -5,6 +5,7 @@ import {
   getVisibleThreads,
   setThreadHidden,
 } from "@/lib/forum";
+import { getSessionMember } from "@/lib/memberAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,13 @@ export async function POST(req: Request) {
     if (body.website || body.company) {
       return NextResponse.json({ ok: true });
     }
+    const session = await getSessionMember();
     const thread = createThread({
       categoryId: String(body.categoryId || ""),
       title: String(body.title || ""),
-      authorName: String(body.authorName || ""),
+      authorName: String(body.authorName || session?.name || ""),
       body: String(body.body || ""),
+      authorMemberId: session?.id || null,
     });
     return NextResponse.json({ thread });
   } catch (err) {

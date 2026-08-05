@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { NewThreadForm } from "@/components/ForumForms";
+import { MemberName } from "@/components/MemberName";
 import {
   countReplies,
   getCategoryBySlug,
@@ -89,7 +90,11 @@ export default async function ForumCategoryPage({
                       )}
                       <h3>{thread.title}</h3>
                       <p className="forum-thread-meta">
-                        {thread.authorName} · {replies} repl
+                        <MemberName
+                          name={thread.authorName}
+                          memberId={thread.authorMemberId}
+                        />{" "}
+                        · {replies} repl
                         {replies === 1 ? "y" : "ies"} · updated{" "}
                         {formatDate(thread.updatedAt)}
                       </p>

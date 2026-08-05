@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { readJsonFile, tryWriteJsonFile, writeJsonFile } from "./dataFs";
+import { resolveAuthorBadges } from "./memberBadges";
 import type { VillageNeighbor, VillageNeighborsData } from "./villageNeighborTypes";
 
 const NEIGHBORS_FILE = "village-neighbors.json";
@@ -80,7 +81,14 @@ export function getNeighborsForVillage(villageSlug: string): VillageNeighbor[] {
   return loadVillageNeighbors()
     .neighbors.filter((n) => n.villageSlug === villageSlug && !n.hidden)
     .slice()
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((n) => ({
+      ...n,
+      badges: resolveAuthorBadges({
+        memberId: n.memberId,
+        authorName: n.displayName,
+      }),
+    }));
 }
 
 export function addVillageNeighbor(input: {
@@ -90,6 +98,7 @@ export function addVillageNeighbor(input: {
   bio: string;
   interests?: string[];
   tenure?: string;
+  memberId?: string | null;
 }) {
   const data = loadVillageNeighbors();
   const displayName = String(input.displayName || "")
@@ -110,6 +119,7 @@ export function addVillageNeighbor(input: {
     id: uid("nbr"),
     villageSlug,
     displayName,
+    memberId: input.memberId || null,
     areaNote: input.areaNote
       ? String(input.areaNote).trim().slice(0, 80)
       : undefined,

@@ -11,7 +11,9 @@ import {
   MySpacePetSchedule,
   MySpaceRoyaltyLounge,
 } from "@/components/MySpaceModules";
+import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import type { PopularClub } from "@/lib/clubs";
+import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import type { PublicMember } from "@/lib/yardSaleTypes";
 import {
   FEATURE_META,
@@ -23,6 +25,7 @@ import {
 
 type SpacePayload = {
   member: PublicMember;
+  badges?: BadgeDef[];
   space: {
     plan: HubPlanId;
     planLabel: string;
@@ -200,11 +203,17 @@ export function MySpaceDashboard() {
           <span className="kicker">
             {f.planBadge ? "👑 Square Royalty" : "Members only"}
           </span>
-          <h2 style={{ margin: "0.35rem 0" }}>
-            {space.spaceTitle || `${member.name.split(" ")[0]}’s Space`}
+          <h2 style={{ margin: "0.35rem 0" }} className="member-name">
+            <span className="member-name-text">
+              {space.spaceTitle || `${member.name.split(" ")[0]}’s Space`}
+            </span>
+            <MemberBadgesRow badges={data.badges || []} />
           </h2>
           <p style={{ margin: 0, color: "var(--muted)" }}>
-            {member.email}
+            <span className="member-name">
+              <span className="member-name-text">{member.name}</span>
+              <MemberBadgesRow badges={data.badges || []} />
+            </span>
             {member.village ? ` · ${member.village}` : ""} · Plan:{" "}
             <strong>{planLabel}</strong>
             {space.planTagline ? (

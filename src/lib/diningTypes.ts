@@ -41,6 +41,8 @@ export type Review = {
   id: string;
   restaurantId: string;
   authorName: string;
+  /** Hub member id when posted while signed in */
+  authorMemberId?: string | null;
   /** 1–5 whole stars */
   rating: number;
   title: string;

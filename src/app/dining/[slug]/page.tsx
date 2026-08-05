@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MemberName } from "@/components/MemberName";
 import { ReviewForm } from "@/components/ReviewForm";
 import { StarRating } from "@/components/StarRating";
 import {
@@ -195,7 +196,10 @@ export default async function RestaurantPage({
                       </div>
                       <h3>{review.title}</h3>
                       <p className="recent-review-meta">
-                        {review.authorName}
+                        <MemberName
+                          name={review.authorName}
+                          memberId={review.authorMemberId}
+                        />
                         {review.dish ? ` · ${review.dish}` : ""}
                         {review.wouldReturn ? " · Would return" : " · Might skip next time"}
                       </p>

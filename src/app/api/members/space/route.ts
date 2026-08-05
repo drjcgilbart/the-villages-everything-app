@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionMember } from "@/lib/memberAuth";
+import { badgesForMemberRecord } from "@/lib/memberBadges";
 import {
   getMemberSpace,
   memberCanAccess,
@@ -24,6 +25,7 @@ export async function GET() {
   );
   return NextResponse.json({
     member: toPublicMember(member),
+    badges: badgesForMemberRecord(member, space.plan),
     space: payload,
     favoriteClubs,
     upgradeTiers: paidTiers().map((t) => ({

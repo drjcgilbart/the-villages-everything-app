@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { badgesForMemberRecord } from "@/lib/memberBadges";
 import { getSessionMember } from "@/lib/memberAuth";
+import { getMemberSpace, publicSpacePayload } from "@/lib/memberSpace";
 import { toPublicMember } from "@/lib/yardSale";
 
 export const dynamic = "force-dynamic";
@@ -10,5 +12,10 @@ export async function GET() {
   if (!member) {
     return NextResponse.json({ member: null });
   }
-  return NextResponse.json({ member: toPublicMember(member) });
+  const space = getMemberSpace(member.id);
+  return NextResponse.json({
+    member: toPublicMember(member),
+    badges: badgesForMemberRecord(member, space.plan),
+    space: publicSpacePayload(space),
+  });
 }

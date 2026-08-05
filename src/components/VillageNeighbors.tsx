@@ -84,7 +84,26 @@ export function VillageNeighborsSection({
           {initialNeighbors.map((n) => (
             <article key={n.id} className="village-neighbor-card">
               <div className="village-neighbor-card-head">
-                <strong>{n.displayName}</strong>
+                <span className="member-name">
+                  <strong className="member-name-text">{n.displayName}</strong>
+                  {n.badges && n.badges.length > 0 ? (
+                    <span className="member-badges" aria-label="Member badges">
+                      {n.badges.map((b) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={b.id}
+                          src={b.image}
+                          alt={b.label}
+                          title={b.title}
+                          width={22}
+                          height={22}
+                          className="member-badge"
+                          loading="lazy"
+                        />
+                      ))}
+                    </span>
+                  ) : null}
+                </span>
                 {n.tenure && <span className="pill pill-cuisine">{n.tenure}</span>}
               </div>
               {n.areaNote && (

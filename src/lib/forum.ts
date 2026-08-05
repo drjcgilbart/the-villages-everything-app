@@ -255,6 +255,7 @@ export function createThread(input: {
   title: string;
   authorName: string;
   body: string;
+  authorMemberId?: string | null;
 }) {
   const data = loadForum();
   if (!data.categories.some((c) => c.id === input.categoryId)) {
@@ -273,6 +274,7 @@ export function createThread(input: {
     categoryId: input.categoryId,
     title,
     authorName,
+    authorMemberId: input.authorMemberId || null,
     body,
     createdAt: now,
     updatedAt: now,
@@ -286,6 +288,7 @@ export function createReply(input: {
   threadId: string;
   authorName: string;
   body: string;
+  authorMemberId?: string | null;
 }) {
   const data = loadForum();
   const thread = data.threads.find((t) => t.id === input.threadId);
@@ -302,6 +305,7 @@ export function createReply(input: {
     id: uid("reply"),
     threadId: input.threadId,
     authorName,
+    authorMemberId: input.authorMemberId || null,
     body,
     createdAt: now,
   };

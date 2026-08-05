@@ -11,7 +11,9 @@ import {
   type PublicMember,
   type YardListing,
 } from "@/lib/yardSaleTypes";
+import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import { formatPrice } from "@/components/YardListingCard";
+import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import { formatDate } from "@/lib/format";
 
 const emptyForm = {
@@ -30,6 +32,7 @@ const emptyForm = {
 
 export function MemberDashboard() {
   const [member, setMember] = useState<PublicMember | null | undefined>(undefined);
+  const [badges, setBadges] = useState<BadgeDef[]>([]);
   const [listings, setListings] = useState<YardListing[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
@@ -45,6 +48,7 @@ export function MemberDashboard() {
     const meRes = await fetch("/api/members/me", { cache: "no-store" });
     const meData = await meRes.json();
     setMember(meData.member || null);
+    setBadges(Array.isArray(meData.badges) ? meData.badges : []);
     if (meData.member) {
       const listRes = await fetch("/api/yard-sale?mine=1", { cache: "no-store" });
       const listData = await listRes.json();
@@ -197,10 +201,14 @@ export function MemberDashboard() {
   if (member.status === "pending") {
     return (
       <div className="admin-card">
-        <h2 style={{ marginTop: 0 }}>Membership pending</h2>
-        <p>
-          Hi {member.name} — your request is waiting for admin approval. You&apos;ll
-          be able to post listings once approved.
+        <h2 style={{ marginTop: 0 }} className="member-name">
+          <span className="member-name-text">Membership pending</span>
+        </h2>
+        <p className="member-name">
+          Hi{" "}
+          <span className="member-name-text">{member.name}</span>
+          <MemberBadgesRow badges={badges} /> — your request is waiting for admin
+          approval. You&apos;ll be able to post listings once approved.
         </p>
         <button type="button" className="btn btn-ghost" onClick={logout}>
           Sign out
@@ -226,7 +234,10 @@ export function MemberDashboard() {
       <div className="admin-card">
         <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
           <div>
-            <h2 style={{ margin: 0 }}>Hello, {member.name}</h2>
+            <h2 style={{ margin: 0 }} className="member-name">
+              <span className="member-name-text">Hello, {member.name}</span>
+              <MemberBadgesRow badges={badges} />
+            </h2>
             <p className="panel-hint" style={{ marginBottom: 0 }}>
               {member.email}
               {member.village ? ` · ${member.village}` : ""}

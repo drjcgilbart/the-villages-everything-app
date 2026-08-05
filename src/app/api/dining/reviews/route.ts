@@ -7,6 +7,7 @@ import {
   loadDining,
   setReviewHidden,
 } from "@/lib/dining";
+import { getSessionMember } from "@/lib/memberAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -28,14 +29,16 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const session = await getSessionMember();
     const review = addReview({
       restaurantId: String(body.restaurantId || ""),
-      authorName: String(body.authorName || ""),
+      authorName: String(body.authorName || session?.name || ""),
       rating: Number(body.rating),
       title: String(body.title || ""),
       body: String(body.body || ""),
       wouldReturn: body.wouldReturn !== false,
       dish: body.dish ? String(body.dish) : undefined,
+      authorMemberId: session?.id || null,
     });
     return NextResponse.json({ review });
   } catch (err) {
