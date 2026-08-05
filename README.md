@@ -34,7 +34,8 @@ Personal blog, videos, and photos still live under **My Story** / media links; t
 | **About** | Mission + disclaimer (not affiliated with The Villages® operators) |
 | **Photo Journal** | Picture gallery with short captions (upload via Studio) |
 | **Community Yard Sale** | Moderated marketplace for Villagers — members request approval, post items (up to 5 photos + 1 short video), admin approves listings before they go live |
-| **Studio** (`/admin`) | Password-protected creator dashboard (includes Yard Sale moderation) |
+| **Admin Portal** (`/admin`) | Site-owner tools: members, yard sale, dining, real estate |
+| **Creator Studio** (`/studio`) | Password-protected content dashboard (blog, photos, videos) |
 | **Theme music** | Optional multi-mood audio (bottom-right 🎵) with track switcher — **real royalty-free instrumental MP3s** (Sunny Morning, Evening Jazz Cart Ride, etc.). See `public/music/CREDITS.md` |
 
 ---
@@ -45,7 +46,7 @@ Personal blog, videos, and photos still live under **My Story** / media links; t
 
 1. Open `start.bat`
 2. Browser: [http://localhost:3000](http://localhost:3000)
-3. Studio: [http://localhost:3000/admin](http://localhost:3000/admin)
+3. Admin Portal: [http://localhost:3000/admin](http://localhost:3000/admin) · Studio: [http://localhost:3000/studio](http://localhost:3000/studio)
 
 ### Option B — terminal
 
@@ -113,7 +114,7 @@ Optional: set `NEXT_PUBLIC_DONATION_PAYMENT_LINK` to a [Payment Link](https://da
 
 ## Posting content (Studio)
 
-1. Go to `/admin` and sign in  
+1. Go to `/studio` and sign in  
 2. **Blog & Video episodes** — title, body, tags, type (`blog` or written video episode)  
 3. **Videos** (public `/videos` feed)  
    - **YouTube link** — paste a full URL or video ID  
