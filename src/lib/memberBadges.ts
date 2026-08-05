@@ -78,18 +78,27 @@ export function badgesForMemberRecord(
   return badges;
 }
 
-export function findMemberByDisplayName(name: string): Member | null {
-  const q = String(name || "")
+function normalizePersonName(name: string) {
+  return String(name || "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
+}
+
+export function findMemberByDisplayName(name: string): Member | null {
+  const q = normalizePersonName(name);
   if (q.length < 2) return null;
   const members = loadYardSale().members;
-  return (
-    members.find(
-      (m) => m.name.trim().toLowerCase().replace(/\s+/g, " ") === q
-    ) || null
-  );
+  // Exact full-name match first
+  const exact = members.find((m) => normalizePersonName(m.name) === q);
+  if (exact) return exact;
+  // “Jonathan” matches “Jonathan Gilbart” when unique
+  const first = members.filter((m) => {
+    const n = normalizePersonName(m.name);
+    return n === q || n.startsWith(q + " ") || n.endsWith(" " + q);
+  });
+  if (first.length === 1) return first[0];
+  return null;
 }
 
 /**

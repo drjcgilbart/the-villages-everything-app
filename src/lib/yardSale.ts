@@ -5,6 +5,7 @@ import {
   BUNDLE_DATA_DIR,
   readJsonFile,
   writeJsonFile,
+  writeJsonFileAsync,
   writableUploadsDir,
 } from "./dataFs";
 import type {
@@ -77,6 +78,20 @@ export function saveYardSale(data: YardSaleData) {
   data.updatedAt = new Date().toISOString();
   try {
     writeJsonFile(YARD_FILE, data);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not save membership data on this host"
+    );
+  }
+  return data;
+}
+
+export async function saveYardSaleAsync(data: YardSaleData) {
+  data.updatedAt = new Date().toISOString();
+  try {
+    await writeJsonFileAsync(YARD_FILE, data);
   } catch (err) {
     throw new Error(
       err instanceof Error

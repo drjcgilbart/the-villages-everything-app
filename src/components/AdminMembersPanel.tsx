@@ -33,6 +33,7 @@ export function AdminMembersPanel() {
     null
   );
   const [busy, setBusy] = useState(false);
+  const [durableHint, setDurableHint] = useState<string | null>(null);
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -45,6 +46,9 @@ export function AdminMembersPanel() {
     if (!res.ok) throw new Error(data.error || "Could not load members");
     setMembers(data.members || []);
     setTiers(data.tiers || []);
+    setDurableHint(
+      typeof data.durableHint === "string" ? data.durableHint : null
+    );
   }, []);
 
   useEffect(() => {
@@ -205,6 +209,15 @@ export function AdminMembersPanel() {
       </div>
 
       {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
+
+      {durableHint && (
+        <div className="msg msg-err" style={{ marginBottom: "1rem" }}>
+          <strong>Storage warning:</strong> {durableHint}{" "}
+          In Vercel: Storage → create Blob → add{" "}
+          <code>BLOB_READ_WRITE_TOKEN</code> to the project env, then redeploy.
+          After that, re-apply plan/loofah for each member so it syncs site-wide.
+        </div>
+      )}
 
       {topTierPending.length > 0 && (
         <>

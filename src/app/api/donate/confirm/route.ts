@@ -6,7 +6,13 @@ import {
   parseDonationAmount,
 } from "@/lib/donations";
 import { getSessionMember } from "@/lib/memberAuth";
-import { getMemberSpace, grantDonationBadge } from "@/lib/memberSpace";
+import { ensureDurableHydrated } from "@/lib/dataFs";
+import {
+  getMemberSpace,
+  grantDonationBadge,
+  loadMemberSpaces,
+  saveMemberSpacesAsync,
+} from "@/lib/memberSpace";
 import { getStripe, stripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +25,8 @@ export async function POST(req: NextRequest) {
   if (!stripeConfigured()) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
   }
+
+  await ensureDurableHydrated();
 
   const body = (await req.json()) as { sessionId?: string };
   const sessionId = String(body.sessionId || "").trim();
@@ -90,6 +98,7 @@ export async function POST(req: NextRequest) {
   const before = getMemberSpace(memberId);
   const alreadyHad = (before.donationBadges || []).includes(badgeId);
   const space = grantDonationBadge(memberId, badgeId);
+  await saveMemberSpacesAsync(loadMemberSpaces());
   const topTier = isTopTierDonationBadge(badgeId);
 
   let message = alreadyHad

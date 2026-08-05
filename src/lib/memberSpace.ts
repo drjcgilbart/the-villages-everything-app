@@ -1,4 +1,4 @@
-import { readJsonFile, writeJsonFile } from "./dataFs";
+import { readJsonFile, writeJsonFile, writeJsonFileAsync } from "./dataFs";
 import { isTopTierDonationBadge } from "./donations";
 import {
   type AnyStoredPlan,
@@ -148,6 +148,21 @@ export function saveMemberSpaces(data: SpaceFile) {
   return data;
 }
 
+/** Prefer in API routes so Vercel Blob finishes before the response. */
+export async function saveMemberSpacesAsync(data: SpaceFile) {
+  data.updatedAt = new Date().toISOString();
+  try {
+    await writeJsonFileAsync(SPACE_FILE, data);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not save member space on this host"
+    );
+  }
+  return data;
+}
+
 export function getMemberSpace(memberId: string): MemberSpaceRecord {
   const data = loadMemberSpaces();
   const existing = data.spaces.find((s) => s.memberId === memberId);
@@ -211,7 +226,9 @@ export function updateMemberSpace(
   }
   if (patch.donationBadges) {
     rec.donationBadges = [...new Set(patch.donationBadges.map(String))];
-    rec.goldenLoofah = rec.donationBadges.includes("golden_loofah");
+    rec.goldenLoofah =
+      rec.donationBadges.includes("golden_loofah") ||
+      rec.donationBadges.includes("custom_star_loofah");
     if (rec.goldenLoofah && !rec.goldenLoofahAt) {
       rec.goldenLoofahAt = new Date().toISOString();
     }
@@ -247,6 +264,18 @@ export function updateMemberSpace(
   rec.updatedAt = new Date().toISOString();
   saveMemberSpaces(data);
   return normalizeRecord(rec);
+}
+
+/** Same as updateMemberSpace but awaits durable Blob sync. */
+export async function updateMemberSpaceAsync(
+  memberId: string,
+  patch: Parameters<typeof updateMemberSpace>[1]
+): Promise<MemberSpaceRecord> {
+  const rec = updateMemberSpace(memberId, patch);
+  // Re-save full file async so Blob has the latest (update already wrote sync/memory)
+  const data = loadMemberSpaces();
+  await saveMemberSpacesAsync(data);
+  return rec;
 }
 
 function plusOneYearIso(from = new Date()) {

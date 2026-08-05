@@ -1,18 +1,26 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import {
+  blobConfigured,
+  ensureDurableHydrated,
+} from "@/lib/dataFs";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
 import {
   approveTopTierMembership,
   getMemberSpace,
   grantGoldenLoofah,
+  loadMemberSpaces,
   publicSpacePayload,
   rejectTopTierMembership,
+  saveMemberSpacesAsync,
   updateMemberSpace,
 } from "@/lib/memberSpace";
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
 import {
   getMemberById,
   listMembers,
+  loadYardSale,
+  saveYardSaleAsync,
   setMemberPassword,
   setMemberStatus,
 } from "@/lib/yardSale";
@@ -20,6 +28,11 @@ import type { MemberStatus } from "@/lib/yardSaleTypes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+async function persistAll() {
+  await saveMemberSpacesAsync(loadMemberSpaces());
+  await saveYardSaleAsync(loadYardSale());
+}
 
 function membersWithPlans() {
   return listMembers().map((m) => {
@@ -43,6 +56,7 @@ export async function GET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  await ensureDurableHydrated();
   return NextResponse.json({
     members: membersWithPlans(),
     tiers: HUB_TIERS.map((t) => ({
@@ -51,6 +65,10 @@ export async function GET() {
       shortLabel: t.shortLabel,
       rank: t.rank,
     })),
+    durableStorage: blobConfigured(),
+    durableHint: blobConfigured()
+      ? null
+      : "BLOB_READ_WRITE_TOKEN is not set. Badge/plan changes only last on this server instance. Add a Vercel Blob store and token so updates show site-wide.",
   });
 }
 
@@ -59,59 +77,84 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    await ensureDurableHydrated();
     const body = await req.json();
 
     if (body.action === "setPassword") {
       const member = setMemberPassword(String(body.id || ""), body.password);
-      return NextResponse.json({ member, members: membersWithPlans() });
+      await persistAll();
+      return NextResponse.json({
+        member,
+        members: membersWithPlans(),
+        durableStorage: blobConfigured(),
+      });
     }
 
     if (body.action === "setPlan") {
       const id = String(body.id || "");
       const plan = normalizePlan(body.plan);
-      updateMemberSpace(id, { plan });
+      updateMemberSpace(id, {
+        plan,
+        // Manual plan set is open-ended unless clearing royalty
+        planExpiresAt: plan === "square_royalty" ? null : null,
+      });
+      await persistAll();
       return NextResponse.json({
         memberId: id,
         plan,
         planLabel: publicSpacePayload(getMemberSpace(id)).planLabel,
         members: membersWithPlans(),
+        durableStorage: blobConfigured(),
       });
     }
 
     if (body.action === "setGoldenLoofah") {
       const id = String(body.id || "");
       if (body.goldenLoofah === false) {
-        updateMemberSpace(id, { goldenLoofah: false, goldenLoofahAt: null });
+        const space = getMemberSpace(id);
+        const badges = (space.donationBadges || []).filter(
+          (b) => b !== "golden_loofah" && b !== "custom_star_loofah"
+        );
+        updateMemberSpace(id, {
+          donationBadges: badges,
+          goldenLoofah: false,
+          goldenLoofahAt: null,
+        });
       } else {
         grantGoldenLoofah(id);
       }
+      await persistAll();
       return NextResponse.json({
         memberId: id,
         goldenLoofah: !!getMemberSpace(id).goldenLoofah,
         members: membersWithPlans(),
+        durableStorage: blobConfigured(),
       });
     }
 
     if (body.action === "approveTopTier") {
       const id = String(body.id || "");
-      // Ensure account can use the site as a member
       const mem = getMemberById(id);
       if (mem && mem.status === "pending") {
         setMemberStatus(id, "approved");
       }
       approveTopTierMembership(id);
+      await persistAll();
       return NextResponse.json({
         memberId: id,
         members: membersWithPlans(),
+        durableStorage: blobConfigured(),
       });
     }
 
     if (body.action === "rejectTopTier") {
       const id = String(body.id || "");
       rejectTopTierMembership(id);
+      await persistAll();
       return NextResponse.json({
         memberId: id,
         members: membersWithPlans(),
+        durableStorage: blobConfigured(),
       });
     }
 
@@ -120,7 +163,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
     const member = setMemberStatus(body.id, status, body.notes);
-    return NextResponse.json({ member, members: membersWithPlans() });
+    await persistAll();
+    return NextResponse.json({
+      member,
+      members: membersWithPlans(),
+      durableStorage: blobConfigured(),
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Update failed" },

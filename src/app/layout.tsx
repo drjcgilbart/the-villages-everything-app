@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { DonateMascotFloat } from "@/components/DonateMascotFloat";
 import { FloatingBackButton } from "@/components/FloatingBackButton";
 import { ThemeMusicPlayer } from "@/components/ThemeMusicPlayer";
+import { ensureDurableHydrated } from "@/lib/dataFs";
 import "./globals.css";
 
 const display = Fraunces({
@@ -40,7 +41,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Pull latest membership/badge data from Vercel Blob when configured
+  // so Admin Portal grants show on every page, every serverless instance.
+  await ensureDurableHydrated();
+
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
