@@ -44,7 +44,13 @@ export default async function VillageDetailPage({
   const nearbyVillages = villagesByRegion(village.region)
     .filter((v) => v.slug !== village.slug)
     .slice(0, 12);
-  const neighborProfiles = getNeighborsForVillage(village.slug);
+  // Neighbor store can fail on read-only hosts; never block the village page.
+  let neighborProfiles: ReturnType<typeof getNeighborsForVillage> = [];
+  try {
+    neighborProfiles = getNeighborsForVillage(village.slug);
+  } catch {
+    neighborProfiles = [];
+  }
 
   return (
     <article>

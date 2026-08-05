@@ -7,7 +7,21 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const PATH = path.join(DATA_DIR, "village-neighbors.json");
 
 function ensureDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch {
+    // Vercel serverless filesystem is often read-only — ignore
+  }
+}
+
+function tryWriteJson(filePath: string, data: unknown) {
+  try {
+    ensureDirs();
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function uid(prefix = "nbr") {
@@ -53,13 +67,14 @@ function seedData(): VillageNeighborsData {
 }
 
 export function loadVillageNeighbors(): VillageNeighborsData {
-  ensureDirs();
-  if (!fs.existsSync(PATH)) {
-    const seed = seedData();
-    fs.writeFileSync(PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
   try {
+    ensureDirs();
+    if (!fs.existsSync(PATH)) {
+      const seed = seedData();
+      // Best-effort only — read-only hosts (Vercel) must still render village pages
+      tryWriteJson(PATH, seed);
+      return seed;
+    }
     const raw = JSON.parse(fs.readFileSync(PATH, "utf8")) as VillageNeighborsData;
     return {
       neighbors: Array.isArray(raw.neighbors) ? raw.neighbors : [],
@@ -71,9 +86,13 @@ export function loadVillageNeighbors(): VillageNeighborsData {
 }
 
 export function saveVillageNeighbors(data: VillageNeighborsData) {
-  ensureDirs();
   data.updatedAt = new Date().toISOString();
-  fs.writeFileSync(PATH, JSON.stringify(data, null, 2), "utf8");
+  const ok = tryWriteJson(PATH, data);
+  if (!ok) {
+    throw new Error(
+      "Could not save neighbor intro (read-only host). Neighbor posts need local disk or cloud storage later."
+    );
+  }
   return data;
 }
 
