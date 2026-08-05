@@ -73,8 +73,22 @@ The Villages isn't just a place you move to. It's a full-system reboot — body,
 };
 
 function ensureDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  } catch {
+    // Vercel serverless filesystem is often read-only — ignore
+  }
+}
+
+function tryWriteJson(filePath: string, data: unknown) {
+  try {
+    ensureDirs();
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function uid(prefix = "id") {
@@ -116,13 +130,21 @@ export function extractYouTubeId(input: string): string | null {
 }
 
 export function loadContent(): SiteContent {
-  ensureDirs();
-  if (!fs.existsSync(CONTENT_PATH)) {
-    const seed = { ...SEED, updatedAt: new Date().toISOString() };
-    fs.writeFileSync(CONTENT_PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
+  const seed = (): SiteContent => ({
+    ...SEED,
+    posts: SEED.posts.map((p) => ({ ...p })),
+    videos: [...SEED.videos],
+    photos: [...SEED.photos],
+    updatedAt: new Date().toISOString(),
+  });
+
   try {
+    ensureDirs();
+    if (!fs.existsSync(CONTENT_PATH)) {
+      const s = seed();
+      tryWriteJson(CONTENT_PATH, s);
+      return s;
+    }
     const raw = JSON.parse(fs.readFileSync(CONTENT_PATH, "utf8")) as SiteContent;
     return {
       site: { ...SITE, ...(raw.site || {}) },
@@ -132,15 +154,19 @@ export function loadContent(): SiteContent {
       updatedAt: raw.updatedAt || null,
     };
   } catch {
-    return { ...SEED, updatedAt: new Date().toISOString() };
+    return seed();
   }
 }
 
 export function saveContent(content: SiteContent) {
-  ensureDirs();
   content.updatedAt = new Date().toISOString();
   content.site = { ...SITE, ...(content.site || {}) };
-  fs.writeFileSync(CONTENT_PATH, JSON.stringify(content, null, 2), "utf8");
+  const ok = tryWriteJson(CONTENT_PATH, content);
+  if (!ok) {
+    throw new Error(
+      "Could not save content (read-only host). Studio writes need local/disk storage or cloud blob later."
+    );
+  }
   return content;
 }
 
