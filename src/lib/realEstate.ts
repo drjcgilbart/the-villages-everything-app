@@ -28,6 +28,8 @@ function uid(prefix = "id") {
  * Free live market links — always open current public results (not scraped).
  * Kept in code (not frozen in JSON) so we can refresh the catalog anytime.
  */
+const RE_ART = "/graphics/real-estate";
+
 const DEFAULT_LIVE_SEARCHES: MarketSnapshot["liveSearches"] = [
   {
     label: "The Villages Homefinder",
@@ -35,74 +37,119 @@ const DEFAULT_LIVE_SEARCHES: MarketSnapshot["liveSearches"] = [
       "Official new & pre-owned homes inside The Villages community — best first stop for Villages inventory.",
     url: "https://www.thevillages.com/homefinder/",
     source: "Official",
+    image: `${RE_ART}/alligator-keys.jpg`,
   },
   {
     label: "Homes for sale · Realtor.com",
     description: "Broad MLS-style search for The Villages, FL",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL",
     source: "Realtor.com",
+    image: `${RE_ART}/armadillo-listings.jpg`,
   },
   {
     label: "Homes for sale · Redfin",
     description: "Alternate live map & list view for The Villages",
     url: "https://www.redfin.com/city/25985/FL/The-Villages",
     source: "Redfin",
+    image: `${RE_ART}/otter-map.jpg`,
   },
   {
     label: "Homes for sale · Zillow",
     description: "Zillow market view for The Villages area",
     url: "https://www.zillow.com/the-villages-fl/",
     source: "Zillow",
+    image: `${RE_ART}/tortoise-keys.jpg`,
   },
   {
     label: "Under $350k",
     description: "Entry-level filter on Realtor.com",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/price-na-350000",
     source: "Filter",
+    image: `${RE_ART}/raccoon-budget.jpg`,
   },
   {
     label: "Under $400k",
     description: "Mid-range budget snapshot",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/price-na-400000",
     source: "Filter",
+    image: `${RE_ART}/heron-key.jpg`,
   },
   {
     label: "Under $500k",
     description: "Room to stretch — still filtered live results",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/price-na-500000",
     source: "Filter",
+    image: `${RE_ART}/manatee-home.jpg`,
   },
   {
     label: "New construction",
     description: "Newer inventory & builder-style product",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/type-single-family-home,condo/keyword-new",
     source: "Filter",
+    image: `${RE_ART}/crane-new-build.jpg`,
   },
   {
     label: "Condos & townhomes",
     description: "Lower-maintenance styles in and around The Villages",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/type-condo,townhome,co-op",
     source: "Filter",
+    image: `${RE_ART}/frog-condo.jpg`,
   },
   {
     label: "55+ style search",
     description: "Keyword filter for active-adult / 55+ oriented results",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/keyword-55",
     source: "Filter",
+    image: `${RE_ART}/pelican-lifestyle.jpg`,
   },
   {
     label: "Redfin · under $400k",
     description: "Budget filter on Redfin’s Villages map",
     url: "https://www.redfin.com/city/25985/FL/The-Villages/filter/max-price=400k",
     source: "Redfin",
+    image: `${RE_ART}/rabbit-budget.jpg`,
   },
   {
     label: "Redfin · housing market",
     description: "Trends & stats for The Villages (not individual listings)",
     url: "https://www.redfin.com/city/25985/FL/The-Villages/housing-market",
     source: "Stats",
+    image: `${RE_ART}/deer-market.jpg`,
   },
 ];
+
+/** Fallback whimsical art when a featured listing has no photo */
+const LISTING_FALLBACK_ART = [
+  `${RE_ART}/squirrel-villa.jpg`,
+  `${RE_ART}/butterfly-courtyard.jpg`,
+  `${RE_ART}/manatee-home.jpg`,
+  `${RE_ART}/tortoise-keys.jpg`,
+  `${RE_ART}/alligator-keys.jpg`,
+  `${RE_ART}/crane-new-build.jpg`,
+] as const;
+
+/** Partner agent card art by tier (cycled within tier) */
+const AGENT_ART = {
+  preferred: `${RE_ART}/scrub-jay-agent.jpg`,
+  featured: `${RE_ART}/heron-key.jpg`,
+  listed: `${RE_ART}/otter-map.jpg`,
+} as const;
+
+export function listingCardImage(listing: {
+  id: string;
+  imageUrl?: string;
+}): string {
+  if (listing.imageUrl) return listing.imageUrl;
+  let hash = 0;
+  for (let i = 0; i < listing.id.length; i++) {
+    hash = (hash + listing.id.charCodeAt(i) * (i + 1)) % 997;
+  }
+  return LISTING_FALLBACK_ART[hash % LISTING_FALLBACK_ART.length];
+}
+
+export function agentCardImage(tier: AgentTier): string {
+  return AGENT_ART[tier] || AGENT_ART.listed;
+}
 
 function seedData(): RealEstateData {
   const now = new Date().toISOString();

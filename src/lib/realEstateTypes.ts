@@ -81,6 +81,8 @@ export type MarketSnapshot = {
     url: string;
     /** Short source badge, e.g. Homefinder / Realtor / Redfin */
     source?: string;
+    /** Whimsical card art under /public/graphics/real-estate */
+    image?: string;
   }[];
 };
 

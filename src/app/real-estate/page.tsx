@@ -3,10 +3,12 @@ import Link from "next/link";
 import { MarketRefreshButton } from "@/components/MarketRefreshButton";
 import { RealEstateLeadForm } from "@/components/RealEstateLeadForm";
 import {
+  agentCardImage,
   formatPrice,
   getAgentById,
   getPublicAgents,
   getPublicListings,
+  listingCardImage,
   loadRealEstate,
   marketSummary,
 } from "@/lib/realEstate";
@@ -119,10 +121,25 @@ export default function RealEstatePage() {
                 rel="noopener noreferrer"
                 className="re-live-card about-panel"
               >
-                {s.source && <span className="pill re-live-source">{s.source}</span>}
-                <strong>{s.label}</strong>
-                <span>{s.description}</span>
-                <em>Open live results →</em>
+                {s.image && (
+                  <div className="re-live-card-art">
+                    <Image
+                      src={s.image}
+                      alt=""
+                      width={640}
+                      height={640}
+                      className="re-live-card-img"
+                    />
+                  </div>
+                )}
+                <div className="re-live-card-body">
+                  {s.source && (
+                    <span className="pill re-live-source">{s.source}</span>
+                  )}
+                  <strong>{s.label}</strong>
+                  <span>{s.description}</span>
+                  <em>Open live results →</em>
+                </div>
               </a>
             ))}
           </div>
@@ -154,6 +171,15 @@ export default function RealEstatePage() {
                   : null;
                 return (
                   <article key={listing.id} className="card re-listing-card">
+                    <div className="re-listing-card-art">
+                      <Image
+                        src={listingCardImage(listing)}
+                        alt=""
+                        width={640}
+                        height={480}
+                        className="re-listing-card-img"
+                      />
+                    </div>
                     <div className="re-listing-body">
                       <div className="card-meta">
                         <span className={`pill pill-re-${listing.status}`}>
@@ -230,6 +256,15 @@ export default function RealEstatePage() {
                         key={agent.id}
                         className={`card re-agent-card tier-${agent.tier}`}
                       >
+                        <div className="re-agent-card-art">
+                          <Image
+                            src={agent.photoUrl || agentCardImage(agent.tier)}
+                            alt=""
+                            width={640}
+                            height={480}
+                            className="re-agent-card-img"
+                          />
+                        </div>
                         <div className="re-agent-body">
                           <div className="card-meta">
                             <span className={`pill pill-tier-${agent.tier}`}>
