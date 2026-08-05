@@ -1,6 +1,5 @@
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
+import { readJsonFile, writeJsonFile } from "./dataFs";
 import type {
   ForumCategory,
   ForumData,
@@ -8,12 +7,7 @@ import type {
   ForumThread,
 } from "./forumTypes";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const FORUM_PATH = path.join(DATA_DIR, "forum.json");
-
-function ensureDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+const FORUM_FILE = "forum.json";
 
 function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
@@ -171,29 +165,19 @@ function seedData(): ForumData {
 }
 
 export function loadForum(): ForumData {
-  ensureDirs();
-  if (!fs.existsSync(FORUM_PATH)) {
-    const seed = seedData();
-    fs.writeFileSync(FORUM_PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
-  try {
-    const raw = JSON.parse(fs.readFileSync(FORUM_PATH, "utf8")) as ForumData;
-    return {
-      categories: Array.isArray(raw.categories) ? raw.categories : seedCategories(),
-      threads: Array.isArray(raw.threads) ? raw.threads : [],
-      replies: Array.isArray(raw.replies) ? raw.replies : [],
-      updatedAt: raw.updatedAt || null,
-    };
-  } catch {
-    return seedData();
-  }
+  const raw = readJsonFile<ForumData>(FORUM_FILE);
+  if (!raw) return seedData();
+  return {
+    categories: Array.isArray(raw.categories) ? raw.categories : seedCategories(),
+    threads: Array.isArray(raw.threads) ? raw.threads : [],
+    replies: Array.isArray(raw.replies) ? raw.replies : [],
+    updatedAt: raw.updatedAt || null,
+  };
 }
 
 export function saveForum(data: ForumData) {
-  ensureDirs();
   data.updatedAt = new Date().toISOString();
-  fs.writeFileSync(FORUM_PATH, JSON.stringify(data, null, 2), "utf8");
+  writeJsonFile(FORUM_FILE, data);
   return data;
 }
 

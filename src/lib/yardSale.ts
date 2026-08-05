@@ -1,6 +1,12 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import {
+  BUNDLE_DATA_DIR,
+  readJsonFile,
+  writeJsonFile,
+  writableUploadsDir,
+} from "./dataFs";
 import type {
   ItemCondition,
   ListingStatus,
@@ -12,18 +18,13 @@ import type {
   YardSaleData,
 } from "./yardSaleTypes";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const YARD_PATH = path.join(DATA_DIR, "yard-sale.json");
-const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
+const YARD_FILE = "yard-sale.json";
+/** @deprecated path kept for exports/debug — runtime writes use dataFs */
+const YARD_PATH = path.join(BUNDLE_DATA_DIR, YARD_FILE);
 
 const MAX_IMAGES = 5;
 const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-
-function ensureDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
 
 function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
@@ -63,29 +64,26 @@ function emptyData(): YardSaleData {
 }
 
 export function loadYardSale(): YardSaleData {
-  ensureDirs();
-  if (!fs.existsSync(YARD_PATH)) {
-    const seed = emptyData();
-    seed.updatedAt = new Date().toISOString();
-    fs.writeFileSync(YARD_PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
-  try {
-    const raw = JSON.parse(fs.readFileSync(YARD_PATH, "utf8")) as YardSaleData;
-    return {
-      members: Array.isArray(raw.members) ? raw.members : [],
-      listings: Array.isArray(raw.listings) ? raw.listings : [],
-      updatedAt: raw.updatedAt || null,
-    };
-  } catch {
-    return emptyData();
-  }
+  const raw = readJsonFile<YardSaleData>(YARD_FILE);
+  if (!raw) return emptyData();
+  return {
+    members: Array.isArray(raw.members) ? raw.members : [],
+    listings: Array.isArray(raw.listings) ? raw.listings : [],
+    updatedAt: raw.updatedAt || null,
+  };
 }
 
 export function saveYardSale(data: YardSaleData) {
-  ensureDirs();
   data.updatedAt = new Date().toISOString();
-  fs.writeFileSync(YARD_PATH, JSON.stringify(data, null, 2), "utf8");
+  try {
+    writeJsonFile(YARD_FILE, data);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not save membership data on this host"
+    );
+  }
   return data;
 }
 
@@ -404,10 +402,10 @@ export function listingWithSeller(listing: YardListing) {
 }
 
 export function saveYardUpload(buffer: Buffer, filename: string) {
-  ensureDirs();
+  const dir = writableUploadsDir();
   const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
   const name = `${Date.now().toString(36)}-${safe}`;
-  const full = path.join(UPLOADS_DIR, name);
+  const full = path.join(dir, name);
   fs.writeFileSync(full, buffer);
   return `/api/media/${name}`;
 }

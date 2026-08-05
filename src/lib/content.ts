@@ -1,11 +1,18 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import {
+  BUNDLE_DATA_DIR,
+  readJsonFile,
+  resolveUploadFile,
+  tryWriteJsonFile,
+  writableUploadsDir,
+} from "./dataFs";
 import type { Photo, Post, SiteContent, Video } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const CONTENT_PATH = path.join(DATA_DIR, "content.json");
-const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
+const CONTENT_FILE = "content.json";
+const CONTENT_PATH = path.join(BUNDLE_DATA_DIR, CONTENT_FILE);
+const UPLOADS_DIR = path.join(BUNDLE_DATA_DIR, "uploads");
 
 export const SITE = {
   name: "The Villages Hub",
@@ -72,23 +79,9 @@ The Villages isn't just a place you move to. It's a full-system reboot — body,
   updatedAt: null,
 };
 
-function ensureDirs() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  } catch {
-    // Vercel serverless filesystem is often read-only — ignore
-  }
-}
-
-function tryWriteJson(filePath: string, data: unknown) {
-  try {
-    ensureDirs();
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-    return true;
-  } catch {
-    return false;
-  }
+function tryWriteJson(_filePath: string, data: unknown) {
+  // Always write via dataFs (cwd on local, /tmp on Vercel)
+  return tryWriteJsonFile(CONTENT_FILE, data);
 }
 
 export function uid(prefix = "id") {
@@ -139,13 +132,12 @@ export function loadContent(): SiteContent {
   });
 
   try {
-    ensureDirs();
-    if (!fs.existsSync(CONTENT_PATH)) {
+    const raw = readJsonFile<SiteContent>(CONTENT_FILE);
+    if (!raw) {
       const s = seed();
       tryWriteJson(CONTENT_PATH, s);
       return s;
     }
-    const raw = JSON.parse(fs.readFileSync(CONTENT_PATH, "utf8")) as SiteContent;
     return {
       site: { ...SITE, ...(raw.site || {}) },
       posts: Array.isArray(raw.posts) ? raw.posts : [],
@@ -415,20 +407,16 @@ export function deletePhoto(id: string) {
 }
 
 export function saveUpload(buffer: Buffer, filename: string) {
-  ensureDirs();
+  const dir = writableUploadsDir();
   const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
   const name = `${Date.now().toString(36)}-${safe}`;
-  const full = path.join(UPLOADS_DIR, name);
+  const full = path.join(dir, name);
   fs.writeFileSync(full, buffer);
   return `/api/media/${name}`;
 }
 
 export function resolveUpload(name: string) {
-  ensureDirs();
-  const safe = path.basename(name);
-  const full = path.join(UPLOADS_DIR, safe);
-  if (!full.startsWith(UPLOADS_DIR) || !fs.existsSync(full)) return null;
-  return full;
+  return resolveUploadFile(path.basename(String(name || "")));
 }
 
 export { UPLOADS_DIR, CONTENT_PATH };

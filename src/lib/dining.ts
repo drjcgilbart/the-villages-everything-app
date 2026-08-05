@@ -1,6 +1,5 @@
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
+import { readJsonFile, writeJsonFile } from "./dataFs";
 import type {
   Cuisine,
   DiningData,
@@ -14,12 +13,7 @@ import type {
 } from "./diningTypes";
 import { CUISINES } from "./diningTypes";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DINING_PATH = path.join(DATA_DIR, "dining.json");
-
-function ensureDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+const DINING_FILE = "dining.json";
 
 function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
@@ -290,29 +284,19 @@ The blueberry pancakes weren't supposed to be famous — but try telling that to
 }
 
 export function loadDining(): DiningData {
-  ensureDirs();
-  if (!fs.existsSync(DINING_PATH)) {
-    const seed = seedData();
-    fs.writeFileSync(DINING_PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
-  try {
-    const raw = JSON.parse(fs.readFileSync(DINING_PATH, "utf8")) as DiningData;
-    return {
-      restaurants: Array.isArray(raw.restaurants) ? raw.restaurants : [],
-      reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
-      interviews: Array.isArray(raw.interviews) ? raw.interviews : [],
-      updatedAt: raw.updatedAt || null,
-    };
-  } catch {
-    return seedData();
-  }
+  const raw = readJsonFile<DiningData>(DINING_FILE);
+  if (!raw) return seedData();
+  return {
+    restaurants: Array.isArray(raw.restaurants) ? raw.restaurants : [],
+    reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
+    interviews: Array.isArray(raw.interviews) ? raw.interviews : [],
+    updatedAt: raw.updatedAt || null,
+  };
 }
 
 export function saveDining(data: DiningData) {
-  ensureDirs();
   data.updatedAt = new Date().toISOString();
-  fs.writeFileSync(DINING_PATH, JSON.stringify(data, null, 2), "utf8");
+  writeJsonFile(DINING_FILE, data);
   return data;
 }
 

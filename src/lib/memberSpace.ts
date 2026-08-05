@@ -1,8 +1,6 @@
-import fs from "fs";
-import path from "path";
+import { readJsonFile, writeJsonFile } from "./dataFs";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const SPACE_PATH = path.join(DATA_DIR, "member-space.json");
+const SPACE_FILE = "member-space.json";
 
 export type HubPlan = "free" | "subscriber";
 
@@ -23,36 +21,30 @@ type SpaceFile = {
   updatedAt: string | null;
 };
 
-function ensure() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
 function empty(): SpaceFile {
   return { spaces: [], updatedAt: null };
 }
 
 export function loadMemberSpaces(): SpaceFile {
-  ensure();
-  if (!fs.existsSync(SPACE_PATH)) {
-    const seed = empty();
-    fs.writeFileSync(SPACE_PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
-  try {
-    const raw = JSON.parse(fs.readFileSync(SPACE_PATH, "utf8")) as SpaceFile;
-    return {
-      spaces: Array.isArray(raw.spaces) ? raw.spaces : [],
-      updatedAt: raw.updatedAt || null,
-    };
-  } catch {
-    return empty();
-  }
+  const raw = readJsonFile<SpaceFile>(SPACE_FILE);
+  if (!raw) return empty();
+  return {
+    spaces: Array.isArray(raw.spaces) ? raw.spaces : [],
+    updatedAt: raw.updatedAt || null,
+  };
 }
 
 export function saveMemberSpaces(data: SpaceFile) {
-  ensure();
   data.updatedAt = new Date().toISOString();
-  fs.writeFileSync(SPACE_PATH, JSON.stringify(data, null, 2), "utf8");
+  try {
+    writeJsonFile(SPACE_FILE, data);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not save member space on this host"
+    );
+  }
   return data;
 }
 

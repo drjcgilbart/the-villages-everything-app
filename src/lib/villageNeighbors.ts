@@ -1,28 +1,8 @@
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
+import { readJsonFile, tryWriteJsonFile, writeJsonFile } from "./dataFs";
 import type { VillageNeighbor, VillageNeighborsData } from "./villageNeighborTypes";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const PATH = path.join(DATA_DIR, "village-neighbors.json");
-
-function ensureDirs() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  } catch {
-    // Vercel serverless filesystem is often read-only — ignore
-  }
-}
-
-function tryWriteJson(filePath: string, data: unknown) {
-  try {
-    ensureDirs();
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-    return true;
-  } catch {
-    return false;
-  }
-}
+const NEIGHBORS_FILE = "village-neighbors.json";
 
 function uid(prefix = "nbr") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
@@ -68,14 +48,13 @@ function seedData(): VillageNeighborsData {
 
 export function loadVillageNeighbors(): VillageNeighborsData {
   try {
-    ensureDirs();
-    if (!fs.existsSync(PATH)) {
+    const raw = readJsonFile<VillageNeighborsData>(NEIGHBORS_FILE);
+    if (!raw) {
       const seed = seedData();
-      // Best-effort only — read-only hosts (Vercel) must still render village pages
-      tryWriteJson(PATH, seed);
+      // Best-effort only — never block village pages if write fails
+      tryWriteJsonFile(NEIGHBORS_FILE, seed);
       return seed;
     }
-    const raw = JSON.parse(fs.readFileSync(PATH, "utf8")) as VillageNeighborsData;
     return {
       neighbors: Array.isArray(raw.neighbors) ? raw.neighbors : [],
       updatedAt: raw.updatedAt || null,
@@ -87,10 +66,11 @@ export function loadVillageNeighbors(): VillageNeighborsData {
 
 export function saveVillageNeighbors(data: VillageNeighborsData) {
   data.updatedAt = new Date().toISOString();
-  const ok = tryWriteJson(PATH, data);
-  if (!ok) {
+  try {
+    writeJsonFile(NEIGHBORS_FILE, data);
+  } catch {
     throw new Error(
-      "Could not save neighbor intro (read-only host). Neighbor posts need local disk or cloud storage later."
+      "Could not save neighbor intro on this host. Neighbor posts need local disk or cloud storage later."
     );
   }
   return data;

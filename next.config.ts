@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "img.youtube.com" },
     ],
   },
+  // Ship JSON seeds + any bundled uploads with serverless functions
+  outputFileTracingIncludes: {
+    "/*": ["./data/**/*"],
+  },
   // Allow large direct video uploads in Studio (local / Node host)
   experimental: {
     serverActions: {

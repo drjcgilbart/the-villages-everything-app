@@ -1,6 +1,5 @@
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
+import { readJsonFile, writeJsonFile } from "./dataFs";
 import type {
   AgentTier,
   LeadType,
@@ -13,12 +12,7 @@ import type {
   RealEstateListing,
 } from "./realEstateTypes";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const RE_PATH = path.join(DATA_DIR, "real-estate.json");
-
-function ensureDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+const RE_FILE = "real-estate.json";
 
 function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
@@ -275,14 +269,9 @@ function seedData(): RealEstateData {
 }
 
 export function loadRealEstate(): RealEstateData {
-  ensureDirs();
-  if (!fs.existsSync(RE_PATH)) {
-    const seed = seedData();
-    fs.writeFileSync(RE_PATH, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
   try {
-    const raw = JSON.parse(fs.readFileSync(RE_PATH, "utf8")) as RealEstateData;
+    const raw = readJsonFile<RealEstateData>(RE_FILE);
+    if (!raw) return seedData();
     return {
       listings: Array.isArray(raw.listings) ? raw.listings : [],
       agents: Array.isArray(raw.agents) ? raw.agents : [],
@@ -310,9 +299,8 @@ export function loadRealEstate(): RealEstateData {
 }
 
 export function saveRealEstate(data: RealEstateData) {
-  ensureDirs();
   data.updatedAt = new Date().toISOString();
-  fs.writeFileSync(RE_PATH, JSON.stringify(data, null, 2), "utf8");
+  writeJsonFile(RE_FILE, data);
   return data;
 }
 
