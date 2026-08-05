@@ -24,26 +24,83 @@ function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
 }
 
+/**
+ * Free live market links — always open current public results (not scraped).
+ * Kept in code (not frozen in JSON) so we can refresh the catalog anytime.
+ */
 const DEFAULT_LIVE_SEARCHES: MarketSnapshot["liveSearches"] = [
   {
-    label: "Homes for sale · The Villages",
-    description: "Broad market search (opens live results)",
-    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL",
+    label: "The Villages Homefinder",
+    description:
+      "Official new & pre-owned homes inside The Villages community — best first stop for Villages inventory.",
+    url: "https://www.thevillages.com/homefinder/",
+    source: "Official",
   },
   {
-    label: "New construction",
-    description: "Newer inventory and builder product",
-    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/type-single-family-home,condo/keyword-new",
+    label: "Homes for sale · Realtor.com",
+    description: "Broad MLS-style search for The Villages, FL",
+    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL",
+    source: "Realtor.com",
+  },
+  {
+    label: "Homes for sale · Redfin",
+    description: "Alternate live map & list view for The Villages",
+    url: "https://www.redfin.com/city/25985/FL/The-Villages",
+    source: "Redfin",
+  },
+  {
+    label: "Homes for sale · Zillow",
+    description: "Zillow market view for The Villages area",
+    url: "https://www.zillow.com/the-villages-fl/",
+    source: "Zillow",
+  },
+  {
+    label: "Under $350k",
+    description: "Entry-level filter on Realtor.com",
+    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/price-na-350000",
+    source: "Filter",
   },
   {
     label: "Under $400k",
-    description: "Entry and mid-range filter snapshot",
+    description: "Mid-range budget snapshot",
     url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/price-na-400000",
+    source: "Filter",
   },
   {
-    label: "Zillow · The Villages",
-    description: "Alternate live feed of current listings",
-    url: "https://www.zillow.com/the-villages-fl/",
+    label: "Under $500k",
+    description: "Room to stretch — still filtered live results",
+    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/price-na-500000",
+    source: "Filter",
+  },
+  {
+    label: "New construction",
+    description: "Newer inventory & builder-style product",
+    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/type-single-family-home,condo/keyword-new",
+    source: "Filter",
+  },
+  {
+    label: "Condos & townhomes",
+    description: "Lower-maintenance styles in and around The Villages",
+    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/type-condo,townhome,co-op",
+    source: "Filter",
+  },
+  {
+    label: "55+ style search",
+    description: "Keyword filter for active-adult / 55+ oriented results",
+    url: "https://www.realtor.com/realestateandhomes-search/The-Villages_FL/keyword-55",
+    source: "Filter",
+  },
+  {
+    label: "Redfin · under $400k",
+    description: "Budget filter on Redfin’s Villages map",
+    url: "https://www.redfin.com/city/25985/FL/The-Villages/filter/max-price=400k",
+    source: "Redfin",
+  },
+  {
+    label: "Redfin · housing market",
+    description: "Trends & stats for The Villages (not individual listings)",
+    url: "https://www.redfin.com/city/25985/FL/The-Villages/housing-market",
+    source: "Stats",
   },
 ];
 
@@ -161,8 +218,8 @@ function seedData(): RealEstateData {
       headline: "The Villages market moves fast — always verify live inventory.",
       notes: [
         "Featured homes below are site-curated (great for agent partners).",
-        "“Live market” buttons open current public search results for The Villages.",
-        "Snapshot refreshes hourly when deployed with cron, or anytime via Refresh.",
+        "Live market buttons open Homefinder, Realtor.com, Redfin, Zillow, and handy budget filters.",
+        "Snapshot refreshes daily when deployed with cron, or anytime via Refresh.",
       ],
       liveSearches: DEFAULT_LIVE_SEARCHES,
     },
@@ -189,11 +246,14 @@ export function loadRealEstate(): RealEstateData {
         headline:
           raw.market?.headline ||
           "The Villages market moves fast — always verify live inventory.",
-        notes: Array.isArray(raw.market?.notes) ? raw.market.notes : [],
-        liveSearches:
-          Array.isArray(raw.market?.liveSearches) && raw.market.liveSearches.length
-            ? raw.market.liveSearches
-            : DEFAULT_LIVE_SEARCHES,
+        notes: Array.isArray(raw.market?.notes)
+          ? raw.market.notes
+          : [
+              "Featured homes below are site-curated (great for agent partners).",
+              "“Live market” buttons open current public search results for The Villages.",
+            ],
+        // Always serve the code catalog so Homefinder / Redfin / filters stay current
+        liveSearches: DEFAULT_LIVE_SEARCHES,
       },
       updatedAt: raw.updatedAt || null,
     };
@@ -261,7 +321,7 @@ export function refreshMarket(source: "manual" | "hourly" | "startup" = "manual"
   data.market.notes = [
     `Snapshot refreshed ${source === "hourly" ? "on the hourly schedule" : source === "manual" ? "on demand" : "at startup"}.`,
     `${pending.length} pending featured listing${pending.length === 1 ? "" : "s"} in the site catalog.`,
-    "Live market buttons always open current public search results for The Villages, FL.",
+    "Live market buttons open Homefinder, Realtor.com, Redfin, Zillow, and budget filters — always current on those sites.",
     "Partner agents can sponsor featured placement and receive buyer/seller leads from this page.",
   ];
 

@@ -104,8 +104,9 @@ export default function RealEstatePage() {
             <div>
               <h2>Live market searches</h2>
               <p>
-                These open current public results for The Villages — always as
-                fresh as the source site.
+                Free, always-current public searches — Homefinder (official
+                Villages inventory), Realtor.com, Redfin, Zillow, plus budget and
+                style filters. We link out rather than scrape MLS data.
               </p>
             </div>
           </div>
@@ -115,9 +116,10 @@ export default function RealEstatePage() {
                 key={s.url}
                 href={s.url}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="re-live-card about-panel"
               >
+                {s.source && <span className="pill re-live-source">{s.source}</span>}
                 <strong>{s.label}</strong>
                 <span>{s.description}</span>
                 <em>Open live results →</em>

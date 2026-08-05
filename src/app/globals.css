@@ -5357,11 +5357,21 @@ a.ts-square-card:hover .ts-square-card-img {
   transform: translateY(-2px);
   box-shadow: 0 14px 32px rgba(28, 36, 48, 0.1);
 }
+.re-live-source {
+  align-self: flex-start;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 0.1rem;
+}
 .re-live-card strong {
   font-family: var(--font-display), Georgia, serif;
   font-size: 1.1rem;
 }
-.re-live-card span { color: var(--muted); font-size: 0.92rem; }
+.re-live-card > span:not(.pill) {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
 .re-live-card em {
   font-style: normal;
   font-weight: 700;

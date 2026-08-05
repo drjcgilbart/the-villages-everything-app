@@ -75,7 +75,13 @@ export type MarketSnapshot = {
   headline: string;
   notes: string[];
   /** Live search destinations (always current when opened) */
-  liveSearches: { label: string; description: string; url: string }[];
+  liveSearches: {
+    label: string;
+    description: string;
+    url: string;
+    /** Short source badge, e.g. Homefinder / Realtor / Redfin */
+    source?: string;
+  }[];
 };
 
 export type RealEstateData = {
