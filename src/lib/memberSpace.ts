@@ -1,12 +1,24 @@
 import { readJsonFile, writeJsonFile } from "./dataFs";
+import {
+  type AnyStoredPlan,
+  type FeatureKey,
+  type HubPlanId,
+  canAccess,
+  effectivePlan,
+  featuresForPlan,
+  getTier,
+  isPaidPlan,
+  normalizePlan,
+} from "./membershipTiers";
 
 const SPACE_FILE = "member-space.json";
 
-export type HubPlan = "free" | "subscriber";
+/** @deprecated use HubPlanId — kept as alias for imports */
+export type HubPlan = HubPlanId;
 
 export type MemberSpaceRecord = {
   memberId: string;
-  plan: HubPlan;
+  plan: HubPlanId;
   favoriteClubIds: string[];
   /** Optional display name override */
   spaceTitle?: string;
@@ -25,11 +37,27 @@ function empty(): SpaceFile {
   return { spaces: [], updatedAt: null };
 }
 
+function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPlan }): MemberSpaceRecord {
+  return {
+    memberId: String(raw.memberId || ""),
+    plan: normalizePlan(raw.plan),
+    favoriteClubIds: Array.isArray(raw.favoriteClubIds)
+      ? raw.favoriteClubIds.map(String)
+      : [],
+    spaceTitle: raw.spaceTitle,
+    updatedAt: raw.updatedAt || new Date().toISOString(),
+    stripeCustomerId: raw.stripeCustomerId,
+    stripeSubscriptionId: raw.stripeSubscriptionId,
+  };
+}
+
 export function loadMemberSpaces(): SpaceFile {
   const raw = readJsonFile<SpaceFile>(SPACE_FILE);
   if (!raw) return empty();
   return {
-    spaces: Array.isArray(raw.spaces) ? raw.spaces : [],
+    spaces: Array.isArray(raw.spaces)
+      ? raw.spaces.map((s) => normalizeRecord(s))
+      : [],
     updatedAt: raw.updatedAt || null,
   };
 }
@@ -51,10 +79,10 @@ export function saveMemberSpaces(data: SpaceFile) {
 export function getMemberSpace(memberId: string): MemberSpaceRecord {
   const data = loadMemberSpaces();
   const existing = data.spaces.find((s) => s.memberId === memberId);
-  if (existing) return existing;
+  if (existing) return normalizeRecord(existing);
   const created: MemberSpaceRecord = {
     memberId,
-    plan: "free",
+    plan: "porch_waver",
     favoriteClubIds: [],
     updatedAt: new Date().toISOString(),
   };
@@ -81,13 +109,13 @@ export function updateMemberSpace(
   if (!rec) {
     rec = {
       memberId,
-      plan: "free",
+      plan: "porch_waver",
       favoriteClubIds: [],
       updatedAt: new Date().toISOString(),
     };
     data.spaces.push(rec);
   }
-  if (patch.plan) rec.plan = patch.plan;
+  if (patch.plan) rec.plan = normalizePlan(patch.plan);
   if (patch.favoriteClubIds) {
     rec.favoriteClubIds = [...new Set(patch.favoriteClubIds.map(String))].slice(
       0,
@@ -105,16 +133,50 @@ export function updateMemberSpace(
   }
   rec.updatedAt = new Date().toISOString();
   saveMemberSpaces(data);
-  return rec;
+  return normalizeRecord(rec);
 }
 
+/** True if plan is Cart Path Regular or higher (legacy “subscriber”). */
 export function isSubscriber(space: MemberSpaceRecord): boolean {
-  return space.plan === "subscriber";
+  return isPaidPlan(effectivePlan(space.plan));
 }
 
-/** Dev / admin convenience: unlock when env allows or plan is subscriber */
+/** Any paid My Space dashboard modules (not just the upgrade wall). */
 export function memberHasSpaceAccess(space: MemberSpaceRecord): boolean {
-  if (space.plan === "subscriber") return true;
-  if (process.env.HUB_MEMBER_OPEN_ACCESS === "true") return true;
-  return false;
+  return isPaidPlan(effectivePlan(space.plan));
 }
+
+export function memberCanAccess(
+  space: MemberSpaceRecord,
+  feature: FeatureKey
+): boolean {
+  return canAccess(effectivePlan(space.plan), feature);
+}
+
+export function publicSpacePayload(space: MemberSpaceRecord) {
+  const plan = effectivePlan(space.plan);
+  const tier = getTier(plan);
+  const features = featuresForPlan(plan);
+  return {
+    plan,
+    planLabel: tier.label,
+    planTagline: tier.tagline,
+    planRank: tier.rank,
+    favoriteClubIds: space.favoriteClubIds,
+    spaceTitle: space.spaceTitle,
+    updatedAt: space.updatedAt,
+    hasSpaceAccess: isPaidPlan(plan),
+    isSubscriber: isPaidPlan(plan),
+    features,
+    tier: {
+      id: tier.id,
+      label: tier.label,
+      shortLabel: tier.shortLabel,
+      tagline: tier.tagline,
+      blurb: tier.blurb,
+    },
+  };
+}
+
+export { normalizePlan, getTier, paidTiers } from "./membershipTiers";
+export type { FeatureKey, HubPlanId } from "./membershipTiers";

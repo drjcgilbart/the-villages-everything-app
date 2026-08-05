@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
+  getMemberSpace,
+  publicSpacePayload,
+  updateMemberSpace,
+} from "@/lib/memberSpace";
+import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
+import {
   listMembers,
   setMemberPassword,
   setMemberStatus,
@@ -10,11 +16,31 @@ import type { MemberStatus } from "@/lib/yardSaleTypes";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+function membersWithPlans() {
+  return listMembers().map((m) => {
+    const space = getMemberSpace(m.id);
+    const pub = publicSpacePayload(space);
+    return {
+      ...m,
+      plan: pub.plan,
+      planLabel: pub.planLabel,
+    };
+  });
+}
+
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ members: listMembers() });
+  return NextResponse.json({
+    members: membersWithPlans(),
+    tiers: HUB_TIERS.map((t) => ({
+      id: t.id,
+      label: t.label,
+      shortLabel: t.shortLabel,
+      rank: t.rank,
+    })),
+  });
 }
 
 export async function POST(req: Request) {
@@ -26,7 +52,19 @@ export async function POST(req: Request) {
 
     if (body.action === "setPassword") {
       const member = setMemberPassword(String(body.id || ""), body.password);
-      return NextResponse.json({ member, members: listMembers() });
+      return NextResponse.json({ member, members: membersWithPlans() });
+    }
+
+    if (body.action === "setPlan") {
+      const id = String(body.id || "");
+      const plan = normalizePlan(body.plan);
+      updateMemberSpace(id, { plan });
+      return NextResponse.json({
+        memberId: id,
+        plan,
+        planLabel: publicSpacePayload(getMemberSpace(id)).planLabel,
+        members: membersWithPlans(),
+      });
     }
 
     const status = body.status as MemberStatus;
@@ -34,7 +72,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
     const member = setMemberStatus(body.id, status, body.notes);
-    return NextResponse.json({ member, members: listMembers() });
+    return NextResponse.json({ member, members: membersWithPlans() });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Update failed" },

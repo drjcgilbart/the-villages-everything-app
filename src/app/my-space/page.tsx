@@ -16,9 +16,11 @@ export default function MySpacePage() {
           <span className="kicker">Hub Member · private</span>
           <h1>My Space</h1>
           <p>
-            Your personal corner of The Villages Hub — weather, favorite clubs,
-            markets, and daily shortcuts. Built for paid Hub Members (same
-            account family as Yard Sale membership).
+            Your personal corner of The Villages Hub — weather, clubs, health
+            lanai, pet parade, and more. Unlock modules by tier:{" "}
+            <strong>Porch Waver</strong> → <strong>Cart Path Regular</strong> →{" "}
+            <strong>Lanai Legend</strong> → <strong>Square Royalty</strong>. Same
+            account as Yard Sale membership.
           </p>
           <p style={{ marginBottom: 0 }}>
             <Link href="/club-zone" className="text-link">

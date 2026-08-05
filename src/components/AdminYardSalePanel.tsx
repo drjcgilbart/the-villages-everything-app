@@ -4,9 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import type { PublicMember, YardListing } from "@/lib/yardSaleTypes";
 import { formatPrice } from "@/components/YardListingCard";
 import { formatDate } from "@/lib/format";
+import type { HubPlanId } from "@/lib/membershipTiers";
+
+type AdminMember = PublicMember & {
+  plan?: HubPlanId | string;
+  planLabel?: string;
+};
+
+type TierOpt = { id: string; label: string; shortLabel: string; rank: number };
 
 export function AdminYardSalePanel() {
-  const [members, setMembers] = useState<PublicMember[]>([]);
+  const [members, setMembers] = useState<AdminMember[]>([]);
+  const [tiers, setTiers] = useState<TierOpt[]>([]);
   const [listings, setListings] = useState<
     (YardListing & { seller?: { name?: string } | null })[]
   >([]);
@@ -28,6 +37,7 @@ export function AdminYardSalePanel() {
     if (!mRes.ok) throw new Error(mData.error || "Could not load members");
     if (!lRes.ok) throw new Error(lData.error || "Could not load listings");
     setMembers(mData.members || []);
+    setTiers(mData.tiers || []);
     setListings(lData.listings || []);
   }, []);
 
@@ -47,6 +57,26 @@ export function AdminYardSalePanel() {
       if (!res.ok) throw new Error(data.error || "Update failed");
       setMembers(data.members || []);
       flash("ok", `Member ${status}`);
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setMemberPlan(id: string, plan: string) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setPlan", id, plan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Plan update failed");
+      if (Array.isArray(data.members)) setMembers(data.members);
+      else await load();
+      flash("ok", `Plan set to ${data.planLabel || plan}`);
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Failed");
     } finally {
@@ -125,8 +155,9 @@ export function AdminYardSalePanel() {
     <div>
       <h2 style={{ marginTop: 0 }}>Community Yard Sale moderation</h2>
       <p className="panel-hint">
-        Approve members before they can post. Approve listings before they appear
-        publicly. Buyers contact sellers directly from approved listings.
+        Approve members before they can post. Set My Space plan (Porch Waver →
+        Square Royalty) to unlock dashboard modules. Approve listings before they
+        appear publicly.
       </p>
       {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
 
@@ -151,9 +182,32 @@ export function AdminYardSalePanel() {
                 {m.village ? ` · ${m.village}` : ""}
                 {" · "}
                 {formatDate(m.createdAt)}
+                {m.planLabel ? (
+                  <>
+                    {" · "}
+                    <strong>{m.planLabel}</strong>
+                  </>
+                ) : null}
               </span>
             </div>
             <div className="admin-actions">
+              {tiers.length > 0 && (
+                <label className="admin-plan-select">
+                  <span className="sr-only">My Space plan</span>
+                  <select
+                    value={m.plan || "porch_waver"}
+                    disabled={busy}
+                    onChange={(e) => setMemberPlan(m.id, e.target.value)}
+                    title="My Space membership tier"
+                  >
+                    {tiers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {m.status !== "approved" && (
                 <button
                   type="button"

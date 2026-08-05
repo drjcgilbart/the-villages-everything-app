@@ -100,7 +100,7 @@ export function ClubBrowser() {
 
     if (!signedIn) {
       setSyncNote(
-        "Saved on this device. Sign in + Hub Member to keep favorites in your private My Space."
+        "Saved on this device. Sign in as a member to sync favorites to My Space."
       );
       return;
     }
@@ -114,8 +114,8 @@ export function ClubBrowser() {
       if (res.ok) {
         setSyncNote(
           isSubscriber
-            ? "Saved to your Hub Member space."
-            : "Saved to your account. Upgrade to Hub Member to open your private dashboard."
+            ? "Saved to your My Space (Cart Path Regular+ can view the board)."
+            : "Saved to your account. Upgrade to Cart Path Regular+ to open the clubs board on My Space."
         );
       } else {
         const data = await res.json().catch(() => ({}));
