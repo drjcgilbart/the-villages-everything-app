@@ -23,6 +23,29 @@ import {
   tierRequiredFor,
 } from "@/lib/membershipTiers";
 
+/** Explicit badge art for tier cards (client-safe; always present). */
+const TIER_CARD_BADGES: Record<
+  HubPlanId,
+  { src: string; alt: string }
+> = {
+  porch_waver: {
+    src: "/graphics/badges/porch-waver.jpg",
+    alt: "Porch Waver badge",
+  },
+  cart_path_regular: {
+    src: "/graphics/badges/cart-path-regular.jpg",
+    alt: "Cart Path Regular badge",
+  },
+  lanai_legend: {
+    src: "/graphics/badges/lanai-legend.jpg",
+    alt: "Lanai Legend badge",
+  },
+  square_royalty: {
+    src: "/graphics/badges/square-royalty.jpg",
+    alt: "Square Royalty badge",
+  },
+};
+
 type SpacePayload = {
   member: PublicMember;
   badges?: BadgeDef[];
@@ -246,20 +269,30 @@ export function MySpaceDashboard() {
           {HUB_TIERS.map((t) => {
             const current = t.id === space.plan;
             const unlocked = space.planRank >= t.rank;
+            const badge = TIER_CARD_BADGES[t.id];
+            const badgeSrc = badge?.src || t.badgeImage;
             return (
               <article
                 key={t.id}
                 className={`about-panel ms-tier-card ${current ? "is-current" : ""} ${unlocked ? "is-unlocked" : ""}`}
               >
-                <div className="ms-tier-badge-wrap">
+                <div className="ms-tier-badge-wrap" aria-hidden={false}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={t.badgeImage}
-                    alt={`${t.label} badge`}
-                    title={t.tagline}
-                    width={96}
-                    height={96}
+                    src={badgeSrc}
+                    alt={badge?.alt || `${t.label} membership badge`}
+                    title={`${t.label} — ${t.tagline}`}
+                    width={112}
+                    height={112}
                     className="ms-tier-badge-img"
+                    loading="eager"
+                    decoding="async"
+                    style={{
+                      width: "7rem",
+                      height: "7rem",
+                      display: "block",
+                      objectFit: "cover",
+                    }}
                   />
                 </div>
                 <span className="pill">
