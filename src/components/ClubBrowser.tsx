@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -217,11 +218,17 @@ export function ClubBrowser() {
               key={club.id}
               className={`about-panel club-card${isFav ? " is-fav" : ""}`}
             >
-              <div className="club-card-top">
-                <span className="pill">{club.category}</span>
+              <div className="club-card-art">
+                <Image
+                  src={club.image}
+                  alt=""
+                  width={640}
+                  height={640}
+                  className="club-card-img"
+                />
                 <button
                   type="button"
-                  className={`rc-thumb-fav club-star${isFav ? " is-on" : ""}`}
+                  className={`rc-thumb-fav club-star club-star-on-art${isFav ? " is-on" : ""}`}
                   onClick={() => toggleFavorite(club)}
                   aria-pressed={isFav}
                   title={isFav ? "Remove favorite" : "Add favorite"}
@@ -229,32 +236,37 @@ export function ClubBrowser() {
                   {isFav ? "★" : "☆"}
                 </button>
               </div>
-              <h3>{club.name}</h3>
-              <p className="club-card-blurb">{club.blurb}</p>
-              <p className="club-card-meta">
-                <strong>Where:</strong> {club.areaHint}
-              </p>
-              <p className="club-card-meta">
-                <strong>Why it&apos;s a hit:</strong> {club.whyPopular}
-              </p>
-              {club.href && (
-                <p style={{ marginBottom: 0 }}>
-                  {club.href.startsWith("/") ? (
-                    <Link href={club.href} className="text-link">
-                      Related hub page →
-                    </Link>
-                  ) : (
-                    <a
-                      href={club.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-link"
-                    >
-                      Learn more →
-                    </a>
-                  )}
+              <div className="club-card-body">
+                <div className="club-card-top">
+                  <span className="pill">{club.category}</span>
+                </div>
+                <h3>{club.name}</h3>
+                <p className="club-card-blurb">{club.blurb}</p>
+                <p className="club-card-meta">
+                  <strong>Where:</strong> {club.areaHint}
                 </p>
-              )}
+                <p className="club-card-meta">
+                  <strong>Why it&apos;s a hit:</strong> {club.whyPopular}
+                </p>
+                {club.href && (
+                  <p style={{ marginBottom: 0 }}>
+                    {club.href.startsWith("/") ? (
+                      <Link href={club.href} className="text-link">
+                        Related hub page →
+                      </Link>
+                    ) : (
+                      <a
+                        href={club.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-link"
+                      >
+                        Learn more →
+                      </a>
+                    )}
+                  </p>
+                )}
+              </div>
             </article>
           );
         })}

@@ -28,9 +28,16 @@ export type PopularClub = {
   /** Typical rec / area association when known */
   areaHint: string;
   whyPopular: string;
+  /** Whimsical card art under /public/graphics/clubs */
+  image: string;
   /** Optional deep link when a stable public URL exists */
   href?: string;
 };
+
+/** Card art path for a curated club id */
+export function clubImagePath(id: string): string {
+  return `/graphics/clubs/${id}.jpg`;
+}
 
 export type ClubResource = {
   id: string;
@@ -85,7 +92,7 @@ export const CLUB_OFFICIAL_RESOURCES: ClubResource[] = [
 ];
 
 /** Hand-picked “great starter” clubs & genres people talk about a lot. */
-export const POPULAR_CLUBS: PopularClub[] = [
+const POPULAR_CLUBS_BASE: Omit<PopularClub, "image">[] = [
   {
     id: "pickleball",
     name: "Pickleball clubs & open play",
@@ -304,6 +311,11 @@ export const POPULAR_CLUBS: PopularClub[] = [
     whyPopular: "Give back without leaving the cart-path network.",
   },
 ];
+
+export const POPULAR_CLUBS: PopularClub[] = POPULAR_CLUBS_BASE.map((c) => ({
+  ...c,
+  image: clubImagePath(c.id),
+}));
 
 export function getClubById(id: string): PopularClub | undefined {
   return POPULAR_CLUBS.find((c) => c.id === id);

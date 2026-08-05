@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { VillagesWeatherWidget } from "@/components/VillagesWeatherWidget";
@@ -251,12 +252,23 @@ export function MySpaceDashboard() {
               <div className="club-grid">
                 {favoriteClubs.map((c) => (
                   <article key={c.id} className="about-panel club-card is-fav">
-                    <span className="pill">{c.category}</span>
-                    <h3>{c.name}</h3>
-                    <p className="club-card-blurb">{c.blurb}</p>
-                    <p className="club-card-meta">
-                      <strong>Where:</strong> {c.areaHint}
-                    </p>
+                    <div className="club-card-art">
+                      <Image
+                        src={c.image}
+                        alt=""
+                        width={640}
+                        height={640}
+                        className="club-card-img"
+                      />
+                    </div>
+                    <div className="club-card-body">
+                      <span className="pill">{c.category}</span>
+                      <h3>{c.name}</h3>
+                      <p className="club-card-blurb">{c.blurb}</p>
+                      <p className="club-card-meta">
+                        <strong>Where:</strong> {c.areaHint}
+                      </p>
+                    </div>
                   </article>
                 ))}
               </div>

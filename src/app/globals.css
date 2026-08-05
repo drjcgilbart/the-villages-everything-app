@@ -1292,13 +1292,49 @@ a {
 .club-card {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0;
   position: relative;
+  padding: 0;
+  overflow: hidden;
 }
 
 .club-card.is-fav {
   border-color: rgba(232, 184, 74, 0.55);
   box-shadow: 0 10px 28px rgba(232, 184, 74, 0.14);
+}
+
+.club-card-art {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: linear-gradient(145deg, #fde8d8, #fff5eb);
+}
+
+.club-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.club-card:hover .club-card-img {
+  transform: scale(1.03);
+}
+
+.club-star-on-art {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 2;
+}
+
+.club-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.9rem 1rem 1.05rem;
+  flex: 1;
 }
 
 .club-card-top {
