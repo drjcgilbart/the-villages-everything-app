@@ -54,6 +54,38 @@ export function AdminYardSalePanel() {
     }
   }
 
+  async function resetMemberPassword(id: string, name: string) {
+    const password = window.prompt(
+      `New password for ${name} (min 6 characters):`,
+      ""
+    );
+    if (password == null) return;
+    if (password.trim().length < 6) {
+      flash("err", "Password must be at least 6 characters");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "setPassword",
+          id,
+          password: password.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Password reset failed");
+      setMembers(data.members || []);
+      flash("ok", `Password updated for ${name}`);
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function setListingStatus(id: string, adminStatus: string) {
     setBusy(true);
     try {
@@ -162,6 +194,14 @@ export function AdminYardSalePanel() {
                   Reinstate
                 </button>
               )}
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={busy}
+                onClick={() => resetMemberPassword(m.id, m.name)}
+              >
+                Set password
+              </button>
             </div>
           </div>
         ))}

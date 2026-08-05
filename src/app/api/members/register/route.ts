@@ -14,11 +14,13 @@ export async function POST(req: Request) {
       phone: body.phone,
       village: body.village,
     });
+    const updatedPending = member.status === "pending";
     return NextResponse.json({
       ok: true,
       member,
-      message:
-        "Thanks! Your membership request was submitted. You’ll be able to post listings after the admin approves you.",
+      message: updatedPending
+        ? "Thanks! Your membership request is on file (or was updated). You can sign in with this password while pending; posting listings still needs admin approval."
+        : "Thanks! Your membership request was submitted. You’ll be able to post listings after the admin approves you.",
     });
   } catch (err) {
     return NextResponse.json(

@@ -28,7 +28,7 @@ export function MemberJoinForm() {
         kind: "ok",
         text:
           data.message ||
-          "Request submitted! You’ll get access to post after admin approval.",
+          "Request submitted! You can sign in with this password. Posting listings still needs admin approval.",
       });
       setPassword("");
     } catch (err) {
@@ -88,7 +88,9 @@ export function MemberJoinForm() {
         </button>
       </form>
       <p className="panel-hint" style={{ marginBottom: 0 }}>
-        Already a member? <Link href="/yard-sale/login">Sign in</Link>
+        Already requested membership? You can submit again with the same email
+        while still <strong>pending</strong> to set a new password, or{" "}
+        <Link href="/yard-sale/login">sign in</Link>.
       </p>
     </div>
   );

@@ -63,6 +63,8 @@ export function MemberLoginForm() {
       </form>
       <p className="panel-hint" style={{ marginBottom: 0 }}>
         Need an account? <Link href="/yard-sale/join">Request membership</Link>
+        . Forgot your password while still pending? Submit the membership form
+        again with the same email and a new password.
       </p>
     </div>
   );

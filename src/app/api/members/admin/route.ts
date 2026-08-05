@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { listMembers, setMemberStatus } from "@/lib/yardSale";
+import {
+  listMembers,
+  setMemberPassword,
+  setMemberStatus,
+} from "@/lib/yardSale";
 import type { MemberStatus } from "@/lib/yardSaleTypes";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +23,12 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
+
+    if (body.action === "setPassword") {
+      const member = setMemberPassword(String(body.id || ""), body.password);
+      return NextResponse.json({ member, members: listMembers() });
+    }
+
     const status = body.status as MemberStatus;
     if (!["pending", "approved", "rejected", "suspended"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });

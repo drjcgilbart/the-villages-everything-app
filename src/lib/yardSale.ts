@@ -104,8 +104,27 @@ export function registerMember(input: {
   if (password.length < 6) throw new Error("Password must be at least 6 characters");
 
   const data = loadYardSale();
-  if (data.members.some((m) => m.email === email)) {
-    throw new Error("An account with this email already exists");
+  const existing = data.members.find((m) => m.email === email);
+  if (existing) {
+    // Pending requests can re-submit with a new password (forgot password / re-test).
+    // Only pending — never overwrite approved/suspended credentials this way.
+    if (existing.status === "pending") {
+      const idx = data.members.findIndex((m) => m.id === existing.id);
+      data.members[idx] = {
+        ...existing,
+        name,
+        passwordHash: hashPassword(password),
+        phone: String(input.phone || "").trim().slice(0, 40) || existing.phone,
+        village:
+          String(input.village || "").trim().slice(0, 80) || existing.village,
+        // keep pending + original createdAt
+      };
+      saveYardSale(data);
+      return toPublicMember(data.members[idx]);
+    }
+    throw new Error(
+      "An account with this email already exists. Sign in with your password, or ask the site host to reset it in Studio."
+    );
   }
 
   const member: Member = {
@@ -130,7 +149,9 @@ export function authenticateMember(email: string, password: string) {
     (m) => m.email === String(email || "").trim().toLowerCase()
   );
   if (!member || !verifyPassword(password, member.passwordHash)) {
-    throw new Error("Invalid email or password");
+    throw new Error(
+      "Invalid email or password. If you just re-requested membership while still pending, use the newest password you submitted — or re-submit the membership form to set a new one."
+    );
   }
   if (member.status === "rejected") {
     throw new Error("This membership request was not approved");
@@ -139,6 +160,21 @@ export function authenticateMember(email: string, password: string) {
     throw new Error("This account is suspended. Contact the site admin.");
   }
   return member;
+}
+
+/** Admin-only: set a known password for a member (beta / support). */
+export function setMemberPassword(id: string, password: string) {
+  const next = String(password || "");
+  if (next.length < 6) throw new Error("Password must be at least 6 characters");
+  const data = loadYardSale();
+  const idx = data.members.findIndex((m) => m.id === id);
+  if (idx < 0) throw new Error("Member not found");
+  data.members[idx] = {
+    ...data.members[idx],
+    passwordHash: hashPassword(next),
+  };
+  saveYardSale(data);
+  return toPublicMember(data.members[idx]);
 }
 
 export function getMemberById(id: string) {
