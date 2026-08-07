@@ -5,6 +5,8 @@ import {
   ensurePastMonthsTabulatedAsync,
   loadBomAsync,
   setBomEntryStatusAsync,
+  updateBomEntryAsync,
+  deleteBomEntryAsync,
   tabulateMonth,
   tabulatePreviousMonthIfNeeded,
   bomMonthKey,
@@ -46,6 +48,29 @@ export async function POST(req: Request) {
             : "pending";
       const entry = await setBomEntryStatusAsync(String(body.id || ""), status);
       return NextResponse.json({ ok: true, entry });
+    }
+
+    if (action === "update") {
+      const entry = await updateBomEntryAsync(String(body.id || ""), {
+        title: body.title,
+        description: body.description,
+        submitterName: body.submitterName,
+        category: body.category,
+        status: body.status,
+      });
+      return NextResponse.json({
+        ok: true,
+        entry,
+        message: "Entry updated.",
+      });
+    }
+
+    if (action === "delete") {
+      await deleteBomEntryAsync(String(body.id || ""));
+      return NextResponse.json({
+        ok: true,
+        message: "Entry deleted.",
+      });
     }
 
     if (action === "tabulate") {

@@ -347,6 +347,86 @@ export async function setBomEntryStatusAsync(
   return data.entries[idx];
 }
 
+/** Admin: edit text (and optional category/status) on pending or approved entries. */
+export async function updateBomEntryAsync(
+  id: string,
+  patch: {
+    title?: string;
+    description?: string | null;
+    submitterName?: string;
+    category?: string;
+    status?: "approved" | "rejected" | "pending";
+  }
+): Promise<BomEntry> {
+  const data = await loadBomAsync();
+  const idx = data.entries.findIndex((e) => e.id === id);
+  if (idx < 0) throw new Error("Entry not found");
+
+  const cur = data.entries[idx];
+  const title =
+    patch.title !== undefined
+      ? String(patch.title || "").trim().slice(0, 80)
+      : cur.title;
+  const submitterName =
+    patch.submitterName !== undefined
+      ? String(patch.submitterName || "").trim().slice(0, 60)
+      : cur.submitterName;
+  if (title.length < 2) throw new Error("Title is required");
+  if (submitterName.length < 2) throw new Error("Submitter name is required");
+
+  let description = cur.description;
+  if (patch.description !== undefined) {
+    const d = String(patch.description || "").trim().slice(0, 500);
+    description = d.length ? d : undefined;
+  }
+
+  let category = cur.category;
+  if (patch.category !== undefined) {
+    if (!isBomCategory(String(patch.category))) {
+      throw new Error("Invalid category");
+    }
+    category = patch.category as BomCategory;
+  }
+
+  let status = cur.status;
+  if (patch.status !== undefined) {
+    if (!["approved", "rejected", "pending"].includes(patch.status)) {
+      throw new Error("Invalid status");
+    }
+    status = patch.status;
+  }
+
+  data.entries[idx] = {
+    ...cur,
+    title,
+    description,
+    submitterName,
+    category,
+    status,
+  };
+  await saveBomAsync(data);
+  return data.entries[idx];
+}
+
+/** Admin: permanently remove an entry (and its votes). */
+export async function deleteBomEntryAsync(id: string): Promise<void> {
+  const data = await loadBomAsync();
+  const before = data.entries.length;
+  data.entries = data.entries.filter((e) => e.id !== id);
+  if (data.entries.length === before) throw new Error("Entry not found");
+  data.votes = data.votes.filter((v) => v.entryId !== id);
+  // Recompute vote totals for remaining entries (in case of inconsistency)
+  const counts = new Map<string, number>();
+  for (const v of data.votes) {
+    counts.set(v.entryId, (counts.get(v.entryId) || 0) + 1);
+  }
+  data.entries = data.entries.map((e) => ({
+    ...e,
+    votes: counts.get(e.id) || 0,
+  }));
+  await saveBomAsync(data);
+}
+
 export function castBomVote(input: {
   entryId: string;
   voterKey: string;
