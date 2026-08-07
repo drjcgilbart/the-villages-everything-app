@@ -100,17 +100,18 @@ export function HealthHub() {
     return <div className="empty-state">Loading your wellness tools…</div>;
   }
 
+  const day = log;
   const stepsPct = Math.min(
     100,
-    Math.round((log.stepsDone / Math.max(log.stepsGoal, 1)) * 100)
+    Math.round((day.stepsDone / Math.max(day.stepsGoal, 1)) * 100)
   );
   const waterGoal = 8;
-  const waterPct = Math.min(100, Math.round((log.water / waterGoal) * 100));
+  const waterPct = Math.min(100, Math.round((day.water / waterGoal) * 100));
 
   function toggleMove(id: string) {
-    const has = log.moves.includes(id);
+    const has = day.moves.includes(id);
     update({
-      moves: has ? log.moves.filter((m) => m !== id) : [...log.moves, id],
+      moves: has ? day.moves.filter((m) => m !== id) : [...day.moves, id],
     });
   }
 
@@ -149,7 +150,7 @@ export function HealthHub() {
               <button
                 key={m.id}
                 type="button"
-                className={`health-mood-btn${log.mood === m.id ? " is-on" : ""}`}
+                className={`health-mood-btn${day.mood === m.id ? " is-on" : ""}`}
                 onClick={() => update({ mood: m.id })}
               >
                 <span aria-hidden>{m.emoji}</span>
@@ -168,7 +169,7 @@ export function HealthHub() {
             <div>
               <h3>Hydration</h3>
               <p className="health-muted">
-                {log.water} of {waterGoal} glasses · Florida tax included
+                {day.water} of {waterGoal} glasses · Florida tax included
               </p>
             </div>
           </div>
@@ -179,14 +180,14 @@ export function HealthHub() {
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => update({ water: Math.max(0, log.water - 1) })}
+              onClick={() => update({ water: Math.max(0, day.water - 1) })}
             >
               − Glass
             </button>
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              onClick={() => update({ water: Math.min(20, log.water + 1) })}
+              onClick={() => update({ water: Math.min(20, day.water + 1) })}
             >
               + Glass
             </button>
@@ -209,7 +210,7 @@ export function HealthHub() {
             <div>
               <h3>Steps goal</h3>
               <p className="health-muted">
-                {log.stepsDone.toLocaleString()} / {log.stepsGoal.toLocaleString()}{" "}
+                {day.stepsDone.toLocaleString()} / {day.stepsGoal.toLocaleString()}{" "}
                 ({stepsPct}%)
               </p>
             </div>
@@ -222,7 +223,7 @@ export function HealthHub() {
               type="button"
               className="btn btn-ghost btn-sm"
               onClick={() =>
-                update({ stepsDone: Math.max(0, log.stepsDone - 500) })
+                update({ stepsDone: Math.max(0, day.stepsDone - 500) })
               }
             >
               −500
@@ -230,14 +231,14 @@ export function HealthHub() {
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              onClick={() => update({ stepsDone: log.stepsDone + 500 })}
+              onClick={() => update({ stepsDone: day.stepsDone + 500 })}
             >
               +500
             </button>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => update({ stepsDone: log.stepsDone + 1000 })}
+              onClick={() => update({ stepsDone: day.stepsDone + 1000 })}
             >
               +1k
             </button>
@@ -247,7 +248,7 @@ export function HealthHub() {
           </label>
           <select
             id="steps-goal"
-            value={log.stepsGoal}
+            value={day.stepsGoal}
             onChange={(e) => update({ stepsGoal: Number(e.target.value) })}
           >
             {[4000, 5000, 6000, 8000, 10000].map((n) => (
@@ -274,7 +275,7 @@ export function HealthHub() {
           </div>
           <ul className="health-move-list">
             {DAILY_MOVES.map((m) => {
-              const on = log.moves.includes(m.id);
+              const on = day.moves.includes(m.id);
               return (
                 <li key={m.id}>
                   <button
