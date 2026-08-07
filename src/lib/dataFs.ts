@@ -143,32 +143,56 @@ export function readJsonFile<T>(filename: string): T | null {
 
 async function pushJsonToBlob(filename: string, json: string): Promise<void> {
   if (!blobConfigured() || !DURABLE_JSON.has(filename)) return;
+  const { put } = await import("@vercel/blob");
+  const body = Buffer.from(json, "utf8");
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  const baseOpts = {
+    addRandomSuffix: false as const,
+    allowOverwrite: true,
+    contentType: "application/json",
+    token,
+  };
+  // Private stores reject access:"public" — try public then private.
   try {
-    const { put } = await import("@vercel/blob");
-    await put(blobPathname(filename), json, {
+    await put(blobPathname(filename), body, {
+      ...baseOpts,
       access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
-  } catch (err) {
-    console.error("[dataFs] blob put failed", filename, err);
+  } catch (publicErr) {
+    try {
+      await put(blobPathname(filename), body, {
+        ...baseOpts,
+        access: "private",
+      });
+    } catch (privateErr) {
+      console.error("[dataFs] blob put failed", filename, privateErr);
+      throw new Error(
+        `Could not save ${filename} to Vercel Blob. Check BLOB_READ_WRITE_TOKEN and that the Blob store is connected to this project.`
+      );
+    }
   }
 }
 
-async function pullJsonFromBlob(filename: string): Promise<string | null> {
+/** Pull one durable JSON file from Blob (auth header supports private stores). */
+export async function pullJsonFromBlob(
+  filename: string
+): Promise<string | null> {
   if (!blobConfigured() || !DURABLE_JSON.has(filename)) return null;
   try {
     const { list } = await import("@vercel/blob");
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const pathname = blobPathname(filename);
     const { blobs } = await list({
-      prefix: blobPathname(filename),
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      prefix: pathname,
+      token,
       limit: 5,
     });
-    const hit = blobs.find((b) => b.pathname === blobPathname(filename));
+    const hit = blobs.find((b) => b.pathname === pathname);
     if (!hit?.url) return null;
-    const res = await fetch(hit.url, { cache: "no-store" });
+    const res = await fetch(hit.url, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
     if (!res.ok) return null;
     return await res.text();
   } catch (err) {
@@ -262,7 +286,26 @@ export function writeJsonFile(filename: string, data: unknown): void {
 
   // Fire-and-forget durable sync (admin + membership critical files)
   if (DURABLE_JSON.has(base) && blobConfigured()) {
-    void pushJsonToBlob(base, json);
+    void pushJsonToBlob(base, json).catch((err) =>
+      console.error("[dataFs] fire-and-forget blob put failed", base, err)
+    );
+  }
+}
+
+/** Put durable JSON into process memory (+ /tmp) without re-uploading to Blob. */
+export function cacheDurableJson(filename: string, jsonText: string): void {
+  const base = path.basename(filename);
+  if (!base || base.includes("..")) return;
+  memoryJson.set(base, jsonText);
+  try {
+    const dir = ensureWritableDirs();
+    fs.writeFileSync(
+      /*turbopackIgnore: true*/ path.join(dir, base),
+      jsonText,
+      "utf8"
+    );
+  } catch {
+    /* memory still has it */
   }
 }
 
@@ -326,21 +369,23 @@ function guessUploadContentType(filename: string): string {
 }
 
 /**
- * Persist an uploaded file. On Vercel with Blob configured, stores to public
- * Blob and returns that absolute URL (works on every serverless instance).
- * Locally (or without Blob), writes disk and returns `/api/media/...`.
+ * Persist an uploaded file.
+ * Always stores the stable app URL `/api/media/{name}` so private Blob stores
+ * still work (media route fetches with the token). On Vercel without Blob,
+ * uploads cannot survive cold starts — we throw instead of silently breaking.
  */
 export async function saveUploadFile(
   buffer: Buffer,
   filename: string,
   contentType?: string
-): Promise<{ url: string; name: string }> {
+): Promise<{ url: string; name: string; blobUrl?: string }> {
   const safe = path
     .basename(String(filename || "upload.bin"))
     .replace(/[^a-zA-Z0-9._-]/g, "_")
     .slice(0, 80);
   const name = `${Date.now().toString(36)}-${safe || "upload.bin"}`;
   const mime = contentType || guessUploadContentType(name);
+  const appUrl = `/api/media/${encodeURIComponent(name)}`;
 
   // Local /tmp write for same-instance + local dev
   try {
@@ -351,27 +396,50 @@ export async function saveUploadFile(
   }
 
   if (blobConfigured()) {
+    const { put } = await import("@vercel/blob");
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const pathname = blobUploadPathname(name);
+    const baseOpts = {
+      addRandomSuffix: false as const,
+      allowOverwrite: true,
+      contentType: mime,
+      token,
+    };
+    let blobUrl: string | undefined;
     try {
-      const { put } = await import("@vercel/blob");
-      const result = await put(blobUploadPathname(name), buffer, {
+      const result = await put(pathname, buffer, {
+        ...baseOpts,
         access: "public",
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        contentType: mime,
-        token: process.env.BLOB_READ_WRITE_TOKEN,
       });
-      if (result?.url) {
-        return { url: result.url, name };
+      blobUrl = result?.url;
+    } catch {
+      try {
+        const result = await put(pathname, buffer, {
+          ...baseOpts,
+          access: "private",
+        });
+        blobUrl = result?.url;
+      } catch (err) {
+        console.error("[dataFs] upload blob put failed", name, err);
+        throw new Error(
+          "Photo storage failed (Vercel Blob). Confirm BLOB_READ_WRITE_TOKEN is set for Production and redeploy."
+        );
       }
-    } catch (err) {
-      console.error("[dataFs] upload blob put failed", name, err);
     }
+    // App URL always proxies through /api/media (works for private blobs)
+    return { url: appUrl, name, blobUrl };
   }
 
-  return { url: `/api/media/${name}`, name };
+  if (isEphemeralHost()) {
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN is not set. Photos cannot be stored on Vercel without Blob — add the token in Project Settings → Environment Variables, then redeploy."
+    );
+  }
+
+  return { url: appUrl, name };
 }
 
-/** Look up a public Blob URL for a prior upload by basename. */
+/** Look up Blob URL for a prior upload by basename. */
 export async function resolveUploadBlobUrl(
   name: string
 ): Promise<string | null> {
@@ -381,9 +449,10 @@ export async function resolveUploadBlobUrl(
   try {
     const { list } = await import("@vercel/blob");
     const pathname = blobUploadPathname(base);
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
     const { blobs } = await list({
       prefix: pathname,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token,
       limit: 5,
     });
     const hit = blobs.find(
@@ -392,6 +461,34 @@ export async function resolveUploadBlobUrl(
     return hit?.url || null;
   } catch (err) {
     console.error("[dataFs] upload blob resolve failed", base, err);
+    return null;
+  }
+}
+
+/** Fetch upload bytes from Blob (supports private stores via Bearer token). */
+export async function fetchUploadBlobBytes(
+  name: string
+): Promise<{ data: Buffer; contentType: string } | null> {
+  const blobUrl = await resolveUploadBlobUrl(name);
+  if (!blobUrl) return null;
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  try {
+    const res = await fetch(blobUrl, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!res.ok) {
+      console.error("[dataFs] blob fetch failed", name, res.status);
+      return null;
+    }
+    const data = Buffer.from(await res.arrayBuffer());
+    const contentType =
+      res.headers.get("content-type") ||
+      guessUploadContentType(name) ||
+      "application/octet-stream";
+    return { data, contentType };
+  } catch (err) {
+    console.error("[dataFs] blob fetch error", name, err);
     return null;
   }
 }

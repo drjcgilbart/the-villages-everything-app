@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { resolveUpload } from "@/lib/content";
-import { resolveUploadBlobUrl } from "@/lib/dataFs";
+import { fetchUploadBlobBytes } from "@/lib/dataFs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,6 +16,8 @@ const TYPES: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".gif": "image/gif",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
   ".pdf": "application/pdf",
 };
 
@@ -24,7 +26,10 @@ export async function GET(
   ctx: { params: Promise<{ name: string }> }
 ) {
   const { name } = await ctx.params;
-  const safe = path.basename(String(name || ""));
+  const safe = path.basename(decodeURIComponent(String(name || "")));
+  if (!safe || safe === "." || safe === "..") {
+    return new NextResponse("Not found", { status: 404 });
+  }
 
   // 1) Local /tmp or bundled file (dev + same serverless instance)
   const filePath = resolveUpload(safe);
@@ -35,15 +40,20 @@ export async function GET(
     return new NextResponse(data, {
       headers: {
         "Content-Type": type,
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": "public, max-age=3600",
       },
     });
   }
 
-  // 2) Durable Vercel Blob (survives across instances / cold starts)
-  const blobUrl = await resolveUploadBlobUrl(safe);
-  if (blobUrl) {
-    return NextResponse.redirect(blobUrl, 302);
+  // 2) Durable Vercel Blob — stream bytes (works for private stores with token)
+  const fromBlob = await fetchUploadBlobBytes(safe);
+  if (fromBlob) {
+    return new NextResponse(new Uint8Array(fromBlob.data), {
+      headers: {
+        "Content-Type": fromBlob.contentType,
+        "Cache-Control": "public, max-age=3600",
+      },
+    });
   }
 
   return new NextResponse("Not found", { status: 404 });

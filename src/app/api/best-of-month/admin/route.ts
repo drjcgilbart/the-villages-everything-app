@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { blobConfigured } from "@/lib/dataFs";
 import {
   ensurePastMonthsTabulatedAsync,
   loadBomAsync,
@@ -24,6 +25,7 @@ export async function GET() {
     results: data.results,
     monthKey: bomMonthKey(),
     pending: data.entries.filter((e) => e.status === "pending"),
+    blobConfigured: blobConfigured(),
   });
 }
 

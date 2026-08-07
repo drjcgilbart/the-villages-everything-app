@@ -425,7 +425,7 @@ export function BestOfMonthClub() {
               <input
                 id="bom-file"
                 type="file"
-                accept=".jpg,.jpeg,image/jpeg,application/pdf"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 required
               />

@@ -9,11 +9,16 @@ export function AdminBestOfMonthPanel() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [blobOk, setBlobOk] = useState<boolean | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     const res = await fetch("/api/best-of-month/admin", { cache: "no-store" });
     const data = await res.json();
-    if (res.ok) setEntries(data.entries || []);
+    if (res.ok) {
+      setEntries(data.entries || []);
+      setBlobOk(Boolean(data.blobConfigured));
+    }
   }, []);
 
   useEffect(() => {
@@ -56,6 +61,20 @@ export function AdminBestOfMonthPanel() {
         per visitor each month. Winners tabulate automatically at month end
         (cron + on page load).
       </p>
+      {blobOk === false && (
+        <div className="msg msg-err" style={{ marginBottom: "0.75rem" }}>
+          <strong>Storage warning:</strong>{" "}
+          <code>BLOB_READ_WRITE_TOKEN</code> is not set on this deployment.
+          Photos will not stick across servers. In Vercel: connect your Blob
+          store, add the token under Environment Variables (Production), then
+          Redeploy.
+        </div>
+      )}
+      {blobOk === true && (
+        <p style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
+          Blob storage: connected (photos and approvals persist site-wide).
+        </p>
+      )}
       {msg && <div className="msg msg-ok">{msg}</div>}
 
       <div className="hero-actions" style={{ marginBottom: "1rem" }}>
@@ -115,7 +134,7 @@ export function AdminBestOfMonthPanel() {
                   Open {e.fileType === "pdf" ? "PDF" : "image"}
                 </a>
               </p>
-              {e.fileType === "image" && (
+              {e.fileType === "image" && !brokenImages[e.id] && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={e.imageUrl}
@@ -124,8 +143,24 @@ export function AdminBestOfMonthPanel() {
                     maxWidth: "220px",
                     borderRadius: 12,
                     marginBottom: "0.75rem",
+                    display: "block",
                   }}
+                  onError={() =>
+                    setBrokenImages((prev) => ({ ...prev, [e.id]: true }))
+                  }
                 />
+              )}
+              {e.fileType === "image" && brokenImages[e.id] && (
+                <p
+                  style={{
+                    margin: "0 0 0.65rem",
+                    color: "#9a3a2e",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Image failed to load (URL may be from before Blob was set up).
+                  Ask the villager to re-submit a new photo.
+                </p>
               )}
               <div className="hero-actions">
                 {e.status !== "approved" && (

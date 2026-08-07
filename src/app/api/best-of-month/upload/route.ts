@@ -25,8 +25,15 @@ export async function POST(req: Request) {
       file.name || "upload.jpg",
       file.type || ""
     );
-    return NextResponse.json({ url, fileType, name: file.name });
+    return NextResponse.json({
+      url,
+      fileType,
+      name: file.name,
+      // Help debug storage in the browser network tab
+      storedVia: url.startsWith("/api/media/") ? "app-media-proxy" : "direct",
+    });
   } catch (err) {
+    console.error("[bom/upload]", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 400 }

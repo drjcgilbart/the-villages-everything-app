@@ -75,7 +75,27 @@ export function loadBom(): BomData {
 
 /** Prefer this on serverless so Blob-backed entries are visible. */
 export async function loadBomAsync(): Promise<BomData> {
-  await ensureDurableHydrated();
+  // Always re-pull this file from Blob (not the multi-file hydrate TTL cache)
+  // so approvals submitted on another instance show up immediately.
+  const {
+    pullJsonFromBlob,
+    isEphemeralHost,
+    blobConfigured,
+    cacheDurableJson,
+  } = await import("./dataFs");
+  if (isEphemeralHost() && blobConfigured()) {
+    const text = await pullJsonFromBlob(BOM_FILE);
+    if (text) {
+      try {
+        JSON.parse(text); // validate
+        cacheDurableJson(BOM_FILE, text);
+      } catch {
+        /* fall through to local/memory */
+      }
+    }
+  } else {
+    await ensureDurableHydrated();
+  }
   return loadBom();
 }
 
@@ -441,19 +461,35 @@ export async function saveBomUpload(
   mime: string
 ): Promise<{ url: string; fileType: BomFileType }> {
   const lower = filename.toLowerCase();
-  const isPdf = mime === "application/pdf" || lower.endsWith(".pdf");
-  const isJpg =
-    mime === "image/jpeg" ||
-    mime === "image/jpg" ||
+  const mimeLower = (mime || "").toLowerCase();
+  const isPdf = mimeLower === "application/pdf" || lower.endsWith(".pdf");
+  const isImage =
+    mimeLower === "image/jpeg" ||
+    mimeLower === "image/jpg" ||
+    mimeLower === "image/png" ||
+    mimeLower === "image/webp" ||
+    mimeLower === "image/heic" ||
+    mimeLower === "image/heif" ||
     lower.endsWith(".jpg") ||
-    lower.endsWith(".jpeg");
-  if (!isPdf && !isJpg) {
-    throw new Error("Only JPG or PDF files are allowed");
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".webp") ||
+    lower.endsWith(".heic") ||
+    lower.endsWith(".heif") ||
+    // iOS sometimes sends empty type for photos
+    (!mimeLower && /\.(jpe?g|png|webp)$/i.test(lower));
+  if (!isPdf && !isImage) {
+    throw new Error("Only photo (JPG/PNG/WebP) or PDF files are allowed");
   }
 
+  let contentType = mimeLower || "image/jpeg";
+  if (isPdf) contentType = "application/pdf";
+  else if (lower.endsWith(".png")) contentType = "image/png";
+  else if (lower.endsWith(".webp")) contentType = "image/webp";
+  else if (!contentType.startsWith("image/")) contentType = "image/jpeg";
+
   // Prefix so media/blob keys are easy to spot
-  const safeName = `bom-${filename}`;
-  const contentType = isPdf ? "application/pdf" : "image/jpeg";
+  const safeName = `bom-${filename || "photo.jpg"}`;
   const { url } = await saveUploadFile(buffer, safeName, contentType);
 
   return {
