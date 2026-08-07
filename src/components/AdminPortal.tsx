@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AdminBestOfMonthPanel } from "@/components/AdminBestOfMonthPanel";
+import { AdminClubsPanel } from "@/components/AdminClubsPanel";
 import { AdminDiningPanel } from "@/components/AdminDiningPanel";
 import { AdminGolfPanel } from "@/components/AdminGolfPanel";
 import { AdminMembersPanel } from "@/components/AdminMembersPanel";
@@ -17,10 +18,11 @@ type PortalTab =
   | "realestate"
   | "bestof"
   | "golf"
+  | "clubs"
   | "access";
 
 /**
- * Site-owner Admin Portal — memberships, listings, dining, real estate, best of month, golf, site access.
+ * Site-owner Admin Portal — memberships, listings, dining, clubs, golf, site access.
  * Content publishing lives in Creator Studio (/studio).
  */
 export function AdminPortal() {
@@ -219,6 +221,13 @@ export function AdminPortal() {
           </button>
           <button
             type="button"
+            className={tab === "clubs" ? "active" : ""}
+            onClick={() => setTab("clubs")}
+          >
+            Clubs
+          </button>
+          <button
+            type="button"
             className={tab === "access" ? "active" : ""}
             onClick={() => setTab("access")}
           >
@@ -232,6 +241,7 @@ export function AdminPortal() {
         {tab === "realestate" && <AdminRealEstatePanel />}
         {tab === "bestof" && <AdminBestOfMonthPanel />}
         {tab === "golf" && <AdminGolfPanel />}
+        {tab === "clubs" && <AdminClubsPanel />}
         {tab === "access" && <AdminSiteGatePanel />}
       </div>
     </div>

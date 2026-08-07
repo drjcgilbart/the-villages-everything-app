@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ClubBrowser } from "@/components/ClubBrowser";
+import { ClubLeaderDirectory } from "@/components/ClubLeaderDirectory";
 import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Clubs",
   description:
-    "Popular clubs in The Villages — pickleball, dance, cards, music, and more — plus official directories and Hub Member favorites.",
+    "Popular clubs in The Villages, leader-updated open/closed listings with contacts, official directories, and Hub Member favorites.",
 };
 
 export default function ClubZonePage() {
@@ -29,20 +30,18 @@ export default function ClubZonePage() {
             <h1>{topic.title}</h1>
             <p>{topic.description}</p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
-              <a href="#clubs" className="btn btn-primary">
-                Browse popular clubs
+              <a href="#leader-directory" className="btn btn-primary">
+                Leader-updated directory
+              </a>
+              <a href="#clubs" className="btn btn-ghost">
+                Popular starter clubs
+              </a>
+              <a href="#club-leader-form" className="btn btn-ghost">
+                Leaders: update your club
               </a>
               <Link href="/my-space" className="btn btn-ghost">
                 My Space favorites
               </Link>
-              <a
-                href="https://www.districtgov.org/recreation/clubs/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-ghost"
-              >
-                Official club contacts
-              </a>
             </div>
           </div>
           <div className="page-hero-art">
@@ -58,7 +57,13 @@ export default function ClubZonePage() {
         </div>
       </div>
 
-      <section className="section" id="clubs">
+      <section className="section" id="leader-directory">
+        <div className="shell">
+          <ClubLeaderDirectory />
+        </div>
+      </section>
+
+      <section className="section" id="clubs" style={{ paddingTop: 0 }}>
         <div className="shell">
           <div className="section-head">
             <div>
