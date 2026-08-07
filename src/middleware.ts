@@ -104,6 +104,7 @@ export async function middleware(req: NextRequest) {
   if (
     (pathname.startsWith("/api/real-estate/refresh") ||
       pathname.startsWith("/api/entertainment/refresh") ||
+      pathname.startsWith("/api/calendar/refresh") ||
       pathname.startsWith("/api/best-of-month/tabulate")) &&
     (req.headers.get("x-vercel-cron") === "1" ||
       req.headers.get("authorization")?.startsWith("Bearer "))

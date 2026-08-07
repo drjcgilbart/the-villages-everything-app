@@ -7908,3 +7908,303 @@ a.floating-back-btn {
   background: rgba(232, 184, 74, 0.16);
   font-size: 0.92rem;
 }
+
+/* -- Events calendar -- */
+.events-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.events-cal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+.events-cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.events-cal-month {
+  margin: 0;
+  min-width: 10rem;
+  text-align: center;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.35rem;
+}
+.events-cal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.cal-warn {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #7a4d00;
+  background: rgba(232, 184, 74, 0.16);
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+}
+.events-cal-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 1rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .events-cal-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.events-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.events-cal-wd {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.events-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+.events-cal-cell {
+  aspect-ratio: 1;
+  min-height: 3.2rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.events-cal-cell.is-empty {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+.events-cal-cell:hover:not(.is-empty) {
+  border-color: rgba(31, 107, 74, 0.35);
+}
+.events-cal-cell.is-today {
+  box-shadow: 0 0 0 2px rgba(31, 107, 74, 0.45);
+}
+.events-cal-cell.is-selected {
+  background: linear-gradient(145deg, rgba(31, 107, 74, 0.12), rgba(232, 184, 74, 0.14));
+  border-color: rgba(31, 107, 74, 0.4);
+}
+.events-cal-cell.is-past {
+  opacity: 0.72;
+}
+.events-cal-cell.has-events .events-cal-daynum {
+  font-weight: 800;
+  color: var(--palm-deep);
+}
+.events-cal-daynum {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.events-cal-dots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  min-height: 8px;
+}
+.events-cal-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--palm);
+  display: block;
+}
+.events-cal-more {
+  font-style: normal;
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+.events-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin: 0.85rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.events-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.events-cal-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.events-cal-legend-item i.is-today-swatch {
+  box-shadow: 0 0 0 2px rgba(31, 107, 74, 0.45);
+  background: #fff;
+}
+.events-cal-legend-item i.is-dot-swatch {
+  border-radius: 50%;
+  background: var(--palm);
+}
+.cal-day-kicker {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--palm-deep);
+}
+.cal-day-kicker.is-past {
+  color: var(--muted);
+}
+.cal-muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.cal-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.cal-event-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.75rem 0.85rem;
+  background: #fff;
+}
+.cal-event-card.is-past {
+  opacity: 0.85;
+  background: #faf8f4;
+}
+.cal-event-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.cal-pill-cat {
+  background: rgba(31, 107, 74, 0.12);
+  color: var(--palm-deep);
+  font-weight: 700;
+}
+.cal-event-time {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7a4d00;
+}
+.cal-event-card h4 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.05rem;
+}
+.cal-event-venue {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.cal-event-desc {
+  margin: 0 0 0.45rem;
+  font-size: 0.88rem;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.cal-event-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+.cal-event-source {
+  color: var(--muted);
+}
+.cal-event-foot a {
+  color: var(--palm);
+  font-weight: 700;
+}
+.events-cal-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 800px) {
+  .events-cal-lists {
+    grid-template-columns: 1fr;
+  }
+}
+.cal-agenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 28rem;
+  overflow: auto;
+}
+.cal-agenda-btn {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  cursor: pointer;
+  font: inherit;
+}
+.cal-agenda-btn:hover {
+  border-color: rgba(31, 107, 74, 0.35);
+}
+.cal-agenda-btn strong {
+  font-size: 0.82rem;
+  color: var(--palm-deep);
+}
+.cal-agenda-btn span {
+  font-size: 0.8rem;
+  color: #7a4d00;
+  font-weight: 600;
+}
+.cal-agenda-btn em {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.cal-agenda-btn small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.cal-agenda-past .cal-agenda-btn {
+  opacity: 0.85;
+  background: #faf8f4;
+}
+.cal-disclaimer {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}

@@ -9,6 +9,10 @@
       "schedule": "0 11 * * *"
     },
     {
+      "path": "/api/calendar/refresh",
+      "schedule": "30 11 * * *"
+    },
+    {
       "path": "/api/best-of-month/tabulate",
       "schedule": "15 5 1 * *"
     }
