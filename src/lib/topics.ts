@@ -84,7 +84,7 @@ export const TOPICS: TopicDef[] = [
     title: "Wealth",
     kicker: "Money & markets",
     description:
-      "Portfolios, pensions, compound interest, and pretending quarterly statements are mystery novels. Money lessons from the reboot — without the hard sell.",
+      "Live markets and a personal portfolio board, plus local banks, Social Security & Medicare links, scam watch, and light money tools — without the hard sell.",
     image: "/graphics/theme-wealth.jpg",
     tags: [
       "wealth",
@@ -100,19 +100,26 @@ export const TOPICS: TopicDef[] = [
       "retirement",
       "budget",
       "broker",
+      "social-security",
+      "medicare",
+      "scam",
     ],
     highlights: [
       {
-        title: "Markets, demystified",
-        body: "What’s actually going on — in plain English, with room for healthy skepticism.",
+        title: "Live markets + portfolio",
+        body: "Index charts and a private on-device stock/ETF board.",
       },
       {
-        title: "Retirement money",
-        body: "How the reboot treats cash flow, risk, and the emotional support spreadsheet.",
+        title: "Local banks & credit unions",
+        body: "Places Villagers actually bank — with maps and websites.",
       },
       {
-        title: "Lessons learned",
-        body: "Wins, oops moments, and the stuff they don’t put on the brochure.",
+        title: "Official retirement links",
+        body: "SSA, Medicare, IRS, Investor.gov, and BrokerCheck.",
+      },
+      {
+        title: "Scam watch + money tools",
+        body: "Common traps, plus coffee budget and cash-flow sketches on your device.",
       },
     ],
     quote:
@@ -665,7 +672,7 @@ export const MAIN_TOPICS: {
     href: "/wealth",
     label: "Wealth",
     blurb:
-      "Markets, money lessons, and pretending compound interest is a love language.",
+      "Markets, local banks, Social Security links, scam watch, and light money tools.",
     image: "/graphics/theme-wealth.jpg",
   },
   {
