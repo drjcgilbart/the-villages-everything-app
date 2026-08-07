@@ -6446,9 +6446,132 @@ a.floating-back-btn {
   overflow: hidden;
 }
 
+.bom-show-more {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0.1rem 0 0;
+  color: var(--palm);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.bom-entry-media-btn {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: #f3eee6;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bom-view-full {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  background: rgba(20, 40, 30, 0.72);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.bom-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.bom-pill-picked {
+  background: rgba(232, 184, 74, 0.3);
+  color: #7a4d00;
+  font-weight: 700;
+}
+
 .bom-vote-count {
   margin: 0.35rem 0;
   font-size: 0.95rem;
+}
+
+.bom-media-img.is-hero {
+  width: 100%;
+  height: auto;
+  max-height: min(70vh, 640px);
+  object-fit: contain;
+  background: #1a1f1c;
+}
+
+.bom-media-pdf.is-hero {
+  min-height: 280px;
+}
+
+.bom-pdf-frame.is-hero {
+  height: min(55vh, 480px);
+}
+
+.bom-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(12, 20, 16, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.bom-lightbox-panel {
+  width: min(920px, 100%);
+  max-height: min(92vh, 900px);
+  overflow: auto;
+  margin: auto;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.bom-lightbox-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.bom-lightbox-head h3 {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.35rem;
+}
+
+.bom-lightbox-media {
+  border-radius: 14px;
+  overflow: hidden;
+  background: #1a1f1c;
+  margin-bottom: 0.85rem;
+}
+
+.bom-lightbox-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.bom-lightbox-desc {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--ink);
 }
 
 .bom-submit {

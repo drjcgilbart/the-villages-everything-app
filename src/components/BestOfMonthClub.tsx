@@ -40,17 +40,30 @@ function formatMonth(key: string) {
   });
 }
 
-function EntryMedia({ entry, large }: { entry: BomEntry; large?: boolean }) {
+function EntryMedia({
+  entry,
+  large,
+  hero,
+}: {
+  entry: BomEntry;
+  large?: boolean;
+  /** Full-size for detail modal */
+  hero?: boolean;
+}) {
   if (entry.fileType === "pdf") {
     return (
-      <div className={`bom-media bom-media-pdf${large ? " is-large" : ""}`}>
+      <div
+        className={`bom-media bom-media-pdf${large ? " is-large" : ""}${
+          hero ? " is-hero" : ""
+        }`}
+      >
         <a href={entry.imageUrl} target="_blank" rel="noopener noreferrer">
           📄 View PDF
         </a>
         <iframe
           src={entry.imageUrl}
           title={entry.title}
-          className="bom-pdf-frame"
+          className={`bom-pdf-frame${hero ? " is-hero" : ""}`}
         />
       </div>
     );
@@ -60,7 +73,9 @@ function EntryMedia({ entry, large }: { entry: BomEntry; large?: boolean }) {
     <img
       src={entry.imageUrl}
       alt={entry.title}
-      className={`bom-media-img${large ? " is-large" : ""}`}
+      className={`bom-media-img${large ? " is-large" : ""}${
+        hero ? " is-hero" : ""
+      }`}
     />
   );
 }
@@ -91,6 +106,8 @@ export function BestOfMonthClub() {
   const [error, setError] = useState<string | null>(null);
   const [busyVote, setBusyVote] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  /** Entry open in full detail lightbox */
+  const [detail, setDetail] = useState<BomEntry | null>(null);
 
   // Submit form
   const [category, setCategory] = useState<BomCategory>("pet");
@@ -117,6 +134,30 @@ export function BestOfMonthClub() {
     const t = setInterval(load, 30_000); // live totals
     return () => clearInterval(t);
   }, [load]);
+
+  // Keep detail panel in sync with live vote totals after reload
+  useEffect(() => {
+    if (!detail || !feed) return;
+    const cat = detail.category;
+    const fresh = (feed.entriesByCategory[cat] || []).find(
+      (e) => e.id === detail.id
+    );
+    if (fresh) setDetail(fresh);
+  }, [feed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!detail) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDetail(null);
+    }
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [detail]);
 
   async function vote(entryId: string) {
     setBusyVote(entryId);
@@ -272,8 +313,9 @@ export function BestOfMonthClub() {
           <div>
             <h2>Vote · {formatMonth(feed.monthKey)}</h2>
             <p>
-              One vote per category per visitor each month. Totals update live.
-              Pick your favorite in each category!
+              One pick per category at a time — you can change your vote anytime
+              until the month ends. Open a photo for the full picture and
+              description. Totals update live.
             </p>
           </div>
         </div>
@@ -293,7 +335,7 @@ export function BestOfMonthClub() {
                   </div>
                 </div>
                 {myPick ? (
-                  <span className="pill">You voted</span>
+                  <span className="pill bom-pill-picked">Your pick set · changeable</span>
                 ) : (
                   <span className="pill bom-pill-open">Open</span>
                 )}
@@ -307,17 +349,34 @@ export function BestOfMonthClub() {
                 <div className="bom-entry-grid">
                   {entries.map((entry) => {
                     const isMine = myPick === entry.id;
-                    const locked = Boolean(myPick);
+                    const hasOtherPick = Boolean(myPick) && !isMine;
                     return (
                       <article
                         key={entry.id}
                         className={`bom-entry-card${isMine ? " is-picked" : ""}`}
                       >
-                        <EntryMedia entry={entry} />
+                        <button
+                          type="button"
+                          className="bom-entry-media-btn"
+                          onClick={() => setDetail(entry)}
+                          aria-label={`View full details for ${entry.title}`}
+                        >
+                          <EntryMedia entry={entry} />
+                          <span className="bom-view-full">View full size</span>
+                        </button>
                         <div className="bom-entry-body">
                           <h4>{entry.title}</h4>
                           {entry.description ? (
                             <p className="bom-entry-desc">{entry.description}</p>
+                          ) : null}
+                          {entry.description && entry.description.length > 80 ? (
+                            <button
+                              type="button"
+                              className="bom-show-more"
+                              onClick={() => setDetail(entry)}
+                            >
+                              Show more
+                            </button>
                           ) : null}
                           <p className="bom-muted">
                             by {entry.submitterName}
@@ -326,20 +385,29 @@ export function BestOfMonthClub() {
                             <strong>{entry.votes}</strong> vote
                             {entry.votes === 1 ? "" : "s"}
                           </p>
-                          <button
-                            type="button"
-                            className={`btn btn-sm ${isMine ? "btn-primary" : "btn-ghost"}`}
-                            disabled={locked || busyVote === entry.id}
-                            onClick={() => vote(entry.id)}
-                          >
-                            {isMine
-                              ? "★ Your pick"
-                              : locked
-                                ? "Already voted"
+                          <div className="bom-entry-actions">
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => setDetail(entry)}
+                            >
+                              Full view
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${isMine ? "btn-primary" : "btn-ghost"}`}
+                              disabled={busyVote === entry.id}
+                              onClick={() => vote(entry.id)}
+                            >
+                              {isMine
+                                ? "★ Your pick"
                                 : busyVote === entry.id
-                                  ? "Voting…"
-                                  : "Vote favorite"}
-                          </button>
+                                  ? "Saving…"
+                                  : hasOtherPick
+                                    ? "Switch vote here"
+                                    : "Vote favorite"}
+                            </button>
+                          </div>
                         </div>
                       </article>
                     );
@@ -350,6 +418,82 @@ export function BestOfMonthClub() {
           );
         })}
       </section>
+
+      {/* Full-size entry lightbox */}
+      {detail ? (
+        <div
+          className="bom-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bom-lightbox-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDetail(null);
+          }}
+        >
+          <div className="bom-lightbox-panel about-panel">
+            <div className="bom-lightbox-head">
+              <div>
+                <span className="pill">
+                  {BOM_CATEGORY_META[detail.category]?.label || detail.category}
+                </span>
+                <h3 id="bom-lightbox-title">{detail.title}</h3>
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setDetail(null)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="bom-lightbox-media">
+              <EntryMedia entry={detail} hero />
+            </div>
+            <div className="bom-lightbox-body">
+              {detail.description ? (
+                <p className="bom-lightbox-desc">{detail.description}</p>
+              ) : (
+                <p className="bom-muted">No description provided.</p>
+              )}
+              <p className="bom-muted">
+                Submitted by {detail.submitterName} ·{" "}
+                <strong>{detail.votes}</strong> vote
+                {detail.votes === 1 ? "" : "s"}
+              </p>
+              <div className="bom-entry-actions">
+                <a
+                  href={detail.imageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-ghost btn-sm"
+                >
+                  Open original {detail.fileType === "pdf" ? "PDF" : "image"}
+                </a>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${
+                    feed.myVotes[detail.category] === detail.id
+                      ? "btn-primary"
+                      : "btn-primary"
+                  }`}
+                  disabled={busyVote === detail.id}
+                  onClick={() => vote(detail.id)}
+                >
+                  {feed.myVotes[detail.category] === detail.id
+                    ? "★ Your pick"
+                    : feed.myVotes[detail.category]
+                      ? busyVote === detail.id
+                        ? "Saving…"
+                        : "Switch vote to this one"
+                      : busyVote === detail.id
+                        ? "Saving…"
+                        : "Vote for this one"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* —— Submit —— */}
       <section className="bom-section" id="submit">

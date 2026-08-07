@@ -124,7 +124,8 @@ export async function POST(req: Request) {
         entryId: result.entry.id,
         votes: result.votes,
         category: result.entry.category,
-        message: "Vote recorded — thanks!",
+        changed: result.changed,
+        message: result.message,
       });
       if (setCookie) {
         res.cookies.set(VOTER_COOKIE, setCookie, {

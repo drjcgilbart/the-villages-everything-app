@@ -427,10 +427,26 @@ export async function deleteBomEntryAsync(id: string): Promise<void> {
   await saveBomAsync(data);
 }
 
+function recountVotes(data: BomData, entryIds: string[]) {
+  const set = new Set(entryIds.filter(Boolean));
+  for (const id of set) {
+    const idx = data.entries.findIndex((e) => e.id === id);
+    if (idx < 0) continue;
+    data.entries[idx] = {
+      ...data.entries[idx],
+      votes: data.votes.filter((v) => v.entryId === id).length,
+    };
+  }
+}
+
+/**
+ * Cast or change a vote in a category for the current month.
+ * One active pick per category per visitor — may switch until the month ends.
+ */
 export function castBomVote(input: {
   entryId: string;
   voterKey: string;
-}): { entry: BomEntry; votes: number } {
+}): { entry: BomEntry; votes: number; changed: boolean; message: string } {
   const data = ensurePastMonthsTabulated(loadBom());
   const monthKey = bomMonthKey();
   const voterKey = String(input.voterKey || "").trim().slice(0, 80);
@@ -449,10 +465,29 @@ export function castBomVote(input: {
       v.monthKey === monthKey &&
       v.category === entry.category
   );
+
   if (already) {
-    throw new Error(
-      `You already voted in ${BOM_CATEGORY_META[entry.category].label} this month`
-    );
+    if (already.entryId === entry.id) {
+      const idx = data.entries.findIndex((e) => e.id === entry.id);
+      return {
+        entry: data.entries[idx],
+        votes: data.entries[idx].votes,
+        changed: false,
+        message: "That’s already your pick in this category.",
+      };
+    }
+    const previousId = already.entryId;
+    already.entryId = entry.id;
+    already.createdAt = new Date().toISOString();
+    recountVotes(data, [previousId, entry.id]);
+    saveBom(data);
+    const idx = data.entries.findIndex((e) => e.id === entry.id);
+    return {
+      entry: data.entries[idx],
+      votes: data.entries[idx].votes,
+      changed: true,
+      message: `Vote moved to “${entry.title}”. You can change again anytime this month.`,
+    };
   }
 
   const vote: BomVote = {
@@ -464,20 +499,21 @@ export function castBomVote(input: {
     createdAt: new Date().toISOString(),
   };
   data.votes.push(vote);
-
-  const idx = data.entries.findIndex((e) => e.id === entry.id);
-  data.entries[idx] = {
-    ...data.entries[idx],
-    votes: data.entries[idx].votes + 1,
-  };
+  recountVotes(data, [entry.id]);
   saveBom(data);
-  return { entry: data.entries[idx], votes: data.entries[idx].votes };
+  const idx = data.entries.findIndex((e) => e.id === entry.id);
+  return {
+    entry: data.entries[idx],
+    votes: data.entries[idx].votes,
+    changed: true,
+    message: "Vote recorded — you can change it anytime this month.",
+  };
 }
 
 export async function castBomVoteAsync(input: {
   entryId: string;
   voterKey: string;
-}): Promise<{ entry: BomEntry; votes: number }> {
+}): Promise<{ entry: BomEntry; votes: number; changed: boolean; message: string }> {
   const data = await ensurePastMonthsTabulatedAsync();
   const monthKey = bomMonthKey();
   const voterKey = String(input.voterKey || "").trim().slice(0, 80);
@@ -496,10 +532,29 @@ export async function castBomVoteAsync(input: {
       v.monthKey === monthKey &&
       v.category === entry.category
   );
+
   if (already) {
-    throw new Error(
-      `You already voted in ${BOM_CATEGORY_META[entry.category].label} this month`
-    );
+    if (already.entryId === entry.id) {
+      const idx = data.entries.findIndex((e) => e.id === entry.id);
+      return {
+        entry: data.entries[idx],
+        votes: data.entries[idx].votes,
+        changed: false,
+        message: "That’s already your pick in this category.",
+      };
+    }
+    const previousId = already.entryId;
+    already.entryId = entry.id;
+    already.createdAt = new Date().toISOString();
+    recountVotes(data, [previousId, entry.id]);
+    await saveBomAsync(data);
+    const idx = data.entries.findIndex((e) => e.id === entry.id);
+    return {
+      entry: data.entries[idx],
+      votes: data.entries[idx].votes,
+      changed: true,
+      message: `Vote moved to “${entry.title}”. You can change again anytime this month.`,
+    };
   }
 
   const vote: BomVote = {
@@ -511,14 +566,15 @@ export async function castBomVoteAsync(input: {
     createdAt: new Date().toISOString(),
   };
   data.votes.push(vote);
-
-  const idx = data.entries.findIndex((e) => e.id === entry.id);
-  data.entries[idx] = {
-    ...data.entries[idx],
-    votes: data.entries[idx].votes + 1,
-  };
+  recountVotes(data, [entry.id]);
   await saveBomAsync(data);
-  return { entry: data.entries[idx], votes: data.entries[idx].votes };
+  const idx = data.entries.findIndex((e) => e.id === entry.id);
+  return {
+    entry: data.entries[idx],
+    votes: data.entries[idx].votes,
+    changed: true,
+    message: "Vote recorded — you can change it anytime this month.",
+  };
 }
 
 export function voterChoicesThisMonth(
