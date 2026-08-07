@@ -112,6 +112,30 @@ export const WEALTH_LOCAL: WealthResource[] = [
     accent: "coral",
   },
   {
+    id: "seacoast",
+    name: "Seacoast Bank",
+    kind: "bank",
+    emoji: "🌊",
+    blurb:
+      "Florida community bank with branches around The Villages — local flavor for checking, savings, and everyday banking.",
+    city: "The Villages / nearby",
+    href: "https://www.seacoastbank.com/",
+    mapsQuery: "Seacoast Bank The Villages FL",
+    accent: "sky",
+  },
+  {
+    id: "pnc",
+    name: "PNC Bank",
+    kind: "bank",
+    emoji: "🧡",
+    blurb:
+      "National bank with Villages-area branches and ATMs — handy if your accounts already live in the PNC ecosystem.",
+    city: "The Villages area",
+    href: "https://www.pnc.com/en/personal-banking/banking/branch-locator.html",
+    mapsQuery: "PNC Bank The Villages FL",
+    accent: "coral",
+  },
+  {
     id: "publix-banking",
     name: "In-store banking & ATMs",
     kind: "local",
