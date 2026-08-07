@@ -38,7 +38,7 @@ export const TOPICS: TopicDef[] = [
     title: "Health",
     kicker: "The long game",
     description:
-      "Steps, sleep, meds, meals, and the occasional “I walked to the rec center on purpose.” Wellness without the wellness cult energy.",
+      "Local hospitals & ERs, emergency numbers, ER-vs-urgent-care guidance, and light wellness tools — steps, water, and honest check-ins without the cult energy.",
     image: "/graphics/theme-health.jpg",
     tags: [
       "health",
@@ -53,19 +53,25 @@ export const TOPICS: TopicDef[] = [
       "doctor",
       "exercise",
       "pickleball",
+      "hospital",
+      "emergency",
     ],
     highlights: [
       {
-        title: "Moving more",
-        body: "Cart paths, rec centers, and the gentle art of choosing the long way home.",
+        title: "Local care contacts",
+        body: "Hospitals, freestanding ERs, and helplines with call + maps buttons.",
       },
       {
-        title: "Feeling better",
-        body: "Doctors, routines, and small wins that don’t require a new personality.",
+        title: "Know where to go",
+        body: "Plain-language ER vs urgent care vs primary — when in doubt, 911.",
       },
       {
-        title: "Honest check-ins",
-        body: "What worked, what didn’t, and what we’re still negotiating with ourselves about.",
+        title: "Wellness tools",
+        body: "Daily mood, water, steps, and tiny wins stored on your device only.",
+      },
+      {
+        title: "Move like a villager",
+        body: "Rec centers, cart paths, and consistency over heroic resolutions.",
       },
     ],
     quote:
@@ -652,7 +658,7 @@ export const MAIN_TOPICS: {
     href: "/health",
     label: "Health",
     blurb:
-      "Steps, sleep, and “I walked to the rec center on purpose” — wellness without the cult.",
+      "Hospitals & ERs, emergency numbers, and light wellness tools for real villagers.",
     image: "/graphics/theme-health.jpg",
   },
   {

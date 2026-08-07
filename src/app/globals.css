@@ -7109,3 +7109,433 @@ a.floating-back-btn {
   color: var(--palm-deep);
   font-weight: 800;
 }
+
+/* —— Health hub —— */
+.health-disclaimer {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.health-emergency-banner {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1rem;
+  align-items: stretch;
+  background: linear-gradient(
+    135deg,
+    rgba(232, 93, 76, 0.12),
+    rgba(232, 184, 74, 0.14)
+  );
+  border: 1px solid rgba(232, 93, 76, 0.28);
+}
+
+@media (max-width: 800px) {
+  .health-emergency-banner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.health-pill-alert {
+  background: rgba(232, 93, 76, 0.18);
+  color: #9a3a2e;
+  font-weight: 800;
+}
+
+.health-emergency-numbers {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.health-emergency-num {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.health-emergency-num:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(20, 60, 40, 0.08);
+}
+
+.health-emergency-num strong {
+  font-size: 1.25rem;
+  color: var(--palm-deep);
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.health-emergency-num span {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.health-emergency-num em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.health-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 960px) {
+  .health-snapshot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .health-snapshot-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.health-snapshot-card h3 {
+  margin: 0.35rem 0 0.35rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.05rem;
+}
+
+.health-snapshot-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.health-snapshot-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.health-facility-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.9rem;
+}
+
+.health-facility-grid-sm {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.health-facility-card {
+  display: flex;
+  flex-direction: column;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.health-facility-card.accent-palm {
+  border-color: rgba(31, 107, 74, 0.28);
+  box-shadow: 0 10px 24px rgba(31, 107, 74, 0.06);
+}
+
+.health-facility-card.accent-coral {
+  border-color: rgba(232, 93, 76, 0.3);
+  box-shadow: 0 10px 24px rgba(232, 93, 76, 0.07);
+}
+
+.health-facility-card.accent-gold {
+  border-color: rgba(232, 184, 74, 0.4);
+  box-shadow: 0 10px 24px rgba(232, 184, 74, 0.1);
+}
+
+.health-facility-card.accent-sky {
+  border-color: rgba(58, 166, 201, 0.35);
+  box-shadow: 0 10px 24px rgba(58, 166, 201, 0.08);
+}
+
+.health-facility-card.accent-lilac {
+  border-color: rgba(140, 110, 180, 0.35);
+  box-shadow: 0 10px 24px rgba(140, 110, 180, 0.08);
+}
+
+.health-facility-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.health-facility-emoji {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.health-facility-card h3 {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.12rem;
+}
+
+.health-facility-blurb {
+  margin: 0 0 0.55rem;
+  font-size: 0.92rem;
+  color: var(--ink);
+  flex: 1;
+}
+
+.health-facility-addr {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.health-facility-addr a {
+  color: var(--palm);
+  font-weight: 600;
+}
+
+.health-facility-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.health-carepath-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 860px) {
+  .health-carepath-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.health-carepath-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.health-carepath-title span {
+  font-size: 1.35rem;
+}
+
+.health-carepath-title h3 {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.05rem;
+}
+
+.health-carepath-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.health-carepath-card li {
+  margin: 0.35rem 0;
+}
+
+.health-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.health-muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0.2rem 0;
+}
+
+.health-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .health-tools-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.health-tool-wide {
+  grid-column: 1 / -1;
+}
+
+.health-tool-head {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-bottom: 0.65rem;
+}
+
+.health-tool-head h3 {
+  margin: 0 0 0.15rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.health-tool-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.health-mood-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.health-mood-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.health-mood-btn.is-on {
+  background: rgba(31, 107, 74, 0.12);
+  border-color: rgba(31, 107, 74, 0.35);
+  color: var(--palm-deep);
+}
+
+.health-meter {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(28, 36, 48, 0.08);
+  overflow: hidden;
+  margin-bottom: 0.65rem;
+}
+
+.health-meter-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3aa6c9, #1f6b4a);
+  transition: width 0.25s ease;
+}
+
+.health-meter-steps .health-meter-bar {
+  background: linear-gradient(90deg, #e8b84a, #1f6b4a);
+}
+
+.health-tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.health-goal-label {
+  display: block;
+  margin: 0.65rem 0 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.health-move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.health-move-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  max-width: 100%;
+}
+
+.health-move-chip em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.health-move-chip.is-on {
+  background: rgba(232, 184, 74, 0.2);
+  border-color: rgba(232, 184, 74, 0.55);
+  font-weight: 600;
+}
+
+.health-daily-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 700px) {
+  .health-daily-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.health-tip-card {
+  background: linear-gradient(
+    145deg,
+    rgba(31, 107, 74, 0.06),
+    rgba(232, 184, 74, 0.1)
+  );
+}
+
+.health-pill {
+  background: rgba(31, 107, 74, 0.14);
+  color: var(--palm-deep);
+  font-weight: 700;
+}
+
+.health-pill-stretch {
+  background: rgba(58, 166, 201, 0.16);
+  color: #0b6f8a;
+  font-weight: 700;
+}
+
+.health-tip-text {
+  margin: 0.55rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--palm-deep);
+}
+
+.health-note-card textarea {
+  width: 100%;
+  margin: 0.35rem 0 0.55rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.health-saved {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--palm-deep);
+}
