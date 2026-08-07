@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import {
   bomMonthKey,
-  castBomVote,
-  ensurePastMonthsTabulated,
+  castBomVoteAsync,
+  ensurePastMonthsTabulatedAsync,
   getResultsForFeaturedMonth,
   isBomCategory,
   listApprovedForMonth,
-  loadBom,
-  submitBomEntry,
+  submitBomEntryAsync,
   voterChoicesThisMonth,
 } from "@/lib/bestOfMonth";
 import type { BomCategory, BomFileType } from "@/lib/bestOfMonthTypes";
@@ -30,8 +29,7 @@ async function getOrCreateVoterKey(): Promise<{
 }
 
 export async function GET() {
-  let data = loadBom();
-  data = ensurePastMonthsTabulated(data);
+  let data = await ensurePastMonthsTabulatedAsync();
   const monthKey = bomMonthKey();
   const { key: voterKey, setCookie } = await getOrCreateVoterKey();
 
@@ -46,10 +44,6 @@ export async function GET() {
   const featuredEntries = featured
     ? Object.fromEntries(
         featured.categories.map((c) => {
-          const ids = [
-            c.winnerEntryId,
-            ...c.honorableMentionIds,
-          ].filter(Boolean) as string[];
           return [
             c.category,
             {
@@ -103,7 +97,7 @@ export async function POST(req: Request) {
       if (!isBomCategory(category)) {
         return NextResponse.json({ error: "Invalid category" }, { status: 400 });
       }
-      const entry = submitBomEntry({
+      const entry = await submitBomEntryAsync({
         category,
         title: body.title,
         description: body.description,
@@ -121,7 +115,7 @@ export async function POST(req: Request) {
 
     if (action === "vote") {
       const { key: voterKey, setCookie } = await getOrCreateVoterKey();
-      const result = castBomVote({
+      const result = await castBomVoteAsync({
         entryId: String(body.entryId || ""),
         voterKey,
       });

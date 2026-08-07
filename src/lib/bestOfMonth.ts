@@ -1,11 +1,9 @@
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
 import {
-  BUNDLE_DATA_DIR,
+  ensureDurableHydrated,
   readJsonFile,
   resolveUploadFile,
-  writableUploadsDir,
+  saveUploadFile,
   writeJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
@@ -75,6 +73,12 @@ export function loadBom(): BomData {
   };
 }
 
+/** Prefer this on serverless so Blob-backed entries are visible. */
+export async function loadBomAsync(): Promise<BomData> {
+  await ensureDurableHydrated();
+  return loadBom();
+}
+
 export function saveBom(data: BomData) {
   data.updatedAt = new Date().toISOString();
   writeJsonFile(BOM_FILE, data);
@@ -109,6 +113,28 @@ export function ensurePastMonthsTabulated(data: BomData = loadBom()): BomData {
   }
   if (changed) saveBom(data);
   return data;
+}
+
+export async function ensurePastMonthsTabulatedAsync(
+  data?: BomData
+): Promise<BomData> {
+  let next = data || (await loadBomAsync());
+  const current = bomMonthKey();
+  const months = new Set(
+    next.entries
+      .filter((e) => e.status === "approved")
+      .map((e) => e.monthKey)
+      .filter((m) => m < current)
+  );
+
+  let changed = false;
+  for (const monthKey of months) {
+    if (next.results.some((r) => r.monthKey === monthKey)) continue;
+    next = tabulateMonth(next, monthKey);
+    changed = true;
+  }
+  if (changed) await saveBomAsync(next);
+  return next;
 }
 
 export function tabulateMonth(data: BomData, monthKey: string): BomData {
@@ -240,6 +266,43 @@ export function submitBomEntry(input: {
   return entry;
 }
 
+export async function submitBomEntryAsync(input: {
+  category: BomCategory;
+  title: string;
+  description?: string;
+  submitterName: string;
+  imageUrl: string;
+  fileType: BomFileType;
+  monthKey?: string;
+}): Promise<BomEntry> {
+  const data = await loadBomAsync();
+  const title = String(input.title || "").trim().slice(0, 80);
+  const submitterName = String(input.submitterName || "").trim().slice(0, 60);
+  if (title.length < 2) throw new Error("Please enter a name/title");
+  if (submitterName.length < 2) throw new Error("Please enter your name");
+  if (!input.imageUrl) throw new Error("Please upload a JPG or PDF");
+  if (!isBomCategory(input.category)) throw new Error("Invalid category");
+
+  const entry: BomEntry = {
+    id: uid("bom"),
+    category: input.category,
+    title,
+    description: input.description
+      ? String(input.description).trim().slice(0, 500)
+      : undefined,
+    submitterName,
+    imageUrl: input.imageUrl,
+    fileType: input.fileType,
+    status: "pending",
+    monthKey: input.monthKey || bomMonthKey(),
+    createdAt: new Date().toISOString(),
+    votes: 0,
+  };
+  data.entries.unshift(entry);
+  await saveBomAsync(data);
+  return entry;
+}
+
 export function setBomEntryStatus(
   id: string,
   status: "approved" | "rejected" | "pending"
@@ -248,11 +311,19 @@ export function setBomEntryStatus(
   const idx = data.entries.findIndex((e) => e.id === id);
   if (idx < 0) throw new Error("Entry not found");
   data.entries[idx] = { ...data.entries[idx], status };
-  // Recompute votes denormalized from vote list (approved only matter)
-  if (status !== "approved") {
-    // keep vote count for history
-  }
   saveBom(data);
+  return data.entries[idx];
+}
+
+export async function setBomEntryStatusAsync(
+  id: string,
+  status: "approved" | "rejected" | "pending"
+): Promise<BomEntry> {
+  const data = await loadBomAsync();
+  const idx = data.entries.findIndex((e) => e.id === id);
+  if (idx < 0) throw new Error("Entry not found");
+  data.entries[idx] = { ...data.entries[idx], status };
+  await saveBomAsync(data);
   return data.entries[idx];
 }
 
@@ -303,6 +374,53 @@ export function castBomVote(input: {
   return { entry: data.entries[idx], votes: data.entries[idx].votes };
 }
 
+export async function castBomVoteAsync(input: {
+  entryId: string;
+  voterKey: string;
+}): Promise<{ entry: BomEntry; votes: number }> {
+  const data = await ensurePastMonthsTabulatedAsync();
+  const monthKey = bomMonthKey();
+  const voterKey = String(input.voterKey || "").trim().slice(0, 80);
+  if (voterKey.length < 8) throw new Error("Missing voter id");
+
+  const entry = data.entries.find((e) => e.id === input.entryId);
+  if (!entry) throw new Error("Entry not found");
+  if (entry.status !== "approved") throw new Error("Entry is not open for voting");
+  if (entry.monthKey !== monthKey) {
+    throw new Error("Voting is only open for this month’s entries");
+  }
+
+  const already = data.votes.find(
+    (v) =>
+      v.voterKey === voterKey &&
+      v.monthKey === monthKey &&
+      v.category === entry.category
+  );
+  if (already) {
+    throw new Error(
+      `You already voted in ${BOM_CATEGORY_META[entry.category].label} this month`
+    );
+  }
+
+  const vote: BomVote = {
+    id: uid("vote"),
+    entryId: entry.id,
+    category: entry.category,
+    monthKey,
+    voterKey,
+    createdAt: new Date().toISOString(),
+  };
+  data.votes.push(vote);
+
+  const idx = data.entries.findIndex((e) => e.id === entry.id);
+  data.entries[idx] = {
+    ...data.entries[idx],
+    votes: data.entries[idx].votes + 1,
+  };
+  await saveBomAsync(data);
+  return { entry: data.entries[idx], votes: data.entries[idx].votes };
+}
+
 export function voterChoicesThisMonth(
   data: BomData,
   voterKey: string,
@@ -317,11 +435,11 @@ export function voterChoicesThisMonth(
   return out;
 }
 
-export function saveBomUpload(
+export async function saveBomUpload(
   buffer: Buffer,
   filename: string,
   mime: string
-): { url: string; fileType: BomFileType } {
+): Promise<{ url: string; fileType: BomFileType }> {
   const lower = filename.toLowerCase();
   const isPdf = mime === "application/pdf" || lower.endsWith(".pdf");
   const isJpg =
@@ -333,29 +451,20 @@ export function saveBomUpload(
     throw new Error("Only JPG or PDF files are allowed");
   }
 
-  const dir = writableUploadsDir();
-  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
-  const name = `bom-${Date.now().toString(36)}-${safe}`;
-  const full = path.join(dir, name);
-  fs.writeFileSync(full, buffer);
-
-  // Also try bundle dir when local so media route finds it
-  try {
-    if (dir !== path.join(BUNDLE_DATA_DIR, "uploads")) {
-      /* local writable is already BUNDLE_DATA_DIR/uploads or /tmp */
-    }
-  } catch {
-    /* ignore */
-  }
+  // Prefix so media/blob keys are easy to spot
+  const safeName = `bom-${filename}`;
+  const contentType = isPdf ? "application/pdf" : "image/jpeg";
+  const { url } = await saveUploadFile(buffer, safeName, contentType);
 
   return {
-    url: `/api/media/${name}`,
+    url,
     fileType: isPdf ? "pdf" : "image",
   };
 }
 
 export function resolveBomMedia(name: string) {
-  return resolveUploadFile(path.basename(String(name || "")));
+  const base = String(name || "").split(/[/\\]/).pop() || "";
+  return resolveUploadFile(base);
 }
 
 export { BOM_CATEGORIES, BOM_CATEGORY_META };

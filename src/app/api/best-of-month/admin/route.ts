@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
-  ensurePastMonthsTabulated,
-  loadBom,
-  setBomEntryStatus,
+  ensurePastMonthsTabulatedAsync,
+  loadBomAsync,
+  setBomEntryStatusAsync,
   tabulateMonth,
   tabulatePreviousMonthIfNeeded,
   bomMonthKey,
   previousMonthKey,
-  saveBom,
+  saveBomAsync,
 } from "@/lib/bestOfMonth";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +17,8 @@ export async function GET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  let data = loadBom();
-  data = ensurePastMonthsTabulated(data);
+  let data = await loadBomAsync();
+  data = await ensurePastMonthsTabulatedAsync(data);
   return NextResponse.json({
     entries: data.entries,
     results: data.results,
@@ -42,16 +42,16 @@ export async function POST(req: Request) {
           : action === "reject"
             ? "rejected"
             : "pending";
-      const entry = setBomEntryStatus(String(body.id || ""), status);
+      const entry = await setBomEntryStatusAsync(String(body.id || ""), status);
       return NextResponse.json({ ok: true, entry });
     }
 
     if (action === "tabulate") {
       const monthKey = String(body.monthKey || previousMonthKey(bomMonthKey()));
-      let data = loadBom();
+      let data = await loadBomAsync();
       if (!data.results.some((r) => r.monthKey === monthKey)) {
         data = tabulateMonth(data, monthKey);
-        saveBom(data);
+        await saveBomAsync(data);
       }
       return NextResponse.json({
         ok: true,
@@ -60,7 +60,10 @@ export async function POST(req: Request) {
     }
 
     if (action === "tabulate-previous") {
+      // keep sync helper but force hydrate + durable save path first
+      await loadBomAsync();
       const data = tabulatePreviousMonthIfNeeded();
+      await saveBomAsync(data);
       return NextResponse.json({ ok: true, results: data.results[0] || null });
     }
 

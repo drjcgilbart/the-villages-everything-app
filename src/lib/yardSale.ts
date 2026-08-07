@@ -4,9 +4,9 @@ import crypto from "crypto";
 import {
   BUNDLE_DATA_DIR,
   readJsonFile,
+  saveUploadFile,
   writeJsonFile,
   writeJsonFileAsync,
-  writableUploadsDir,
 } from "./dataFs";
 import type {
   ItemCondition,
@@ -452,13 +452,9 @@ export function listingWithSeller(listing: YardListing) {
   };
 }
 
-export function saveYardUpload(buffer: Buffer, filename: string) {
-  const dir = writableUploadsDir();
-  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
-  const name = `${Date.now().toString(36)}-${safe}`;
-  const full = path.join(dir, name);
-  fs.writeFileSync(full, buffer);
-  return `/api/media/${name}`;
+export async function saveYardUpload(buffer: Buffer, filename: string) {
+  const { url } = await saveUploadFile(buffer, filename);
+  return url;
 }
 
 export { MAX_IMAGES, MAX_VIDEO_BYTES, MAX_IMAGE_BYTES, YARD_PATH };

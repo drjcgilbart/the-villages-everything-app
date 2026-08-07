@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       );
     }
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { url, fileType } = saveBomUpload(
+    const { url, fileType } = await saveBomUpload(
       buffer,
       file.name || "upload.jpg",
       file.type || ""

@@ -214,25 +214,37 @@ export async function hydrateDurableJsonFromBlob(): Promise<{
 }
 
 let hydrateOnce: Promise<void> | null = null;
+/** Last successful hydrate time — re-pull from Blob so other instances see approvals. */
+let lastHydrateAt = 0;
+const HYDRATE_TTL_MS = 4_000;
 
-/** Coalesce concurrent hydrates (one per process). */
+/**
+ * Coalesce concurrent hydrates, but re-pull from Blob every few seconds on
+ * serverless so admin approvals/submits appear on every instance.
+ */
 export function ensureDurableHydrated(): Promise<void> {
   if (!isEphemeralHost() || !blobConfigured()) {
     return Promise.resolve();
   }
-  if (!hydrateOnce) {
-    hydrateOnce = hydrateDurableJsonFromBlob()
-      .then(() => undefined)
-      .catch(() => {
-        hydrateOnce = null;
-      });
+  const now = Date.now();
+  if (hydrateOnce && now - lastHydrateAt < HYDRATE_TTL_MS) {
+    return hydrateOnce;
   }
+  hydrateOnce = hydrateDurableJsonFromBlob()
+    .then(() => {
+      lastHydrateAt = Date.now();
+    })
+    .catch(() => {
+      hydrateOnce = null;
+      lastHydrateAt = 0;
+    });
   return hydrateOnce;
 }
 
 /** Reset hydrate latch after a successful durable write (optional). */
 export function invalidateHydrateLatch() {
   hydrateOnce = null;
+  lastHydrateAt = 0;
 }
 
 export function writeJsonFile(filename: string, data: unknown): void {
@@ -271,6 +283,11 @@ export async function writeJsonFileAsync(
 
   if (DURABLE_JSON.has(base) && blobConfigured()) {
     await pushJsonToBlob(base, json);
+    // Let other instances re-pull promptly
+    invalidateHydrateLatch();
+    // Keep this instance's memory as source of truth until next TTL pull
+    memoryJson.set(base, json);
+    lastHydrateAt = Date.now();
   }
 }
 
@@ -285,6 +302,97 @@ export function tryWriteJsonFile(filename: string, data: unknown): boolean {
 
 export function writableUploadsDir(): string {
   return path.join(ensureWritableDirs({ uploads: true }), "uploads");
+}
+
+function blobUploadPathname(filename: string) {
+  return `tvh-data/uploads/${path.basename(filename)}`;
+}
+
+function guessUploadContentType(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  const map: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".pdf": "application/pdf",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".mov": "video/quicktime",
+  };
+  return map[ext] || "application/octet-stream";
+}
+
+/**
+ * Persist an uploaded file. On Vercel with Blob configured, stores to public
+ * Blob and returns that absolute URL (works on every serverless instance).
+ * Locally (or without Blob), writes disk and returns `/api/media/...`.
+ */
+export async function saveUploadFile(
+  buffer: Buffer,
+  filename: string,
+  contentType?: string
+): Promise<{ url: string; name: string }> {
+  const safe = path
+    .basename(String(filename || "upload.bin"))
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .slice(0, 80);
+  const name = `${Date.now().toString(36)}-${safe || "upload.bin"}`;
+  const mime = contentType || guessUploadContentType(name);
+
+  // Local /tmp write for same-instance + local dev
+  try {
+    const dir = writableUploadsDir();
+    fs.writeFileSync(/*turbopackIgnore: true*/ path.join(dir, name), buffer);
+  } catch (err) {
+    console.error("[dataFs] local upload write failed", name, err);
+  }
+
+  if (blobConfigured()) {
+    try {
+      const { put } = await import("@vercel/blob");
+      const result = await put(blobUploadPathname(name), buffer, {
+        access: "public",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        contentType: mime,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      if (result?.url) {
+        return { url: result.url, name };
+      }
+    } catch (err) {
+      console.error("[dataFs] upload blob put failed", name, err);
+    }
+  }
+
+  return { url: `/api/media/${name}`, name };
+}
+
+/** Look up a public Blob URL for a prior upload by basename. */
+export async function resolveUploadBlobUrl(
+  name: string
+): Promise<string | null> {
+  if (!blobConfigured()) return null;
+  const base = path.basename(String(name || ""));
+  if (!base || base === "." || base === "..") return null;
+  try {
+    const { list } = await import("@vercel/blob");
+    const pathname = blobUploadPathname(base);
+    const { blobs } = await list({
+      prefix: pathname,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+      limit: 5,
+    });
+    const hit = blobs.find(
+      (b) => b.pathname === pathname || b.pathname.endsWith(`/${base}`)
+    );
+    return hit?.url || null;
+  } catch (err) {
+    console.error("[dataFs] upload blob resolve failed", base, err);
+    return null;
+  }
 }
 
 /** Resolve an upload by basename from /tmp overlay, then bundled uploads. */
