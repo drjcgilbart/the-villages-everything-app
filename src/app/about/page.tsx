@@ -60,7 +60,7 @@ export default function AboutPage() {
             <p>
               The personal corner of {SITE.name} — blog, photos, and videos from
               one resident&apos;s moderately ridiculous life in The Villages.
-              The main hub stays about The Villages; this page is about the plot
+              The main app stays about The Villages; this page is about the plot
               twist.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
@@ -86,7 +86,7 @@ export default function AboutPage() {
           <div className="page-hero-art">
             <Image
               src="/graphics/mascot-logo.jpg"
-              alt="Original golf-ball mascot illustration for The Villages Hub"
+              alt="Original golf-ball mascot illustration for The Villages Everything App"
               width={280}
               height={280}
               className="about-mascot"
@@ -205,7 +205,7 @@ export default function AboutPage() {
             </p>
             <p style={{ marginBottom: 0 }}>
               <Link href="/" className="text-link">
-                ← Back to The Villages Hub
+                ← Back to The Villages Everything App
               </Link>
             </p>
           </div>

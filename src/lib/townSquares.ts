@@ -70,23 +70,11 @@ export const TOWN_SQUARES: TownSquare[] = [
     mapQuery: "Spanish Springs Town Square, 1051 Main St, The Villages, FL 32159",
     camNote: "Main view and East Entrance cams when online.",
     photo: {
-      src: "/graphics/town-squares/spanish-springs.jpg",
-      alt: "Storefronts and plaza area at Spanish Springs Town Square in The Villages, Florida",
+      src: "/graphics/town-squares/spanish-springs-v2.jpg",
+      alt: "Whimsical cartoon of Spanish Springs — adobe plaza, fountain, red-tile roofs, and outdoor stage",
       credit:
-        "Photo: Tetraeder · Wikimedia Commons · CC BY-SA 4.0",
+        "Original whimsical illustration for The Villages Everything App",
     },
-    gallery: [
-      {
-        src: "/graphics/town-squares/spanish-springs-evening.jpg",
-        alt: "Evening lights at Spanish Springs Town Square",
-        credit: "Photo: Tetraeder · Wikimedia Commons · CC BY-SA 4.0",
-      },
-      {
-        src: "/graphics/town-squares/spanish-springs-arch.jpg",
-        alt: "Entrance arch near Spanish Springs in The Villages, Florida",
-        credit: "Photo: Connor J. Williams · Wikimedia Commons · CC BY 3.0",
-      },
-    ],
     officialPage:
       "https://www.thevillages.com/shopping-dining/spanish-springs/",
     entertainmentPage:
@@ -180,17 +168,11 @@ export const TOWN_SQUARES: TownSquare[] = [
     mapQuery: "Lake Sumter Landing Market Square, 1000 Lake Sumter Landing, The Villages, FL 32162",
     camNote: "Main and Gazebo views — sometimes offline for adjustments.",
     photo: {
-      src: "/graphics/town-squares/lake-sumter-pier.jpg",
-      alt: "Waterfront pier near Lake Sumter Landing in The Villages, Florida",
-      credit: "Photo: Tetraeder · Wikimedia Commons · CC BY-SA 4.0",
+      src: "/graphics/town-squares/lake-sumter-landing-v2.jpg",
+      alt: "Whimsical cartoon of Lake Sumter Landing — lighthouse, long pier, market stalls, and lake sunset",
+      credit:
+        "Original whimsical illustration for The Villages Everything App",
     },
-    gallery: [
-      {
-        src: "/graphics/town-squares/lake-sumter-carts.jpg",
-        alt: "Golf carts near Lake Sumter Landing in The Villages, Florida",
-        credit: "Photo: Tetraeder · Wikimedia Commons · CC BY-SA 4.0",
-      },
-    ],
     officialPage:
       "https://www.thevillages.com/shopping-dining/lake-sumter-landing/",
     entertainmentPage:
@@ -281,18 +263,11 @@ export const TOWN_SQUARES: TownSquare[] = [
       "Brownwood Paddock Square, 2705 West Torch Lake Drive, The Villages, FL 32163",
     camNote: "Main view and Northeast Entrance cams when online.",
     photo: {
-      src: "/graphics/town-squares/brownwood.jpg",
-      alt: "Ranch-style paddock square plaza with western storefronts and outdoor seating",
+      src: "/graphics/town-squares/brownwood-v2.jpg",
+      alt: "Whimsical cartoon of Brownwood Paddock Square — ranch western storefronts, dance paddock, and cowboy boot stage",
       credit:
-        "Original illustration for The Villages Hub (copyright-free scene art)",
+        "Original whimsical illustration for The Villages Everything App",
     },
-    gallery: [
-      {
-        src: "/graphics/town-squares/brownwood-bridge.jpg",
-        alt: "Bridge over SR 44 near Brownwood in The Villages area",
-        credit: "Photo: Iamorangelightning · Wikimedia Commons · CC BY-SA 4.0",
-      },
-    ],
     officialPage: "https://www.thevillages.com/shopping-dining/brownwood/",
     entertainmentPage: "https://www.thevillagesentertainment.com/",
     highlights: [
@@ -380,10 +355,10 @@ export const TOWN_SQUARES: TownSquare[] = [
     mapQuery: "Eastport, 6980 Central Lake Drive, The Villages, FL",
     camNote: "Official cam listed; availability can read “coming soon.”",
     photo: {
-      src: "/graphics/town-squares/eastport.jpg",
-      alt: "Modern town-square plaza with fountain, shops, and golf carts",
+      src: "/graphics/town-squares/eastport-v2.jpg",
+      alt: "Whimsical cartoon of Eastport — modern glass shops, contemporary fountain, and new plaza stage",
       credit:
-        "Original illustration for The Villages Hub (copyright-free scene art)",
+        "Original whimsical illustration for The Villages Everything App",
     },
     officialPage: "https://www.thevillages.com/shopping-dining/eastport/",
     entertainmentPage: "https://www.thevillagesentertainment.com/",
@@ -471,10 +446,10 @@ export const TOWN_SQUARES: TownSquare[] = [
     mapQuery: "Sawgrass Grove, 766 Marilee Place, The Villages, FL",
     camNote: "Main view on the official Live Web Cameras page.",
     photo: {
-      src: "/graphics/town-squares/sawgrass-grove.jpg",
-      alt: "Railroad-depot style gathering place with palms and outdoor seating",
+      src: "/graphics/town-squares/sawgrass-grove-v2.jpg",
+      alt: "Whimsical cartoon of Sawgrass Grove — railroad depot, clock tower, gazebo, sawgrass, and golf carts",
       credit:
-        "Original illustration for The Villages Hub (copyright-free scene art)",
+        "Original whimsical illustration for The Villages Everything App",
     },
     officialPage: "https://www.thevillages.com/shopping-dining/sawgrass-grove/",
     entertainmentPage: "https://www.thevillagesentertainment.com/",

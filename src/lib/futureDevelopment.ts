@@ -174,7 +174,7 @@ export const DEVELOPMENT_AREAS: DevelopmentArea[] = [
       "One of the newest “center of it all” chapters — town-center energy, championship golf adjacency, and villages like Edenfield, Oak Hollow, and friends filling in fast.",
     tips: [
       "Watch drone flyovers month-to-month — rooftops appear like popcorn.",
-      "Pair aerials with My Village pages for CDD / area context.",
+      "Pair aerials with The Villages pages for CDD / area context.",
       "Town-center amenities often lag housing by a beat — manage expectations.",
     ],
     relatedVillageSlugs: ["edenfield", "oak-hollow", "lagrange", "moultrie-creek"],

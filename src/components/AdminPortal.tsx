@@ -2,15 +2,25 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { AdminBestOfMonthPanel } from "@/components/AdminBestOfMonthPanel";
 import { AdminDiningPanel } from "@/components/AdminDiningPanel";
+import { AdminGolfPanel } from "@/components/AdminGolfPanel";
 import { AdminMembersPanel } from "@/components/AdminMembersPanel";
 import { AdminRealEstatePanel } from "@/components/AdminRealEstatePanel";
+import { AdminSiteGatePanel } from "@/components/AdminSiteGatePanel";
 import { AdminYardSalePanel } from "@/components/AdminYardSalePanel";
 
-type PortalTab = "members" | "yard" | "dining" | "realestate";
+type PortalTab =
+  | "members"
+  | "yard"
+  | "dining"
+  | "realestate"
+  | "bestof"
+  | "golf"
+  | "access";
 
 /**
- * Site-owner Admin Portal — memberships, listings, dining, real estate.
+ * Site-owner Admin Portal — memberships, listings, dining, real estate, best of month, golf, site access.
  * Content publishing lives in Creator Studio (/studio).
  */
 export function AdminPortal() {
@@ -135,7 +145,7 @@ export function AdminPortal() {
       <div className="admin-card">
         <div className="admin-portal-header">
           <div>
-            <span className="kicker">The Villages Hub · owner tools</span>
+            <span className="kicker">The Villages Everything App · owner tools</span>
             <h1 style={{ margin: "0.25rem 0" }}>Admin Portal</h1>
             <p style={{ margin: 0, color: "var(--muted)" }}>
               Memberships, badges, and site moderation — separate from Creator
@@ -193,12 +203,36 @@ export function AdminPortal() {
           >
             Real Estate
           </button>
+          <button
+            type="button"
+            className={tab === "bestof" ? "active" : ""}
+            onClick={() => setTab("bestof")}
+          >
+            Best of Month
+          </button>
+          <button
+            type="button"
+            className={tab === "golf" ? "active" : ""}
+            onClick={() => setTab("golf")}
+          >
+            Golf
+          </button>
+          <button
+            type="button"
+            className={tab === "access" ? "active" : ""}
+            onClick={() => setTab("access")}
+          >
+            Site access
+          </button>
         </div>
 
         {tab === "members" && <AdminMembersPanel />}
         {tab === "yard" && <AdminYardSalePanel />}
         {tab === "dining" && <AdminDiningPanel />}
         {tab === "realestate" && <AdminRealEstatePanel />}
+        {tab === "bestof" && <AdminBestOfMonthPanel />}
+        {tab === "golf" && <AdminGolfPanel />}
+        {tab === "access" && <AdminSiteGatePanel />}
       </div>
     </div>
   );

@@ -2,16 +2,16 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { BetaGateForm } from "@/components/BetaGateForm";
-import { isSiteGateEnabled } from "@/lib/siteGate";
+import { isSiteGateEnabledAsync } from "@/lib/siteGate";
 
 export const metadata: Metadata = {
   title: "Beta access",
   robots: { index: false, follow: false },
 };
 
-export default function BetaGatePage() {
+export default async function BetaGatePage() {
   // If gate is off, no reason to land here
-  if (!isSiteGateEnabled()) {
+  if (!(await isSiteGateEnabledAsync())) {
     redirect("/");
   }
 
@@ -22,7 +22,7 @@ export default function BetaGatePage() {
           <span className="kicker">Private beta</span>
           <h1>Password, please</h1>
           <p>
-            The Villages Hub is in private beta. Enter the password you were
+            The Villages Everything App is in private beta. Enter the password you were
             given to explore the site.
           </p>
         </div>

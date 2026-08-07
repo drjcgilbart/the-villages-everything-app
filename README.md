@@ -1,8 +1,8 @@
-# The Villages Hub
+# The Villages Everything App
 
 **Everything app for The Villages, Florida** — villages, dining, rec centers, town squares, real estate, calendar, and more. Built by a resident, for neighbors.
 
-Personal blog, videos, and photos still live under **My Story** / media links; the main product is the Villages hub.
+Personal blog, videos, and photos still live under **My Retirement Reboot** / media links; the main product is the everything app.
 
 **Live domain target:** [https://www.thevillageseverythingapp.com](https://www.thevillageseverythingapp.com)
 
@@ -124,7 +124,7 @@ Optional: set `NEXT_PUBLIC_DONATION_PAYMENT_LINK` to a [Payment Link](https://da
 
 ---
 
-## Deploy to thevillagesidiot.com (Vercel — recommended)
+## Deploy to thevillageseverythingapp.com (Vercel — recommended)
 
 Same general path you used for other sites:
 
@@ -133,11 +133,11 @@ Same general path you used for other sites:
 3. Set environment variables in Vercel:  
    - `ADMIN_PASSWORD` = a strong password  
    - `ADMIN_SECRET` = a long random string  
-   - `NEXT_PUBLIC_SITE_URL` = `https://thevillagesidiot.com`  
+   - `NEXT_PUBLIC_SITE_URL` = `https://www.thevillageseverythingapp.com`  
    - `STRIPE_SECRET_KEY` = your Stripe secret key (live when ready)  
    - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = your Stripe publishable key  
 4. Deploy  
-5. In Vercel → Project → Domains, add `thevillagesidiot.com` and `www` if you use it  
+5. In Vercel → Project → Domains, add `thevillageseverythingapp.com` and `www`  
 6. At GoDaddy (or your DNS host), point DNS to Vercel (A / CNAME records Vercel shows you)
 
 ### Important note about posting *after* deploy
@@ -157,17 +157,20 @@ To **include** content in git for deploy, temporarily remove `data/content.json`
 ## Project folder
 
 ```
-the-villages-idiot/
-  src/app/          # pages + API
-  src/components/   # UI
-  src/lib/          # content store + auth
-  data/             # content.json + uploads (created on first run)
+the-villages-idiot/          # folder name on disk (legacy; product brand below)
+  src/app/                   # pages + API
+  src/components/            # UI
+  src/lib/                   # content store + auth
+  src/lib/siteBrand.ts       # canonical product name
+  data/                      # content.json + uploads (created on first run)
   start.bat
-  .env.local        # your local secrets (not committed)
+  .env.local                 # your local secrets (not committed)
 ```
 
 Folder name on disk: `the-villages-idiot`  
-Site name / brand: **The Villages Retirement Reboot**
+npm package name: `the-villages-everything-app`  
+Site name / brand: **The Villages Everything App**  
+YouTube channel: **The Villages Everything App** ([@TheVillagesEverythingApp](https://www.youtube.com/@TheVillagesEverythingApp))
 
 ---
 

@@ -162,7 +162,7 @@ export default function FutureDevelopmentPage() {
                 Where the map is still under construction — pair these notes
                 with drone videos and{" "}
                 <Link href="/my-village" className="text-link">
-                  My Village
+                  The Villages
                 </Link>{" "}
                 for ground-level context.
               </p>
@@ -226,7 +226,7 @@ export default function FutureDevelopmentPage() {
               <h2>Keep exploring</h2>
               <ul className="village-related-links">
                 <li>
-                  <Link href="/my-village">My Village</Link> — ground-level
+                  <Link href="/my-village">The Villages</Link> — ground-level
                   village pages (hello, Edenfield)
                 </li>
                 <li>
@@ -238,8 +238,12 @@ export default function FutureDevelopmentPage() {
                   — chat about what you just saw from the sky
                 </li>
                 <li>
-                  <Link href="/community-resources">Community Resources</Link> —
-                  squares, rec, and the rest
+                  <Link href="/yard-sale">Yard Sale</Link> — neighbor treasure
+                  hunts
+                </li>
+                <li>
+                  <Link href="/best-of-the-month">Best of the Month</Link> —
+                  monthly highlight reel
                 </li>
               </ul>
             </div>

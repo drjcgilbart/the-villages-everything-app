@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DiningFavoriteButton } from "@/components/DiningFavoriteButton";
 import { MemberName } from "@/components/MemberName";
 import { ReviewForm } from "@/components/ReviewForm";
 import { StarRating } from "@/components/StarRating";
@@ -11,6 +13,7 @@ import {
   loadDining,
   topByCuisine,
 } from "@/lib/dining";
+import { cuisineArtPath } from "@/lib/diningTypes";
 import { formatDate, paragraphs } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +62,16 @@ export default async function RestaurantPage({
               <span className="pill pill-rank">#{myRank} in {restaurant.cuisine}</span>
             )}
           </div>
+          <div className="dining-detail-cuisine-art">
+            <Image
+              src={cuisineArtPath(restaurant.cuisine)}
+              alt=""
+              width={720}
+              height={400}
+              className="dining-detail-cuisine-img"
+              priority
+            />
+          </div>
           <h1>{restaurant.name}</h1>
           <p className="subtitle">{restaurant.description}</p>
           <div className="restaurant-hero-rating">
@@ -79,11 +92,19 @@ export default async function RestaurantPage({
               Must-try: {restaurant.specialties.join(" · ")}
             </p>
           )}
-          <p style={{ marginTop: "1rem" }}>
-            <Link href="/dining" className="text-link">
+          <div className="hero-actions" style={{ marginTop: "1rem" }}>
+            <DiningFavoriteButton
+              restaurantId={restaurant.id}
+              name={restaurant.name}
+              variant="full"
+            />
+            <Link href="/my-space#ms-favorites" className="btn btn-ghost btn-sm">
+              My Space favorites
+            </Link>
+            <Link href="/dining" className="btn btn-ghost btn-sm">
               ← All dining
             </Link>
-          </p>
+          </div>
         </div>
       </div>
 

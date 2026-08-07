@@ -1,8 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VillageSaveButton } from "@/components/VillageBrowser";
 import { VillageNeighborsSection } from "@/components/VillageNeighbors";
 import { getNeighborsForVillage } from "@/lib/villageNeighbors";
+import { getVillageArt, motifEmoji } from "@/lib/villageArt";
 import {
   VILLAGES,
   cddLabel,
@@ -41,6 +43,7 @@ export default async function VillageDetailPage({
   if (!village) notFound();
 
   const region = getRegion(village.region);
+  const art = getVillageArt(village);
   const nearbyVillages = villagesByRegion(village.region)
     .filter((v) => v.slug !== village.slug)
     .slice(0, 12);
@@ -60,9 +63,28 @@ export default async function VillageDetailPage({
             <span className="pill pill-cuisine">{region.shortLabel}</span>
             <span>{village.county} County</span>
             <span>{cddLabel(village.cdd)}</span>
+            <span className="pill">
+              {motifEmoji(art.motif)} {art.motifLabel}
+            </span>
           </div>
           <h1>Village of {village.name}</h1>
           <p className="subtitle">{village.blurb}</p>
+          <div
+            className="village-detail-art"
+            style={{ ["--village-accent" as string]: art.accent }}
+          >
+            <Image
+              src={art.image}
+              alt={`Whimsical ${art.creature} scene for Village of ${village.name}`}
+              width={960}
+              height={540}
+              className="village-detail-art-img"
+              priority
+            />
+            <p className="village-detail-art-caption">
+              <strong>{art.creature}</strong> · {art.motifLabel} · {art.hook}
+            </p>
+          </div>
           <div className="hero-actions" style={{ marginTop: "1rem" }}>
             <VillageSaveButton slug={village.slug} name={village.name} />
             <Link href="/my-village" className="btn btn-ghost btn-sm">

@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * Fixed back control on every page except home.
- * Uses browser history when available; otherwise returns to the hub home.
+ * Fixed Back + Home controls on every page except home.
+ * Back uses browser history when available; otherwise goes home.
+ * Home always jumps straight to the site root.
  */
 export function FloatingBackButton() {
   const pathname = usePathname();
@@ -30,17 +32,30 @@ export function FloatingBackButton() {
   if (!canShow) return null;
 
   return (
-    <button
-      type="button"
-      className="floating-back-btn"
-      onClick={goBack}
-      aria-label="Go back to previous page"
-      title="Back"
-    >
-      <span className="floating-back-arrow" aria-hidden>
-        ←
-      </span>
-      <span className="floating-back-label">Back</span>
-    </button>
+    <div className="floating-nav-stack" role="navigation" aria-label="Page navigation">
+      <button
+        type="button"
+        className="floating-back-btn"
+        onClick={goBack}
+        aria-label="Go back to previous page"
+        title="Back"
+      >
+        <span className="floating-back-arrow" aria-hidden>
+          ←
+        </span>
+        <span className="floating-back-label">Back</span>
+      </button>
+      <Link
+        href="/"
+        className="floating-back-btn floating-home-btn"
+        aria-label="Go to home page"
+        title="Home"
+      >
+        <span className="floating-back-arrow" aria-hidden>
+          ⌂
+        </span>
+        <span className="floating-back-label">Home</span>
+      </Link>
+    </div>
   );
 }

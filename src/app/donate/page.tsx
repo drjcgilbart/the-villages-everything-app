@@ -6,7 +6,7 @@ import { donationPaymentLink, stripeConfigured } from "@/lib/stripe";
 export const metadata = {
   title: "Buy me a cup of Joe",
   description:
-    "Tip The Villages Hub — help keep the lights on with a cup of Joe.",
+    "Tip The Villages Everything App — help keep the lights on with a cup of Joe.",
 };
 
 export default async function DonatePage({

@@ -1,8 +1,8 @@
 @echo off
 cd /d "%~dp0"
 echo.
-echo  The Villages Idiot
-echo  ------------------
+echo  The Villages Everything App
+echo  ----------------------------
 echo  Starting local site at http://localhost:3000
 echo  Studio (admin):     http://localhost:3000/admin
 echo  Default password:   changeme  (see .env.local)

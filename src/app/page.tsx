@@ -31,7 +31,7 @@ export default function HomePage() {
             <p className="subtitle">{SITE.subtitle}</p>
             <div className="hero-actions">
               <Link href="/my-village" className="btn btn-primary">
-                Find my village
+                Browse The Villages
               </Link>
               <Link href="/dining" className="btn btn-ghost">
                 Feed me
@@ -99,7 +99,7 @@ export default function HomePage() {
             <h2>Currently useful…</h2>
             <p>
               Villages tools up top. Personal reboot story tucked away under My
-              Retirement Reboot — so the hub stays about The Villages, not just
+              Retirement Reboot — so the app stays about The Villages, not just
               me.
             </p>
             <div className="hub-quick-list">

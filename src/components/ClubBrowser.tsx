@@ -8,34 +8,16 @@ import {
   POPULAR_CLUBS,
   type PopularClub,
 } from "@/lib/clubs";
-
-const LOCAL_KEY = "tvh-club-favorites-local";
-
-function readLocal(): string[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY);
-    if (!raw) return [];
-    const p = JSON.parse(raw) as unknown;
-    return Array.isArray(p) ? p.filter((x) => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeLocal(ids: string[]) {
-  try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(ids));
-  } catch {
-    /* ignore */
-  }
-}
+import {
+  readClubFavoritesLocal,
+  writeClubFavoritesLocal,
+} from "@/lib/siteFavorites";
 
 export function ClubBrowser() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [signedIn, setSignedIn] = useState(false);
-  const [isSubscriber, setIsSubscriber] = useState(false);
   const [syncNote, setSyncNote] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
@@ -44,16 +26,14 @@ export function ClubBrowser() {
       const res = await fetch("/api/members/space", { cache: "no-store" });
       if (res.status === 401) {
         setSignedIn(false);
-        setIsSubscriber(false);
         return;
       }
       if (!res.ok) return;
       const data = await res.json();
       setSignedIn(true);
-      setIsSubscriber(Boolean(data.space?.isSubscriber || data.space?.hasSpaceAccess));
       if (Array.isArray(data.space?.favoriteClubIds)) {
         setFavorites(data.space.favoriteClubIds);
-        writeLocal(data.space.favoriteClubIds);
+        writeClubFavoritesLocal(data.space.favoriteClubIds);
       }
     } catch {
       /* offline */
@@ -61,7 +41,7 @@ export function ClubBrowser() {
   }, []);
 
   useEffect(() => {
-    const local = readLocal();
+    const local = readClubFavoritesLocal();
     setFavorites(local);
     setHydrated(true);
     syncFromServer();
@@ -96,7 +76,7 @@ export function ClubBrowser() {
       ? favorites.filter((id) => id !== club.id)
       : [...favorites, club.id];
     setFavorites(next);
-    writeLocal(next);
+    writeClubFavoritesLocal(next);
 
     if (!signedIn) {
       setSyncNote(
@@ -113,9 +93,7 @@ export function ClubBrowser() {
       });
       if (res.ok) {
         setSyncNote(
-          isSubscriber
-            ? "Saved to your My Space (Cart Path Regular+ can view the board)."
-            : "Saved to your account. Upgrade to Cart Path Regular+ to open the clubs board on My Space."
+          "Saved on this device and to My Space · My favorites."
         );
       } else {
         const data = await res.json().catch(() => ({}));
@@ -164,16 +142,12 @@ export function ClubBrowser() {
               : `${favorites.length} favorite club${favorites.length === 1 ? "" : "s"}`}
           </h3>
           <p style={{ margin: 0, color: "var(--muted)", fontSize: "0.92rem" }}>
-            Guests: saved on this computer.{" "}
-            <Link href="/yard-sale/login" className="text-link">
-              Sign in
+            Starred clubs stay on this page and are copied into{" "}
+            <Link href="/my-space#ms-favorites" className="text-link">
+              My Space · My favorites
             </Link>{" "}
-            and become a{" "}
-            <Link href="/my-space" className="text-link">
-              Hub Member
-            </Link>{" "}
-            to keep favorites on your private My Space page (with weather,
-            markets, and more).
+            with your home village, town squares, and rec centers.
+            {signedIn ? " Synced to your account when signed in." : null}
           </p>
           {syncNote && (
             <p className="club-sync-note">{syncNote}</p>

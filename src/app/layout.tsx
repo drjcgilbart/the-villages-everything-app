@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DonateMascotFloat } from "@/components/DonateMascotFloat";
 import { FloatingBackButton } from "@/components/FloatingBackButton";
+import { MascotQuipPopup } from "@/components/MascotQuipPopup";
 import { ThemeMusicPlayer } from "@/components/ThemeMusicPlayer";
 import { ensureDurableHydrated } from "@/lib/dataFs";
 import "./globals.css";
@@ -25,17 +26,17 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "The Villages Hub",
-    template: "%s · The Villages Hub",
+    default: "The Villages Everything App",
+    template: "%s · The Villages Everything App",
   },
   description:
-    "The moderately ridiculous everything-app for The Villages, Florida — villages, dining, golf, clubs, calendar, community resources, and a personal retirement reboot notebook.",
+    "The moderately ridiculous everything app for The Villages, Florida — villages, dining, golf, clubs, calendar, community resources, and a personal retirement reboot notebook.",
   openGraph: {
-    title: "The Villages Hub",
+    title: "The Villages Everything App",
     description:
       "Everything you need in The Villages — with jokes, cart-path energy, and zero corporate brochure voice.",
     url: siteUrl,
-    siteName: "The Villages Hub",
+    siteName: "The Villages Everything App",
     locale: "en_US",
     type: "website",
   },
@@ -54,6 +55,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Footer />
         <FloatingBackButton />
         <DonateMascotFloat />
+        <MascotQuipPopup />
         <ThemeMusicPlayer />
       </body>
     </html>

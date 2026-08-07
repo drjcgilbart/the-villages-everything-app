@@ -98,7 +98,7 @@ export default async function RecCenterDetailPage({
               priority
             />
             <figcaption className="ts-photo-credit">
-              Original whimsical illustration for The Villages Hub · free to use
+              Original whimsical illustration for The Villages Everything App · free to use
               on this site · inspired by {center.theme.toLowerCase()}
             </figcaption>
           </figure>
@@ -210,6 +210,10 @@ export default async function RecCenterDetailPage({
                   <span>All centers on one map</span>
                 </li>
                 <li>
+                  <Link href="/official-map">Official Map page</Link>
+                  <span>Map hub in this app</span>
+                </li>
+                <li>
                   <a
                     href={OFFICIAL_REC_CENTERS_URL}
                     target="_blank"
@@ -283,7 +287,7 @@ export default async function RecCenterDetailPage({
                 Calendar
               </Link>
               <Link href="/my-village" className="btn btn-ghost btn-sm">
-                My Village
+                The Villages
               </Link>
             </div>
           </div>

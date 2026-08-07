@@ -4,8 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
+import { SITE_BRAND } from "@/lib/siteBrand";
 
-/** Slim bar — Villages hub first; personal media lives under My Retirement Reboot. */
+/**
+ * Utility bar (top thin strip): site-wide + personal/member areas.
+ * My Space owns member login, favorites, dashboard, and yard-sale seller tools.
+ */
 const UTILITY_NAV = [
   { href: "/", label: "Home" },
   {
@@ -16,7 +20,12 @@ const UTILITY_NAV = [
   {
     href: "/my-space",
     label: "My Space",
-    matchPrefixes: ["/my-space"],
+    matchPrefixes: [
+      "/my-space",
+      "/yard-sale/login",
+      "/yard-sale/join",
+      "/yard-sale/dashboard",
+    ],
   },
   { href: "/donate", label: "Support" },
 ];
@@ -86,8 +95,8 @@ export function Header() {
               height={46}
             />
             <span className="brand-text">
-              <span className="brand-name">The Villages Hub</span>
-              <span className="brand-tag">Cart paths · chaos · FL</span>
+              <span className="brand-name">{SITE_BRAND.name}</span>
+              <span className="brand-tag">{SITE_BRAND.brandTag}</span>
             </span>
           </Link>
 

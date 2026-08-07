@@ -3,7 +3,7 @@ import { DonateSuccessClient } from "@/components/DonateSuccessClient";
 
 export const metadata = {
   title: "Thanks for the Joe",
-  description: "Thank you for supporting The Villages Hub.",
+  description: "Thank you for supporting The Villages Everything App.",
 };
 
 export default function DonateSuccessPage() {

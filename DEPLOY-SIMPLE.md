@@ -27,15 +27,15 @@ In **PowerShell** (or Git Bash), from the project folder:
 ```bat
 cd "C:\Users\Jonathan Gilbart\the-villages-idiot"
 git add .
-git commit -m "Ready to deploy The Villages Hub"
+git commit -m "Ready to deploy The Villages Everything App"
 ```
 
-Then on GitHub: **New repository** (name e.g. `the-villages-hub`) — **do not** add a README.
+Then on GitHub: **New repository** (name e.g. `the-villages-everything-app`) — **do not** add a README.
 
 Then:
 
 ```bat
-git remote add origin https://github.com/YOUR_USERNAME/the-villages-hub.git
+git remote add origin https://github.com/YOUR_USERNAME/the-villages-everything-app.git
 git push -u origin main
 ```
 
@@ -81,20 +81,24 @@ In Vercel → Project → **Settings** → **Environment Variables**, add at lea
 | `ADMIN_PASSWORD` | a strong new password (not `changeme`) |
 | `ADMIN_SECRET` | a long random string |
 | `NEXT_PUBLIC_SITE_URL` | `https://www.thevillageseverythingapp.com` |
-| `SITE_PASSWORD` | shared beta password for testers (omit or leave empty for full public access) |
+| `CRON_SECRET` (optional) | Long random string — locks Vercel cron refresh routes |
+| `BLOB_READ_WRITE_TOKEN` (optional but recommended) | Vercel Blob — keeps dining, members, **entertainment schedule**, etc. across deploys |
+| `SITE_PASSWORD` | shared beta unlock password (keep set even when public so Admin can re-enable the wall) |
 | `STRIPE_SECRET_KEY` | your **live** Stripe secret key (if donations) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | your **live** publishable key |
 
 Then **Redeploy** (Deployments → ⋮ → Redeploy) so they take effect.
 
-### Private beta (site-wide password)
+### Private beta (site-wide password wall)
 
-1. Set `SITE_PASSWORD` in Vercel → Environment Variables (Production).  
-2. Redeploy.  
-3. Anyone who opens the site is sent to `/beta-gate` until they enter that password.  
-4. When you’re ready to go fully public: **delete** `SITE_PASSWORD` (or clear its value) and redeploy.
+The wall is **off by default** (site is public). Control it from **Admin → Site access** without redeploying.
 
-Optional: `SITE_GATE_SECRET` — separate string used only to sign the unlock cookie (defaults to `ADMIN_SECRET` / `SITE_PASSWORD`).
+1. Set `SITE_PASSWORD` in Vercel → Environment Variables (Production) and redeploy once so the password exists.  
+2. Leave the site public, **or** open **Admin Portal → Site access** and turn the password wall **ON**.  
+3. While ON, visitors go to `/beta-gate` until they enter `SITE_PASSWORD`.  
+4. Turn the wall **OFF** in Admin when you want the site fully public again — no need to delete the env var.
+
+Optional emergency env (overrides the admin toggle): `SITE_GATE_ENABLED=off` or `=on`.
 
 ---
 

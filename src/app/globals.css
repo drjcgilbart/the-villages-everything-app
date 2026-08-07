@@ -1429,6 +1429,82 @@ a {
   background: rgba(232, 184, 74, 0.2);
 }
 
+/* My Space · aggregated site favorites */
+.ms-fav-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ms-fav-group {
+  padding: 1rem 1.1rem;
+}
+
+.ms-fav-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.ms-fav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.ms-fav-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.ms-fav-thumb-link {
+  display: block;
+  line-height: 0;
+}
+
+.ms-fav-thumb {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+}
+
+.ms-fav-card-body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.ms-fav-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ms-fav-blurb {
+  margin: 0.35rem 0 0.65rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ms-fav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ms-fav-start-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .my-space-block {
   margin-bottom: 1.75rem;
 }
@@ -2014,6 +2090,247 @@ a.artisan-medium-card:hover {
 }
 
 /* Town Squares */
+/* —— Town square entertainment (who / when / where) —— */
+.ts-ent-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ts-ent-board-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.ts-ent-board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ts-ent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.85rem;
+}
+
+.ts-ent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  border: 2px solid var(--line);
+}
+
+.ts-ent-card.has-acts {
+  border-color: rgba(232, 184, 74, 0.55);
+  box-shadow: 0 10px 28px rgba(232, 184, 74, 0.12);
+}
+
+.ts-ent-when-pill {
+  background: rgba(31, 107, 74, 0.14);
+  color: var(--palm-deep);
+  font-weight: 700;
+}
+
+.ts-ent-card-title {
+  margin: 0.45rem 0 0.2rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.25rem;
+}
+
+.ts-ent-card-title a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.ts-ent-card-title a:hover {
+  color: var(--palm);
+}
+
+.ts-ent-stage-note {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.ts-ent-act-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ts-ent-act-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  background: rgba(232, 184, 74, 0.12);
+  border: 1px solid rgba(232, 184, 74, 0.28);
+}
+
+.ts-ent-act-name {
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.ts-ent-act-time {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--palm-deep);
+}
+
+.ts-ent-act-blurb {
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.ts-ent-unknown {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.ts-ent-unknown p {
+  margin: 0 0 0.35rem;
+}
+
+.ts-ent-hours-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.ts-ent-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: auto;
+}
+
+.ts-ent-disclaimer {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.ts-ent-updated {
+  margin: 0.55rem 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.ts-ent-detail-banner {
+  margin-bottom: 0.85rem;
+}
+
+.ts-ent-hours-big {
+  margin: 0.25rem 0 0;
+  font-size: 1.15rem;
+}
+
+.ts-ent-upcoming-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ts-ent-upcoming-list > li {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ts-ent-upcoming-list > li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ts-ent-upcoming-date {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+
+.ts-ent-upcoming-date span {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--palm-deep);
+}
+
+.ts-ent-act-list-nested {
+  margin-top: 0.25rem;
+}
+
+.ts-card-tonight {
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  background: linear-gradient(
+    145deg,
+    rgba(232, 184, 74, 0.18),
+    rgba(31, 107, 74, 0.1)
+  );
+  border: 1px solid rgba(232, 184, 74, 0.35);
+}
+
+.ts-card-tonight-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--palm-deep);
+}
+
+.ts-card-tonight-time {
+  display: block;
+  font-size: 1.05rem;
+  margin: 0.15rem 0 0.35rem;
+  color: var(--ink);
+}
+
+.ts-card-tonight-acts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ts-card-tonight-acts li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.ts-card-act-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.ts-card-act-time {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--palm-deep);
+}
+
+.ts-card-tonight-fallback {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
 .ts-cam-panel {
   max-width: 720px;
 }
@@ -2722,8 +3039,10 @@ a.ts-square-card:hover .ts-square-card-img {
 .brand-name {
   font-family: var(--font-display), Georgia, serif;
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 1rem;
   letter-spacing: -0.02em;
+  max-width: 14rem;
+  line-height: 1.2;
 }
 
 .brand-tag {
@@ -4363,12 +4682,19 @@ a.ts-square-card:hover .ts-square-card-img {
   color: var(--muted);
 }
 
-/* Fixed back control — all pages except home */
-.floating-back-btn {
+/* Fixed Back + Home controls — all pages except home */
+.floating-nav-stack {
   position: fixed;
   left: 1rem;
   bottom: 5.75rem;
   z-index: 81;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.floating-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -4383,7 +4709,12 @@ a.ts-square-card:hover .ts-square-card-img {
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
+  text-decoration: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+a.floating-back-btn {
+  color: inherit;
 }
 
 .floating-back-btn:hover {
@@ -4397,6 +4728,15 @@ a.ts-square-card:hover .ts-square-card-img {
   outline-offset: 3px;
 }
 
+.floating-home-btn {
+  background: rgba(31, 107, 74, 0.1);
+  border-color: rgba(31, 107, 74, 0.28);
+}
+
+.floating-home-btn:hover {
+  background: rgba(31, 107, 74, 0.16);
+}
+
 .floating-back-arrow {
   font-size: 1.15rem;
   line-height: 1;
@@ -4408,10 +4748,175 @@ a.ts-square-card:hover .ts-square-card-img {
 }
 
 @media (max-width: 520px) {
-  .floating-back-btn {
+  .floating-nav-stack {
     bottom: 5.5rem;
     left: 0.75rem;
+  }
+
+  .floating-back-btn {
     padding: 0.55rem 0.75rem;
+  }
+}
+
+/* —— Golf ball mascot quips (jokes / sarcasm / advice) —— */
+.mascot-quip-toggle {
+  position: fixed;
+  right: 1rem;
+  bottom: 5.75rem;
+  z-index: 82;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 248, 238, 0.96);
+  box-shadow: 0 10px 26px rgba(28, 36, 48, 0.14);
+  backdrop-filter: blur(10px);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.mascot-quip-toggle.is-on {
+  color: var(--palm-deep);
+  border-color: rgba(31, 107, 74, 0.35);
+  background: rgba(31, 107, 74, 0.1);
+}
+
+.mascot-quip-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(28, 36, 48, 0.16);
+}
+
+.mascot-quip-toggle:focus-visible {
+  outline: 2px solid var(--palm);
+  outline-offset: 3px;
+}
+
+.mascot-quip-toggle-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+.mascot-quip-popup {
+  position: fixed;
+  right: 1rem;
+  bottom: 9rem;
+  z-index: 83;
+  max-width: min(360px, calc(100vw - 1.5rem));
+  animation: mascot-quip-in 0.35s ease;
+}
+
+@keyframes mascot-quip-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mascot-quip-popup-inner {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.9rem 1rem 0.9rem 0.85rem;
+  border-radius: 20px;
+  background: rgba(255, 248, 238, 0.98);
+  border: 2px solid rgba(232, 184, 74, 0.55);
+  box-shadow: 0 18px 44px rgba(28, 36, 48, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.mascot-quip-popup-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 16px rgba(28, 36, 48, 0.12);
+  flex-shrink: 0;
+}
+
+.mascot-quip-popup-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.mascot-quip-popup-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.mascot-quip-kind {
+  background: rgba(232, 184, 74, 0.28);
+  color: #7a4d00;
+  font-weight: 700;
+}
+
+.mascot-quip-from {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.mascot-quip-text {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.mascot-quip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.mascot-quip-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.45rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.mascot-quip-close:hover {
+  color: var(--ink);
+  background: rgba(28, 36, 48, 0.06);
+}
+
+@media (max-width: 520px) {
+  .mascot-quip-toggle {
+    right: 0.75rem;
+    bottom: 5.5rem;
+  }
+
+  .mascot-quip-popup {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: 8.5rem;
+    max-width: none;
   }
 }
 
@@ -4971,9 +5476,113 @@ a.ts-square-card:hover .ts-square-card-img {
   color: #d4a017;
 }
 
+.form-error {
+  margin: 0;
+  color: #b03a2e;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.form-success {
+  margin: 0;
+  color: var(--palm-deep);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.dining-suggest-panel {
+  max-width: 52rem;
+}
+
+.restaurant-card {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+.restaurant-card-cuisine-art {
+  line-height: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.restaurant-card-cuisine-img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.restaurant-card-fav {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 2;
+}
+
+.dining-fav-icon {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(28, 36, 48, 0.1);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  transition: 0.15s ease;
+}
+
+.dining-fav-icon:hover {
+  border-color: var(--gold);
+  color: #b8860b;
+}
+
+.dining-fav-icon.is-fav {
+  color: #d4a017;
+  background: rgba(232, 184, 74, 0.2);
+  border-color: rgba(232, 184, 74, 0.55);
+}
+
+.dining-fav-btn {
+  max-width: 100%;
+}
+
 .restaurant-card-link {
   display: block;
-  padding: 1.1rem 1.15rem 1.2rem;
+  padding: 0 0 1.2rem;
+  padding-right: 0;
+}
+
+.restaurant-card-link .restaurant-card-top,
+.restaurant-card-link .restaurant-card-rating,
+.restaurant-card-link .restaurant-card-desc,
+.restaurant-card-link .restaurant-specialties,
+.restaurant-card-link .restaurant-return {
+  padding-left: 1.15rem;
+  padding-right: 2.75rem;
+}
+
+.restaurant-card-link .restaurant-card-top {
+  padding-top: 1rem;
+}
+
+.dining-detail-cuisine-art {
+  margin: 0.85rem 0 1rem;
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 28rem;
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(28, 36, 48, 0.08);
+}
+
+.dining-detail-cuisine-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  vertical-align: middle;
 }
 
 .restaurant-card-top {
@@ -5065,11 +5674,32 @@ a.ts-square-card:hover .ts-square-card-img {
   gap: 1rem;
 }
 
+.cuisine-board {
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cuisine-board-art {
+  line-height: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 248, 238, 0.6);
+}
+
+.cuisine-board-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
 .cuisine-board-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 0.75rem;
+  margin: 0;
+  padding: 0.85rem 1rem 0.5rem;
 }
 
 .cuisine-board-head h3 {
@@ -5083,27 +5713,46 @@ a.ts-square-card:hover .ts-square-card-img {
   font-weight: 600;
 }
 
+.cuisine-board .cuisine-leader-list {
+  padding: 0 0.85rem 0.85rem;
+}
+
 .cuisine-leader-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.cuisine-leader-list li a {
+.cuisine-leader-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.cuisine-leader-row:last-child {
+  border-bottom: none;
+}
+
+.cuisine-leader-link {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 0.65rem;
   align-items: center;
   padding: 0.55rem 0;
-  border-bottom: 1px solid var(--line);
+  flex: 1;
+  min-width: 0;
 }
 
-.cuisine-leader-list li:last-child a {
-  border-bottom: none;
-  padding-bottom: 0;
+.cuisine-leader-row .dining-fav-icon {
+  flex-shrink: 0;
+  width: 1.85rem;
+  height: 1.85rem;
+  font-size: 1rem;
+  box-shadow: none;
 }
 
-.cuisine-leader-list li.is-self a {
+.cuisine-leader-list li.is-self .cuisine-leader-link {
   background: rgba(31, 107, 74, 0.06);
   border-radius: 10px;
   padding-inline: 0.4rem;
@@ -5308,7 +5957,7 @@ a.ts-square-card:hover .ts-square-card-img {
   font-size: 0.95rem;
 }
 
-/* My Village directory */
+/* The Villages directory (/my-village) */
 .village-howto {
   margin: 0 0 1rem;
   padding-left: 1.2rem;
@@ -5407,8 +6056,8 @@ a.ts-square-card:hover .ts-square-card-img {
 
 .village-chip-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem;
 }
 
 .village-chip {
@@ -5421,6 +6070,11 @@ a.ts-square-card:hover .ts-square-card-img {
   box-shadow: 0 8px 20px rgba(28, 36, 48, 0.05);
 }
 
+.village-art-card {
+  flex-direction: column;
+  border-top: 3px solid var(--village-accent, var(--palm));
+}
+
 .village-chip.is-mine {
   border-color: rgba(232, 184, 74, 0.7);
   box-shadow: 0 0 0 2px rgba(232, 184, 74, 0.2);
@@ -5430,14 +6084,74 @@ a.ts-square-card:hover .ts-square-card-img {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.75rem 0.85rem;
+  gap: 0;
+  padding: 0;
   min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.village-art-wrap {
+  position: relative;
+  line-height: 0;
+  background: rgba(255, 248, 238, 0.7);
+}
+
+.village-art-img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.village-art-motif {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+  box-shadow: 0 4px 12px rgba(28, 36, 48, 0.1);
+}
+
+.village-art-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem 0.75rem;
 }
 
 .village-chip-main strong {
   font-size: 0.95rem;
   line-height: 1.25;
+}
+
+.village-art-creature {
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: var(--village-accent, var(--palm)) !important;
+}
+
+.village-art-hook {
+  font-size: 0.8rem !important;
+  color: var(--muted) !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.village-art-region {
+  font-size: 0.75rem !important;
+  color: var(--muted) !important;
 }
 
 .village-chip-main span {
@@ -5447,6 +6161,16 @@ a.ts-square-card:hover .ts-square-card-img {
 
 .village-chip-meta {
   font-size: 0.75rem !important;
+}
+
+.village-art-card .village-chip-save {
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  transform: none;
+  border-left: none;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  padding: 0.45rem 0.65rem;
 }
 
 .village-chip-save {
@@ -5468,6 +6192,267 @@ a.ts-square-card:hover .ts-square-card-img {
 .village-chip.is-mine .village-chip-save {
   color: #7a4d00;
   background: rgba(232, 184, 74, 0.28);
+}
+
+.village-detail-art {
+  margin: 1rem 0 0;
+  max-width: 36rem;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 2px solid var(--village-accent, var(--line));
+  box-shadow: 0 14px 36px rgba(28, 36, 48, 0.1);
+}
+
+.village-detail-art-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.village-detail-art-caption {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  background: rgba(255, 248, 238, 0.95);
+  border-top: 1px solid var(--line);
+}
+
+/* —— Best of the Month Club —— */
+.bom-club {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.bom-note {
+  margin: 0;
+  font-weight: 600;
+  color: var(--palm-deep);
+}
+
+.bom-section {
+  scroll-margin-top: 5rem;
+}
+
+.bom-muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0.25rem 0;
+}
+
+.bom-winners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.bom-winner-card.is-champ {
+  border: 2px solid rgba(232, 184, 74, 0.65);
+  box-shadow: 0 12px 32px rgba(232, 184, 74, 0.15);
+}
+
+.bom-winner-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.bom-cat-art {
+  flex-shrink: 0;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #f8f4ec;
+  border: 1px solid rgba(31, 107, 74, 0.12);
+  box-shadow: 0 4px 12px rgba(20, 60, 40, 0.08);
+}
+
+.bom-cat-art-md {
+  width: 56px;
+  height: 56px;
+}
+
+.bom-cat-art-sm {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.bom-cat-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.bom-submit-cat-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.35rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(232, 184, 74, 0.12), rgba(31, 107, 74, 0.08));
+  border: 1px solid rgba(31, 107, 74, 0.1);
+}
+
+.bom-submit-cat-preview strong {
+  display: block;
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--palm-deep);
+}
+
+.bom-submit-cat-preview .bom-muted {
+  margin: 0.15rem 0 0;
+}
+
+.bom-pill-win {
+  background: rgba(232, 184, 74, 0.35);
+  color: #7a4d00;
+  font-weight: 800;
+}
+
+.bom-hm {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.bom-hm ul {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+}
+
+.bom-hm li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.bom-hm em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 0.85rem;
+}
+
+.bom-category-block {
+  margin-bottom: 1rem;
+}
+
+.bom-cat-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.bom-cat-head h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.bom-pill-open {
+  background: rgba(31, 107, 74, 0.14);
+  color: var(--palm-deep);
+}
+
+.bom-admin-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bom-admin-cat-art {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
+}
+
+.bom-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.bom-entry-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.bom-entry-card.is-picked {
+  border-color: rgba(232, 184, 74, 0.75);
+  box-shadow: 0 0 0 2px rgba(232, 184, 74, 0.2);
+}
+
+.bom-media-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+  background: #f3eee6;
+}
+
+.bom-media-img.is-large {
+  height: 200px;
+}
+
+.bom-media-pdf {
+  padding: 0.75rem;
+  background: #f8f4ec;
+  min-height: 120px;
+}
+
+.bom-pdf-frame {
+  width: 100%;
+  height: 140px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 0.4rem;
+  background: #fff;
+}
+
+.bom-entry-body {
+  padding: 0.75rem 0.85rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.bom-entry-body h4 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.bom-entry-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bom-vote-count {
+  margin: 0.35rem 0;
+  font-size: 0.95rem;
+}
+
+.bom-submit {
+  max-width: 40rem;
 }
 
 .village-letter-head {
@@ -5796,4 +6781,331 @@ a.ts-square-card:hover .ts-square-card-img {
 .market-refresh-note {
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+/* —— The Villages Golf Club hub —— */
+.golf-club {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.golf-club-section {
+  scroll-margin-top: 5rem;
+}
+
+.golf-note {
+  margin: 0;
+  font-weight: 600;
+  color: var(--palm-deep);
+}
+
+.golf-muted {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0.25rem 0;
+}
+
+.golf-leader-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .golf-leader-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.golf-leader-card h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.golf-leader-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.golf-rank-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.golf-rank-list li {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+  border-radius: 12px;
+  background: rgba(31, 107, 74, 0.05);
+}
+
+.golf-rank-num {
+  font-weight: 800;
+  color: var(--palm-deep);
+  text-align: center;
+}
+
+.golf-rank-name {
+  font-weight: 600;
+}
+
+.golf-rank-stat {
+  font-weight: 800;
+  color: var(--palm-deep);
+  white-space: nowrap;
+}
+
+.golf-rank-stat em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.golf-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.golf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.golf-table th,
+.golf-table td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.golf-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.golf-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.golf-pill-count {
+  margin-left: 0.3rem;
+  font-size: 0.8em;
+  opacity: 0.85;
+}
+
+.golf-recent-rounds {
+  margin-top: 1rem;
+}
+
+.golf-round-chips {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.golf-round-chips li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  min-width: 140px;
+}
+
+.golf-round-chips span {
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+
+.golf-round-chips em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.golf-foursome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.85rem;
+}
+
+.golf-foursome-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+
+.golf-foursome-card h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.golf-foursome-msg {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+}
+
+.golf-foursome-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.golf-foursome-meta strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.golf-section-men {
+  background: rgba(58, 166, 201, 0.16);
+  color: #0b6f8a;
+}
+
+.golf-section-women {
+  background: rgba(232, 93, 76, 0.14);
+  color: #9a3a2e;
+}
+
+.golf-section-mixed {
+  background: rgba(31, 107, 74, 0.14);
+  color: var(--palm-deep);
+}
+
+.golf-ace-banner {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  background: linear-gradient(
+    135deg,
+    rgba(232, 184, 74, 0.18),
+    rgba(31, 107, 74, 0.1)
+  );
+  border: 1px solid rgba(232, 184, 74, 0.35);
+}
+
+.golf-ace-banner-emoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.golf-ace-banner strong {
+  display: block;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.15rem;
+  color: var(--palm-deep);
+  margin-bottom: 0.25rem;
+}
+
+.golf-ace-banner p {
+  margin: 0;
+  color: var(--ink);
+}
+
+.golf-ace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.golf-ace-card {
+  border: 2px solid rgba(232, 184, 74, 0.4);
+  box-shadow: 0 10px 28px rgba(232, 184, 74, 0.12);
+}
+
+.golf-ace-card h3 {
+  margin: 0.4rem 0 0.35rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.golf-ace-pill {
+  background: rgba(232, 184, 74, 0.35);
+  color: #7a4d00;
+  font-weight: 800;
+}
+
+.golf-ace-congrats {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.golf-ace-story {
+  margin: 0.45rem 0 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--ink);
+}
+
+/* —— Admin site access / beta gate toggle —— */
+.site-gate-status-card {
+  border: 1px solid rgba(31, 107, 74, 0.18);
+}
+
+.site-gate-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.site-gate-status-detail {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  max-width: 42rem;
+}
+
+.site-gate-checklist {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.site-gate-pill-on {
+  background: rgba(232, 93, 76, 0.16);
+  color: #9a3a2e;
+  font-weight: 800;
+}
+
+.site-gate-pill-off {
+  background: rgba(31, 107, 74, 0.14);
+  color: var(--palm-deep);
+  font-weight: 800;
 }

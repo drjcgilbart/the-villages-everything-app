@@ -1,0 +1,45 @@
+{
+  "neighbors": [
+    {
+      "id": "nbr-seed-1",
+      "villageSlug": "edenfield",
+      "displayName": "Pat & Sam",
+      "areaNote": "Near the cart path to Eastport",
+      "bio": "New construction survivors who still wave at every cart. Looking for pickleball partners who don't keep score too seriously.",
+      "interests": [
+        "Pickleball",
+        "Early walks",
+        "Eastport music"
+      ],
+      "tenure": "Since 2025",
+      "createdAt": "2026-07-31T18:51:14.288Z"
+    },
+    {
+      "id": "nbr-seed-2",
+      "villageSlug": "edenfield",
+      "displayName": "Robin",
+      "bio": "Dog person, coffee person, “which gate is which?” person. Happy to share builder tips and dessert recommendations.",
+      "interests": [
+        "Dogs",
+        "Baking",
+        "Golf carts"
+      ],
+      "tenure": "Moved in last year",
+      "createdAt": "2026-08-02T18:51:14.288Z"
+    },
+    {
+      "id": "nbr-seed-3",
+      "villageSlug": "mira-mesa",
+      "displayName": "LongTimer Lou",
+      "bio": "Historic-side regular. Knows every shortcut that still gets you lost. Welcome wagon energy without the formal committee.",
+      "interests": [
+        "Spanish Springs",
+        "Cards",
+        "History"
+      ],
+      "tenure": "Since 2012",
+      "createdAt": "2026-07-26T18:51:14.288Z"
+    }
+  ],
+  "updatedAt": "2026-08-05T18:51:14.288Z"
+}

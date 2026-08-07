@@ -3,23 +3,40 @@ import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
+import { SquareEntertainmentBoard } from "@/components/SquareEntertainmentBoard";
 import { TownSquareBrowser } from "@/components/TownSquareBrowser";
 import { VideoCard } from "@/components/VideoCard";
+import {
+  ensureEntertainmentFresh,
+  getEntertainmentUpdatedAt,
+  loadActiveLineup,
+} from "@/lib/entertainmentFetch";
 import { getTopicContent } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 import { OFFICIAL_LIVE_CAMS_URL } from "@/lib/townSquares";
+import {
+  OFFICIAL_NIGHTLY_ENTERTAINMENT_URL,
+  floridaDateKey,
+  getAllSquaresTonight,
+} from "@/lib/squareEntertainment";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Town Squares",
   description:
-    "Spanish Springs, Lake Sumter Landing, Brownwood, Eastport, Sawgrass Grove — shopping, dining, free live entertainment, and official live webcams in The Villages.",
+    "Spanish Springs, Lake Sumter Landing, Brownwood, Eastport, Sawgrass Grove — who’s playing tonight, free live entertainment times, shopping, dining, and official live webcams in The Villages.",
 };
 
-export default function TownSquaresPage() {
+export default async function TownSquaresPage() {
+  await ensureEntertainmentFresh(20);
+
   const topic = getTopic("town-squares");
   const { posts, videos, photos } = getTopicContent("town-squares");
   const hasRelated = posts.length + videos.length + photos.length > 0;
+  const dateKey = floridaDateKey();
+  const lineup = loadActiveLineup();
+  const tonightRows = getAllSquaresTonight(dateKey, lineup);
+  const updatedAt = getEntertainmentUpdatedAt();
 
   return (
     <>
@@ -30,13 +47,24 @@ export default function TownSquaresPage() {
             <h1>{topic.title}</h1>
             <p>{topic.description}</p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
+              <a href="#whats-on" className="btn btn-primary">
+                What&apos;s on tonight
+              </a>
+              <a
+                href={OFFICIAL_NIGHTLY_ENTERTAINMENT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+              >
+                Official band schedule
+              </a>
               <a
                 href={OFFICIAL_LIVE_CAMS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-primary"
+                className="btn btn-ghost"
               >
-                Official live cams
+                Live cams
               </a>
               <a href="#squares" className="btn btn-ghost">
                 The squares
@@ -55,6 +83,17 @@ export default function TownSquaresPage() {
           </div>
         </div>
       </div>
+
+      <section className="section" id="whats-on-section" style={{ paddingBottom: 0 }}>
+        <div className="shell">
+          <SquareEntertainmentBoard
+            dateKey={dateKey}
+            updatedAt={updatedAt}
+            lineup={lineup}
+            tonightRows={tonightRows}
+          />
+        </div>
+      </section>
 
       <section className="section" id="live-cams">
         <div className="shell">
@@ -122,7 +161,11 @@ export default function TownSquaresPage() {
             </div>
           </div>
 
-          <TownSquareBrowser />
+          <TownSquareBrowser
+            tonightBySquareId={Object.fromEntries(
+              tonightRows.map((r) => [r.squareId, r])
+            )}
+          />
         </div>
       </section>
 
@@ -154,8 +197,8 @@ export default function TownSquaresPage() {
               <Link href="/dining" className="btn btn-ghost btn-sm">
                 Dining
               </Link>
-              <Link href="/community-resources" className="btn btn-ghost btn-sm">
-                Community Resources
+              <Link href="/rec-centers" className="btn btn-ghost btn-sm">
+                Rec Centers
               </Link>
             </div>
           </div>

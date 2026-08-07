@@ -3,6 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import {
+  actTimeLabel,
+  floridaDateKey,
+  getSquareDaySchedule,
+  type SquareDaySchedule,
+  type SquareId,
+} from "@/lib/squareEntertainment";
 import { TOWN_SQUARES, getTownSquare } from "@/lib/townSquares";
 import {
   isTownSquareFavorite,
@@ -12,14 +19,34 @@ import {
   writeTownSquareFavorites,
 } from "@/lib/townSquareFavorites";
 
-export function TownSquareBrowser() {
+export function TownSquareBrowser({
+  tonightBySquareId,
+}: {
+  /** Server-hydrated tonight schedules (auto-refreshed lineup). */
+  tonightBySquareId?: Record<string, SquareDaySchedule>;
+} = {}) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [liveTonight, setLiveTonight] = useState(tonightBySquareId || {});
 
   useEffect(() => {
     setFavorites(readTownSquareFavorites());
     setHydrated(true);
+    // Keep cards in sync with auto-refreshed schedule API
+    void fetch("/api/entertainment/schedule", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!Array.isArray(data.squares)) return;
+        const map: Record<string, SquareDaySchedule> = {};
+        for (const s of data.squares as SquareDaySchedule[]) {
+          if (s?.squareId) map[s.squareId] = s;
+        }
+        setLiveTonight(map);
+      })
+      .catch(() => {
+        /* keep server prop / local defaults */
+      });
   }, []);
 
   const favoriteSquares = useMemo(
@@ -133,13 +160,16 @@ export function TownSquareBrowser() {
       <div className="ts-square-grid">
         {ordered.map((square) => {
           const isFav = favorites.includes(square.id);
+          const tonight =
+            liveTonight[square.id] ||
+            getSquareDaySchedule(square.id as SquareId, floridaDateKey());
           return (
             <div
               key={square.id}
               className={`ts-square-card-wrap${isFav ? " is-fav" : ""}`}
             >
               <Link
-                href={`/town-squares/${square.id}`}
+                href={`/town-squares/${square.id}#tonight`}
                 className="about-panel ts-square-card"
               >
                 <div className="ts-square-card-art">
@@ -158,11 +188,33 @@ export function TownSquareBrowser() {
                       <span className="pill rc-fav-pill">★ Favorite</span>
                     )}
                   </div>
+                  <div className="ts-card-tonight">
+                    <span className="ts-card-tonight-label">Tonight</span>
+                    <strong className="ts-card-tonight-time">
+                      {tonight.hours.label}
+                    </strong>
+                    {tonight.hasCuratedActs ? (
+                      <ul className="ts-card-tonight-acts">
+                        {tonight.acts.map((act) => (
+                          <li key={act.name + (act.start || "")}>
+                            <span className="ts-card-act-name">{act.name}</span>
+                            <span className="ts-card-act-time">
+                              {actTimeLabel(act, tonight.hours)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="ts-card-tonight-fallback">
+                        Free live music most nights · see official lineup
+                      </p>
+                    )}
+                  </div>
                   <p>{square.blurb}</p>
                   <p className="ts-cam-note">
                     <strong>Live cam:</strong> {square.camNote}
                   </p>
-                  <span className="text-link">Open square page →</span>
+                  <span className="text-link">Who&apos;s playing →</span>
                 </div>
               </Link>
               <button

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   VILLAGE_REGIONS,
   VILLAGES,
@@ -11,8 +12,11 @@ import {
   cddLabel,
   getRegion,
 } from "@/lib/villages";
-
-const STORAGE_KEY = "tvi-my-village-slug";
+import { getVillageArt, motifEmoji } from "@/lib/villageArt";
+import {
+  readMyVillageSlug,
+  writeMyVillageSlug,
+} from "@/lib/siteFavorites";
 
 const REGION_IDS = new Set(VILLAGE_REGIONS.map((r) => r.id));
 
@@ -30,12 +34,7 @@ export function VillageBrowser() {
   const [mySlug, setMySlug] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setMySlug(saved);
-    } catch {
-      /* ignore */
-    }
+    setMySlug(readMyVillageSlug());
   }, []);
 
   useEffect(() => {
@@ -80,21 +79,13 @@ export function VillageBrowser() {
   }, [filtered]);
 
   function setAsMine(slug: string) {
-    try {
-      localStorage.setItem(STORAGE_KEY, slug);
-      setMySlug(slug);
-    } catch {
-      /* ignore */
-    }
+    writeMyVillageSlug(slug);
+    setMySlug(slug);
   }
 
   function clearMine() {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      setMySlug(null);
-    } catch {
-      /* ignore */
-    }
+    writeMyVillageSlug(null);
+    setMySlug(null);
   }
 
   const letters = useMemo(() => {
@@ -253,14 +244,38 @@ function VillageChip({
   showRegion?: boolean;
 }) {
   const region = getRegion(village.region);
+  const art = getVillageArt(village);
   return (
-    <article className={`village-chip ${isMine ? "is-mine" : ""}`}>
+    <article
+      className={`village-chip village-art-card ${isMine ? "is-mine" : ""}`}
+      style={{ ["--village-accent" as string]: art.accent }}
+    >
       <Link href={`/my-village/${village.slug}`} className="village-chip-main">
-        <strong>Village of {village.name}</strong>
-        {showRegion && <span>{region.shortLabel}</span>}
-        <span className="village-chip-meta">
-          {cddLabel(village.cdd)} · near {region.nearestSquare.split("·")[0].trim()}
-        </span>
+        <div className="village-art-wrap">
+          <Image
+            src={art.image}
+            alt=""
+            width={640}
+            height={400}
+            className="village-art-img"
+          />
+          <span className="village-art-motif" title={art.motifLabel}>
+            <span aria-hidden>{motifEmoji(art.motif)}</span>
+            {art.motifLabel}
+          </span>
+        </div>
+        <div className="village-art-body">
+          <strong>Village of {village.name}</strong>
+          <span className="village-art-creature">{art.creature}</span>
+          <span className="village-art-hook">{art.hook}</span>
+          {showRegion && (
+            <span className="village-art-region">{region.shortLabel}</span>
+          )}
+          <span className="village-chip-meta">
+            {cddLabel(village.cdd)} · near{" "}
+            {region.nearestSquare.split("·")[0].trim()}
+          </span>
+        </div>
       </Link>
       <button
         type="button"
@@ -285,24 +300,16 @@ export function VillageSaveButton({
   const [isMine, setIsMine] = useState(false);
 
   useEffect(() => {
-    try {
-      setIsMine(localStorage.getItem(STORAGE_KEY) === slug);
-    } catch {
-      /* ignore */
-    }
+    setIsMine(readMyVillageSlug() === slug);
   }, [slug]);
 
   function toggle() {
-    try {
-      if (isMine) {
-        localStorage.removeItem(STORAGE_KEY);
-        setIsMine(false);
-      } else {
-        localStorage.setItem(STORAGE_KEY, slug);
-        setIsMine(true);
-      }
-    } catch {
-      /* ignore */
+    if (isMine) {
+      writeMyVillageSlug(null);
+      setIsMine(false);
+    } else {
+      writeMyVillageSlug(slug);
+      setIsMine(true);
     }
   }
 

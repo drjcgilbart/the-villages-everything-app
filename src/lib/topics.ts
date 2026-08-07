@@ -157,7 +157,7 @@ export const TOPICS: TopicDef[] = [
     title: "Golf",
     kicker: "Fairways & cart paths",
     description:
-      "Golf courses, golf carts, range days, and the beautiful absurdity of a community designed around the green. Tips, tales, and trail reports from the reboot.",
+      "Leader Board by handicap and best games, find a foursome, celebrate holes-in-one, plus executive trail resources, maps, and cart-path tips.",
     image: "/graphics/hero-golf-cart.jpg",
     tags: [
       "golf",
@@ -172,23 +172,26 @@ export const TOPICS: TopicDef[] = [
       "putting",
       "range",
       "executive",
+      "leaderboard",
+      "foursome",
+      "hole-in-one",
     ],
     highlights: [
       {
-        title: "Executive Trail",
-        body: "40+ resident-friendly executive courses — free greens for residents; trail fee if you ride your cart.",
+        title: "The Villages Leader Board",
+        body: "Track neighbor handicaps and best scores by course — upload your game for approval.",
       },
       {
-        title: "On the course",
-        body: "Rounds, mishits, and the eternal optimism of “just one more hole.”",
+        title: "Find a foursome",
+        body: "Men, women, or mixed — post when you need 1–3 more players.",
       },
       {
-        title: "Cart culture",
-        body: "Decorated rides, path rules, and why everything here is a cart trip.",
+        title: "Holes in One",
+        body: "Report an ace and get a proper congratulations on the Ace Wall.",
       },
       {
         title: "Maps & fees",
-        body: "Official course maps, trail-pass portals, and FAQs linked from this page.",
+        body: "Official course maps, trail-pass portals, and FAQs linked below.",
       },
     ],
     quote:
@@ -450,11 +453,11 @@ export const TOPICS: TopicDef[] = [
   {
     slug: "my-village",
     href: "/my-village",
-    navLabel: "My Village",
-    title: "My Village",
+    navLabel: "The Villages",
+    title: "The Villages",
     kicker: "Find your neighborhood",
     description:
-      "The Villages is made of many individual villages — Edenfield, Fenney, Bonnybrook, and 100+ more. Search or browse by area, open your village’s landing page, and star it so it’s always easy to find.",
+      "The Villages is made of many individual villages — Edenfield, Fenney, Bonnybrook, and 100+ more. Search or browse by area, then open a village’s landing page. Member favorites and saved picks live under My Space.",
     image: "/graphics/theme-my-village.jpg",
     tags: [
       "village",
@@ -474,12 +477,12 @@ export const TOPICS: TopicDef[] = [
         body: "Jump straight to Edenfield or any village — or browse by Historic Side, North of 466, Eastport, and more.",
       },
       {
-        title: "Your landing page",
+        title: "Village landing pages",
         body: "Each village gets its own page with area context, CDD when known, and nearby square energy.",
       },
       {
-        title: "Save “Mine”",
-        body: "Star your village on this device for a one-click return next visit.",
+        title: "Save in My Space",
+        body: "Star your home village and other favorites — member-saved stuff lives under My Space.",
       },
     ],
     quote:
@@ -529,9 +532,9 @@ export const TOPICS: TopicDef[] = [
     href: "/community-resources",
     navLabel: "Community Resources",
     title: "Community Resources",
-    kicker: "Squares · rec · homes · neighbors",
+    kicker: "Yard sale · monthly picks",
     description:
-      "Town squares, recreation centers, real estate, yard sale, and monthly highlights — everyday Villages resources in one place. (Meet Your Neighbors lives on each village page under My Village.)",
+      "Community yard sale and Best of the Month — plus links to other public tools. Town Squares, Rec Centers, and Real Estate have their own main tabs. Meet Your Neighbors lives on each village page under The Villages.",
     image: "/graphics/theme-community-resources.jpg",
     tags: [
       "community",
@@ -603,8 +606,8 @@ export function getTopic(slug: TopicSlug): TopicDef {
 }
 
 /**
- * Primary top-level topics for The Villages Hub.
- * Everything else lives under Community Resources (or Media & story).
+ * Primary top-level topics for The Villages Everything App (main banner).
+ * Member-only / saved tools live under My Space (utility bar).
  */
 export const MAIN_TOPICS: {
   href: string;
@@ -615,10 +618,27 @@ export const MAIN_TOPICS: {
   image: string;
 }[] = [
   {
-    href: "/my-village",
-    label: "My Village",
+    href: "/town-squares",
+    label: "Town Squares",
+    matchPrefixes: ["/town-squares"],
     blurb:
-      "Edenfield, Fenney, and 100+ villages — search, star yours, and meet neighbors unique to your village.",
+      "Spanish Springs, Lake Sumter, Brownwood — free bands, shopping, and dancing after dark.",
+    image: "/graphics/theme-town-squares.jpg",
+  },
+  {
+    href: "/rec-centers",
+    label: "Rec Centers",
+    matchPrefixes: ["/rec-centers"],
+    blurb:
+      "Pools, pickleball diplomacy, billiards, and “see you at the rec center.”",
+    image: "/graphics/theme-rec-centers.jpg",
+  },
+  {
+    href: "/my-village",
+    label: "The Villages",
+    matchPrefixes: ["/my-village"],
+    blurb:
+      "Edenfield, Fenney, and 100+ villages — search, browse by area, and open each village’s landing page.",
     image: "/graphics/theme-my-village.jpg",
   },
   {
@@ -651,6 +671,22 @@ export const MAIN_TOPICS: {
     image: "/graphics/theme-local-news.jpg",
   },
   {
+    href: "/real-estate",
+    label: "Real Estate",
+    matchPrefixes: ["/real-estate"],
+    blurb:
+      "Featured homes, live market rabbit holes, and agents who speak “village.”",
+    image: "/graphics/theme-real-estate.jpg",
+  },
+  {
+    href: "/official-map",
+    label: "Official Map",
+    matchPrefixes: ["/official-map"],
+    blurb:
+      "District recreation map PDF — all the centers on one official cart-path cheat sheet.",
+    image: "/graphics/theme-rec-centers.jpg",
+  },
+  {
     href: "/golf-zone",
     label: "Golf",
     blurb:
@@ -661,7 +697,7 @@ export const MAIN_TOPICS: {
     href: "/club-zone",
     label: "Clubs",
     blurb:
-      "Popular clubs, official directories, and Hub Member favorites — pickleball to mah-jongg.",
+      "Popular clubs, official directories, and member favorites — pickleball to mah-jongg.",
     image: "/graphics/theme-club-zone.jpg",
   },
   {
@@ -695,60 +731,17 @@ export const MAIN_TOPICS: {
     image: "/graphics/theme-chaos.jpg",
   },
   {
-    href: "/community-resources",
-    label: "Community Resources",
-    matchPrefixes: [
-      "/community-resources",
-      "/town-squares",
-      "/rec-centers",
-      "/real-estate",
-      "/yard-sale",
-      "/best-of-the-month",
-    ],
-    blurb:
-      "Squares, rec centers, real estate, yard sale — the “everything else” drawer, organized.",
-    image: "/graphics/theme-community-resources.jpg",
-  },
-];
-
-/** Nested tools under Community Resources */
-export const COMMUNITY_RESOURCES: {
-  href: string;
-  label: string;
-  blurb: string;
-  image: string;
-}[] = [
-  {
-    href: "/town-squares",
-    label: "Town Squares",
-    blurb:
-      "Spanish Springs, Lake Sumter, Brownwood — free bands, shopping, and dancing after dark.",
-    image: "/graphics/theme-town-squares.jpg",
-  },
-  {
-    href: "/rec-centers",
-    label: "Rec Centers",
-    blurb:
-      "Pools, pickleball diplomacy, billiards, and “see you at the rec center.”",
-    image: "/graphics/theme-rec-centers.jpg",
-  },
-  {
-    href: "/real-estate",
-    label: "Real Estate",
-    blurb:
-      "Featured homes, live market rabbit holes, and agents who speak “village.”",
-    image: "/graphics/theme-real-estate.jpg",
-  },
-  {
     href: "/yard-sale",
     label: "Yard Sale",
+    matchPrefixes: ["/yard-sale"],
     blurb:
-      "One neighbor’s “why do I own this?” is another’s treasure — with photos.",
+      "One neighbor’s “why do I own this?” is another’s treasure — with photos. Posting is under My Space.",
     image: "/graphics/theme-wealth.jpg",
   },
   {
     href: "/best-of-the-month",
     label: "Best of the Month",
+    matchPrefixes: ["/best-of-the-month"],
     blurb:
       "The monthly highlight reel — no dues, maximum chaos, zero algorithm anxiety.",
     image: "/graphics/theme-best-of-month.jpg",

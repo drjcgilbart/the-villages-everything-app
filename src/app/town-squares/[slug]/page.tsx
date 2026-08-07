@@ -1,7 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SquareTonightPanel } from "@/components/SquareEntertainmentBoard";
 import { TownSquareFavoriteButton } from "@/components/TownSquareBrowser";
+import {
+  ensureEntertainmentFresh,
+  getEntertainmentUpdatedAt,
+  loadActiveLineup,
+} from "@/lib/entertainmentFetch";
+import type { SquareId } from "@/lib/squareEntertainment";
 import {
   OFFICIAL_LIVE_CAMS_URL,
   TOWN_SQUARES,
@@ -36,9 +43,12 @@ export default async function TownSquareDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  await ensureEntertainmentFresh(20);
   const square = getTownSquare(slug);
   if (!square) notFound();
 
+  const lineup = loadActiveLineup();
+  const updatedAt = getEntertainmentUpdatedAt();
   const others = otherTownSquares(square.id);
   const externalLinks = square.links.filter((l) => l.href.startsWith("http"));
   const internalLinks = square.links.filter((l) => l.href.startsWith("/"));
@@ -57,6 +67,9 @@ export default async function TownSquareDetailPage({
           <h1>{square.name}</h1>
           <p className="subtitle">{square.blurb}</p>
           <div className="hero-actions" style={{ marginTop: "1rem" }}>
+            <a href="#tonight" className="btn btn-primary btn-sm">
+              Who&apos;s playing tonight
+            </a>
             <TownSquareFavoriteButton
               id={square.id}
               name={square.shortName}
@@ -65,9 +78,9 @@ export default async function TownSquareDetailPage({
               href={OFFICIAL_LIVE_CAMS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-primary btn-sm"
+              className="btn btn-ghost btn-sm"
             >
-              Official live cams
+              Live cams
             </a>
             <a
               href={mapsUrl(square)}
@@ -107,6 +120,16 @@ export default async function TownSquareDetailPage({
               {square.photo.credit}
             </figcaption>
           </figure>
+        </div>
+      </section>
+
+      <section className="section" style={{ paddingBottom: 0 }}>
+        <div className="shell">
+          <SquareTonightPanel
+            squareId={square.id as SquareId}
+            lineup={lineup}
+            updatedAt={updatedAt}
+          />
         </div>
       </section>
 
@@ -273,8 +296,8 @@ export default async function TownSquareDetailPage({
               <Link href="/calendar" className="btn btn-ghost btn-sm">
                 Calendar
               </Link>
-              <Link href="/community-resources" className="btn btn-ghost btn-sm">
-                Community Resources
+              <Link href="/rec-centers" className="btn btn-ghost btn-sm">
+                Rec Centers
               </Link>
             </div>
           </div>

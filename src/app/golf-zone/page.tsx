@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { GolfClubHub } from "@/components/GolfClubHub";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Golf",
   description:
-    "Golf in The Villages — executive trail, trail fees, course maps, championship links, and cart-path resources from The Villages Hub.",
+    "Golf in The Villages — leaderboard, find a foursome, holes-in-one wall, executive trail, trail fees, and course maps from The Villages Everything App.",
 };
 
 export default function GolfZonePage() {
@@ -36,24 +37,17 @@ export default function GolfZonePage() {
               {topic.description} {GOLF_HUB.blurb}
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
-              <a href="#resources" className="btn btn-primary">
-                Golf resources
+              <a href="#leaderboard" className="btn btn-primary">
+                Leader Board
               </a>
-              <a
-                href="https://www.golfthevillages.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-ghost"
-              >
-                Golf The Villages
+              <a href="#foursome" className="btn btn-ghost">
+                Find a foursome
               </a>
-              <a
-                href="https://www.thevillages.com/golf/executive/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-ghost"
-              >
-                Executive courses
+              <a href="#aces" className="btn btn-ghost">
+                Holes in One
+              </a>
+              <a href="#resources" className="btn btn-ghost">
+                Resources
               </a>
             </div>
           </div>
@@ -72,7 +66,13 @@ export default function GolfZonePage() {
         </div>
       </div>
 
-      <section className="section" id="snapshot">
+      <section className="section" id="golf-club">
+        <div className="shell">
+          <GolfClubHub />
+        </div>
+      </section>
+
+      <section className="section" id="snapshot" style={{ paddingTop: 0 }}>
         <div className="shell">
           <div className="section-head">
             <div>

@@ -1,0 +1,758 @@
+[
+  {
+    "name": "Country Club",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "One of the earliest Villages neighborhoods — classic roots near the original Spanish Springs orbit.",
+    "slug": "country-club"
+  },
+  {
+    "name": "Del Mar",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Historic-side living with mature trees and an easy cart path to Spanish Springs shopping and entertainment.",
+    "slug": "del-mar"
+  },
+  {
+    "name": "El Cortez",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Established Lake County village with the classic older-Villages streetscape and town-square proximity.",
+    "slug": "el-cortez"
+  },
+  {
+    "name": "Hacienda",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "A familiar historic-side name spanning early development — walkable vibes and longtime neighbors.",
+    "slug": "hacienda"
+  },
+  {
+    "name": "La Reynalda",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Quiet historic-side streets close to the original shopping and entertainment core.",
+    "slug": "la-reynalda"
+  },
+  {
+    "name": "La Zamora",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Lake County classic with established landscaping and Spanish Springs cart access.",
+    "slug": "la-zamora"
+  },
+  {
+    "name": "Mira Mesa",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Early village living on the historic side — smaller-scale charm and deep roots.",
+    "slug": "mira-mesa"
+  },
+  {
+    "name": "Oak Meadow",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Historic-side neighborhood energy with mature homes and nearby rec options.",
+    "slug": "oak-meadow"
+  },
+  {
+    "name": "Orange Blossom Gardens",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Tied to the original Orange Blossom Gardens story — where The Villages lifestyle first took shape.",
+    "slug": "orange-blossom-gardens"
+  },
+  {
+    "name": "Pine Hills",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Established village with Lake County roots and nearby piney-green corridors.",
+    "slug": "pine-hills"
+  },
+  {
+    "name": "Pine Ridge",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Mature historic-side village known for settled streets and proximity to early amenities.",
+    "slug": "pine-ridge"
+  },
+  {
+    "name": "Silver Lake",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Lake County village with classic Villages curb appeal and square access.",
+    "slug": "silver-lake"
+  },
+  {
+    "name": "Spring Arbor",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Historic-side pocket with established homes and a quieter residential feel.",
+    "slug": "spring-arbor"
+  },
+  {
+    "name": "Valle Verde",
+    "region": "historic-side",
+    "county": "Lake",
+    "blurb": "Early neighborhood on the historic side — green, settled, and close to Spanish Springs.",
+    "slug": "valle-verde"
+  },
+  {
+    "name": "Alhambra",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-of-466 village with Spanish-inspired naming and easy access toward the northern squares.",
+    "slug": "alhambra"
+  },
+  {
+    "name": "Belle Aire",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "Popular north-side village spanning multiple pockets — established homes and strong rec access.",
+    "slug": "belle-aire"
+  },
+  {
+    "name": "Briar Meadow",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "Marion County village with a residential meadow feel and neighborhood rec access.",
+    "slug": "briar-meadow"
+  },
+  {
+    "name": "Calumet Grove",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "Marion County grove-named village — quieter streets and cart-friendly living.",
+    "slug": "calumet-grove"
+  },
+  {
+    "name": "Chatham",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "Marion County village with classic Villages villas and neighborhood amenities.",
+    "slug": "chatham"
+  },
+  {
+    "name": "Chatham at Soulliere",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "A Chatham-area pocket with its own identity — small-village feel inside the larger map.",
+    "slug": "chatham-at-soulliere"
+  },
+  {
+    "name": "De Allende",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "Early Sumter expansion village north of 466 with longtime residents and mature landscaping.",
+    "slug": "de-allende"
+  },
+  {
+    "name": "De La Vista",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-of-466 classic — established streets and a strong “I’ve lived here forever” energy.",
+    "slug": "de-la-vista"
+  },
+  {
+    "name": "Glenbrook",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-side village with residential charm and solid access to central amenities.",
+    "slug": "glenbrook"
+  },
+  {
+    "name": "Palo Alto",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "Well-known north-of-466 village (sometimes spelled Pallo Alto) with established homes.",
+    "slug": "palo-alto"
+  },
+  {
+    "name": "Piedmont",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "Marion County village with neighborhood recreation and quiet residential streets.",
+    "slug": "piedmont"
+  },
+  {
+    "name": "Polo Ridge",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-side village with a residential ridge feel and convenient cart corridors.",
+    "slug": "polo-ridge"
+  },
+  {
+    "name": "Rio Grande",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "Early Sumter village with Spanish-inspired naming and mature neighborhood character.",
+    "slug": "rio-grande"
+  },
+  {
+    "name": "Rio Ponderosa",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-of-466 village with established homes and familiar local rec patterns.",
+    "slug": "rio-ponderosa"
+  },
+  {
+    "name": "Rio Ranchero",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "Ranchero-named north-side village — residential, cartable, and long-settled.",
+    "slug": "rio-ranchero"
+  },
+  {
+    "name": "Santiago",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-of-466 village known for patio and courtyard villa living options.",
+    "slug": "santiago"
+  },
+  {
+    "name": "Santo Domingo",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-side village with classic Villages architecture and neighborhood amenities.",
+    "slug": "santo-domingo"
+  },
+  {
+    "name": "Springdale",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "Marion County village with a springdale quiet and nearby recreation.",
+    "slug": "springdale"
+  },
+  {
+    "name": "Summerhill",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "North-of-466 residential village with established streets and cart access.",
+    "slug": "summerhill"
+  },
+  {
+    "name": "Tierra Del Sol",
+    "region": "north-of-466",
+    "county": "Sumter",
+    "blurb": "Sunny north-side village name, established homes, and District 1 services.",
+    "slug": "tierra-del-sol"
+  },
+  {
+    "name": "Woodbury",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "Marion County village with woodsy residential character and neighborhood rec.",
+    "slug": "woodbury"
+  },
+  {
+    "name": "Woodbury at Phillips",
+    "region": "north-of-466",
+    "county": "Marion",
+    "blurb": "A Woodbury-area pocket with its own street identity and quiet living.",
+    "slug": "woodbury-at-phillips"
+  },
+  {
+    "name": "Amelia",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village with coastal-Florida naming and central Sumter access.",
+    "slug": "amelia"
+  },
+  {
+    "name": "Ashland",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Popular middle-map village with a mix of home styles and strong rec proximity.",
+    "slug": "ashland"
+  },
+  {
+    "name": "Belvedere",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village with residential polish and Lake Sumter Landing cart reach.",
+    "slug": "belvedere"
+  },
+  {
+    "name": "Bonita",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Sunny-named village in the south-of-466 belt with neighborhood amenities.",
+    "slug": "bonita"
+  },
+  {
+    "name": "Bonnybrook",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Well-known village with patio, courtyard, and ranch-style home options.",
+    "slug": "bonnybrook"
+  },
+  {
+    "name": "Bridgeport at Creekside Landing",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Bridgeport pocket near water/landing amenities — cottage and villa energy.",
+    "slug": "bridgeport-at-creekside-landing"
+  },
+  {
+    "name": "Bridgeport at Lake Miona",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Lake Miona–oriented Bridgeport living with water-adjacent Villages lifestyle.",
+    "slug": "bridgeport-at-lake-miona"
+  },
+  {
+    "name": "Bridgeport at Lake Sumter",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Bridgeport neighborhood oriented toward Lake Sumter corridors and squares.",
+    "slug": "bridgeport-at-lake-sumter"
+  },
+  {
+    "name": "Bridgeport at Lakeshore Cottages",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Cottage-style Bridgeport living with a lakeshore naming vibe.",
+    "slug": "bridgeport-at-lakeshore-cottages"
+  },
+  {
+    "name": "Bridgeport at Laurel Valley",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Laurel Valley Bridgeport pocket — residential streets and nearby rec.",
+    "slug": "bridgeport-at-laurel-valley"
+  },
+  {
+    "name": "Bridgeport at Miona Shores",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Miona Shores Bridgeport living with water-inspired neighborhood character.",
+    "slug": "bridgeport-at-miona-shores"
+  },
+  {
+    "name": "Bridgeport at Mission Hills",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Mission Hills Bridgeport pocket in the broader south-of-466 / 466A transition.",
+    "slug": "bridgeport-at-mission-hills"
+  },
+  {
+    "name": "Buttonwood",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village with Florida coastal plant names and settled streets.",
+    "slug": "buttonwood"
+  },
+  {
+    "name": "Caroline",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Central Sumter village with classic Villages home styles and rec access.",
+    "slug": "caroline"
+  },
+  {
+    "name": "Duval",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village named for Florida place heritage — residential and cartable.",
+    "slug": "duval"
+  },
+  {
+    "name": "Hadley",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Quieter south-of-466 village living with neighborhood amenities nearby.",
+    "slug": "hadley"
+  },
+  {
+    "name": "Hemingway",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Literate-named village south of 466 with villa options and rec access.",
+    "slug": "hemingway"
+  },
+  {
+    "name": "Largo",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village with Florida Gulf-coast naming and central amenities.",
+    "slug": "largo"
+  },
+  {
+    "name": "Liberty Park",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Park-named village with residential streets and Lake Sumter Landing reach.",
+    "slug": "liberty-park"
+  },
+  {
+    "name": "Lynnhaven",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village with a residential haven feel and strong amenity access.",
+    "slug": "lynnhaven"
+  },
+  {
+    "name": "Mallory Square",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Square-named village — community-oriented living in the middle map.",
+    "slug": "mallory-square"
+  },
+  {
+    "name": "Pennecamp",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Florida park–named village south of 466 with neighborhood recreation nearby.",
+    "slug": "pennecamp"
+  },
+  {
+    "name": "Poinciana",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Flowering-tree-named village known for single-family options in central Sumter.",
+    "slug": "poinciana"
+  },
+  {
+    "name": "Sabal Chase",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Palm-named village south of 466 with residential charm and cart corridors.",
+    "slug": "sabal-chase"
+  },
+  {
+    "name": "St. Charles",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village with classic naming and neighborhood amenities.",
+    "slug": "st-charles"
+  },
+  {
+    "name": "St. James",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Residential village south of 466 with established Villages street patterns.",
+    "slug": "st-james"
+  },
+  {
+    "name": "Sunset Pointe",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Sunset-named village — golden-hour branding and central Sumter living.",
+    "slug": "sunset-pointe"
+  },
+  {
+    "name": "Tall Trees",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Tree-canopy village feel south of 466 with neighborhood recreation.",
+    "slug": "tall-trees"
+  },
+  {
+    "name": "Tamarind Grove",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Grove-named village with Florida fruit-tree energy and south-of-466 access.",
+    "slug": "tamarind-grove"
+  },
+  {
+    "name": "Virginia Trace",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "Popular village for patio and courtyard villas with strong lifestyle access.",
+    "slug": "virginia-trace"
+  },
+  {
+    "name": "Winifred",
+    "region": "south-of-466",
+    "county": "Sumter",
+    "blurb": "South-of-466 village with residential streets and Lake Sumter Landing proximity.",
+    "slug": "winifred"
+  },
+  {
+    "name": "Charlotte",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "South-of-466A village near Brownwood energy — Florida county naming and later-built homes.",
+    "slug": "charlotte"
+  },
+  {
+    "name": "Collier",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Larger south-side village name with multiple Collier pockets and bungalow options.",
+    "slug": "collier"
+  },
+  {
+    "name": "Collier at Alden Bungalows",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Bungalow-focused Collier pocket with a distinct street-level identity.",
+    "slug": "collier-at-alden-bungalows"
+  },
+  {
+    "name": "Collier at Antrim Dells",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Antrim Dells Collier neighborhood — dells naming and southern Sumter living.",
+    "slug": "collier-at-antrim-dells"
+  },
+  {
+    "name": "Collier at Atwood Bungalows",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Atwood bungalow pocket within the broader Collier family of villages.",
+    "slug": "collier-at-atwood-bungalows"
+  },
+  {
+    "name": "Dunedin",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Gulf-coast-named village south of 466A with Brownwood-area cart reach.",
+    "slug": "dunedin"
+  },
+  {
+    "name": "Fernandina",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Northeast-Florida-named village oriented toward southern squares and rec.",
+    "slug": "fernandina"
+  },
+  {
+    "name": "Gilchrist",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "South-of-466A village with Florida county naming and neighborhood amenities.",
+    "slug": "gilchrist"
+  },
+  {
+    "name": "Hillsborough",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "South-side village near Brownwood corridors and later-era home styles.",
+    "slug": "hillsborough"
+  },
+  {
+    "name": "LaBelle",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "South-of-466A village with Florida heritage naming and residential streets.",
+    "slug": "labelle"
+  },
+  {
+    "name": "Lake Deaton",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Lake-oriented southern village — water geography and Brownwood-area lifestyle.",
+    "slug": "lake-deaton"
+  },
+  {
+    "name": "Osceola Hills",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Hilly-named southern village with residential character near south-side amenities.",
+    "slug": "osceola-hills"
+  },
+  {
+    "name": "Osceola Hills at Soaring Eagle Preserve",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Osceola Hills pocket by Soaring Eagle Preserve — nature-edge living.",
+    "slug": "osceola-hills-at-soaring-eagle-preserve"
+  },
+  {
+    "name": "Pinellas",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Gulf-coast-named village south of 466A with cart access to Brownwood.",
+    "slug": "pinellas"
+  },
+  {
+    "name": "Sanibel",
+    "region": "south-of-466a",
+    "county": "Sumter",
+    "blurb": "Island-named village popular for patio and courtyard villa living.",
+    "slug": "sanibel"
+  },
+  {
+    "name": "Bradford",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Southern expansion village south of SR 44 with newer-construction character.",
+    "slug": "bradford"
+  },
+  {
+    "name": "Cason Hammock",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Hammock-named southern village — Florida landscape language and growing amenities.",
+    "slug": "cason-hammock"
+  },
+  {
+    "name": "Chitty Chatty",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "One of the most memorable village names — south of 44 with neighborly energy.",
+    "slug": "chitty-chatty"
+  },
+  {
+    "name": "Citrus Grove",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Grove-named southern village with Florida citrus heritage vibes.",
+    "slug": "citrus-grove"
+  },
+  {
+    "name": "DeLuna",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Southern village (also spelled De Luna) spanning newer expansion areas.",
+    "slug": "deluna"
+  },
+  {
+    "name": "DeSoto",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Explorer-named southern village with modern home styles and rec growth.",
+    "slug": "desoto"
+  },
+  {
+    "name": "Fenney",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Major southern growth area — Fenney is a landmark name for south-of-44 living.",
+    "slug": "fenney"
+  },
+  {
+    "name": "Hammock at Fenney",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Fenney-area hammock pocket with nature-forward naming and newer streets.",
+    "slug": "hammock-at-fenney"
+  },
+  {
+    "name": "Hawkins",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Southern village south of SR 44 with residential streets and expanding amenities.",
+    "slug": "hawkins"
+  },
+  {
+    "name": "Linden",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Tree-named southern village in the SR 44 growth corridor.",
+    "slug": "linden"
+  },
+  {
+    "name": "Marsh Bend",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Marsh-and-bend geography naming — southern expansion living.",
+    "slug": "marsh-bend"
+  },
+  {
+    "name": "McClure",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Southern village near Fenney-area growth with newer construction.",
+    "slug": "mcclure"
+  },
+  {
+    "name": "Monarch Grove",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Butterfly-and-grove naming in the southern map — residential and cartable.",
+    "slug": "monarch-grove"
+  },
+  {
+    "name": "Richmond",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Southern village south of SR 44 with neighborhood character.",
+    "slug": "richmond"
+  },
+  {
+    "name": "St. Catherine",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "Southern village with classic naming in the SR 44 expansion belt.",
+    "slug": "st-catherine"
+  },
+  {
+    "name": "St. Johns",
+    "region": "south-of-sr-44",
+    "county": "Sumter",
+    "blurb": "River-named southern village in the newer growth corridor.",
+    "slug": "st-johns"
+  },
+  {
+    "name": "Edenfield",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "One of The Villages’ newest villages in the Eastport area — golf views near the Woodlands Championship course, fresh construction, and Eastport Town Center energy just a cart ride away.",
+    "slug": "edenfield"
+  },
+  {
+    "name": "Dabney",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport-area village in the newest chapter of The Villages map — modern homes and growing amenities.",
+    "slug": "dabney"
+  },
+  {
+    "name": "LaGrange",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport-area village near Edenfield and neighbors — new-construction lifestyle and District 15 services.",
+    "slug": "lagrange"
+  },
+  {
+    "name": "Lake Denham",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport-area lake-named village with newer streets and regional recreation growth.",
+    "slug": "lake-denham"
+  },
+  {
+    "name": "Moultrie Creek",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport village with creek-inspired naming and fresh residential development.",
+    "slug": "moultrie-creek"
+  },
+  {
+    "name": "Newell",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport-area village in the newest districts — modern floor plans and cart corridors.",
+    "slug": "newell"
+  },
+  {
+    "name": "Oak Hollow",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport village with oak-hollow naming — District 15 and newer-home energy.",
+    "slug": "oak-hollow"
+  },
+  {
+    "name": "Shady Brook",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport-area village with shady-brook character in The Villages’ eastern growth.",
+    "slug": "shady-brook"
+  },
+  {
+    "name": "Waters Edge",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport village with water-edge naming and proximity to new amenities.",
+    "slug": "waters-edge"
+  },
+  {
+    "name": "Well Point",
+    "region": "eastport",
+    "county": "Sumter",
+    "blurb": "Eastport-area village in District 15 — part of the newest residential wave.",
+    "slug": "well-point"
+  }
+]

@@ -1,5 +1,5 @@
 /**
- * Recreation Centers catalog for The Villages Hub.
+ * Recreation Centers catalog for The Villages Everything App.
  * Addresses, phones, and types are drawn from public districtgov.org listings.
  * Themes/tips are neighbor-oriented orientation notes — not official amenity inventories.
  * Confirm hours, IDs, and closures on districtgov.org / thevillages.com.

@@ -5,9 +5,9 @@ import { villageCount } from "@/lib/villages";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "My Village",
+  title: "The Villages",
   description:
-    "Find your exact village inside The Villages, Florida — Edenfield, Fenney, Spanish Springs side, and 100+ neighborhoods with local context.",
+    "Browse 100+ individual villages inside The Villages, Florida — Edenfield, Fenney, Spanish Springs side, and more with local context.",
 };
 
 export default function MyVillagePage() {
@@ -19,13 +19,14 @@ export default function MyVillagePage() {
         <div className="shell page-hero-grid">
           <div>
             <span className="kicker">100+ neighborhoods · one hometown</span>
-            <h1>My Village</h1>
+            <h1>The Villages</h1>
             <p>
               The Villages isn&apos;t one subdivision — it&apos;s a constellation
               of individual villages (like <strong>Edenfield</strong>, Fenney,
-              Bonnybrook, and many more). Search or browse by area to open your
-              village&apos;s landing page, then star it so it&apos;s always one
-              click away.
+              Bonnybrook, and many more). Search or browse by area to open a
+              village&apos;s landing page. Star favorites for this device; your
+              member dashboard and saved picks live under{" "}
+              <a href="/my-space">My Space</a>.
             </p>
             <div className="dining-summary-stats">
               <div className="stat">

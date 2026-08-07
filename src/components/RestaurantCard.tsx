@@ -1,5 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Restaurant, RestaurantStats } from "@/lib/diningTypes";
+import { cuisineArtPath } from "@/lib/diningTypes";
+import { DiningFavoriteButton } from "@/components/DiningFavoriteButton";
 import { StarRating } from "@/components/StarRating";
 
 export function RestaurantCard({
@@ -13,7 +16,23 @@ export function RestaurantCard({
 }) {
   return (
     <article className="card restaurant-card">
+      <div className="restaurant-card-fav">
+        <DiningFavoriteButton
+          restaurantId={restaurant.id}
+          name={restaurant.name}
+          variant="icon"
+        />
+      </div>
       <Link href={`/dining/${restaurant.slug}`} className="restaurant-card-link">
+        <div className="restaurant-card-cuisine-art">
+          <Image
+            src={cuisineArtPath(restaurant.cuisine)}
+            alt=""
+            width={640}
+            height={360}
+            className="restaurant-card-cuisine-img"
+          />
+        </div>
         <div className="restaurant-card-top">
           {rank != null && <span className="restaurant-rank">#{rank}</span>}
           <div>

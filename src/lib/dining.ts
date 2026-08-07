@@ -8,10 +8,11 @@ import type {
   RankedRestaurant,
   RatingBreakdown,
   Restaurant,
+  RestaurantSuggestion,
   RestaurantStats,
   Review,
 } from "./diningTypes";
-import { CUISINES } from "./diningTypes";
+import { CUISINES, PRICE_RANGES } from "./diningTypes";
 
 const DINING_FILE = "dining.json";
 
@@ -280,7 +281,7 @@ The blueberry pancakes weren't supposed to be famous — but try telling that to
     },
   ];
 
-  return { restaurants, reviews, interviews, updatedAt: now };
+  return { restaurants, reviews, interviews, suggestions: [], updatedAt: now };
 }
 
 export function loadDining(): DiningData {
@@ -290,6 +291,7 @@ export function loadDining(): DiningData {
     restaurants: Array.isArray(raw.restaurants) ? raw.restaurants : [],
     reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
     interviews: Array.isArray(raw.interviews) ? raw.interviews : [],
+    suggestions: Array.isArray(raw.suggestions) ? raw.suggestions : [],
     updatedAt: raw.updatedAt || null,
   };
 }
@@ -482,6 +484,199 @@ export function deleteRestaurant(id: string) {
   data.restaurants = data.restaurants.filter((r) => r.id !== id);
   data.reviews = data.reviews.filter((r) => r.restaurantId !== id);
   data.interviews = data.interviews.filter((i) => i.restaurantId !== id);
+  return saveDining(data);
+}
+
+function normalizeCuisine(raw: unknown): Cuisine {
+  const c = String(raw || "").trim();
+  return CUISINES.includes(c as Cuisine) ? (c as Cuisine) : "Other";
+}
+
+function normalizePrice(raw: unknown): PriceRange {
+  const p = String(raw || "").trim();
+  return PRICE_RANGES.includes(p as PriceRange) ? (p as PriceRange) : "$$";
+}
+
+/** Public: visitor suggests a restaurant for admin review. */
+export function submitRestaurantSuggestion(input: {
+  name: string;
+  cuisine?: string;
+  area?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  priceRange?: string;
+  description?: string;
+  specialties?: string[] | string;
+  tags?: string[] | string;
+  suggestedBy: string;
+  suggestedByEmail?: string;
+  note?: string;
+}): RestaurantSuggestion {
+  const data = loadDining();
+  const name = String(input.name || "").trim().slice(0, 120);
+  if (name.length < 2) throw new Error("Please enter the restaurant name");
+
+  const suggestedBy = String(input.suggestedBy || "").trim().slice(0, 60);
+  if (suggestedBy.length < 2) throw new Error("Please enter your name");
+
+  const description = String(input.description || "").trim().slice(0, 2000);
+  if (description.length < 10) {
+    throw new Error(
+      "Add a short description so we know why this spot belongs in the guide"
+    );
+  }
+
+  // Soft dedupe against live list and pending suggestions
+  const nameKey = name.toLowerCase();
+  if (data.restaurants.some((r) => r.name.toLowerCase() === nameKey)) {
+    throw new Error("That restaurant is already listed in Dining");
+  }
+  if (
+    data.suggestions.some(
+      (s) =>
+        s.status === "pending" && s.name.toLowerCase() === nameKey
+    )
+  ) {
+    throw new Error(
+      "Someone already suggested that spot — it's waiting for admin review"
+    );
+  }
+
+  const splitList = (v: string[] | string | undefined) => {
+    if (Array.isArray(v)) return v.map(String).map((t) => t.trim()).filter(Boolean);
+    return String(v || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+  };
+
+  const suggestion: RestaurantSuggestion = {
+    id: uid("sug"),
+    name,
+    cuisine: normalizeCuisine(input.cuisine),
+    tags: splitList(input.tags).slice(0, 12),
+    area: String(input.area || "The Villages").trim().slice(0, 80) || "The Villages",
+    address: input.address
+      ? String(input.address).trim().slice(0, 160)
+      : undefined,
+    phone: input.phone ? String(input.phone).trim().slice(0, 40) : undefined,
+    website: input.website
+      ? String(input.website).trim().slice(0, 200)
+      : undefined,
+    priceRange: normalizePrice(input.priceRange),
+    description,
+    specialties: splitList(input.specialties).slice(0, 8),
+    suggestedBy,
+    suggestedByEmail: input.suggestedByEmail
+      ? String(input.suggestedByEmail).trim().slice(0, 120)
+      : undefined,
+    note: input.note ? String(input.note).trim().slice(0, 500) : undefined,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+
+  data.suggestions.unshift(suggestion);
+  saveDining(data);
+  return suggestion;
+}
+
+export function listRestaurantSuggestions(opts?: {
+  status?: RestaurantSuggestion["status"] | "all";
+}): RestaurantSuggestion[] {
+  const data = loadDining();
+  const status = opts?.status || "all";
+  return data.suggestions
+    .filter((s) => (status === "all" ? true : s.status === status))
+    .slice()
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+/** Admin: approve → creates live restaurant and marks suggestion approved. */
+export function approveRestaurantSuggestion(id: string): {
+  suggestion: RestaurantSuggestion;
+  restaurant: Restaurant;
+} {
+  const data = loadDining();
+  const idx = data.suggestions.findIndex((s) => s.id === id);
+  if (idx < 0) throw new Error("Suggestion not found");
+  const sug = data.suggestions[idx];
+
+  if (sug.status === "approved" && sug.approvedRestaurantId) {
+    const existing = data.restaurants.find(
+      (r) => r.id === sug.approvedRestaurantId
+    );
+    if (existing) return { suggestion: sug, restaurant: existing };
+  }
+  if (sug.status === "rejected") {
+    throw new Error(
+      "That suggestion was rejected — re-submit or add the restaurant manually"
+    );
+  }
+
+  // Already live under the same name? Link without duplicating.
+  const nameKey = sug.name.toLowerCase();
+  let restaurant = data.restaurants.find((r) => r.name.toLowerCase() === nameKey);
+  const now = new Date().toISOString();
+
+  if (!restaurant) {
+    let slug = slugify(sug.name);
+    if (data.restaurants.some((r) => r.slug === slug)) {
+      slug = `${slug}-${Date.now().toString(36)}`;
+    }
+    restaurant = {
+      id: uid("rest"),
+      name: sug.name,
+      slug,
+      cuisine: sug.cuisine,
+      tags: sug.tags || [],
+      area: sug.area || "The Villages",
+      address: sug.address,
+      phone: sug.phone,
+      website: sug.website,
+      priceRange: sug.priceRange || "$$",
+      description: sug.description,
+      specialties: sug.specialties || [],
+      featured: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    data.restaurants.unshift(restaurant);
+  }
+
+  data.suggestions[idx] = {
+    ...sug,
+    status: "approved",
+    reviewedAt: now,
+    approvedRestaurantId: restaurant.id,
+  };
+  saveDining(data);
+  return { suggestion: data.suggestions[idx], restaurant };
+}
+
+export function rejectRestaurantSuggestion(
+  id: string,
+  reason?: string
+): RestaurantSuggestion {
+  const data = loadDining();
+  const idx = data.suggestions.findIndex((s) => s.id === id);
+  if (idx < 0) throw new Error("Suggestion not found");
+  if (data.suggestions[idx].status === "approved") {
+    throw new Error("Already approved — remove the restaurant from the live list if needed");
+  }
+  data.suggestions[idx] = {
+    ...data.suggestions[idx],
+    status: "rejected",
+    reviewedAt: new Date().toISOString(),
+    rejectReason: reason ? String(reason).trim().slice(0, 300) : undefined,
+  };
+  saveDining(data);
+  return data.suggestions[idx];
+}
+
+export function deleteRestaurantSuggestion(id: string) {
+  const data = loadDining();
+  data.suggestions = data.suggestions.filter((s) => s.id !== id);
   return saveDining(data);
 }
 

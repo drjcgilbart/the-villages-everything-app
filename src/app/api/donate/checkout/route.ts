@@ -55,13 +55,13 @@ export async function POST(req: Request) {
     ? `${earned.def.label} — Buy me a cup of Joe`
     : "Cup of Joe — Keep the lights on";
   const productDescription = earned
-    ? `Tip ($${amountUsd.toFixed(2)}) for The Villages Hub — unlocks the “${earned.def.label}” badge${
+    ? `Tip ($${amountUsd.toFixed(2)}) for The Villages Everything App — unlocks the “${earned.def.label}” badge${
         earned.badgeId === "golden_loofah" ||
         earned.badgeId === "custom_star_loofah"
           ? " and queues you for Square Royalty (1 year) pending admin approval"
           : ""
       }.`
-    : "A tip for The Villages Hub — hosting, coffee, and golf-cart energy.";
+    : "A tip for The Villages Everything App — hosting, coffee, and golf-cart energy.";
 
   try {
     const session = await stripe.checkout.sessions.create({

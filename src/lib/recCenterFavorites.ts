@@ -1,3 +1,5 @@
+import { notifyFavoritesChanged } from "./siteFavorites";
+
 /** Browser localStorage key for favorite rec center ids (this device only). */
 export const REC_FAVORITES_KEY = "tvh-rec-center-favorites";
 
@@ -21,6 +23,7 @@ export function writeRecFavorites(ids: string[]): void {
   } catch {
     /* quota / private mode */
   }
+  notifyFavoritesChanged();
 }
 
 export function isRecFavorite(id: string, favorites: string[]): boolean {

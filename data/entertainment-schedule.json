@@ -1,0 +1,340 @@
+{
+  "updatedAt": "2026-08-07T14:43:13.138Z",
+  "sourceUrls": [
+    "https://www.thevillagesentertainment.com/nightly-entertainment/",
+    "https://www.thevillagesentertainment.com/spanish-springs/"
+  ],
+  "nights": [
+    {
+      "date": "2026-08-07",
+      "squareId": "brownwood",
+      "acts": [
+        {
+          "name": "CLUB CTRL Feat. DJ Lu-S",
+          "blurb": "Beats, lights, repeat — DJ Lu-S is taking full CTRL of the night, flipping the switch to club-mode and keeping the momentum pumping all night long.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-07",
+      "squareId": "eastport",
+      "acts": [
+        {
+          "name": "The Voodoo Gypsies",
+          "blurb": "The Voodoo Gypsies is a classic rock cover band from Central Florida! The band is all about playing popular rock ‘n roll hits from the '60s, '70s, '80s.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-07",
+      "squareId": "lake-sumter",
+      "acts": [
+        {
+          "name": "The 789s",
+          "blurb": "With five musicians from five corners of the country, The 789s ignite the stage with a shared love of all the greatest rock, disco, and pop hits.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-07",
+      "squareId": "sawgrass-grove",
+      "acts": [
+        {
+          "name": "Scooter The DJ",
+          "blurb": "Audience Participation is required! Popular Dances and Scooter Originals!",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-07",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Jerico",
+          "blurb": "Leaning to the southern side of rock, Jerico celebrates the sounds of the last 6 decades.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-08",
+      "squareId": "brownwood",
+      "acts": [
+        {
+          "name": "Cable Cars",
+          "blurb": "Cable Cars is a dynamic cover band ready to transport audiences to the hits of decades past and today!",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-08",
+      "squareId": "eastport",
+      "acts": [
+        {
+          "name": "Rocky and The Rollers",
+          "blurb": "An absolute Villages favorite. Rocky and The Rollers have 27 years performing in The Villages and their wide range of high energy music from all eras and genres will keep you excited and engaged throughout the performance.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-08",
+      "squareId": "lake-sumter",
+      "acts": [
+        {
+          "name": "Bourbon Street Brass",
+          "blurb": "New Orleans brass band music, but also includes jazz and other stylings. Good Time Party Music.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-08",
+      "squareId": "sawgrass-grove",
+      "acts": [
+        {
+          "name": "Greg Warren Trio",
+          "blurb": "Greg Warren Trio : High energy country, classic rock, rock, and dance band. We like to keep you dancing all night! Radlin' Rootz : Radlin' Rootz is an eclectic cover/original band that is comprised of top tier musicians from Ocala, FL.",
+          "start": "12:00 PM",
+          "end": "3:00 PM"
+        },
+        {
+          "name": "Radlin' Rootz",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-08",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "The Fire Rhythms Band",
+          "blurb": "Fueled by Caribbean heat and Brazilian beats, The Fire Rhythms Band lights up the stage with funk, rock, and Top 40 hits that turn every show into a full-blown dance party.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-09",
+      "squareId": "brownwood",
+      "acts": [
+        {
+          "name": "September Dogs",
+          "blurb": "September Dogs is a four piece, female fronted band. The live shows are driven by strong, layered vocals by Cate & Michael, with a diverse, unique song selection that sets them apart from other local bands. The band always brings their energy to each performance and engages with ",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-09",
+      "squareId": "eastport",
+      "acts": [
+        {
+          "name": "Greg Warren Band",
+          "blurb": "High energy country, classic rock, rock, and dance band. We like to keep you dancing all night!",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-09",
+      "squareId": "lake-sumter",
+      "acts": [
+        {
+          "name": "Pavani's Band",
+          "blurb": "From the streets of Rio to the subways of Manhattan, Pavani’s Band delivers a dynamic blend of raw talent and timeless hits, spanning decades of '70s and '80s.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-09",
+      "squareId": "sawgrass-grove",
+      "acts": [
+        {
+          "name": "Anita Drink Band",
+          "blurb": "Anita Drink Band is a high-energy variety band bringing the best of rock ’n’ roll from the ’60s to today, plus fan-favorite originals, soulful Christian selections, country hits, and blues grooves that keep every crowd singing along and tapping their feet.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-09",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Osaka Fall",
+          "blurb": "Uncovered Hits, Unforgettable Vibes. Osaka Fall sets itself apart with a setlist you won’t hear anywhere else. From rare old-school jams to glam rock, funk, modern pop, and soulful love songs, they create a musical experience like no other.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-10",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "MPIRE",
+          "blurb": "MPIRE is a tight, dynamic band that delivers a variety of music from the '60s through today.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-11",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "The Dave Capp Project",
+          "blurb": "Serving up rock, pop, and blues with a splash of Motown & R&B—smooth grooves and powerhouse vocals make this band the full package.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-12",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Justin Heet Band",
+          "blurb": "Rock at its finest! This band doesn't hold back. Come out and party with this great rock band!",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-13",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Billy Buchanan & His Rock N' Soul Revue",
+          "blurb": "Soul, early rock, and blues from the '50s to the '80s and beyond!",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-14",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Zee-R Band",
+          "blurb": "Zee-R is an international artist originally from Brazil. Zee's repertoire consists of family-friendly classic hits from all eras.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-15",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Rocky and The Rollers",
+          "blurb": "An absolute Villages favorite. Rocky and The Rollers have 27 years performing in The Villages and their wide range of high energy music from all eras and genres will keep you excited and engaged throughout the performance.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-16",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Sheila & The Sound",
+          "blurb": "From Aretha to Journey, Sheila & The Sound bring the power, passion, and pipes to turn every stage into a retro-fueled dance floor.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-17",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Blonde Ambition",
+          "blurb": "Blonde Ambition is an international special event show band based out of Orlando, FL. American Top 40, pop, rock, Motown, '70s, '80s, '90s, Latin cross-over and more!",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-18",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Anita Drink Band",
+          "blurb": "Anita Drink Band is a high-energy variety band bringing the best of rock ’n’ roll from the ’60s to today, plus fan-favorite originals, soulful Christian selections, country hits, and blues grooves that keep every crowd singing along and tapping their feet.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-19",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Earth Beat",
+          "blurb": "A classic dance band featuring country, rock, and Motown hits!",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-20",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "Hayfire",
+          "blurb": "A fun, energetic country band with superb vocals! Hayfire is one of The Villages' best and dubbed one of Orlando Weekly's Best Cover Bands.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    },
+    {
+      "date": "2026-08-21",
+      "squareId": "spanish-springs",
+      "acts": [
+        {
+          "name": "5.0.1.",
+          "blurb": "5.0.1. lets the MUSIC come first. Playing the best of the Blues, Soul & Classic Rock Music from the '60s and '70s.",
+          "start": "6:00 PM",
+          "end": "10:00 PM"
+        }
+      ]
+    }
+  ],
+  "eventCount": 30,
+  "lastError": null
+}

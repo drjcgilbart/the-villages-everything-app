@@ -1,7 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CUISINES, PRICE_RANGES, type Cuisine, type Interview, type PriceRange, type Restaurant, type RestaurantStats, type Review } from "@/lib/diningTypes";
+import {
+  CUISINES,
+  PRICE_RANGES,
+  type Cuisine,
+  type Interview,
+  type PriceRange,
+  type Restaurant,
+  type RestaurantStats,
+  type RestaurantSuggestion,
+  type Review,
+} from "@/lib/diningTypes";
 
 type RestRow = Restaurant & { stats: RestaurantStats };
 
@@ -65,11 +75,16 @@ export function AdminDiningPanel() {
   const [restaurants, setRestaurants] = useState<RestRow[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [suggestions, setSuggestions] = useState<RestaurantSuggestion[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [restForm, setRestForm] = useState<RestForm>(emptyRest);
   const [intForm, setIntForm] = useState<IntForm>(emptyInt);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
-  const [sub, setSub] = useState<"restaurants" | "reviews" | "interviews">("restaurants");
+  const [sub, setSub] = useState<
+    "suggestions" | "restaurants" | "reviews" | "interviews"
+  >("suggestions");
+  const [sugFilter, setSugFilter] = useState<"pending" | "all">("pending");
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -77,17 +92,21 @@ export function AdminDiningPanel() {
   };
 
   const load = useCallback(async () => {
-    const [rRes, revRes, iRes] = await Promise.all([
+    const [rRes, revRes, iRes, sRes] = await Promise.all([
       fetch("/api/dining/restaurants"),
       fetch("/api/dining/reviews?all=1"),
       fetch("/api/dining/interviews"),
+      fetch("/api/dining/suggestions?status=all"),
     ]);
     const rData = await rRes.json();
     const revData = await revRes.json();
     const iData = await iRes.json();
+    const sData = await sRes.json();
     setRestaurants(rData.restaurants || []);
     setReviews(revData.reviews || []);
     setInterviews(iData.interviews || []);
+    setSuggestions(sData.suggestions || []);
+    setPendingCount(Number(sData.pendingCount) || 0);
   }, []);
 
   useEffect(() => {
@@ -232,15 +251,54 @@ export function AdminDiningPanel() {
   const restName = (id: string) =>
     restaurants.find((r) => r.id === id)?.name || id;
 
+  const visibleSuggestions =
+    sugFilter === "pending"
+      ? suggestions.filter((s) => s.status === "pending")
+      : suggestions;
+
+  async function suggestionAction(
+    action: "approve" | "reject" | "delete",
+    id: string
+  ) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/dining/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          id,
+          reason: action === "reject" ? "Not a fit for the guide right now" : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Action failed");
+      flash("ok", data.message || "Updated");
+      await load();
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Action failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        Manage the Dining guide — restaurants, community reviews, and kitchen
-        interviews. Leaderboards update automatically from star ratings.
+        Manage the Dining guide — visitor suggestions, restaurants, community
+        reviews, and kitchen interviews. Leaderboards update automatically from
+        star ratings.
       </p>
       {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
 
       <div className="admin-tabs" style={{ marginBottom: "1rem" }}>
+        <button
+          type="button"
+          className={sub === "suggestions" ? "active" : ""}
+          onClick={() => setSub("suggestions")}
+        >
+          Suggestions{pendingCount > 0 ? ` (${pendingCount})` : ""}
+        </button>
         <button
           type="button"
           className={sub === "restaurants" ? "active" : ""}
@@ -263,6 +321,137 @@ export function AdminDiningPanel() {
           Interviews
         </button>
       </div>
+
+      {sub === "suggestions" && (
+        <>
+          <div className="section-head" style={{ marginBottom: "0.75rem" }}>
+            <div>
+              <h2 style={{ margin: 0 }}>Restaurant suggestions</h2>
+              <p style={{ margin: "0.35rem 0 0", color: "var(--muted)" }}>
+                Visitors submit these from Dining. Approve to list the spot
+                live; reject to dismiss.
+              </p>
+            </div>
+            <div className="hero-actions">
+              <button
+                type="button"
+                className={`btn btn-sm ${sugFilter === "pending" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setSugFilter("pending")}
+              >
+                Pending ({pendingCount})
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${sugFilter === "all" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setSugFilter("all")}
+              >
+                All
+              </button>
+            </div>
+          </div>
+
+          {visibleSuggestions.length === 0 ? (
+            <div className="empty-state">
+              {sugFilter === "pending"
+                ? "No pending suggestions — nice and quiet."
+                : "No suggestions yet."}
+            </div>
+          ) : (
+            <div className="admin-list">
+              {visibleSuggestions.map((s) => (
+                <article key={s.id} className="about-panel admin-list-item">
+                  <div className="card-meta">
+                    <span className="pill">{s.status}</span>
+                    <span className="pill pill-cuisine">{s.cuisine}</span>
+                    <span>{s.priceRange}</span>
+                    <span>{s.area}</span>
+                    <time dateTime={s.createdAt}>
+                      {new Date(s.createdAt).toLocaleString()}
+                    </time>
+                  </div>
+                  <h3 style={{ margin: "0.4rem 0 0.25rem" }}>{s.name}</h3>
+                  <p style={{ margin: "0 0 0.5rem", color: "var(--muted)" }}>
+                    {s.description}
+                  </p>
+                  {s.specialties?.length > 0 && (
+                    <p style={{ margin: "0 0 0.5rem", fontSize: "0.9rem" }}>
+                      <strong>Must-tries:</strong> {s.specialties.join(" · ")}
+                    </p>
+                  )}
+                  <p style={{ margin: "0 0 0.35rem", fontSize: "0.9rem" }}>
+                    <strong>Suggested by:</strong> {s.suggestedBy}
+                    {s.suggestedByEmail ? ` · ${s.suggestedByEmail}` : ""}
+                  </p>
+                  {s.note && (
+                    <p style={{ margin: "0 0 0.35rem", fontSize: "0.9rem" }}>
+                      <strong>Note:</strong> {s.note}
+                    </p>
+                  )}
+                  {(s.address || s.phone || s.website) && (
+                    <p
+                      style={{
+                        margin: "0 0 0.65rem",
+                        fontSize: "0.88rem",
+                        color: "var(--muted)",
+                      }}
+                    >
+                      {[s.address, s.phone, s.website].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                  {s.status === "approved" && s.approvedRestaurantId && (
+                    <p className="panel-hint" style={{ marginTop: 0 }}>
+                      Live restaurant id: {s.approvedRestaurantId}
+                    </p>
+                  )}
+                  {s.status === "rejected" && s.rejectReason && (
+                    <p className="panel-hint" style={{ marginTop: 0 }}>
+                      Rejected: {s.rejectReason}
+                    </p>
+                  )}
+                  <div className="hero-actions">
+                    {s.status === "pending" && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          disabled={busy}
+                          onClick={() => suggestionAction("approve", s.id)}
+                        >
+                          Approve &amp; list
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          disabled={busy}
+                          onClick={() => suggestionAction("reject", s.id)}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      disabled={busy}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            "Delete this suggestion permanently?"
+                          )
+                        ) {
+                          void suggestionAction("delete", s.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {sub === "restaurants" && (
         <>

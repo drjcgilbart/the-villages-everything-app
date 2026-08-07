@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { DiningFavoriteButton } from "@/components/DiningFavoriteButton";
 import { MemberName } from "@/components/MemberName";
 import { RestaurantCard } from "@/components/RestaurantCard";
+import { RestaurantSuggestForm } from "@/components/RestaurantSuggestForm";
 import { StarRating } from "@/components/StarRating";
 import {
   allCuisineLeaders,
@@ -13,7 +15,7 @@ import {
   withStats,
 } from "@/lib/dining";
 import { formatDate } from "@/lib/format";
-import { CUISINES } from "@/lib/diningTypes";
+import { CUISINE_ART, CUISINES } from "@/lib/diningTypes";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -48,7 +50,9 @@ export default function DiningPage() {
             <p>
               Community restaurant guide with live 1–5 star ratings, top 5
               leaderboards by cuisine, staff interviews, and honest reviews from
-              people who actually eat here (often before 5 p.m.).
+              people who actually eat here (often before 5 p.m.). Star a spot
+              with ☆ — favorites land on{" "}
+              <a href="/my-space#ms-favorites">My Space</a> too.
             </p>
             <div className="dining-summary-stats">
               <div className="stat">
@@ -92,6 +96,9 @@ export default function DiningPage() {
             ))}
             <a href="#all-restaurants" className="dining-chip">
               All spots
+            </a>
+            <a href="#suggest" className="dining-chip">
+              Suggest a spot
             </a>
             <a href="#interviews" className="dining-chip">
               Interviews
@@ -150,14 +157,23 @@ export default function DiningPage() {
                   id={`cuisine-${cuisine.toLowerCase()}`}
                   className="cuisine-board about-panel"
                 >
+                  <div className="cuisine-board-art">
+                    <Image
+                      src={CUISINE_ART[cuisine]}
+                      alt=""
+                      width={640}
+                      height={640}
+                      className="cuisine-board-img"
+                    />
+                  </div>
                   <div className="cuisine-board-head">
                     <h3>{cuisine}</h3>
                     <span>Top {leaders.length}</span>
                   </div>
                   <ol className="cuisine-leader-list">
                     {leaders.map((r) => (
-                      <li key={r.id}>
-                        <Link href={`/dining/${r.slug}`}>
+                      <li key={r.id} className="cuisine-leader-row">
+                        <Link href={`/dining/${r.slug}`} className="cuisine-leader-link">
                           <span className="leader-rank">{r.rank}</span>
                           <span className="leader-main">
                             <strong>{r.name}</strong>
@@ -170,6 +186,11 @@ export default function DiningPage() {
                             <small>{r.stats.reviewCount} reviews</small>
                           </span>
                         </Link>
+                        <DiningFavoriteButton
+                          restaurantId={r.id}
+                          name={r.name}
+                          variant="icon"
+                        />
                       </li>
                     ))}
                   </ol>
@@ -290,6 +311,23 @@ export default function DiningPage() {
             {allRestaurants.map((r) => (
               <RestaurantCard key={r.id} restaurant={r} stats={r.stats} />
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section" id="suggest" style={{ paddingTop: 0 }}>
+        <div className="shell">
+          <div className="section-head">
+            <div>
+              <h2>Missing a favorite?</h2>
+              <p>
+                Suggest a restaurant in or around The Villages. After admin
+                approval, it joins the Dining guide for reviews and ratings.
+              </p>
+            </div>
+          </div>
+          <div className="about-panel dining-suggest-panel">
+            <RestaurantSuggestForm />
           </div>
         </div>
       </section>

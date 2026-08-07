@@ -13,6 +13,30 @@ export const CUISINES = [
 
 export type Cuisine = (typeof CUISINES)[number];
 
+/**
+ * Whimsical card art for each cuisine (under /public/graphics/cuisines).
+ * Each card features a different cute Florida creature as the waiter.
+ */
+export const CUISINE_ART: Record<Cuisine, string> = {
+  American: "/graphics/cuisines/american-v2.jpg", // brown pelican
+  Italian: "/graphics/cuisines/italian-v2.jpg", // manatee
+  Mexican: "/graphics/cuisines/mexican-v2.jpg", // armadillo
+  Asian: "/graphics/cuisines/asian-v2.jpg", // sea turtle
+  Seafood: "/graphics/cuisines/seafood-v2.jpg", // bottlenose dolphin
+  BBQ: "/graphics/cuisines/bbq-v2.jpg", // alligator
+  Breakfast: "/graphics/cuisines/breakfast-v2.jpg", // roseate spoonbill
+  Steakhouse: "/graphics/cuisines/steakhouse-v2.jpg", // Florida black bear
+  Mediterranean: "/graphics/cuisines/mediterranean-v2.jpg", // white ibis
+  Other: "/graphics/cuisines/other-v2.jpg", // raccoon
+};
+
+export function cuisineArtPath(cuisine: string): string {
+  if ((CUISINES as readonly string[]).includes(cuisine)) {
+    return CUISINE_ART[cuisine as Cuisine];
+  }
+  return CUISINE_ART.Other;
+}
+
 export const PRICE_RANGES = ["$", "$$", "$$$", "$$$$"] as const;
 export type PriceRange = (typeof PRICE_RANGES)[number];
 
@@ -70,10 +94,40 @@ export type Interview = {
   featured?: boolean;
 };
 
+/** Visitor-submitted restaurant; only listed after admin approval. */
+export type RestaurantSuggestionStatus = "pending" | "approved" | "rejected";
+
+export type RestaurantSuggestion = {
+  id: string;
+  name: string;
+  cuisine: Cuisine;
+  tags: string[];
+  area: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  priceRange: PriceRange;
+  description: string;
+  specialties: string[];
+  /** Who suggested it (display name) */
+  suggestedBy: string;
+  /** Optional email for follow-up (admin only) */
+  suggestedByEmail?: string;
+  /** Extra note for admin (why list it, etc.) */
+  note?: string;
+  status: RestaurantSuggestionStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  /** Set when approved — links to the live restaurant */
+  approvedRestaurantId?: string;
+  rejectReason?: string;
+};
+
 export type DiningData = {
   restaurants: Restaurant[];
   reviews: Review[];
   interviews: Interview[];
+  suggestions: RestaurantSuggestion[];
   updatedAt: string | null;
 };
 

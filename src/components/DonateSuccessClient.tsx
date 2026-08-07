@@ -95,7 +95,8 @@ export function DonateSuccessClient() {
             (message ||
               "Sign in as a Hub member and revisit this page to claim your badge.")}
           {status === "error" && (message || "Something went wrong verifying the tip.")}
-          {status === "idle" && "Thank you for supporting The Villages Hub."}
+          {status === "idle" &&
+            "Thank you for supporting The Villages Everything App."}
         </p>
         {status === "badge" && (
           <p className="panel-hint">

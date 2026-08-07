@@ -1,3 +1,5 @@
+import { notifyFavoritesChanged } from "./siteFavorites";
+
 /** Browser localStorage key for favorite town square ids (this device only). */
 export const TS_FAVORITES_KEY = "tvh-town-square-favorites";
 
@@ -21,6 +23,7 @@ export function writeTownSquareFavorites(ids: string[]): void {
   } catch {
     /* quota / private mode */
   }
+  notifyFavoritesChanged();
 }
 
 export function isTownSquareFavorite(id: string, favorites: string[]): boolean {

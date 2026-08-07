@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
-import { isSiteGateEnabled } from "@/lib/siteGate";
+import { isSiteGateEnabledAsync } from "@/lib/siteGate";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
   // While beta gate is on, ask crawlers to stay out
-  if (isSiteGateEnabled()) {
+  if (await isSiteGateEnabledAsync()) {
     return {
       rules: {
         userAgent: "*",

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MAIN_TOPICS, COMMUNITY_RESOURCES } from "@/lib/topics";
+import { MAIN_TOPICS } from "@/lib/topics";
 import { SITE } from "@/lib/content";
 
 export function Footer() {
@@ -37,13 +37,11 @@ export function Footer() {
             </div>
           </div>
           <div className="footer-group">
-            <strong>Community Resources</strong>
+            <strong>My Space</strong>
             <div className="footer-group-links">
-              {COMMUNITY_RESOURCES.map((t) => (
-                <Link key={t.href} href={t.href}>
-                  {t.label}
-                </Link>
-              ))}
+              <Link href="/my-space">Dashboard</Link>
+              <Link href="/yard-sale/login">Member sign-in</Link>
+              <Link href="/yard-sale/dashboard">Yard sale tools</Link>
             </div>
           </div>
           <div className="footer-group">

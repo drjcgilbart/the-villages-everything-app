@@ -112,7 +112,7 @@ export const FEATURE_META: Record<
     anchor: "ms-top",
   },
   shortcuts: {
-    title: "Hub shortcuts",
+    title: "Site shortcuts",
     teaser: "Quick cart-path links around the site.",
     anchor: "ms-links",
   },
@@ -128,8 +128,8 @@ export const FEATURE_META: Record<
   },
   favoriteClubs: {
     title: "Favorite clubs",
-    teaser: "Starred clubs from Club Zone, parked on your dashboard.",
-    anchor: "ms-clubs",
+    teaser: "Starred clubs from Club Zone — included in My favorites on My Space.",
+    anchor: "ms-favorites",
   },
   portfolio: {
     title: "Investments",

@@ -9,24 +9,19 @@ import {
   writableUploadsDir,
 } from "./dataFs";
 import type { Photo, Post, SiteContent, Video } from "./types";
+import { SITE_BRAND } from "./siteBrand";
 
 const CONTENT_FILE = "content.json";
 const CONTENT_PATH = path.join(BUNDLE_DATA_DIR, CONTENT_FILE);
 const UPLOADS_DIR = path.join(BUNDLE_DATA_DIR, "uploads");
 
+/** Site brand + YouTube — single source via siteBrand.ts */
 export const SITE = {
-  name: "The Villages Hub",
-  tagline: "Everything app. Zero stuffiness. Florida edition.",
-  subtitle:
-    "The moderately ridiculous everything-app for The Villages, Florida — find your village, rate a restaurant, chase live music, and still laugh about the plot twist of starting over here.",
-  location: "The Villages, Florida",
-  /** Personal reboot YouTube channel */
-  youtube: {
-    title: "The Villages Idiot",
-    handle: "@TheVillagesIdiot",
-    url: "https://www.youtube.com/@TheVillagesIdiot",
-    channelId: "UC_ccna64GSBqC1zQyhcvaUg",
-  },
+  name: SITE_BRAND.name,
+  tagline: SITE_BRAND.tagline,
+  subtitle: SITE_BRAND.subtitle,
+  location: SITE_BRAND.location,
+  youtube: { ...SITE_BRAND.youtube },
 };
 
 const SEED: SiteContent = {

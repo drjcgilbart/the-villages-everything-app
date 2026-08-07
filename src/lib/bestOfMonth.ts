@@ -1,0 +1,361 @@
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import {
+  BUNDLE_DATA_DIR,
+  readJsonFile,
+  resolveUploadFile,
+  writableUploadsDir,
+  writeJsonFile,
+  writeJsonFileAsync,
+} from "./dataFs";
+import {
+  BOM_CATEGORIES,
+  BOM_CATEGORY_META,
+  type BomCategory,
+  type BomData,
+  type BomEntry,
+  type BomFileType,
+  type BomMonthResults,
+  type BomVote,
+} from "./bestOfMonthTypes";
+
+const BOM_FILE = "best-of-month.json";
+
+function uid(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
+}
+
+/** Florida calendar month key YYYY-MM */
+export function bomMonthKey(d = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(d);
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  return `${y}-${m}`;
+}
+
+export function previousMonthKey(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const d = new Date(y, m - 2, 1); // month is 1-based in key
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${yy}-${mm}`;
+}
+
+export function nextMonthKey(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const d = new Date(y, m, 1);
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${yy}-${mm}`;
+}
+
+export function formatMonthLabel(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function emptyData(): BomData {
+  return { entries: [], votes: [], results: [], updatedAt: null };
+}
+
+export function loadBom(): BomData {
+  const raw = readJsonFile<BomData>(BOM_FILE);
+  if (!raw) return emptyData();
+  return {
+    entries: Array.isArray(raw.entries) ? raw.entries : [],
+    votes: Array.isArray(raw.votes) ? raw.votes : [],
+    results: Array.isArray(raw.results) ? raw.results : [],
+    updatedAt: raw.updatedAt || null,
+  };
+}
+
+export function saveBom(data: BomData) {
+  data.updatedAt = new Date().toISOString();
+  writeJsonFile(BOM_FILE, data);
+  return data;
+}
+
+export async function saveBomAsync(data: BomData) {
+  data.updatedAt = new Date().toISOString();
+  await writeJsonFileAsync(BOM_FILE, data);
+  return data;
+}
+
+export function isBomCategory(v: string): v is BomCategory {
+  return (BOM_CATEGORIES as readonly string[]).includes(v);
+}
+
+/** Tabulate any past month that has approved entries but no results yet. */
+export function ensurePastMonthsTabulated(data: BomData = loadBom()): BomData {
+  const current = bomMonthKey();
+  const months = new Set(
+    data.entries
+      .filter((e) => e.status === "approved")
+      .map((e) => e.monthKey)
+      .filter((m) => m < current)
+  );
+
+  let changed = false;
+  for (const monthKey of months) {
+    if (data.results.some((r) => r.monthKey === monthKey)) continue;
+    data = tabulateMonth(data, monthKey);
+    changed = true;
+  }
+  if (changed) saveBom(data);
+  return data;
+}
+
+export function tabulateMonth(data: BomData, monthKey: string): BomData {
+  if (data.results.some((r) => r.monthKey === monthKey)) return data;
+
+  const categories = BOM_CATEGORIES.map((category) => {
+    const ranked = data.entries
+      .filter(
+        (e) =>
+          e.status === "approved" &&
+          e.monthKey === monthKey &&
+          e.category === category
+      )
+      .slice()
+      .sort((a, b) => {
+        if (b.votes !== a.votes) return b.votes - a.votes;
+        return a.createdAt.localeCompare(b.createdAt);
+      });
+
+    const winnerEntryId = ranked[0]?.id || null;
+    const honorableMentionIds = ranked
+      .slice(1, 3)
+      .map((e) => e.id)
+      .filter(Boolean);
+
+    return { category, winnerEntryId, honorableMentionIds };
+  });
+
+  const result: BomMonthResults = {
+    monthKey,
+    featuredInMonthKey: nextMonthKey(monthKey),
+    tabulatedAt: new Date().toISOString(),
+    categories,
+  };
+  data.results.unshift(result);
+  return data;
+}
+
+/** Force-tabulate previous month (cron / manual). */
+export function tabulatePreviousMonthIfNeeded(): BomData {
+  let data = loadBom();
+  data = ensurePastMonthsTabulated(data);
+  const prev = previousMonthKey(bomMonthKey());
+  if (!data.results.some((r) => r.monthKey === prev)) {
+    const hasEntries = data.entries.some(
+      (e) => e.status === "approved" && e.monthKey === prev
+    );
+    if (hasEntries) {
+      data = tabulateMonth(data, prev);
+      saveBom(data);
+    }
+  }
+  return data;
+}
+
+export function getResultsForFeaturedMonth(
+  data: BomData,
+  featuredMonthKey: string
+): BomMonthResults | null {
+  return (
+    data.results.find((r) => r.featuredInMonthKey === featuredMonthKey) ||
+    data.results.find(
+      (r) => r.monthKey === previousMonthKey(featuredMonthKey)
+    ) ||
+    null
+  );
+}
+
+export function getEntryById(
+  data: BomData,
+  id: string
+): BomEntry | undefined {
+  return data.entries.find((e) => e.id === id);
+}
+
+export function listApprovedForMonth(
+  data: BomData,
+  monthKey: string,
+  category?: BomCategory
+): BomEntry[] {
+  return data.entries
+    .filter(
+      (e) =>
+        e.status === "approved" &&
+        e.monthKey === monthKey &&
+        (category ? e.category === category : true)
+    )
+    .slice()
+    .sort((a, b) => {
+      if (b.votes !== a.votes) return b.votes - a.votes;
+      return a.createdAt.localeCompare(b.createdAt);
+    });
+}
+
+export function submitBomEntry(input: {
+  category: BomCategory;
+  title: string;
+  description?: string;
+  submitterName: string;
+  imageUrl: string;
+  fileType: BomFileType;
+  monthKey?: string;
+}): BomEntry {
+  const data = loadBom();
+  const title = String(input.title || "").trim().slice(0, 80);
+  const submitterName = String(input.submitterName || "").trim().slice(0, 60);
+  if (title.length < 2) throw new Error("Please enter a name/title");
+  if (submitterName.length < 2) throw new Error("Please enter your name");
+  if (!input.imageUrl) throw new Error("Please upload a JPG or PDF");
+  if (!isBomCategory(input.category)) throw new Error("Invalid category");
+
+  const entry: BomEntry = {
+    id: uid("bom"),
+    category: input.category,
+    title,
+    description: input.description
+      ? String(input.description).trim().slice(0, 500)
+      : undefined,
+    submitterName,
+    imageUrl: input.imageUrl,
+    fileType: input.fileType,
+    status: "pending",
+    monthKey: input.monthKey || bomMonthKey(),
+    createdAt: new Date().toISOString(),
+    votes: 0,
+  };
+  data.entries.unshift(entry);
+  saveBom(data);
+  return entry;
+}
+
+export function setBomEntryStatus(
+  id: string,
+  status: "approved" | "rejected" | "pending"
+): BomEntry {
+  const data = loadBom();
+  const idx = data.entries.findIndex((e) => e.id === id);
+  if (idx < 0) throw new Error("Entry not found");
+  data.entries[idx] = { ...data.entries[idx], status };
+  // Recompute votes denormalized from vote list (approved only matter)
+  if (status !== "approved") {
+    // keep vote count for history
+  }
+  saveBom(data);
+  return data.entries[idx];
+}
+
+export function castBomVote(input: {
+  entryId: string;
+  voterKey: string;
+}): { entry: BomEntry; votes: number } {
+  const data = ensurePastMonthsTabulated(loadBom());
+  const monthKey = bomMonthKey();
+  const voterKey = String(input.voterKey || "").trim().slice(0, 80);
+  if (voterKey.length < 8) throw new Error("Missing voter id");
+
+  const entry = data.entries.find((e) => e.id === input.entryId);
+  if (!entry) throw new Error("Entry not found");
+  if (entry.status !== "approved") throw new Error("Entry is not open for voting");
+  if (entry.monthKey !== monthKey) {
+    throw new Error("Voting is only open for this month’s entries");
+  }
+
+  const already = data.votes.find(
+    (v) =>
+      v.voterKey === voterKey &&
+      v.monthKey === monthKey &&
+      v.category === entry.category
+  );
+  if (already) {
+    throw new Error(
+      `You already voted in ${BOM_CATEGORY_META[entry.category].label} this month`
+    );
+  }
+
+  const vote: BomVote = {
+    id: uid("vote"),
+    entryId: entry.id,
+    category: entry.category,
+    monthKey,
+    voterKey,
+    createdAt: new Date().toISOString(),
+  };
+  data.votes.push(vote);
+
+  const idx = data.entries.findIndex((e) => e.id === entry.id);
+  data.entries[idx] = {
+    ...data.entries[idx],
+    votes: data.entries[idx].votes + 1,
+  };
+  saveBom(data);
+  return { entry: data.entries[idx], votes: data.entries[idx].votes };
+}
+
+export function voterChoicesThisMonth(
+  data: BomData,
+  voterKey: string,
+  monthKey = bomMonthKey()
+): Partial<Record<BomCategory, string>> {
+  const out: Partial<Record<BomCategory, string>> = {};
+  for (const v of data.votes) {
+    if (v.voterKey === voterKey && v.monthKey === monthKey) {
+      out[v.category] = v.entryId;
+    }
+  }
+  return out;
+}
+
+export function saveBomUpload(
+  buffer: Buffer,
+  filename: string,
+  mime: string
+): { url: string; fileType: BomFileType } {
+  const lower = filename.toLowerCase();
+  const isPdf = mime === "application/pdf" || lower.endsWith(".pdf");
+  const isJpg =
+    mime === "image/jpeg" ||
+    mime === "image/jpg" ||
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg");
+  if (!isPdf && !isJpg) {
+    throw new Error("Only JPG or PDF files are allowed");
+  }
+
+  const dir = writableUploadsDir();
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+  const name = `bom-${Date.now().toString(36)}-${safe}`;
+  const full = path.join(dir, name);
+  fs.writeFileSync(full, buffer);
+
+  // Also try bundle dir when local so media route finds it
+  try {
+    if (dir !== path.join(BUNDLE_DATA_DIR, "uploads")) {
+      /* local writable is already BUNDLE_DATA_DIR/uploads or /tmp */
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return {
+    url: `/api/media/${name}`,
+    fileType: isPdf ? "pdf" : "image",
+  };
+}
+
+export function resolveBomMedia(name: string) {
+  return resolveUploadFile(path.basename(String(name || "")));
+}
+
+export { BOM_CATEGORIES, BOM_CATEGORY_META };

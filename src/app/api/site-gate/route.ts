@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { isAdminAuthenticated } from "@/lib/auth";
 import {
   clearSiteGateCookieOptions,
   expectedSiteGateToken,
+  getSiteGateStatus,
   getSitePassword,
-  isSiteGateEnabled,
+  isSiteGateEnabledAsync,
+  setSiteGateEnabled,
   siteGateCookieOptions,
 } from "@/lib/siteGate";
 
@@ -14,7 +17,6 @@ function passwordsMatch(a: string, b: string): boolean {
   const ba = Buffer.from(a);
   const bb = Buffer.from(b);
   if (ba.length !== bb.length) {
-    // Still do a dummy compare to reduce timing leaks on length
     crypto.timingSafeEqual(ba, ba);
     return false;
   }
@@ -23,7 +25,7 @@ function passwordsMatch(a: string, b: string): boolean {
 
 /** POST { password } — unlock site for this browser */
 export async function POST(req: Request) {
-  if (!isSiteGateEnabled()) {
+  if (!(await isSiteGateEnabledAsync())) {
     return NextResponse.json({ ok: true, gate: "off" });
   }
 
@@ -42,7 +44,6 @@ export async function POST(req: Request) {
   const cookie = siteGateCookieOptions();
   const res = NextResponse.json({
     ok: true,
-    // Helps debug “accepted but still gated” without leaking the password
     cookieSet: true,
   });
   res.cookies.set({
@@ -57,11 +58,29 @@ export async function POST(req: Request) {
   return res;
 }
 
-/** GET — is gate on, and is this browser unlocked? */
+/**
+ * GET — gate status.
+ * Public: { enabled, unlocked }
+ * Admin (cookie): also { toggleOn, passwordConfigured, updatedAt }
+ * Middleware probe uses ?probe=1 (same public shape).
+ */
 export async function GET(req: Request) {
-  const enabled = isSiteGateEnabled();
+  const status = await getSiteGateStatus();
+  const enabled = status.enabled;
+
   if (!enabled) {
-    return NextResponse.json({ enabled: false, unlocked: true });
+    const admin = await isAdminAuthenticated();
+    return NextResponse.json({
+      enabled: false,
+      unlocked: true,
+      ...(admin
+        ? {
+            toggleOn: status.toggleOn,
+            passwordConfigured: status.passwordConfigured,
+            updatedAt: status.updatedAt,
+          }
+        : {}),
+    });
   }
 
   const cookieHeader = req.headers.get("cookie") || "";
@@ -78,10 +97,56 @@ export async function GET(req: Request) {
     unlocked = false;
   }
 
-  return NextResponse.json({ enabled: true, unlocked });
+  const admin = await isAdminAuthenticated();
+  return NextResponse.json({
+    enabled: true,
+    unlocked,
+    ...(admin
+      ? {
+          toggleOn: status.toggleOn,
+          passwordConfigured: status.passwordConfigured,
+          updatedAt: status.updatedAt,
+        }
+      : {}),
+  });
 }
 
-/** DELETE — clear unlock cookie (optional “lock again”) */
+/**
+ * PATCH { enabled: boolean } — admin only: turn beta wall on/off.
+ * Password always comes from SITE_PASSWORD env; this only flips the wall.
+ */
+export async function PATCH(req: Request) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const enabled = Boolean(body.enabled);
+    const settings = await setSiteGateEnabled(enabled);
+    const status = await getSiteGateStatus();
+
+    return NextResponse.json({
+      ok: true,
+      enabled: status.enabled,
+      toggleOn: settings.enabled,
+      passwordConfigured: status.passwordConfigured,
+      updatedAt: settings.updatedAt,
+      message: settings.enabled
+        ? status.passwordConfigured
+          ? "Beta password wall is ON — visitors need the site password."
+          : "Toggle is ON, but SITE_PASSWORD is not set in env — wall stays inactive until you add it."
+        : "Beta password wall is OFF — site is public.",
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Could not update gate" },
+      { status: 400 }
+    );
+  }
+}
+
+/** DELETE — clear unlock cookie (optional “lock again” for this browser) */
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   const cookie = clearSiteGateCookieOptions();

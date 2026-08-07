@@ -328,7 +328,7 @@ export default function RealEstatePage() {
               <h2>Also explore</h2>
               <ul className="village-related-links">
                 <li>
-                  <Link href="/my-village">My Village</Link> — find Edenfield &amp;
+                  <Link href="/my-village">The Villages</Link> — find Edenfield &amp;
                   100+ neighborhoods
                 </li>
                 <li>

@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Wealth",
   description:
-    "Money, markets, and a personal stock & ETF board — plus live S&P 500, Nasdaq 100, Russell 2000, and Dow Jones charts from The Villages Hub.",
+    "Money, markets, and a personal stock & ETF board — plus live S&P 500, Nasdaq 100, Russell 2000, and Dow Jones charts from The Villages Everything App.",
 };
 
 export default function WealthPage() {

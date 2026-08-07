@@ -11,6 +11,7 @@ import {
   MySpacePetSchedule,
   MySpaceRoyaltyLounge,
 } from "@/components/MySpaceModules";
+import { MySpaceFavoritesHub } from "@/components/MySpaceFavoritesHub";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import type { PopularClub } from "@/lib/clubs";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
@@ -191,29 +192,30 @@ export function MySpaceDashboard() {
 
   if (error === "signed_out" || !data) {
     return (
-      <div className="about-panel my-space-gate">
-        <h2 style={{ marginTop: 0 }}>Sign in to open My Space</h2>
-        <p>
-          My Space is your private Villages dashboard — weather, clubs, health
-          lanai, pet parade, and more, unlocked by membership tier. Same account
-          as Yard Sale.
-        </p>
-        <div className="hero-actions">
-          <Link href="/yard-sale/login" className="btn btn-primary">
-            Sign in
-          </Link>
-          <Link href="/yard-sale/join" className="btn btn-ghost">
-            Request membership
-          </Link>
-          <Link href="/club-zone" className="btn btn-ghost">
-            Browse clubs
-          </Link>
+      <div className="my-space" id="ms-top">
+        <div className="about-panel my-space-gate">
+          <h2 style={{ marginTop: 0 }}>Your customized My Space</h2>
+          <p>
+            Favorites you star across the site (home village, town squares, rec
+            centers, dining, clubs) already collect below — no sign-in required
+            for those. Sign in for membership tiers, weather, health lanai, yard
+            sale tools, and more.
+          </p>
+          <div className="hero-actions">
+            <Link href="/yard-sale/login" className="btn btn-primary">
+              Sign in
+            </Link>
+            <Link href="/yard-sale/join" className="btn btn-ghost">
+              Request membership
+            </Link>
+          </div>
         </div>
+        <MySpaceFavoritesHub />
       </div>
     );
   }
 
-  const { member, space, favoriteClubs, upgradeTiers } = data;
+  const { member, space, upgradeTiers } = data;
   const f = space.features;
   const planLabel = space.planLabel;
   const showDev =
@@ -342,8 +344,8 @@ export function MySpaceDashboard() {
       </section>
 
       <nav className="my-space-nav" aria-label="My Space sections">
+        <a href="#ms-favorites">Favorites</a>
         <a href="#ms-weather">Weather</a>
-        <a href="#ms-clubs">Clubs</a>
         <a href="#ms-markets">Investments</a>
         <a href="#ms-health">Health</a>
         <a href="#ms-pets">Pets</a>
@@ -351,6 +353,8 @@ export function MySpaceDashboard() {
         <a href="#ms-lounge">Royalty</a>
         <a href="#ms-links">Shortcuts</a>
       </nav>
+
+      <MySpaceFavoritesHub />
 
       <section id="ms-weather" className="my-space-block">
         <h3 className="my-space-block-title">Villages weather</h3>
@@ -360,58 +364,6 @@ export function MySpaceDashboard() {
           </div>
         ) : (
           <LockedTeaser feature="weather" currentLabel={planLabel} />
-        )}
-      </section>
-
-      <section id="ms-clubs" className="my-space-block">
-        <div className="section-head" style={{ marginBottom: "0.75rem" }}>
-          <div>
-            <h3 className="my-space-block-title" style={{ margin: 0 }}>
-              My favorite clubs
-            </h3>
-            <p style={{ margin: "0.25rem 0 0", color: "var(--muted)" }}>
-              Star clubs on the Clubs page — they land here on Cart Path Regular+.
-            </p>
-          </div>
-          <Link href="/club-zone" className="btn btn-ghost btn-sm">
-            Edit favorites
-          </Link>
-        </div>
-        {f.favoriteClubs ? (
-          favoriteClubs.length === 0 ? (
-            <div className="empty-state">
-              No favorites yet.{" "}
-              <Link href="/club-zone" className="text-link">
-                Browse clubs and star a few →
-              </Link>
-            </div>
-          ) : (
-            <div className="club-grid">
-              {favoriteClubs.map((c) => (
-                <article key={c.id} className="about-panel club-card is-fav">
-                  <div className="club-card-art">
-                    <Image
-                      src={c.image}
-                      alt=""
-                      width={640}
-                      height={640}
-                      className="club-card-img"
-                    />
-                  </div>
-                  <div className="club-card-body">
-                    <span className="pill">{c.category}</span>
-                    <h3>{c.name}</h3>
-                    <p className="club-card-blurb">{c.blurb}</p>
-                    <p className="club-card-meta">
-                      <strong>Where:</strong> {c.areaHint}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )
-        ) : (
-          <LockedTeaser feature="favoriteClubs" currentLabel={planLabel} />
         )}
       </section>
 
@@ -467,34 +419,47 @@ export function MySpaceDashboard() {
       </section>
 
       <section id="ms-links" className="my-space-block">
-        <h3 className="my-space-block-title">Hub shortcuts</h3>
+        <h3 className="my-space-block-title">Site shortcuts</h3>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
-          Open to every Porch Waver and above — no cart registration required.
+          Jump back to public directories — your saved favorites and tools stay
+          on this My Space page.
         </p>
         <div className="my-space-links">
-          <Link href="/news" className="about-panel my-space-link-card">
-            <strong>Local News</strong>
-            <span>Headlines &amp; desks</span>
+          <Link href="/my-village" className="about-panel my-space-link-card">
+            <strong>The Villages</strong>
+            <span>100+ village directory</span>
           </Link>
-          <Link href="/calendar" className="about-panel my-space-link-card">
-            <strong>Calendar</strong>
-            <span>What’s on this week</span>
-          </Link>
-          <Link href="/health" className="about-panel my-space-link-card">
-            <strong>Health hub</strong>
-            <span>Site wellness topics</span>
-          </Link>
-          <Link href="/golf-zone" className="about-panel my-space-link-card">
-            <strong>Golf</strong>
-            <span>Trail fees &amp; maps</span>
+          <Link href="/town-squares" className="about-panel my-space-link-card">
+            <strong>Town Squares</strong>
+            <span>Bands, shopping, dancing</span>
           </Link>
           <Link href="/rec-centers" className="about-panel my-space-link-card">
             <strong>Rec Centers</strong>
             <span>Pools &amp; complexes</span>
           </Link>
+          <Link href="/real-estate" className="about-panel my-space-link-card">
+            <strong>Real Estate</strong>
+            <span>Homes &amp; market</span>
+          </Link>
+          <Link href="/calendar" className="about-panel my-space-link-card">
+            <strong>Calendar</strong>
+            <span>What’s on this week</span>
+          </Link>
+          <Link href="/news" className="about-panel my-space-link-card">
+            <strong>Local News</strong>
+            <span>Headlines &amp; desks</span>
+          </Link>
+          <Link href="/golf-zone" className="about-panel my-space-link-card">
+            <strong>Golf</strong>
+            <span>Trail fees &amp; maps</span>
+          </Link>
           <Link href="/forums" className="about-panel my-space-link-card">
             <strong>Forums</strong>
             <span>Neighbor chat</span>
+          </Link>
+          <Link href="/yard-sale" className="about-panel my-space-link-card">
+            <strong>Yard Sale</strong>
+            <span>Browse · post from dashboard</span>
           </Link>
         </div>
       </section>
