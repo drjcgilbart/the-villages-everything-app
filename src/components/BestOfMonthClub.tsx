@@ -158,7 +158,13 @@ export function BestOfMonthClub() {
   const [description, setDescription] = useState("");
   const [submitterName, setSubmitterName] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Message shown next to the submit form (not only at top of page) */
+  const [submitMsg, setSubmitMsg] = useState<{
+    kind: "ok" | "err" | "info";
+    text: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -222,60 +228,126 @@ export function BestOfMonthClub() {
     }
   }
 
+  function setFileFromInput(next: File | null) {
+    setFile(next);
+    setSubmitMsg(null);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return next && next.type.startsWith("image/")
+        ? URL.createObjectURL(next)
+        : null;
+    });
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) {
-      setNote("Please choose a JPG or PDF file");
+    const t = title.trim();
+    const who = submitterName.trim();
+    if (t.length < 2) {
+      setSubmitMsg({ kind: "err", text: "Please enter a name/title for your entry." });
       return;
     }
+    if (who.length < 2) {
+      setSubmitMsg({ kind: "err", text: "Please enter your name." });
+      return;
+    }
+    if (!file) {
+      setSubmitMsg({ kind: "err", text: "Please choose a JPG or PDF file." });
+      return;
+    }
+
     setSubmitting(true);
+    setSubmitMsg({
+      kind: "info",
+      text: "Uploading photo… large phone pictures are compressed first. Please wait.",
+    });
     setNote(null);
+
     try {
       // Compress large phone photos so they survive Redis storage (Blob quota)
+      setSubmitMsg({
+        kind: "info",
+        text: `Preparing photo (${Math.round(file.size / 1024)} KB)…`,
+      });
       const prepared = await prepareBomUploadFile(file);
       if (prepared.size > 12 * 1024 * 1024) {
         throw new Error(
-          "Photo is still over 12 MB after compression. Please choose a smaller JPG."
+          "Photo is still over 12 MB after compression. Please choose a smaller JPG (or take a lower-resolution photo)."
         );
       }
 
+      setSubmitMsg({
+        kind: "info",
+        text: `Uploading ${Math.round(prepared.size / 1024)} KB…`,
+      });
       const fd = new FormData();
       fd.append("file", prepared);
       const up = await fetch("/api/best-of-month/upload", {
         method: "POST",
         body: fd,
       });
-      const upData = await up.json();
-      if (!up.ok) throw new Error(upData.error || "Upload failed");
+      let upData: { error?: string; url?: string; fileType?: string } = {};
+      try {
+        upData = await up.json();
+      } catch {
+        throw new Error(
+          `Photo upload failed (HTTP ${up.status}). Try a smaller JPG.`
+        );
+      }
+      if (!up.ok) {
+        throw new Error(upData.error || `Photo upload failed (HTTP ${up.status})`);
+      }
+      if (!upData.url) {
+        throw new Error("Photo upload returned no URL — please try again.");
+      }
 
+      setSubmitMsg({ kind: "info", text: "Saving entry for admin approval…" });
       const res = await fetch("/api/best-of-month/entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "submit",
           category,
-          title,
+          title: t,
           description,
-          submitterName,
+          submitterName: who,
           imageUrl: upData.url,
-          fileType: upData.fileType as BomFileType,
+          fileType: (upData.fileType === "pdf" ? "pdf" : "image") as BomFileType,
         }),
       });
-      const data = await res.json();
+      let data: { error?: string; message?: string; entry?: { id?: string } } =
+        {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Submit failed (HTTP ${res.status}). Please try again.`);
+      }
       if (!res.ok) throw new Error(data.error || "Submit failed");
+
       const sizeNote =
         prepared.size !== file.size
-          ? ` (photo optimized from ${Math.round(file.size / 1024)} KB → ${Math.round(prepared.size / 1024)} KB)`
+          ? ` Photo optimized ${Math.round(file.size / 1024)} KB → ${Math.round(prepared.size / 1024)} KB.`
           : "";
-      setNote(
-        `${data.message || "Submitted for approval."}${sizeNote} Title: “${title.trim()}”.`
-      );
+      const okText = `Success! “${t}” is pending admin approval.${sizeNote} Check Admin → Best of Month → Pending.`;
+      setSubmitMsg({ kind: "ok", text: okText });
+      setNote(okText);
       setTitle("");
       setDescription("");
-      setFile(null);
+      setFileFromInput(null);
       await load();
+      // Keep success message in view (form is at bottom of a long page)
+      document.getElementById("bom-submit-status")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     } catch (err) {
-      setNote(err instanceof Error ? err.message : "Submit failed");
+      const text = err instanceof Error ? err.message : "Submit failed";
+      setSubmitMsg({ kind: "err", text });
+      setNote(text);
+      document.getElementById("bom-submit-status")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -566,6 +638,50 @@ export function BestOfMonthClub() {
         </div>
 
         <form className="form-grid about-panel bom-submit" onSubmit={submit}>
+          <div
+            id="bom-submit-status"
+            role="status"
+            aria-live="polite"
+            style={{ gridColumn: "1 / -1" }}
+          >
+            {submitMsg && (
+              <div
+                className={
+                  submitMsg.kind === "err"
+                    ? "msg msg-err"
+                    : submitMsg.kind === "ok"
+                      ? "msg msg-ok"
+                      : "msg"
+                }
+                style={{
+                  marginBottom: "0.75rem",
+                  padding: "0.85rem 1rem",
+                  borderRadius: 12,
+                  background:
+                    submitMsg.kind === "err"
+                      ? "rgba(180, 60, 40, 0.12)"
+                      : submitMsg.kind === "ok"
+                        ? "rgba(40, 140, 80, 0.12)"
+                        : "rgba(40, 100, 180, 0.1)",
+                  border:
+                    submitMsg.kind === "err"
+                      ? "1px solid rgba(180, 60, 40, 0.35)"
+                      : submitMsg.kind === "ok"
+                        ? "1px solid rgba(40, 140, 80, 0.35)"
+                        : "1px solid rgba(40, 100, 180, 0.25)",
+                }}
+              >
+                <strong>
+                  {submitMsg.kind === "err"
+                    ? "Could not submit: "
+                    : submitMsg.kind === "ok"
+                      ? "Done — "
+                      : ""}
+                </strong>
+                {submitMsg.text}
+              </div>
+            )}
+          </div>
           <div className="bom-submit-cat-preview">
             <CategoryArt cat={category} />
             <div>
@@ -580,6 +696,7 @@ export function BestOfMonthClub() {
                 id="bom-cat"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as BomCategory)}
+                disabled={submitting}
               >
                 {BOM_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -596,6 +713,7 @@ export function BestOfMonthClub() {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={80}
+                disabled={submitting}
                 placeholder="Pet name, car model, cart name, villager…"
               />
             </div>
@@ -609,6 +727,7 @@ export function BestOfMonthClub() {
               maxLength={500}
               rows={2}
               placeholder="Why should they win?"
+              disabled={submitting}
             />
           </div>
           <div className="form-row">
@@ -620,6 +739,7 @@ export function BestOfMonthClub() {
                 onChange={(e) => setSubmitterName(e.target.value)}
                 required
                 maxLength={60}
+                disabled={submitting}
               />
             </div>
             <div className="field">
@@ -628,14 +748,37 @@ export function BestOfMonthClub() {
                 id="bom-file"
                 type="file"
                 accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                required
+                onChange={(e) => setFileFromInput(e.target.files?.[0] || null)}
+                required={!file}
+                disabled={submitting}
               />
+              {file && (
+                <p className="bom-muted" style={{ margin: "0.35rem 0 0" }}>
+                  Selected: {file.name} ({Math.round(file.size / 1024)} KB)
+                </p>
+              )}
             </div>
           </div>
+          {previewUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewUrl}
+              alt="Selected photo preview"
+              style={{
+                maxWidth: "220px",
+                borderRadius: 12,
+                display: "block",
+                marginBottom: "0.5rem",
+              }}
+            />
+          )}
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? "Sending…" : "Submit for approval"}
+            {submitting ? "Sending… please wait" : "Submit for approval"}
           </button>
+          <p className="bom-muted" style={{ margin: "0.5rem 0 0", fontSize: "0.9rem" }}>
+            After you submit, a green or red message appears <strong>above this form</strong>.
+            Green = pending admin approval. Red = what went wrong (often photo too large).
+          </p>
         </form>
       </section>
     </div>
