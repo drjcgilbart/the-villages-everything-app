@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { GolfPlayerName } from "@/components/GolfPlayerName";
 import type {
   GolfAce,
   GolfCourseLeader,
@@ -13,7 +14,9 @@ import type {
   GolfRound,
 } from "@/lib/golfClubTypes";
 import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
+import { scoreRingForRound } from "@/lib/golfBadges";
 import { GOLF_ART } from "@/lib/golfResources";
+import type { BadgeDef } from "@/lib/memberBadgeTypes";
 
 type Feed = {
   handicapLeaders: GolfHandicapLeader[];
@@ -21,6 +24,7 @@ type Feed = {
   recentRounds: GolfRound[];
   foursomes: GolfFoursomePost[];
   aces: GolfAce[];
+  playerBadges?: Record<string, BadgeDef[]>;
   courses?: string[];
   sections?: typeof FOURSOME_SECTIONS;
 };
@@ -104,6 +108,10 @@ export function GolfClubHub() {
     if (courseBoardFilter === "all") return list;
     return list.filter((c) => c.holes === courseBoardFilter);
   }, [feed, courseBoardFilter]);
+
+  function badgesFor(name: string): BadgeDef[] {
+    return feed?.playerBadges?.[name] || [];
+  }
 
   async function postAction(body: Record<string, unknown>, okMsg?: string) {
     setBusy(true);
@@ -232,7 +240,12 @@ export function GolfClubHub() {
                 {feed.handicapLeaders.map((row, i) => (
                   <li key={row.playerName}>
                     <span className="golf-rank-num">{i + 1}</span>
-                    <span className="golf-rank-name">{row.playerName}</span>
+                    <span className="golf-rank-name">
+                      <GolfPlayerName
+                        name={row.playerName}
+                        badges={badgesFor(row.playerName)}
+                      />
+                    </span>
                     <span className="golf-rank-stat">
                       {row.handicap.toFixed(1)}
                       <em>
@@ -285,17 +298,40 @@ export function GolfClubHub() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredCourseLeaders.map((row) => (
-                      <tr key={row.roundId}>
-                        <td>{row.course}</td>
-                        <td>{row.holes}</td>
-                        <td>{row.playerName}</td>
-                        <td>
-                          <strong>{row.score}</strong>
-                        </td>
-                        <td>{formatDate(row.playDate)}</td>
-                      </tr>
-                    ))}
+                    {filteredCourseLeaders.map((row) => {
+                      const ring = scoreRingForRound(row);
+                      return (
+                        <tr key={row.roundId}>
+                          <td>{row.course}</td>
+                          <td>{row.holes}</td>
+                          <td>
+                            <GolfPlayerName
+                              name={row.playerName}
+                              badges={badgesFor(row.playerName)}
+                            />
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                ring
+                                  ? `golf-score-ring golf-score-ring-${ring}`
+                                  : undefined
+                              }
+                              title={
+                                ring === "eagle"
+                                  ? "Eagle-caliber / exceptional round"
+                                  : ring === "birdie"
+                                    ? "Birdie-caliber round"
+                                    : undefined
+                              }
+                            >
+                              <strong>{row.score}</strong>
+                            </span>
+                          </td>
+                          <td>{formatDate(row.playDate)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -307,15 +343,31 @@ export function GolfClubHub() {
           <div className="about-panel golf-recent-rounds">
             <h3 style={{ marginTop: 0 }}>Recently approved rounds</h3>
             <ul className="golf-round-chips">
-              {feed.recentRounds.slice(0, 12).map((r) => (
-                <li key={r.id}>
-                  <strong>{r.playerName}</strong>
-                  <span>
-                    {r.score} · {r.holes}h · {r.course}
-                  </span>
-                  <em>{formatDate(r.playDate)}</em>
-                </li>
-              ))}
+              {feed.recentRounds.slice(0, 12).map((r) => {
+                const ring = scoreRingForRound(r);
+                return (
+                  <li key={r.id}>
+                    <GolfPlayerName
+                      name={r.playerName}
+                      badges={badgesFor(r.playerName)}
+                      as="strong"
+                    />
+                    <span>
+                      <span
+                        className={
+                          ring
+                            ? `golf-score-ring golf-score-ring-${ring}`
+                            : undefined
+                        }
+                      >
+                        {r.score}
+                      </span>{" "}
+                      · {r.holes}h · {r.course}
+                    </span>
+                    <em>{formatDate(r.playDate)}</em>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -691,7 +743,12 @@ export function GolfClubHub() {
             {feed.aces.map((a) => (
               <article key={a.id} className="about-panel golf-ace-card">
                 <span className="pill golf-ace-pill">Hole-in-one</span>
-                <h3>{a.playerName}</h3>
+                <h3>
+                  <GolfPlayerName
+                    name={a.playerName}
+                    badges={badgesFor(a.playerName)}
+                  />
+                </h3>
                 <p className="golf-ace-congrats">
                   Congratulations, {a.playerName.split(" ")[0]}! An ace on hole{" "}
                   {a.hole} at {a.course}

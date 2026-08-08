@@ -1888,6 +1888,65 @@ a.my-space-link-card:hover {
   flex-shrink: 0;
 }
 
+.member-badge-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.member-badge-golf .member-badge {
+  border-radius: 50%;
+}
+
+.member-badge-metal-bronze .member-badge {
+  box-shadow: 0 0 0 2px #b87333, 0 2px 8px rgba(28, 36, 48, 0.16);
+}
+
+.member-badge-metal-silver .member-badge {
+  box-shadow: 0 0 0 2px #a8b0b8, 0 2px 8px rgba(28, 36, 48, 0.16);
+}
+
+.member-badge-metal-gold .member-badge {
+  box-shadow: 0 0 0 2px #d4a017, 0 2px 8px rgba(28, 36, 48, 0.16);
+}
+
+.member-badge-metal-pink .member-badge {
+  box-shadow: 0 0 0 2px #e85a9b, 0 2px 10px rgba(232, 90, 155, 0.35);
+}
+
+.member-badge-emoji {
+  position: absolute;
+  right: -0.2rem;
+  bottom: -0.25rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(28, 36, 48, 0.35));
+  pointer-events: none;
+}
+
+/* Score rings: single = birdie-caliber · double = eagle/ace-caliber */
+.golf-score-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.golf-score-ring-birdie {
+  border: 2px solid var(--palm, #1f6b4a);
+  box-shadow: none;
+}
+
+.golf-score-ring-eagle {
+  border: 2px solid #d4a017;
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.35);
+}
+
 .forum-post-head .member-name,
 .forum-op-meta .member-name,
 .forum-thread-meta .member-name {
@@ -2077,6 +2136,21 @@ h2.member-name .member-badge {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.golf-badge-legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.golf-badge-legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.92rem;
 }
 
 .golf-resource-groups {

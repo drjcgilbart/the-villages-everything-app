@@ -15,9 +15,11 @@ type Props = {
 };
 
 /**
- * Display name + membership badges (Golden Loofah always for members;
- * paid tier badge for Cart Path Regular / Lanai Legend / Square Royalty).
- * Server components only — uses filesystem member lookup.
+ * Display name + badges:
+ * - Donation / paid membership badges when a hub member is matched
+ * - Golf skill badges (bronze · silver · gold · pink ace ⛳) for members
+ *   OR visitors who have approved Golf hub results under this name
+ * Server components only — uses filesystem lookup.
  */
 export function MemberName({
   name,

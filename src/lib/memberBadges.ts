@@ -5,6 +5,7 @@ import {
   donationBadgeDef,
   DONATION_PRESETS,
 } from "./donations";
+import { golfBadgeCatalog, golfBadgesForName } from "./golfBadges";
 import {
   effectivePlan,
   isPaidPlan,
@@ -103,7 +104,8 @@ export function findMemberByDisplayName(name: string): Member | null {
 
 /**
  * Resolve badges for a displayed author name and/or known member id.
- * Includes donation-tier badges and paid membership plan badges.
+ * Includes donation-tier badges, paid membership plan badges, and
+ * golf skill badges (members OR visitors) from approved Golf hub results.
  */
 export function resolveAuthorBadges(opts: {
   memberId?: string | null;
@@ -116,8 +118,20 @@ export function resolveAuthorBadges(opts: {
   if (!member && opts.authorName) {
     member = findMemberByDisplayName(opts.authorName);
   }
-  if (!member) return [];
-  return badgesForMemberRecord(member);
+
+  const badges: BadgeDef[] = [];
+  if (member) {
+    badges.push(...badgesForMemberRecord(member));
+  }
+
+  // Golf feats attach by display name so visitors on the Leader Board get them too
+  const golfName = opts.authorName || member?.name || null;
+  const golf = golfBadgesForName(golfName);
+  for (const g of golf) {
+    if (!badges.some((b) => b.id === g.id)) badges.push(g);
+  }
+
+  return badges;
 }
 
 export function allBadgeCatalog(): BadgeDef[] {
@@ -127,6 +141,7 @@ export function allBadgeCatalog(): BadgeDef[] {
     TIER_BADGES.cart_path_regular!,
     TIER_BADGES.lanai_legend!,
     TIER_BADGES.square_royalty!,
+    ...golfBadgeCatalog(),
   ];
 }
 

@@ -114,6 +114,84 @@ export default function GolfZonePage() {
 
       <section className="section" id="golf-club">
         <div className="shell">
+          <div className="about-panel golf-badge-legend" style={{ marginBottom: "1rem" }}>
+            <h3 style={{ marginTop: 0 }}>Golf skill badges</h3>
+            <p style={{ margin: "0 0 0.65rem", color: "var(--muted)" }}>
+              Members <em>and</em> visitors earn metal badges that stick to their
+              name after admin-approved rounds or hole-in-ones. No green jackets
+              — just fairway flair.
+            </p>
+            <ul className="golf-badge-legend-list">
+              <li>
+                <span className="member-badge-wrap member-badge-golf member-badge-metal-bronze">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/graphics/badges/golf-bronze.jpg"
+                    alt=""
+                    width={36}
+                    height={36}
+                    className="member-badge"
+                  />
+                </span>
+                <span>
+                  <strong>Bronze</strong> — approved rounds on the board
+                </span>
+              </li>
+              <li>
+                <span className="member-badge-wrap member-badge-golf member-badge-metal-silver">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/graphics/badges/golf-silver.jpg"
+                    alt=""
+                    width={36}
+                    height={36}
+                    className="member-badge"
+                  />
+                </span>
+                <span>
+                  <strong>Silver</strong> — handicap ≤ 18 or strong scores /
+                  course records
+                </span>
+              </li>
+              <li>
+                <span className="member-badge-wrap member-badge-golf member-badge-metal-gold">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/graphics/badges/golf-gold.jpg"
+                    alt=""
+                    width={36}
+                    height={36}
+                    className="member-badge"
+                  />
+                </span>
+                <span>
+                  <strong>Gold</strong> — handicap ≤ 10 or exceptional gross
+                </span>
+              </li>
+              <li>
+                <span className="member-badge-wrap member-badge-golf member-badge-metal-pink">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/graphics/badges/golf-pink-ace.jpg"
+                    alt=""
+                    width={36}
+                    height={36}
+                    className="member-badge"
+                  />
+                  <span className="member-badge-emoji" aria-hidden>
+                    ⛳
+                  </span>
+                </span>
+                <span>
+                  <strong>Pink Ace ⛳</strong> — approved hole-in-one (rare feat)
+                </span>
+              </li>
+            </ul>
+            <p className="golf-muted" style={{ margin: "0.75rem 0 0", fontSize: "0.88rem" }}>
+              Scores on the board also show rings: single green circle ≈
+              birdie-caliber round · double gold ring ≈ eagle-caliber round.
+            </p>
+          </div>
           <GolfClubHub />
         </div>
       </section>

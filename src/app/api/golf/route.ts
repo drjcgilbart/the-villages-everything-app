@@ -5,6 +5,7 @@ import {
   submitFoursome,
   submitGolfRound,
 } from "@/lib/golfClub";
+import { golfBadgesForName } from "@/lib/golfBadges";
 import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,20 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const feed = publicGolfFeed();
+    const names = new Set<string>();
+    for (const r of feed.handicapLeaders) names.add(r.playerName);
+    for (const r of feed.courseLeaders) names.add(r.playerName);
+    for (const r of feed.recentRounds) names.add(r.playerName);
+    for (const a of feed.aces) names.add(a.playerName);
+    const playerBadges: Record<string, ReturnType<typeof golfBadgesForName>> =
+      {};
+    for (const name of names) {
+      const badges = golfBadgesForName(name);
+      if (badges.length) playerBadges[name] = badges;
+    }
     return NextResponse.json({
       ...feed,
+      playerBadges,
       courses: GOLF_COURSES,
       sections: FOURSOME_SECTIONS,
     });
