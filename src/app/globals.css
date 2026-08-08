@@ -2637,11 +2637,12 @@ a.ts-square-card:hover .ts-square-card-img {
   max-width: 320px;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #f7f1e8;
+  border: 1px solid rgba(28, 36, 48, 0.1);
+  background: #fbf8f0;
   aspect-ratio: 1 / 1;
   min-height: 0;
   justify-self: center;
+  box-shadow: 0 4px 14px rgba(28, 36, 48, 0.08);
 }
 
 .rc-preview-img {
@@ -2653,7 +2654,7 @@ a.ts-square-card:hover .ts-square-card-img {
   object-fit: cover;
   object-position: center;
   display: block;
-  transform: scale(1.12);
+  transform: scale(1.06);
   transform-origin: center center;
 }
 
@@ -2759,7 +2760,8 @@ a.ts-square-card:hover .ts-square-card-img {
   align-items: stretch;
   width: 100%;
   height: 100%;
-  padding: 0;
+  /* Pad so art can be a true rounded square (all 4 corners), not just top-clipped */
+  padding: 0.4rem 0.4rem 0;
   border: 1px solid var(--line);
   border-radius: 16px;
   overflow: hidden;
@@ -2783,8 +2785,8 @@ a.ts-square-card:hover .ts-square-card-img {
 
 .rc-thumb-fav {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
+  top: 0.55rem;
+  right: 0.55rem;
   z-index: 2;
   width: 2rem;
   height: 2rem;
@@ -2819,8 +2821,10 @@ a.ts-square-card:hover .ts-square-card-img {
   overflow: hidden;
   min-height: 0;
   background: #fbf8f0;
-  /* Rounded square art frame — same size on every card */
-  border-radius: 0;
+  /* Same rounded-square frame on every center (Caroline, Clarendon, regionals, …) */
+  border-radius: 14px;
+  border: 1px solid rgba(28, 36, 48, 0.08);
+  box-shadow: 0 2px 8px rgba(28, 36, 48, 0.06);
 }
 
 .rc-thumb-img {
@@ -2832,8 +2836,8 @@ a.ts-square-card:hover .ts-square-card-img {
   object-fit: cover;
   object-position: center;
   display: block;
-  /* Slight zoom clips any baked soft-corner / black rim in the asset */
-  transform: scale(1.12);
+  /* Mild zoom: hide residual asset rims while keeping full-bleed inside the frame */
+  transform: scale(1.06);
   transform-origin: center center;
 }
 
@@ -2841,7 +2845,7 @@ a.ts-square-card:hover .ts-square-card-img {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  padding: 0.45rem 0.55rem 0.55rem;
+  padding: 0.5rem 0.35rem 0.55rem;
 }
 
 .rc-thumb-body strong {
@@ -2864,8 +2868,8 @@ a.ts-square-card:hover .ts-square-card-img {
   aspect-ratio: 1 / 1;
   border-radius: 22px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: #f7f1e8;
+  border: 1px solid rgba(28, 36, 48, 0.1);
+  background: #fbf8f0;
   box-shadow: 0 14px 32px rgba(28, 36, 48, 0.08);
 }
 
@@ -2878,7 +2882,7 @@ a.ts-square-card:hover .ts-square-card-img {
   object-fit: cover;
   object-position: center;
   display: block;
-  transform: scale(1.12);
+  transform: scale(1.06);
   transform-origin: center center;
 }
 
