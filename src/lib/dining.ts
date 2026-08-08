@@ -30,258 +30,77 @@ export function slugify(text: string) {
     .slice(0, 80);
 }
 
+/**
+ * Fallback only when dining.json is missing.
+ * Prefer the real listings in data/dining.json (verified public sources).
+ * Never re-seed fictional restaurants.
+ */
 function seedData(): DiningData {
   const now = new Date().toISOString();
-  const day = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
-
-  function rev(
-    restaurantId: string,
-    authorName: string,
-    rating: number,
-    title: string,
-    body: string,
-    wouldReturn: boolean,
-    dish: string | undefined,
-    createdAt: string
-  ): Review {
-    return {
-      id: uid("rev"),
-      restaurantId,
-      authorName,
-      rating,
-      title,
-      body,
-      wouldReturn,
-      dish,
-      createdAt,
-    };
-  }
-
   const restaurants: Restaurant[] = [
     {
-      id: "rest-seed-1",
-      name: "Village Bistro & Grill",
-      slug: "village-bistro-grill",
-      cuisine: "American",
-      tags: ["early-bird", "outdoor", "family"],
-      area: "Spanish Springs",
-      address: "Near the square",
-      priceRange: "$$",
-      description:
-        "Comfort classics with a Florida twist — burgers, salads, and the kind of early-bird specials that keep the parking lot full by 4:15.",
-      specialties: ["Blackened grouper sandwich", "Sunset salad"],
-      featured: true,
-      createdAt: day(30),
-      updatedAt: now,
-    },
-    {
-      id: "rest-seed-2",
-      name: "Cart Path Pizza Co.",
-      slug: "cart-path-pizza",
+      id: "rest-bella-vita",
+      name: "Bella Vita Italian Steakhouse",
+      slug: "bella-vita-italian-steakhouse",
       cuisine: "Italian",
-      tags: ["pizza", "casual", "takeout"],
-      area: "Lake Sumter Landing",
-      priceRange: "$",
-      description:
-        "Thin-crust pies, garlic knots, and zero judgment if you show up in a decorated golf cart.",
-      specialties: ["Villager supreme", "Truffle mushroom"],
-      featured: true,
-      createdAt: day(28),
-      updatedAt: now,
-    },
-    {
-      id: "rest-seed-3",
-      name: "Fiesta Plaza Cantina",
-      slug: "fiesta-plaza-cantina",
-      cuisine: "Mexican",
-      tags: ["margaritas", "live-music", "patio"],
-      area: "Brownwood Paddock Square",
-      priceRange: "$$",
-      description:
-        "Sizzling fajitas, fresh guacamole, and patio energy that feels like a permanent happy hour.",
-      specialties: ["Street tacos", "Tableside guac"],
-      createdAt: day(25),
-      updatedAt: now,
-    },
-    {
-      id: "rest-seed-4",
-      name: "Lotus Lantern Kitchen",
-      slug: "lotus-lantern-kitchen",
-      cuisine: "Asian",
-      tags: ["sushi", "noodles", "date-night"],
-      area: "Mulberry Grove",
-      priceRange: "$$",
-      description:
-        "Sushi rolls, stir-fries, and noodle bowls that convert even the “I only eat American food” crowd.",
-      specialties: ["Dragon roll", "Pad Thai"],
-      createdAt: day(22),
-      updatedAt: now,
-    },
-    {
-      id: "rest-seed-5",
-      name: "Gulf & Green Seafood",
-      slug: "gulf-and-green-seafood",
-      cuisine: "Seafood",
-      tags: ["fresh-catch", "oysters", "dinner"],
-      area: "Lake Sumter Landing",
+      tags: ["steak", "date-night", "town-square"],
+      area: "Spanish Springs",
+      address: "1101 Main St, The Villages, FL 32159",
+      phone: "(352) 775-2353",
+      website: "https://www.bellavitaitaliansteakhouse.com/",
       priceRange: "$$$",
       description:
-        "Coastal plates without the drive to the coast — oysters, grouper, and key lime for dessert.",
-      specialties: ["Oysters Rockefeller", "Grouper piccata"],
+        "Italian steakhouse on Spanish Springs Town Square — steaks, pasta, and polished dinner service.",
+      specialties: ["Prime steaks", "Classic pasta"],
       featured: true,
-      createdAt: day(20),
+      createdAt: now,
       updatedAt: now,
     },
     {
-      id: "rest-seed-6",
-      name: "Smoky Spoke BBQ",
-      slug: "smoky-spoke-bbq",
-      cuisine: "BBQ",
-      tags: ["brisket", "casual", "takeout"],
-      area: "Sumter Landing outskirts",
-      priceRange: "$$",
-      description:
-        "Low-and-slow meats, sticky sides, and sauce debates that last longer than dessert.",
-      specialties: ["Brisket plate", "Mac & cheese"],
-      createdAt: day(18),
-      updatedAt: now,
-    },
-    {
-      id: "rest-seed-7",
-      name: "Sunrise Skillet Café",
-      slug: "sunrise-skillet-cafe",
-      cuisine: "Breakfast",
-      tags: ["brunch", "coffee", "pancakes"],
-      area: "Spanish Springs",
-      priceRange: "$",
-      description:
-        "Eggs any style, bottomless coffee energy, and the best reason to wake up before pickleball.",
-      specialties: ["Loaded skillet", "Blueberry pancakes"],
-      createdAt: day(15),
-      updatedAt: now,
-    },
-    {
-      id: "rest-seed-8",
-      name: "Ironwood Steakhouse",
-      slug: "ironwood-steakhouse",
+      id: "rest-chop-house",
+      name: "Chop House at Lake Sumter",
+      slug: "chop-house-at-lake-sumter",
       cuisine: "Steakhouse",
-      tags: ["steak", "date-night", "wine"],
-      area: "Brownwood",
+      tags: ["steak", "date-night", "town-square"],
+      area: "Lake Sumter Landing",
+      address: "1045 Old Camp Rd, The Villages, FL 32162",
+      phone: "(352) 750-6000",
+      website: "https://www.chophousedining.com/",
       priceRange: "$$$$",
       description:
-        "Big steaks, bigger sides, and the occasional celebratory “we paid off the house” dinner.",
-      specialties: ["Ribeye", "Loaded baked potato"],
-      createdAt: day(12),
+        "Upscale steaks and seafood at Lake Sumter Landing.",
+      specialties: ["Aged steaks", "Seafood"],
+      featured: true,
+      createdAt: now,
       updatedAt: now,
     },
     {
-      id: "rest-seed-9",
-      name: "Olive Branch Mediterranean",
-      slug: "olive-branch-mediterranean",
-      cuisine: "Mediterranean",
-      tags: ["healthy", "hummus", "grill"],
-      area: "Mulberry Grove",
-      priceRange: "$$",
-      description:
-        "Fresh salads, grilled kebabs, and hummus that disappears before the pita arrives.",
-      specialties: ["Mixed grill", "Falafel plate"],
-      createdAt: day(10),
-      updatedAt: now,
-    },
-    {
-      id: "rest-seed-10",
-      name: "Harbor House American",
-      slug: "harbor-house-american",
-      cuisine: "American",
-      tags: ["waterfront", "cocktails", "dinner"],
-      area: "Lake Sumter Landing",
+      id: "rest-prima",
+      name: "Prima Italian Steakhouse",
+      slug: "prima-italian-steakhouse",
+      cuisine: "Italian",
+      tags: ["steak", "italian", "town-square"],
+      area: "Brownwood Paddock Square",
+      address: "3660 Kiessel Rd, The Villages, FL 32163",
+      phone: "(352) 391-9939",
+      website: "https://www.primaitaliansteakhouse.com/",
       priceRange: "$$$",
       description:
-        "Water views, elevated comfort food, and the default answer to “where should we go tonight?”",
-      specialties: ["Short rib", "Crab cakes"],
-      createdAt: day(8),
+        "Modern Italian steakhouse on Brownwood Paddock Square.",
+      specialties: ["Hand-cut steaks", "Italian classics"],
+      featured: true,
+      createdAt: now,
       updatedAt: now,
     },
   ];
 
-  const reviews: Review[] = [
-    rev("rest-seed-1", "Pat M.", 5, "Early-bird perfection", "Got seated at 4:10 and felt like a VIP.", true, "Grouper sandwich", day(5)),
-    rev("rest-seed-1", "Linda R.", 4, "Solid neighborhood go-to", "Salads are huge. Service is cheerful.", true, undefined, day(4)),
-    rev("rest-seed-1", "Tom K.", 5, "Bring the cart gang", "Outdoor tables + sunset = yes.", true, undefined, day(2)),
-    rev("rest-seed-2", "Sue B.", 5, "Best pizza near the path", "Garlic knots alone are worth the trip.", true, "Villager supreme", day(6)),
-    rev("rest-seed-2", "Mike D.", 4, "Quick and tasty", "Takeout was still hot. Impressive.", true, undefined, day(3)),
-    rev("rest-seed-2", "Carol W.", 3, "Good, not transcendent", "Fine for a weeknight pie.", true, undefined, day(1)),
-    rev("rest-seed-3", "James P.", 5, "Margarita mission accomplished", "Guac tableside is theater.", true, "Street tacos", day(7)),
-    rev("rest-seed-3", "Nancy F.", 4, "Lively patio", "A little loud — in a good way.", true, undefined, day(2)),
-    rev("rest-seed-4", "Helen C.", 5, "Sushi surprise", "Didn't expect this quality in-town.", true, "Dragon roll", day(4)),
-    rev("rest-seed-4", "Bob A.", 4, "Noodles nailed it", "Pad Thai was properly balanced.", true, "Pad Thai", day(1)),
-    rev("rest-seed-5", "Diane S.", 5, "Coastal without the drive", "Oysters were excellent.", true, "Oysters", day(5)),
-    rev("rest-seed-5", "Rick T.", 5, "Special occasion spot", "Worth the $$$ for a birthday.", true, undefined, day(3)),
-    rev("rest-seed-5", "Anita G.", 4, "Fresh catch energy", "Key lime sealed the deal.", true, undefined, day(1)),
-    rev("rest-seed-6", "Greg H.", 5, "Brisket fans assemble", "Smoke ring for days.", true, "Brisket plate", day(4)),
-    rev("rest-seed-6", "Paula J.", 4, "Messy in the best way", "Bring napkins. Many napkins.", true, undefined, day(2)),
-    rev("rest-seed-7", "Kathy L.", 5, "Breakfast royalty", "Pancakes fluffy as a cloud.", true, "Blueberry pancakes", day(6)),
-    rev("rest-seed-7", "Steve N.", 5, "Coffee refills forever", "Staff remembered my order.", true, undefined, day(2)),
-    rev("rest-seed-8", "Ellen M.", 5, "Steak night win", "Ribeye cooked exactly right.", true, "Ribeye", day(5)),
-    rev("rest-seed-8", "Doug C.", 4, "Pricey but polished", "Service was top-shelf.", true, undefined, day(2)),
-    rev("rest-seed-9", "Maria V.", 5, "Fresh and bright", "Hummus is dangerous.", true, "Falafel plate", day(3)),
-    rev("rest-seed-9", "Phil O.", 4, "Healthy that still tastes good", "Will be back after golf.", true, undefined, day(1)),
-    rev("rest-seed-10", "Joan E.", 5, "Waterfront wow", "Crab cakes + view = anniversary sorted.", true, "Crab cakes", day(4)),
-    rev("rest-seed-10", "Walt R.", 4, "Reliable elevated American", "Short rib falls off the bone.", true, "Short rib", day(2)),
-    rev("rest-seed-10", "Betty Q.", 5, "Our default date night", "Never disappoints.", true, undefined, day(1)),
-  ];
-
-  const interviews: Interview[] = [
-    {
-      id: "int-seed-1",
-      restaurantId: "rest-seed-5",
-      personName: "Chef Angela Ruiz",
-      role: "Executive Chef",
-      title: "How Gulf & Green Sources a “Local” Catch",
-      excerpt:
-        "On specials boards, supplier relationships, and why grouper night sells out.",
-      quote: "If it isn't tasting like the Gulf, it doesn't hit the plate.",
-      body: `We run a tight specials board because the fish decides the menu — not the other way around.
-
-Villagers know quality. They'll tell you if the oysters aren't singing. My favorite nights are when someone stops by the pass just to say the grouper reminded them of a trip to Cedar Key.
-
-Retirement dining doesn't mean boring dining. It means we get to cook for people who have time to taste.`,
-      publishedAt: day(3),
-      featured: true,
-    },
-    {
-      id: "int-seed-2",
-      restaurantId: "rest-seed-2",
-      personName: "Marco Bellini",
-      role: "Owner & Dough Whisperer",
-      title: "Cart Path Pizza: Built for the 9 a.m. Lunch Rush",
-      excerpt:
-        "Why takeout bags matter as much as the pie — and the secret to garlic knots.",
-      quote: "If it survives a cart ride home, it's pizza done right.",
-      body: `We designed the menu for people in a hurry between pickleball and grandkid pickup.
-
-The dough is overnight. The knots are non-negotiable. And yes, we keep extra napkins by the door because the “I'll just have one slice in the cart” plan never works.`,
-      publishedAt: day(6),
-      featured: true,
-    },
-    {
-      id: "int-seed-3",
-      restaurantId: "rest-seed-7",
-      personName: "Dee Patel",
-      role: "General Manager",
-      title: "Sunrise Skillet: Winning the Early Crowd",
-      excerpt:
-        "Coffee cadence, regulars by name, and the pancake that started a fan club.",
-      quote: "Breakfast is a community sport around here.",
-      body: `Our regulars arrive like clockwork. Some want quiet. Some want gossip. Everyone wants coffee that doesn't quit.
-
-The blueberry pancakes weren't supposed to be famous — but try telling that to the table that ordered three stacks “for research.”`,
-      publishedAt: day(9),
-      featured: false,
-    },
-  ];
-
-  return { restaurants, reviews, interviews, suggestions: [], updatedAt: now };
+  return {
+    restaurants,
+    reviews: [],
+    interviews: [],
+    suggestions: [],
+    updatedAt: now,
+  };
 }
 
 export function loadDining(): DiningData {

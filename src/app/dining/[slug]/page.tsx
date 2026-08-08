@@ -142,19 +142,47 @@ export default async function RestaurantPage({
                 </li>
                 {restaurant.address && (
                   <li>
-                    <strong>Address</strong> {restaurant.address}
+                    <strong>Address</strong>{" "}
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        `${restaurant.name}, ${restaurant.address}`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {restaurant.address}
+                    </a>
                   </li>
                 )}
                 {restaurant.phone && (
                   <li>
-                    <strong>Phone</strong> {restaurant.phone}
+                    <strong>Phone</strong>{" "}
+                    <a href={`tel:${restaurant.phone.replace(/\D/g, "")}`}>
+                      {restaurant.phone}
+                    </a>
                   </li>
                 )}
                 {restaurant.website && (
                   <li>
                     <strong>Web</strong>{" "}
-                    <a href={restaurant.website} target="_blank" rel="noreferrer">
+                    <a href={restaurant.website} target="_blank" rel="noopener noreferrer">
                       Visit site
+                    </a>
+                  </li>
+                )}
+                {restaurant.address && (
+                  <li>
+                    <strong>Map</strong>{" "}
+                    <a
+                      className="btn btn-ghost btn-sm"
+                      style={{ marginLeft: "0.25rem" }}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        `${restaurant.name}, ${restaurant.address}`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open in Google Maps
                     </a>
                   </li>
                 )}
