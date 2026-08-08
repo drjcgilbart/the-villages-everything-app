@@ -692,6 +692,14 @@ export const MAIN_TOPICS: {
     image: "/graphics/theme-real-estate.jpg",
   },
   {
+    href: "/support-local-villagers",
+    label: "Support Local",
+    matchPrefixes: ["/support-local-villagers"],
+    blurb:
+      "Neighbor services — handyman, lawn, lessons, pets, tech, and more. Submit your listing for approval.",
+    image: "/graphics/theme-community-resources.jpg",
+  },
+  {
     href: "/official-map",
     label: "Official Map",
     matchPrefixes: ["/official-map"],

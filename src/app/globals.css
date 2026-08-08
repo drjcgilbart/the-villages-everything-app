@@ -8331,3 +8331,104 @@ a.floating-back-btn {
   color: var(--muted);
   line-height: 1.45;
 }
+
+/* —— Support Local Villagers —— */
+.local-svc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.1rem;
+  margin-bottom: 1.1rem;
+  align-items: flex-end;
+}
+.local-svc-toolbar .rc-field {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+.local-svc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.local-svc-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.local-svc-card-media {
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(145deg, #f3efe6, #e8f0ea);
+  overflow: hidden;
+}
+.local-svc-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.local-svc-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: var(--palm);
+  opacity: 0.45;
+}
+.local-svc-card-body {
+  padding: 0.9rem 1rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.local-svc-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+.local-svc-card h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.15rem;
+}
+.local-svc-contact {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.local-svc-desc {
+  margin: 0 0 0.55rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  flex: 1;
+}
+.local-svc-form-panel {
+  scroll-margin-top: 5rem;
+}
+.local-svc-form-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  flex-wrap: wrap;
+}
+.local-svc-form-preview img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.local-svc-admin-thumb {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.field-full {
+  grid-column: 1 / -1;
+}

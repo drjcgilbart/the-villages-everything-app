@@ -6,6 +6,7 @@ import { AdminBestOfMonthPanel } from "@/components/AdminBestOfMonthPanel";
 import { AdminClubsPanel } from "@/components/AdminClubsPanel";
 import { AdminDiningPanel } from "@/components/AdminDiningPanel";
 import { AdminGolfPanel } from "@/components/AdminGolfPanel";
+import { AdminLocalServicesPanel } from "@/components/AdminLocalServicesPanel";
 import { AdminMembersPanel } from "@/components/AdminMembersPanel";
 import { AdminRealEstatePanel } from "@/components/AdminRealEstatePanel";
 import { AdminSiteGatePanel } from "@/components/AdminSiteGatePanel";
@@ -19,6 +20,7 @@ type PortalTab =
   | "bestof"
   | "golf"
   | "clubs"
+  | "localsvc"
   | "access";
 
 /**
@@ -228,6 +230,13 @@ export function AdminPortal() {
           </button>
           <button
             type="button"
+            className={tab === "localsvc" ? "active" : ""}
+            onClick={() => setTab("localsvc")}
+          >
+            Local services
+          </button>
+          <button
+            type="button"
             className={tab === "access" ? "active" : ""}
             onClick={() => setTab("access")}
           >
@@ -242,6 +251,7 @@ export function AdminPortal() {
         {tab === "bestof" && <AdminBestOfMonthPanel />}
         {tab === "golf" && <AdminGolfPanel />}
         {tab === "clubs" && <AdminClubsPanel />}
+        {tab === "localsvc" && <AdminLocalServicesPanel />}
         {tab === "access" && <AdminSiteGatePanel />}
       </div>
     </div>
