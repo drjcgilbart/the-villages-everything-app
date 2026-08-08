@@ -113,7 +113,9 @@ If Storage says *“You have reached your usage limits… Hobby plan. Access res
 4. **Redeploy** Production  
 5. Retry Admin → Members  
 
-The app accepts either env name pair and **prefers Redis** over Blob.
+The app accepts either env name pair and **prefers Redis** over Blob for JSON (members, Best of the Month pending queue, Support Local, yard sale, etc.). Photos also fall back to Redis when Blob is locked.
+
+**Best of the Month:** member submissions only appear in Admin if durable storage works. With Redis set, pending entries are stored and **read from Redis first** so they show up for approval even when Blob is over quota.
 
 #### Option B — Vercel Blob
 

@@ -20,17 +20,17 @@ export async function POST(req: Request) {
       );
     }
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { url, fileType } = await saveBomUpload(
+    const result = await saveBomUpload(
       buffer,
       file.name || "upload.jpg",
       file.type || ""
     );
     return NextResponse.json({
-      url,
-      fileType,
+      url: result.url,
+      fileType: result.fileType,
       name: file.name,
       // Help debug storage in the browser network tab
-      storedVia: url.startsWith("/api/media/") ? "app-media-proxy" : "direct",
+      storedVia: result.via || "unknown",
     });
   } catch (err) {
     console.error("[bom/upload]", err);

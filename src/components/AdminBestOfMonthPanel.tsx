@@ -23,6 +23,8 @@ export function AdminBestOfMonthPanel() {
     "pending"
   );
   const [blobOk, setBlobOk] = useState<boolean | null>(null);
+  const [redisOk, setRedisOk] = useState<boolean | null>(null);
+  const [durableOk, setDurableOk] = useState<boolean | null>(null);
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
@@ -33,6 +35,8 @@ export function AdminBestOfMonthPanel() {
     if (res.ok) {
       setEntries(data.entries || []);
       setBlobOk(Boolean(data.blobConfigured));
+      setRedisOk(Boolean(data.redisConfigured));
+      setDurableOk(Boolean(data.durableConfigured));
     }
   }, []);
 
@@ -132,18 +136,32 @@ export function AdminBestOfMonthPanel() {
         Approve Best of the Month entries, edit titles/descriptions any time,
         or delete posts. Voting is one per category per visitor each month.
       </p>
-      {blobOk === false && (
+      {durableOk === false && (
         <div className="msg msg-err" style={{ marginBottom: "0.75rem" }}>
-          <strong>Storage warning:</strong>{" "}
-          <code>BLOB_READ_WRITE_TOKEN</code> is not set on this deployment.
-          Photos will not stick across servers. In Vercel: connect your Blob
-          store, add the token under Environment Variables (Production), then
+          <strong>Storage warning:</strong> No durable storage is configured on
+          this deployment. Member Best of Month submissions will not reach this
+          admin queue. Add free Upstash Redis (
+          <code>UPSTASH_REDIS_REST_URL</code> +{" "}
+          <code>UPSTASH_REDIS_REST_TOKEN</code>) or connect Vercel Blob, then
           Redeploy.
         </div>
       )}
-      {blobOk === true && (
+      {durableOk === true && redisOk === false && blobOk === true && (
+        <div className="msg msg-err" style={{ marginBottom: "0.75rem" }}>
+          <strong>Storage tip:</strong> Only Vercel Blob is configured. If Blob
+          Hobby is over quota, submissions fail until you add free Redis env
+          vars (see DEPLOY-SIMPLE.md) or the quota resets.
+        </div>
+      )}
+      {durableOk === true && (
         <p style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
-          Blob storage: connected (photos and approvals persist site-wide).
+          Durable storage:{" "}
+          {redisOk ? "Redis connected" : "Redis off"}
+          {" · "}
+          {blobOk ? "Blob connected" : "Blob off"}
+          {redisOk
+            ? " — pending entries are read from Redis first so they appear here."
+            : " — submissions need a working backend to show up for approval."}
         </p>
       )}
       {msg && <div className="msg msg-ok">{msg}</div>}

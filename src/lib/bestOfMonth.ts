@@ -73,18 +73,23 @@ export function loadBom(): BomData {
   };
 }
 
-/** Prefer this on serverless so Blob-backed entries are visible. */
+/**
+ * Prefer this on serverless so durable entries are visible across instances.
+ * CRITICAL: must pull Redis first, then Blob. Writes prefer Redis (and skip
+ * Blob when Redis succeeds) while Hobby Blob is over quota — Blob-only reads
+ * hid pending member submissions from the admin portal.
+ */
 export async function loadBomAsync(): Promise<BomData> {
-  // Always re-pull this file from Blob (not the multi-file hydrate TTL cache)
-  // so approvals submitted on another instance show up immediately.
   const {
-    pullJsonFromBlob,
+    pullDurableJson,
     isEphemeralHost,
-    blobConfigured,
+    durableConfigured,
     cacheDurableJson,
   } = await import("./dataFs");
-  if (isEphemeralHost() && blobConfigured()) {
-    const text = await pullJsonFromBlob(BOM_FILE);
+  if (isEphemeralHost() && durableConfigured()) {
+    // Always re-pull this file (not only the multi-file hydrate TTL cache)
+    // so submits/approvals from another instance show up immediately.
+    const text = await pullDurableJson(BOM_FILE);
     if (text) {
       try {
         JSON.parse(text); // validate
@@ -92,6 +97,8 @@ export async function loadBomAsync(): Promise<BomData> {
       } catch {
         /* fall through to local/memory */
       }
+    } else {
+      await ensureDurableHydrated();
     }
   } else {
     await ensureDurableHydrated();
@@ -595,7 +602,7 @@ export async function saveBomUpload(
   buffer: Buffer,
   filename: string,
   mime: string
-): Promise<{ url: string; fileType: BomFileType }> {
+): Promise<{ url: string; fileType: BomFileType; via?: string }> {
   const lower = filename.toLowerCase();
   const mimeLower = (mime || "").toLowerCase();
   const isPdf = mimeLower === "application/pdf" || lower.endsWith(".pdf");
@@ -626,11 +633,12 @@ export async function saveBomUpload(
 
   // Prefix so media/blob keys are easy to spot
   const safeName = `bom-${filename || "photo.jpg"}`;
-  const { url } = await saveUploadFile(buffer, safeName, contentType);
+  const saved = await saveUploadFile(buffer, safeName, contentType);
 
   return {
-    url,
+    url: saved.url,
     fileType: isPdf ? "pdf" : "image",
+    via: saved.via,
   };
 }
 

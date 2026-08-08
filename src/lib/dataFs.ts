@@ -173,6 +173,76 @@ async function pullJsonFromRedis(filename: string): Promise<string | null> {
 }
 
 /**
+ * Fresh single-file durable pull: Redis first (preferred while Blob Hobby is
+ * capped), then Blob. Use this for admin queues so pending entries written to
+ * Redis are not hidden by a stale Blob copy.
+ */
+export async function pullDurableJson(
+  filename: string
+): Promise<string | null> {
+  const base = path.basename(filename);
+  if (!base || !DURABLE_JSON.has(base)) return null;
+  const fromRedis = await pullJsonFromRedis(base);
+  if (fromRedis) return fromRedis;
+  return pullJsonFromBlob(base);
+}
+
+function redisUploadKey(name: string) {
+  return `tvh-upload:${path.basename(name)}`;
+}
+
+/** Max raw upload size we'll store in Redis (base64 expands ~33%). */
+const REDIS_UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+
+async function pushUploadToRedis(
+  name: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<void> {
+  if (!redisConfigured()) {
+    throw new Error("Redis is not configured");
+  }
+  if (buffer.length > REDIS_UPLOAD_MAX_BYTES) {
+    throw new Error(
+      `Photo is too large for Redis fallback (max ${Math.floor(REDIS_UPLOAD_MAX_BYTES / (1024 * 1024))} MB while Vercel Blob is unavailable). Try a smaller JPG.`
+    );
+  }
+  const payload = JSON.stringify({
+    contentType: contentType || guessUploadContentType(name),
+    data: buffer.toString("base64"),
+  });
+  await redisCommand(["SET", redisUploadKey(name), payload]);
+}
+
+/** Load a member upload that was stored in Redis when Blob was unavailable. */
+export async function fetchUploadRedisBytes(
+  name: string
+): Promise<{ data: Buffer; contentType: string } | null> {
+  if (!redisConfigured()) return null;
+  const base = path.basename(String(name || ""));
+  if (!base || base === "." || base === "..") return null;
+  try {
+    const result = await redisCommand(["GET", redisUploadKey(base)]);
+    if (result == null) return null;
+    const parsed = JSON.parse(String(result)) as {
+      contentType?: string;
+      data?: string;
+    };
+    if (!parsed?.data) return null;
+    return {
+      data: Buffer.from(parsed.data, "base64"),
+      contentType:
+        parsed.contentType ||
+        guessUploadContentType(base) ||
+        "application/octet-stream",
+    };
+  } catch (err) {
+    console.error("[dataFs] redis upload pull failed", base, err);
+    return null;
+  }
+}
+
+/**
  * Do NOT pass an explicit `token` into @vercel/blob when possible.
  * An explicit token always wins over OIDC — a stale BLOB_READ_WRITE_TOKEN
  * on Production will break saves even when the store is correctly connected.
@@ -703,14 +773,18 @@ function guessUploadContentType(filename: string): string {
 /**
  * Persist an uploaded file.
  * Always stores the stable app URL `/api/media/{name}` so private Blob stores
- * still work (media route fetches with the token). On Vercel without Blob,
- * uploads cannot survive cold starts — we throw instead of silently breaking.
+ * still work (media route fetches with the token).
+ *
+ * Order on serverless:
+ *   1) Vercel Blob (when working)
+ *   2) Redis base64 fallback (when Blob is over quota / missing)
+ * Local disk always keeps a same-instance copy for dev.
  */
 export async function saveUploadFile(
   buffer: Buffer,
   filename: string,
   contentType?: string
-): Promise<{ url: string; name: string; blobUrl?: string }> {
+): Promise<{ url: string; name: string; blobUrl?: string; via?: string }> {
   const safe = path
     .basename(String(filename || "upload.bin"))
     .replace(/[^a-zA-Z0-9._-]/g, "_")
@@ -727,35 +801,59 @@ export async function saveUploadFile(
     console.error("[dataFs] local upload write failed", name, err);
   }
 
+  let blobErr: unknown = null;
   if (blobConfigured()) {
     const pathname = blobUploadPathname(name);
     try {
       const result = await putBlobWithAccess(pathname, buffer, mime);
       // App URL always proxies through /api/media (works for private blobs)
-      return { url: appUrl, name, blobUrl: result.url };
+      return { url: appUrl, name, blobUrl: result.url, via: "blob" };
     } catch (err) {
+      blobErr = err;
       console.error("[dataFs] upload blob put failed", name, err);
-      // Local: file is already on disk under data/uploads — keep going.
-      if (blobRequired()) {
-        throw new Error(
-          `Photo storage failed (Vercel Blob). ${formatBlobError(err)}`
+      // Local (non-serverless): file is already on disk — keep going.
+      if (!isEphemeralHost()) {
+        console.warn(
+          "[dataFs] Blob upload skipped; using local disk file:",
+          name
         );
+        return { url: appUrl, name, via: "local-disk" };
       }
-      console.warn(
-        "[dataFs] Blob upload skipped; using local disk file:",
-        name
+      // Serverless: try Redis next (Hobby Blob lockout path).
+    }
+  }
+
+  if (isEphemeralHost() && redisConfigured()) {
+    try {
+      await pushUploadToRedis(name, buffer, mime);
+      return { url: appUrl, name, via: "redis" };
+    } catch (err) {
+      console.error("[dataFs] upload redis put failed", name, err);
+      const redisMsg = err instanceof Error ? err.message : String(err);
+      const blobPart = blobErr
+        ? ` Blob: ${formatBlobError(blobErr)}.`
+        : blobConfigured()
+          ? ""
+          : " Blob is not configured.";
+      throw new Error(
+        `Photo storage failed.${blobPart} Redis: ${redisMsg}`
       );
-      return { url: appUrl, name };
     }
   }
 
   if (isEphemeralHost()) {
+    if (blobErr) {
+      throw new Error(
+        `Photo storage failed (Vercel Blob). ${formatBlobError(blobErr)} ` +
+          missingDurableStorageHelp()
+      );
+    }
     throw new Error(
-      "BLOB_READ_WRITE_TOKEN is not set. Photos cannot be stored on Vercel without Blob — add the token in Project Settings → Environment Variables, then redeploy."
+      "No durable photo storage on Vercel. " + missingDurableStorageHelp()
     );
   }
 
-  return { url: appUrl, name };
+  return { url: appUrl, name, via: "local-disk" };
 }
 
 /** Look up Blob URL for a prior upload by basename. */

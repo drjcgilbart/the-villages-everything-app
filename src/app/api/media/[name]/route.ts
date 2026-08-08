@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { resolveUpload } from "@/lib/content";
-import { fetchUploadBlobBytes } from "@/lib/dataFs";
+import { fetchUploadBlobBytes, fetchUploadRedisBytes } from "@/lib/dataFs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -70,6 +70,17 @@ export async function GET(
     return new NextResponse(new Uint8Array(fromBlob.data), {
       headers: {
         "Content-Type": fromBlob.contentType,
+        "Cache-Control": "public, max-age=3600",
+      },
+    });
+  }
+
+  // 3) Redis fallback (used when Blob Hobby is over quota)
+  const fromRedis = await fetchUploadRedisBytes(safe);
+  if (fromRedis) {
+    return new NextResponse(new Uint8Array(fromRedis.data), {
+      headers: {
+        "Content-Type": fromRedis.contentType,
         "Cache-Control": "public, max-age=3600",
       },
     });
