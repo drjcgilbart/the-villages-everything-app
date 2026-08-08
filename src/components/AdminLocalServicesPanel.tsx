@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LOCAL_SERVICE_CATEGORIES,
   listingPhotos,
   type LocalServiceListing,
 } from "@/lib/localServicesTypes";
+
+const MAX_PHOTOS = 3;
 
 type Payload = {
   listings: LocalServiceListing[];
@@ -30,9 +32,14 @@ export function AdminLocalServicesPanel() {
   const [data, setData] = useState<Payload | null>(null);
   const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [photoErr, setPhotoErr] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditFields | null>(null);
+  const addPhotoInputRef = useRef<HTMLInputElement>(null);
+  const replacePhotoInputRef = useRef<HTMLInputElement>(null);
+  const replaceIndexRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/local-services/admin", { cache: "no-store" });
@@ -68,6 +75,7 @@ export function AdminLocalServicesPanel() {
       setMsg(json.message || "OK");
       setEditingId(null);
       setEdit(null);
+      setPhotoErr(null);
       await load();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Failed");
@@ -78,6 +86,7 @@ export function AdminLocalServicesPanel() {
 
   function startEdit(l: LocalServiceListing) {
     setEditingId(l.id);
+    setPhotoErr(null);
     setEdit({
       businessName: l.businessName,
       contactName: l.contactName,
@@ -89,6 +98,83 @@ export function AdminLocalServicesPanel() {
       website: l.website || "",
       photos: listingPhotos(l),
       adminNote: l.adminNote || "",
+    });
+  }
+
+  async function uploadPhoto(file: File): Promise<string> {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/local-services/upload", {
+      method: "POST",
+      body: fd,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    return data.url as string;
+  }
+
+  async function onAddPhotos(files: FileList | null) {
+    if (!files || files.length === 0 || !edit) return;
+    const room = MAX_PHOTOS - edit.photos.length;
+    if (room <= 0) {
+      setPhotoErr("Maximum 3 photos (1 main + 2 extras).");
+      return;
+    }
+    setUploading(true);
+    setPhotoErr(null);
+    try {
+      const batch = Array.from(files).slice(0, room);
+      const urls: string[] = [];
+      for (const file of batch) {
+        urls.push(await uploadPhoto(file));
+      }
+      setEdit((p) =>
+        p
+          ? { ...p, photos: [...p.photos, ...urls].slice(0, MAX_PHOTOS) }
+          : p
+      );
+    } catch (e) {
+      setPhotoErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function onReplacePhoto(index: number, file: File | null) {
+    if (!file || !edit) return;
+    setUploading(true);
+    setPhotoErr(null);
+    try {
+      const url = await uploadPhoto(file);
+      setEdit((p) => {
+        if (!p) return p;
+        const next = [...p.photos];
+        next[index] = url;
+        return { ...p, photos: next };
+      });
+    } catch (e) {
+      setPhotoErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      replaceIndexRef.current = null;
+    }
+  }
+
+  function removePhoto(index: number) {
+    setEdit((p) =>
+      p ? { ...p, photos: p.photos.filter((_, i) => i !== index) } : p
+    );
+    setPhotoErr(null);
+  }
+
+  function makeMain(index: number) {
+    if (index <= 0) return;
+    setEdit((p) => {
+      if (!p) return p;
+      const next = [...p.photos];
+      const [picked] = next.splice(index, 1);
+      next.unshift(picked);
+      return { ...p, photos: next };
     });
   }
 
@@ -295,27 +381,118 @@ export function AdminLocalServicesPanel() {
                       />
                     </div>
                     <div className="field field-full">
-                      <label>
-                        Photo URLs (one per line — first = main, max 3)
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={edit.photos.join("\n")}
-                        onChange={(e) =>
-                          setEdit((p) =>
-                            p
-                              ? {
-                                  ...p,
-                                  photos: e.target.value
-                                    .split("\n")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                    .slice(0, 3),
+                      <label>Photos (main + up to 2 extras)</label>
+                      <p className="panel-hint" style={{ marginTop: 0 }}>
+                        First photo is the card main image. Use thumbnails below
+                        to add, replace, remove, or set main.{" "}
+                        {edit.photos.length}/{MAX_PHOTOS} photos.
+                      </p>
+                      {photoErr ? (
+                        <div className="msg msg-err">{photoErr}</div>
+                      ) : null}
+                      {uploading ? (
+                        <p className="panel-hint">Uploading photo…</p>
+                      ) : null}
+
+                      {edit.photos.length > 0 ? (
+                        <div className="local-svc-admin-edit-photos">
+                          {edit.photos.map((url, i) => (
+                            <div
+                              key={`${url}-${i}`}
+                              className="local-svc-admin-edit-photo"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt={
+                                  i === 0
+                                    ? "Main photo"
+                                    : `Extra photo ${i}`
                                 }
-                              : p
-                          )
-                        }
-                        placeholder="/api/media/…"
+                              />
+                              <span className="local-svc-form-photo-badge">
+                                {i === 0 ? "Main" : `Extra ${i}`}
+                              </span>
+                              <div className="local-svc-admin-edit-photo-actions">
+                                {i > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    disabled={busy || uploading}
+                                    onClick={() => makeMain(i)}
+                                  >
+                                    Make main
+                                  </button>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost btn-sm"
+                                  disabled={busy || uploading}
+                                  onClick={() => {
+                                    replaceIndexRef.current = i;
+                                    replacePhotoInputRef.current?.click();
+                                  }}
+                                >
+                                  Replace
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost btn-sm"
+                                  disabled={busy || uploading}
+                                  onClick={() => removePhoto(i)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="panel-hint">No photos yet.</p>
+                      )}
+
+                      <div className="hero-actions" style={{ marginTop: "0.65rem" }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          disabled={
+                            busy ||
+                            uploading ||
+                            edit.photos.length >= MAX_PHOTOS
+                          }
+                          onClick={() => addPhotoInputRef.current?.click()}
+                        >
+                          {edit.photos.length === 0
+                            ? "Add photo"
+                            : "Add another photo"}
+                        </button>
+                      </div>
+
+                      {/* Hidden file pickers for add / replace */}
+                      <input
+                        ref={addPhotoInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp"
+                        multiple
+                        className="local-svc-sr-only"
+                        tabIndex={-1}
+                        onChange={(e) => {
+                          onAddPhotos(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <input
+                        ref={replacePhotoInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp"
+                        className="local-svc-sr-only"
+                        tabIndex={-1}
+                        onChange={(e) => {
+                          const idx = replaceIndexRef.current;
+                          const file = e.target.files?.[0] || null;
+                          if (idx !== null) onReplacePhoto(idx, file);
+                          e.target.value = "";
+                        }}
                       />
                     </div>
                     <div className="field field-full">
@@ -345,6 +522,7 @@ export function AdminLocalServicesPanel() {
                         onClick={() => {
                           setEditingId(null);
                           setEdit(null);
+                          setPhotoErr(null);
                         }}
                       >
                         Cancel
