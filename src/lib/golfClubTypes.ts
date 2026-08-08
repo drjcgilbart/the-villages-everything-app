@@ -95,6 +95,27 @@ export type GolfRound = {
   createdAt: string;
 };
 
+/**
+ * Heuristic “great round” tiers when we only have gross score + holes.
+ * Client-safe (no Node/fs) — used for score ring UI on the Golf hub.
+ */
+export type ScoreRing = "birdie" | "eagle" | null;
+
+export function scoreRingForRound(
+  round: Pick<GolfRound, "holes" | "score">
+): ScoreRing {
+  const { holes, score } = round;
+  if (!Number.isFinite(score) || score <= 0) return null;
+  if (holes === 9) {
+    if (score <= 27) return "eagle";
+    if (score <= 32) return "birdie";
+    return null;
+  }
+  if (score <= 68) return "eagle";
+  if (score <= 78) return "birdie";
+  return null;
+}
+
 /** Looking for 1–3 to make a foursome */
 export type GolfFoursomePost = {
   id: string;

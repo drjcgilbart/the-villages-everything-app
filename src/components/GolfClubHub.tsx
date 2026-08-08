@@ -14,7 +14,7 @@ import type {
   GolfRound,
 } from "@/lib/golfClubTypes";
 import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
-import { scoreRingForRound } from "@/lib/golfBadges";
+import { scoreRingForRound } from "@/lib/golfClubTypes";
 import { GOLF_ART } from "@/lib/golfResources";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 

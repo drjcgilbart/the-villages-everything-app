@@ -10,8 +10,12 @@
  */
 
 import { loadGolfClub } from "./golfClub";
-import type { GolfRound } from "./golfClubTypes";
+import type { GolfRound, ScoreRing } from "./golfClubTypes";
+import { scoreRingForRound } from "./golfClubTypes";
 import type { BadgeDef } from "./memberBadgeTypes";
+
+export type { ScoreRing } from "./golfClubTypes";
+export { scoreRingForRound } from "./golfClubTypes";
 
 export const GOLF_BADGE_IDS = {
   bronze: "golf_bronze",
@@ -66,26 +70,6 @@ function normName(name: string) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
-}
-
-/**
- * Heuristic “great round” tiers when we only have gross score + holes
- * (no hole-by-hole card). Tuned for executive 9s and casual 18s.
- */
-export type ScoreRing = "birdie" | "eagle" | null;
-
-export function scoreRingForRound(round: Pick<GolfRound, "holes" | "score">): ScoreRing {
-  const { holes, score } = round;
-  if (!Number.isFinite(score) || score <= 0) return null;
-  if (holes === 9) {
-    if (score <= 27) return "eagle"; // ~ even par or better on short executive
-    if (score <= 32) return "birdie";
-    return null;
-  }
-  // 18 holes
-  if (score <= 68) return "eagle";
-  if (score <= 78) return "birdie";
-  return null;
 }
 
 export type GolfPlayerStats = {
