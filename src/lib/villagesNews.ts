@@ -85,6 +85,40 @@ export const NEWS_CREATORS: NewsCreator[] = [
     featuredVideoId: "rhW2CbphsJc",
     featuredVideoTitle: "Construction / community updates",
   },
+  {
+    id: "gary-abbott",
+    name: "Gary Abbott",
+    handle: "@GaryAbbott",
+    channelUrl: "https://www.youtube.com/@GaryAbbott",
+    // UC n2JLUrRmBLWuYNVhQa2Nug → UU uploads playlist
+    uploadsPlaylistId: "UUn2JLUrRmBLWuYNVhQa2Nug",
+    blurb:
+      "Essential Villages resource channel — market and cost-of-living breakdowns, lifestyle tours, and practical “should I move here?” guidance from a long-running local voice.",
+    strengths: [
+      "Market & cost-of-living explainers",
+      "Village-by-village perspective",
+      "Retiree lifestyle & planning tips",
+    ],
+    featuredVideoId: "ROeoWfs9Iag",
+    featuredVideoTitle: "Can You Afford to Live in The Villages?",
+  },
+  {
+    id: "michael-tiffany",
+    name: "Michael & Tiffany",
+    handle: "@MichaelTiffanyTVE",
+    channelUrl: "https://www.youtube.com/@MichaelTiffanyTVE",
+    // UC oaPwHit-FPAU_-tDy5wSKg → UU uploads playlist
+    uploadsPlaylistId: "UUoaPwHit-FPAU_-tDy5wSKg",
+    blurb:
+      "Real-life experiences and expenses after moving to The Villages — home tours, budgets, cart culture, and the day-to-day of full-time living here.",
+    strengths: [
+      "Real expense & budget trackers",
+      "Home tours & move diaries",
+      "Lifestyle vlogs for newcomers",
+    ],
+    featuredVideoId: "cRcDRSO34DA",
+    featuredVideoTitle: "Moving from California to Florida — new home tour",
+  },
 ];
 
 export const NEWS_OUTLETS: NewsOutlet[] = [
