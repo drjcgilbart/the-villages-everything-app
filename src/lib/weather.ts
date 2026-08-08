@@ -54,96 +54,291 @@ export type VillagesWeather = {
   source: string;
 };
 
-export async function fetchVillagesWeather(): Promise<VillagesWeather> {
+export type ForecastHour = {
+  time: string;
+  tempF: number;
+  feelsLikeF: number;
+  precipProb: number | null;
+  weatherCode: number;
+  emoji: string;
+  condition: string;
+  windMph: number;
+  uvIndex: number | null;
+  isDay: boolean;
+};
+
+export type ForecastDay = {
+  date: string;
+  weatherCode: number;
+  emoji: string;
+  condition: string;
+  highF: number;
+  lowF: number;
+  precipProb: number | null;
+  precipIn: number | null;
+  uvMax: number | null;
+  sunrise: string | null;
+  sunset: string | null;
+  windMaxMph: number | null;
+};
+
+export type VillagesForecast = VillagesWeather & {
+  zip: string;
+  pressureInHg: number | null;
+  cloudCover: number | null;
+  windGustMph: number | null;
+  windDirDeg: number | null;
+  visibilityMi: number | null;
+  sunrise: string | null;
+  sunset: string | null;
+  hourly: ForecastHour[];
+  daily: ForecastDay[];
+};
+
+function windDirLabel(deg: number | null | undefined): string {
+  if (deg == null || Number.isNaN(deg)) return "—";
+  const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  return dirs[Math.round(((deg % 360) + 360) % 360 / 45) % 8];
+}
+
+export { windDirLabel };
+
+async function fetchOpenMeteoRaw(forecastDays: number) {
   const params = new URLSearchParams({
     latitude: String(VILLAGES_LAT),
     longitude: String(VILLAGES_LON),
+    timezone: VILLAGES_TZ,
+    temperature_unit: "fahrenheit",
+    wind_speed_unit: "mph",
+    precipitation_unit: "inch",
     current: [
       "temperature_2m",
       "relative_humidity_2m",
       "apparent_temperature",
+      "is_day",
       "precipitation",
+      "weather_code",
+      "cloud_cover",
+      "pressure_msl",
+      "wind_speed_10m",
+      "wind_direction_10m",
+      "wind_gusts_10m",
+      "uv_index",
+    ].join(","),
+    hourly: [
+      "temperature_2m",
+      "apparent_temperature",
+      "precipitation_probability",
       "weather_code",
       "wind_speed_10m",
       "uv_index",
+      "visibility",
+      "is_day",
     ].join(","),
     daily: [
+      "weather_code",
       "temperature_2m_max",
       "temperature_2m_min",
+      "sunrise",
+      "sunset",
+      "uv_index_max",
+      "precipitation_sum",
       "precipitation_probability_max",
+      "wind_speed_10m_max",
     ].join(","),
-    temperature_unit: "fahrenheit",
-    wind_speed_unit: "mph",
-    precipitation_unit: "inch",
-    timezone: VILLAGES_TZ,
-    forecast_days: "1",
+    forecast_days: String(forecastDays),
   });
 
   const res = await fetch(
     `https://api.open-meteo.com/v1/forecast?${params.toString()}`,
     {
-      // Server: revalidate often; client will also poll
       next: { revalidate: 120 },
       headers: { Accept: "application/json" },
     }
   );
+  if (!res.ok) throw new Error(`Weather upstream error (${res.status})`);
+  return res.json();
+}
 
-  if (!res.ok) {
-    throw new Error(`Weather upstream error (${res.status})`);
-  }
+export async function fetchVillagesWeather(): Promise<VillagesWeather> {
+  const forecast = await fetchVillagesForecast();
+  const {
+    hourly: _h,
+    daily: _d,
+    zip: _z,
+    pressureInHg: _p,
+    cloudCover: _c,
+    windGustMph: _g,
+    windDirDeg: _wd,
+    visibilityMi: _v,
+    sunrise: _sr,
+    sunset: _ss,
+    ...basic
+  } = forecast;
+  return basic;
+}
 
-  const data = (await res.json()) as {
-    current?: {
-      temperature_2m?: number;
-      relative_humidity_2m?: number;
-      apparent_temperature?: number;
-      precipitation?: number;
-      weather_code?: number;
-      wind_speed_10m?: number;
-      uv_index?: number;
-      time?: string;
+/** Full dashboard forecast (current + 24h hourly + 7-day) — from the desktop weather-app. */
+export async function fetchVillagesForecast(): Promise<VillagesForecast> {
+  const data = (await fetchOpenMeteoRaw(7)) as {
+    current?: Record<string, number | string | undefined>;
+    hourly?: {
+      time?: string[];
+      temperature_2m?: (number | null)[];
+      apparent_temperature?: (number | null)[];
+      precipitation_probability?: (number | null)[];
+      weather_code?: (number | null)[];
+      wind_speed_10m?: (number | null)[];
+      uv_index?: (number | null)[];
+      visibility?: (number | null)[];
+      is_day?: (number | null)[];
     };
     daily?: {
-      temperature_2m_max?: number[];
-      temperature_2m_min?: number[];
-      precipitation_probability_max?: number[];
+      time?: string[];
+      weather_code?: (number | null)[];
+      temperature_2m_max?: (number | null)[];
+      temperature_2m_min?: (number | null)[];
+      sunrise?: string[];
+      sunset?: string[];
+      uv_index_max?: (number | null)[];
+      precipitation_sum?: (number | null)[];
+      precipitation_probability_max?: (number | null)[];
+      wind_speed_10m_max?: (number | null)[];
     };
   };
 
   const current = data.current;
-  if (!current || current.temperature_2m == null || current.weather_code == null) {
+  if (
+    !current ||
+    current.temperature_2m == null ||
+    current.weather_code == null
+  ) {
     throw new Error("Weather data incomplete");
   }
 
-  const code = current.weather_code;
+  const code = Number(current.weather_code);
+  const now = Date.now();
+  const hourlyTimes = data.hourly?.time || [];
+  let startIdx = 0;
+  for (let i = 0; i < hourlyTimes.length; i++) {
+    if (new Date(hourlyTimes[i]).getTime() >= now - 30 * 60 * 1000) {
+      startIdx = i;
+      break;
+    }
+  }
+
+  const hourly: ForecastHour[] = [];
+  for (let i = startIdx; i < Math.min(startIdx + 24, hourlyTimes.length); i++) {
+    const wc = Number(data.hourly?.weather_code?.[i] ?? 0);
+    hourly.push({
+      time: hourlyTimes[i],
+      tempF: Math.round(Number(data.hourly?.temperature_2m?.[i] ?? 0)),
+      feelsLikeF: Math.round(
+        Number(
+          data.hourly?.apparent_temperature?.[i] ??
+            data.hourly?.temperature_2m?.[i] ??
+            0
+        )
+      ),
+      precipProb:
+        data.hourly?.precipitation_probability?.[i] != null
+          ? Math.round(Number(data.hourly.precipitation_probability[i]))
+          : null,
+      weatherCode: wc,
+      emoji: weatherCodeEmoji(wc),
+      condition: weatherCodeLabel(wc),
+      windMph: Math.round(Number(data.hourly?.wind_speed_10m?.[i] ?? 0)),
+      uvIndex:
+        data.hourly?.uv_index?.[i] != null
+          ? Math.round(Number(data.hourly.uv_index[i]) * 10) / 10
+          : null,
+      isDay: Number(data.hourly?.is_day?.[i] ?? 1) === 1,
+    });
+  }
+
+  const daily: ForecastDay[] = [];
+  const days = data.daily?.time?.length || 0;
+  for (let i = 0; i < days; i++) {
+    const wc = Number(data.daily?.weather_code?.[i] ?? 0);
+    daily.push({
+      date: data.daily!.time![i],
+      weatherCode: wc,
+      emoji: weatherCodeEmoji(wc),
+      condition: weatherCodeLabel(wc),
+      highF: Math.round(Number(data.daily?.temperature_2m_max?.[i] ?? 0)),
+      lowF: Math.round(Number(data.daily?.temperature_2m_min?.[i] ?? 0)),
+      precipProb:
+        data.daily?.precipitation_probability_max?.[i] != null
+          ? Math.round(Number(data.daily.precipitation_probability_max[i]))
+          : null,
+      precipIn:
+        data.daily?.precipitation_sum?.[i] != null
+          ? Math.round(Number(data.daily.precipitation_sum[i]) * 100) / 100
+          : null,
+      uvMax:
+        data.daily?.uv_index_max?.[i] != null
+          ? Math.round(Number(data.daily.uv_index_max[i]) * 10) / 10
+          : null,
+      sunrise: data.daily?.sunrise?.[i] || null,
+      sunset: data.daily?.sunset?.[i] || null,
+      windMaxMph:
+        data.daily?.wind_speed_10m_max?.[i] != null
+          ? Math.round(Number(data.daily.wind_speed_10m_max[i]))
+          : null,
+    });
+  }
+
+  const visM = data.hourly?.visibility?.[startIdx];
+  const pressureHpa =
+    current.pressure_msl != null ? Number(current.pressure_msl) : null;
 
   return {
     location: "The Villages, FL",
-    temperatureF: Math.round(current.temperature_2m),
-    feelsLikeF: Math.round(current.apparent_temperature ?? current.temperature_2m),
-    humidity: Math.round(current.relative_humidity_2m ?? 0),
-    windMph: Math.round(current.wind_speed_10m ?? 0),
+    zip: "34762",
+    temperatureF: Math.round(Number(current.temperature_2m)),
+    feelsLikeF: Math.round(
+      Number(current.apparent_temperature ?? current.temperature_2m)
+    ),
+    humidity: Math.round(Number(current.relative_humidity_2m ?? 0)),
+    windMph: Math.round(Number(current.wind_speed_10m ?? 0)),
     weatherCode: code,
     condition: weatherCodeLabel(code),
     emoji: weatherCodeEmoji(code),
     uvIndex:
-      current.uv_index != null ? Math.round(current.uv_index * 10) / 10 : null,
-    precipIn: Math.round((current.precipitation ?? 0) * 100) / 100,
-    highF:
-      data.daily?.temperature_2m_max?.[0] != null
-        ? Math.round(data.daily.temperature_2m_max[0])
-        : null,
-    lowF:
-      data.daily?.temperature_2m_min?.[0] != null
-        ? Math.round(data.daily.temperature_2m_min[0])
-        : null,
-    rainChancePct:
-      data.daily?.precipitation_probability_max?.[0] != null
-        ? Math.round(data.daily.precipitation_probability_max[0])
-        : null,
+      current.uv_index != null
+        ? Math.round(Number(current.uv_index) * 10) / 10
+        : hourly[0]?.uvIndex ?? null,
+    precipIn: Math.round(Number(current.precipitation ?? 0) * 100) / 100,
+    highF: daily[0]?.highF ?? null,
+    lowF: daily[0]?.lowF ?? null,
+    rainChancePct: daily[0]?.precipProb ?? null,
     updatedAt: current.time
-      ? new Date(current.time).toISOString()
+      ? new Date(String(current.time)).toISOString()
       : new Date().toISOString(),
     source: "Open-Meteo",
+    pressureInHg:
+      pressureHpa != null
+        ? Math.round((pressureHpa * 0.02953) * 100) / 100
+        : null,
+    cloudCover:
+      current.cloud_cover != null
+        ? Math.round(Number(current.cloud_cover))
+        : null,
+    windGustMph:
+      current.wind_gusts_10m != null
+        ? Math.round(Number(current.wind_gusts_10m))
+        : null,
+    windDirDeg:
+      current.wind_direction_10m != null
+        ? Math.round(Number(current.wind_direction_10m))
+        : null,
+    visibilityMi:
+      visM != null
+        ? Math.round((Number(visM) / 1609.34) * 10) / 10
+        : null,
+    sunrise: daily[0]?.sunrise ?? null,
+    sunset: daily[0]?.sunset ?? null,
+    hourly,
+    daily,
   };
 }

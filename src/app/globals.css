@@ -1748,6 +1748,327 @@ a.my-space-link-card:hover {
   );
 }
 
+/* My Space · daily dashboard (weather-app port) */
+.ms-dash-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1.25rem;
+  padding: 0.35rem;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 253, 249, 0.9);
+}
+
+.ms-dash-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ms-dash-nav-btn:hover {
+  color: var(--ink);
+  background: rgba(232, 184, 74, 0.18);
+}
+
+.ms-dash-nav-btn.active {
+  color: var(--ink);
+  background: rgba(232, 184, 74, 0.35);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.ms-dash-nav-btn.is-locked {
+  opacity: 0.72;
+}
+
+.ms-dash-nav-icon {
+  font-size: 1.05rem;
+}
+
+.ms-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+button.ms-home-card {
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+button.ms-home-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(28, 36, 48, 0.08);
+}
+
+.ms-home-card-icon {
+  font-size: 1.6rem;
+}
+
+.ms-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.ms-subnav-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ms-subnav-btn.active {
+  background: rgba(31, 107, 74, 0.12);
+  color: var(--ink);
+  border-color: rgba(31, 107, 74, 0.35);
+}
+
+.ms-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ms-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.65rem;
+}
+
+.ms-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.ms-stat span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.ms-stat strong {
+  font-size: 1.15rem;
+}
+
+.ms-check-list,
+.ms-simple-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ms-check-list li,
+.ms-simple-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ms-inline-time {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.ms-journal-list p {
+  white-space: pre-wrap;
+}
+
+/* Weather board */
+.ms-wx-hero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 0.85rem;
+}
+
+.ms-wx-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ms-wx-hero-emoji {
+  font-size: 3.2rem;
+  line-height: 1;
+}
+
+.ms-wx-hero-temp {
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.ms-wx-hero-feels {
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.ms-wx-hero-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 9rem;
+}
+
+.ms-wx-hilo {
+  display: flex;
+  gap: 1rem;
+  font-weight: 600;
+}
+
+.ms-wx-sun {
+  display: flex;
+  gap: 1rem;
+}
+
+.ms-wx-sun div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ms-wx-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.ms-wx-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  margin: 0;
+}
+
+.ms-wx-metric strong {
+  font-size: 1.15rem;
+}
+
+.ms-wx-metric-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.ms-wx-hourly {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+}
+
+.ms-wx-hour {
+  flex: 0 0 auto;
+  width: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.35rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 0.82rem;
+}
+
+.ms-wx-hour-time {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.ms-wx-daily {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ms-wx-daily li {
+  display: grid;
+  grid-template-columns: 7rem 2rem 1fr auto auto;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.35rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.ms-wx-daily li:last-child {
+  border-bottom: none;
+}
+
+.ms-wx-day-name {
+  font-weight: 700;
+}
+
+.ms-wx-day-emoji {
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.ms-wx-day-cond {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 640px) {
+  .ms-wx-daily li {
+    grid-template-columns: 5.5rem 1.75rem 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .ms-wx-day-temps,
+  .ms-wx-daily li .panel-hint:last-child {
+    grid-column: 3;
+  }
+}
+
 .admin-plan-select select {
   font: inherit;
   font-size: 0.8rem;

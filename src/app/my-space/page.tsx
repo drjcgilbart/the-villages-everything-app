@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "My Space",
   description:
-    "Member dashboard — saved favorites, weather, clubs, investments, yard-sale tools, and personal modules.",
+    "Member daily dashboard — Villages weather, health, pets, investments, favorites, and yard-sale tools.",
 };
 
 export default function MySpacePage() {
@@ -13,15 +13,15 @@ export default function MySpacePage() {
     <>
       <div className="page-hero">
         <div className="shell">
-          <span className="kicker">Member · private &amp; saved</span>
+          <span className="kicker">Member · daily dashboard</span>
           <h1>My Space</h1>
           <p>
-            Home for anything that&apos;s <strong>yours</strong> — every star you
-            set on The Villages, Town Squares, Rec Centers, Dining, and Clubs is
-            copied into <strong>My favorites</strong> below. Plus membership
-            modules:
-            weather, health lanai, pet parade, investments, and yard-sale
-            posting. Unlock more by tier:{" "}
+            Your private Villages command center — the full daily dashboard from
+            our desktop weather-app, built into the site:{" "}
+            <strong>weather</strong> (hourly + 7-day), <strong>health</strong>{" "}
+            (weight, meds, meals, movement, journal), <strong>pets</strong>{" "}
+            (walks, meals, alarms), <strong>investments</strong>, calendar notes,
+            and every star you set on the site. Unlock more by tier:{" "}
             <strong>Porch Waver</strong> → <strong>Cart Path Regular</strong> →{" "}
             <strong>Lanai Legend</strong> → <strong>Square Royalty</strong>.
           </p>

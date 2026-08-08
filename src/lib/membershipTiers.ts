@@ -123,7 +123,8 @@ export const FEATURE_META: Record<
   },
   weather: {
     title: "Villages weather",
-    teaser: "Live local conditions — before you blame the humidity on the cart.",
+    teaser:
+      "Full dashboard: current conditions, metrics, 24-hour and 7-day forecast (desktop weather-app).",
     anchor: "ms-weather",
   },
   favoriteClubs: {
@@ -133,22 +134,24 @@ export const FEATURE_META: Record<
   },
   portfolio: {
     title: "Investments",
-    teaser: "Stock & ETF board with totals — mystery-novel statement energy.",
+    teaser: "Stock & ETF board with live quotes and portfolio totals.",
     anchor: "ms-markets",
   },
   healthLog: {
     title: "Health lanai",
-    teaser: "Weight, meds, and “I walked on purpose” check-ins.",
+    teaser:
+      "Weight log, meds with dose times & alarms, meals, workouts, journal, and daily goals.",
     anchor: "ms-health",
   },
   petSchedule: {
     title: "Pet parade",
-    teaser: "Walks, meals, and who really runs the household.",
+    teaser:
+      "Walk & meal schedules, daily checkboxes, and optional browser alarms (Angelcake-style).",
     anchor: "ms-pets",
   },
   calendarBoard: {
     title: "My calendar board",
-    teaser: "Personal notes & events — not the whole district calendar.",
+    teaser: "Personal sticky notes & events — not the whole district calendar.",
     anchor: "ms-calendar",
   },
   exclusiveLounge: {

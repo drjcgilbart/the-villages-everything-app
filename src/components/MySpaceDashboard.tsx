@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { VillagesWeatherWidget } from "@/components/VillagesWeatherWidget";
 import { PortfolioTracker } from "@/components/PortfolioTracker";
 import {
   MySpaceCalendarBoard,
@@ -11,6 +10,7 @@ import {
   MySpacePetSchedule,
   MySpaceRoyaltyLounge,
 } from "@/components/MySpaceModules";
+import { MySpaceWeatherBoard } from "@/components/MySpaceWeatherBoard";
 import { MySpaceFavoritesHub } from "@/components/MySpaceFavoritesHub";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import type { PopularClub } from "@/lib/clubs";
@@ -100,12 +100,25 @@ function LockedTeaser({
   );
 }
 
+type DashTab =
+  | "home"
+  | "weather"
+  | "health"
+  | "pets"
+  | "investments"
+  | "calendar"
+  | "favorites"
+  | "membership"
+  | "lounge"
+  | "links";
+
 export function MySpaceDashboard() {
   const [data, setData] = useState<SpacePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [tab, setTab] = useState<DashTab>("home");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -221,12 +234,36 @@ export function MySpaceDashboard() {
   const showDev =
     process.env.NEXT_PUBLIC_HUB_MEMBER_DEV_UNLOCK === "true";
 
+  const tabs: { id: DashTab; label: string; icon: string; locked?: boolean }[] =
+    [
+      { id: "home", label: "Home", icon: "🏠" },
+      { id: "weather", label: "Weather", icon: "🌤", locked: !f.weather },
+      { id: "health", label: "Health", icon: "💚", locked: !f.healthLog },
+      { id: "pets", label: "Pets", icon: "🐶", locked: !f.petSchedule },
+      {
+        id: "investments",
+        label: "Investments",
+        icon: "📈",
+        locked: !f.portfolio,
+      },
+      {
+        id: "calendar",
+        label: "Calendar",
+        icon: "📅",
+        locked: !f.calendarBoard,
+      },
+      { id: "favorites", label: "Favorites", icon: "⭐" },
+      { id: "membership", label: "Tiers", icon: "🎟" },
+      { id: "lounge", label: "Royalty", icon: "👑", locked: !f.exclusiveLounge },
+      { id: "links", label: "Shortcuts", icon: "🔗" },
+    ];
+
   return (
     <div className="my-space" id="ms-top">
       <div className="about-panel my-space-header">
         <div>
           <span className="kicker">
-            {f.planBadge ? "👑 Square Royalty" : "Members only"}
+            {f.planBadge ? "👑 Square Royalty" : "Members only · daily dashboard"}
           </span>
           <h2 style={{ margin: "0.35rem 0" }} className="member-name">
             <span className="member-name-text">
@@ -245,6 +282,10 @@ export function MySpaceDashboard() {
               <span className="ms-plan-tagline"> — {space.planTagline}</span>
             ) : null}
           </p>
+          <p className="panel-hint" style={{ marginBottom: 0 }}>
+            Full daily dashboard (weather · health · pets · investments) —
+            powered by the same tools as the Villages desktop weather-app.
+          </p>
           {note && <p className="club-sync-note">{note}</p>}
         </div>
         <div className="hero-actions">
@@ -260,7 +301,61 @@ export function MySpaceDashboard() {
         </div>
       </div>
 
-      {/* Tier ladder + upgrade */}
+      <nav className="ms-dash-nav" aria-label="My Space dashboard">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`ms-dash-nav-btn ${tab === t.id ? "active" : ""} ${t.locked ? "is-locked" : ""}`}
+            onClick={() => setTab(t.id)}
+            aria-selected={tab === t.id}
+          >
+            <span className="ms-dash-nav-icon" aria-hidden>
+              {t.icon}
+            </span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {tab === "home" && (
+        <section className="my-space-block">
+          <h3 className="my-space-block-title">Your daily hub</h3>
+          <p style={{ color: "var(--muted)", marginTop: 0 }}>
+            Pick a tab above — same layout as the desktop Villages dashboard.
+            Paid tiers unlock weather, investments, health lanai, pet parade,
+            and more.
+          </p>
+          <div className="ms-home-grid">
+            {tabs
+              .filter((t) => t.id !== "home")
+              .map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className="about-panel ms-home-card"
+                  onClick={() => setTab(t.id)}
+                >
+                  <span aria-hidden className="ms-home-card-icon">
+                    {t.icon}
+                  </span>
+                  <strong>
+                    {t.label}
+                    {t.locked ? " 🔒" : ""}
+                  </strong>
+                  <span className="panel-hint">
+                    {t.locked ? "Upgrade to unlock" : "Open"}
+                  </span>
+                </button>
+              ))}
+          </div>
+          <div style={{ marginTop: "1.25rem" }}>
+            <MySpaceFavoritesHub />
+          </div>
+        </section>
+      )}
+
+      {tab === "membership" && (
       <section className="my-space-block" id="ms-tiers">
         <h3 className="my-space-block-title">Membership tiers</h3>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
@@ -342,38 +437,33 @@ export function MySpaceDashboard() {
           </p>
         )}
       </section>
+      )}
 
-      <nav className="my-space-nav" aria-label="My Space sections">
-        <a href="#ms-favorites">Favorites</a>
-        <a href="#ms-weather">Weather</a>
-        <a href="#ms-markets">Investments</a>
-        <a href="#ms-health">Health</a>
-        <a href="#ms-pets">Pets</a>
-        <a href="#ms-calendar">Calendar</a>
-        <a href="#ms-lounge">Royalty</a>
-        <a href="#ms-links">Shortcuts</a>
-      </nav>
+      {tab === "favorites" && (
+        <section className="my-space-block">
+          <MySpaceFavoritesHub />
+        </section>
+      )}
 
-      <MySpaceFavoritesHub />
-
+      {tab === "weather" && (
       <section id="ms-weather" className="my-space-block">
         <h3 className="my-space-block-title">Villages weather</h3>
         {f.weather ? (
-          <div className="my-space-weather-wrap">
-            <VillagesWeatherWidget />
-          </div>
+          <MySpaceWeatherBoard />
         ) : (
           <LockedTeaser feature="weather" currentLabel={planLabel} />
         )}
       </section>
+      )}
 
+      {tab === "investments" && (
       <section id="ms-markets" className="my-space-block">
         <h3 className="my-space-block-title">Investments</h3>
         {f.portfolio ? (
           <>
             <p style={{ color: "var(--muted)", marginTop: 0 }}>
-              Your stock &amp; ETF board (saved on this browser). Same tool as
-              the Wealth page — kept here for dashboard vibes.
+              Stock &amp; ETF board (saved on this browser) — same idea as the
+              desktop investments tab and the Wealth page.
             </p>
             <PortfolioTracker />
           </>
@@ -381,7 +471,9 @@ export function MySpaceDashboard() {
           <LockedTeaser feature="portfolio" currentLabel={planLabel} />
         )}
       </section>
+      )}
 
+      {tab === "health" && (
       <section id="ms-health" className="my-space-block">
         <h3 className="my-space-block-title">Health lanai</h3>
         {f.healthLog ? (
@@ -390,7 +482,9 @@ export function MySpaceDashboard() {
           <LockedTeaser feature="healthLog" currentLabel={planLabel} />
         )}
       </section>
+      )}
 
+      {tab === "pets" && (
       <section id="ms-pets" className="my-space-block">
         <h3 className="my-space-block-title">Pet parade</h3>
         {f.petSchedule ? (
@@ -399,7 +493,9 @@ export function MySpaceDashboard() {
           <LockedTeaser feature="petSchedule" currentLabel={planLabel} />
         )}
       </section>
+      )}
 
+      {tab === "calendar" && (
       <section id="ms-calendar" className="my-space-block">
         <h3 className="my-space-block-title">My calendar board</h3>
         {f.calendarBoard ? (
@@ -408,7 +504,9 @@ export function MySpaceDashboard() {
           <LockedTeaser feature="calendarBoard" currentLabel={planLabel} />
         )}
       </section>
+      )}
 
+      {tab === "lounge" && (
       <section id="ms-lounge" className="my-space-block">
         <h3 className="my-space-block-title">Royalty lounge</h3>
         {f.exclusiveLounge ? (
@@ -417,7 +515,9 @@ export function MySpaceDashboard() {
           <LockedTeaser feature="exclusiveLounge" currentLabel={planLabel} />
         )}
       </section>
+      )}
 
+      {tab === "links" && (
       <section id="ms-links" className="my-space-block">
         <h3 className="my-space-block-title">Site shortcuts</h3>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
@@ -463,11 +563,13 @@ export function MySpaceDashboard() {
           </Link>
         </div>
       </section>
+      )}
 
       <p className="mkt-disclaimer">
         Tiers:{" "}
         {HUB_TIERS.map((t) => t.label).join(" → ")}. Paid upgrades need Stripe
-        price IDs; Studio can set plan for beta testing. Not affiliated with The
+        price IDs; Studio can set plan for beta testing. Dashboard modules
+        store personal data in this browser only. Not affiliated with The
         Villages® operators.
       </p>
     </div>

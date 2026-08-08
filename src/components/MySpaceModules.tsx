@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-/** Lightweight localStorage boards for Lanai Legend+ modules */
+/** Re-export full boards (ported from desktop weather-app). */
+export { MySpaceHealthBoard as MySpaceHealthLog } from "@/components/MySpaceHealthBoard";
+export { MySpacePetBoard as MySpacePetSchedule } from "@/components/MySpacePetBoard";
 
 function useLocalJson<T>(key: string, initial: T) {
   const [value, setValue] = useState<T>(initial);
@@ -28,132 +30,6 @@ function useLocalJson<T>(key: string, initial: T) {
   }
 
   return { value, save, ready };
-}
-
-export function MySpaceHealthLog() {
-  const { value, save, ready } = useLocalJson("tvi-ms-health", {
-    weight: "",
-    note: "",
-    walked: false,
-    meds: false,
-  });
-
-  if (!ready) return <p className="panel-hint">Loading health lanai…</p>;
-
-  return (
-    <div className="about-panel ms-module">
-      <p className="ms-module-lead">
-        Private on this browser — no wellness cult required. Just honest
-        checkboxes and optional numbers.
-      </p>
-      <div className="form-grid ms-module-form">
-        <div className="field">
-          <label>Weight (optional)</label>
-          <input
-            value={value.weight}
-            onChange={(e) => save({ ...value, weight: e.target.value })}
-            placeholder="e.g. 168"
-            inputMode="decimal"
-          />
-        </div>
-        <div className="field">
-          <label>Today’s note</label>
-          <input
-            value={value.note}
-            onChange={(e) => save({ ...value, note: e.target.value })}
-            placeholder="Walked the long way home…"
-          />
-        </div>
-        <label className="ms-check">
-          <input
-            type="checkbox"
-            checked={value.walked}
-            onChange={(e) => save({ ...value, walked: e.target.checked })}
-          />
-          I moved on purpose today
-        </label>
-        <label className="ms-check">
-          <input
-            type="checkbox"
-            checked={value.meds}
-            onChange={(e) => save({ ...value, meds: e.target.checked })}
-          />
-          Meds / vitamins checked off
-        </label>
-      </div>
-    </div>
-  );
-}
-
-export function MySpacePetSchedule() {
-  const { value, save, ready } = useLocalJson("tvi-ms-pet", {
-    petName: "The Real CEO",
-    morningWalk: false,
-    eveningWalk: false,
-    breakfast: false,
-    dinner: false,
-    note: "",
-  });
-
-  if (!ready) return <p className="panel-hint">Loading pet parade…</p>;
-
-  return (
-    <div className="about-panel ms-module">
-      <p className="ms-module-lead">
-        Walks, meals, and reminders that Florida dogs have strong opinions about
-        3 p.m. thunderstorms.
-      </p>
-      <div className="form-grid ms-module-form">
-        <div className="field">
-          <label>Pet name / title</label>
-          <input
-            value={value.petName}
-            onChange={(e) => save({ ...value, petName: e.target.value })}
-          />
-        </div>
-        <label className="ms-check">
-          <input
-            type="checkbox"
-            checked={value.morningWalk}
-            onChange={(e) => save({ ...value, morningWalk: e.target.checked })}
-          />
-          Morning walk
-        </label>
-        <label className="ms-check">
-          <input
-            type="checkbox"
-            checked={value.eveningWalk}
-            onChange={(e) => save({ ...value, eveningWalk: e.target.checked })}
-          />
-          Evening walk
-        </label>
-        <label className="ms-check">
-          <input
-            type="checkbox"
-            checked={value.breakfast}
-            onChange={(e) => save({ ...value, breakfast: e.target.checked })}
-          />
-          Breakfast
-        </label>
-        <label className="ms-check">
-          <input
-            type="checkbox"
-            checked={value.dinner}
-            onChange={(e) => save({ ...value, dinner: e.target.checked })}
-          />
-          Dinner
-        </label>
-        <div className="field">
-          <label>Note</label>
-          <input
-            value={value.note}
-            onChange={(e) => save({ ...value, note: e.target.value })}
-            placeholder="Squirrel incident under control"
-          />
-        </div>
-      </div>
-    </div>
-  );
 }
 
 type CalItem = { id: string; text: string; when: string };
