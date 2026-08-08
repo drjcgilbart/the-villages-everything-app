@@ -198,12 +198,23 @@ export function topByCuisine(
   return ranked;
 }
 
-/** Top 5 for every cuisine that has enough reviews. */
-export function allCuisineLeaders(limit = 5, minReviews = 1) {
+/**
+ * Top N per cuisine.
+ * Default minReviews=0 so boards (and jump anchors) still appear for
+ * real directory restaurants that do not have community ratings yet.
+ */
+export function allCuisineLeaders(limit = 5, minReviews = 0) {
   return CUISINES.map((cuisine) => ({
     cuisine,
     leaders: topByCuisine(cuisine, limit, minReviews),
   })).filter((block) => block.leaders.length > 0);
+}
+
+/** Cuisines that currently have at least one restaurant listed. */
+export function cuisinesWithRestaurants(): Cuisine[] {
+  const data = loadDining();
+  const present = new Set(data.restaurants.map((r) => r.cuisine));
+  return CUISINES.filter((c) => present.has(c));
 }
 
 export function overallLeaders(limit = 10, minReviews = 1): RankedRestaurant[] {

@@ -7,6 +7,7 @@ import { RestaurantSuggestForm } from "@/components/RestaurantSuggestForm";
 import { StarRating } from "@/components/StarRating";
 import {
   allCuisineLeaders,
+  cuisinesWithRestaurants,
   diningSummary,
   getInterviews,
   loadDining,
@@ -15,7 +16,7 @@ import {
   withStats,
 } from "@/lib/dining";
 import { formatDate } from "@/lib/format";
-import { CUISINE_ART, CUISINES } from "@/lib/diningTypes";
+import { CUISINE_ART } from "@/lib/diningTypes";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -27,7 +28,9 @@ export const metadata = {
 export default function DiningPage() {
   const data = loadDining();
   const summary = diningSummary();
-  const cuisineLeaders = allCuisineLeaders(5, 1);
+  // Include unrated spots so jump anchors always exist for listed cuisines
+  const cuisineLeaders = allCuisineLeaders(8, 0);
+  const jumpCuisines = cuisinesWithRestaurants();
   const topOverall = overallLeaders(5, 1);
   const interviews = getInterviews({ featuredOnly: false }).slice(0, 4);
   const recent = recentReviews(6);
@@ -89,8 +92,12 @@ export default function DiningPage() {
         <div className="shell">
           <div className="dining-jump">
             <span className="dining-jump-label">Jump to cuisine</span>
-            {CUISINES.map((c) => (
-              <a key={c} href={`#cuisine-${c.toLowerCase()}`} className="dining-chip">
+            {jumpCuisines.map((c) => (
+              <a
+                key={c}
+                href={`#cuisine-${c.toLowerCase()}`}
+                className="dining-chip"
+              >
                 {c}
               </a>
             ))}
@@ -135,19 +142,19 @@ export default function DiningPage() {
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="shell">
-          <div className="section-head">
+          <div className="section-head" id="by-cuisine">
             <div>
-              <h2>Top 5 by cuisine</h2>
+              <h2>By cuisine</h2>
               <p>
-                Live leaderboards for every cuisine with reviews. Rankings use
-                average stars, then number of reviews as the tiebreaker.
+                Jump chips above scroll here. Boards list restaurants in each
+                cuisine — ratings rise as neighbors leave reviews.
               </p>
             </div>
           </div>
 
           {cuisineLeaders.length === 0 ? (
             <div className="empty-state">
-              No ranked restaurants yet. Add a review to start the boards.
+              No restaurants listed yet. Suggest a spot below.
             </div>
           ) : (
             <div className="cuisine-boards">
@@ -155,7 +162,7 @@ export default function DiningPage() {
                 <div
                   key={cuisine}
                   id={`cuisine-${cuisine.toLowerCase()}`}
-                  className="cuisine-board about-panel"
+                  className="cuisine-board about-panel dining-anchor-target"
                 >
                   <div className="cuisine-board-art">
                     <Image
@@ -168,7 +175,9 @@ export default function DiningPage() {
                   </div>
                   <div className="cuisine-board-head">
                     <h3>{cuisine}</h3>
-                    <span>Top {leaders.length}</span>
+                    <span>
+                      {leaders.length} spot{leaders.length === 1 ? "" : "s"}
+                    </span>
                   </div>
                   <ol className="cuisine-leader-list">
                     {leaders.map((r) => (
@@ -182,8 +191,21 @@ export default function DiningPage() {
                             </em>
                           </span>
                           <span className="leader-score">
-                            <StarRating value={r.stats.averageRating} size="sm" showValue />
-                            <small>{r.stats.reviewCount} reviews</small>
+                            {r.stats.reviewCount > 0 ? (
+                              <>
+                                <StarRating
+                                  value={r.stats.averageRating}
+                                  size="sm"
+                                  showValue
+                                />
+                                <small>
+                                  {r.stats.reviewCount} review
+                                  {r.stats.reviewCount === 1 ? "" : "s"}
+                                </small>
+                              </>
+                            ) : (
+                              <small className="leader-unrated">No ratings yet</small>
+                            )}
                           </span>
                         </Link>
                         <DiningFavoriteButton

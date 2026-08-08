@@ -5461,6 +5461,22 @@ a.floating-back-btn {
   background: rgba(31, 107, 74, 0.06);
 }
 
+/* Jump-to-cuisine anchors clear the sticky site header */
+.dining-anchor-target,
+.cuisine-board[id],
+#all-restaurants,
+#suggest,
+#interviews,
+#by-cuisine {
+  scroll-margin-top: 5.5rem;
+}
+
+.leader-unrated {
+  color: var(--muted);
+  font-weight: 600;
+  font-style: italic;
+}
+
 .star-rating {
   display: inline-flex;
   align-items: center;
