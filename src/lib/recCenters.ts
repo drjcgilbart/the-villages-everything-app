@@ -48,7 +48,7 @@ const TYPE_DEFAULTS: Record<
     hours: "Open daily 7:00am – 10:00pm (confirm holidays)",
     amenityLine:
       "Meeting rooms, cards, billiards, family pool, and outdoor facilities typical of village centers",
-    image: "/graphics/rec-centers/type-village.jpg",
+    image: "/graphics/rec-centers/type-village-sq.jpg",
   },
   neighborhood: {
     hours: "Open daily 7:30am – dusk (confirm seasonally)",
@@ -696,17 +696,18 @@ const NEIGHBORHOOD_MINI: Mini[] = [
   { id: "winifred", name: "Winifred Recreation", shortName: "Winifred", address: "624 Kingston Way", phone: "352-259-6590", path: "winifred", areaHint: "Kingston Way" },
 ];
 
+/** Cache-busted full-bleed squares (no baked-in rounded black corners). */
 const VILLAGE_IMAGES = [
-  "/graphics/rec-centers/village-a.jpg",
-  "/graphics/rec-centers/village-b.jpg",
-  "/graphics/rec-centers/village-c.jpg",
-  "/graphics/rec-centers/village-d.jpg",
+  "/graphics/rec-centers/village-a-sq.jpg",
+  "/graphics/rec-centers/village-b-sq.jpg",
+  "/graphics/rec-centers/village-c-sq.jpg",
+  "/graphics/rec-centers/village-d-sq.jpg",
 ];
 
 const NEIGHBORHOOD_IMAGES = [
-  "/graphics/rec-centers/neighborhood-a.jpg",
-  "/graphics/rec-centers/neighborhood-b.jpg",
-  "/graphics/rec-centers/neighborhood-c.jpg",
+  "/graphics/rec-centers/neighborhood-a-sq.jpg",
+  "/graphics/rec-centers/neighborhood-b-sq.jpg",
+  "/graphics/rec-centers/neighborhood-c-sq.jpg",
 ];
 
 function expandMini(

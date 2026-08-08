@@ -2653,6 +2653,8 @@ a.ts-square-card:hover .ts-square-card-img {
   object-fit: cover;
   object-position: center;
   display: block;
+  transform: scale(1.12);
+  transform-origin: center center;
 }
 
 .rc-preview-theme {
@@ -2816,8 +2818,9 @@ a.ts-square-card:hover .ts-square-card-img {
   flex: 0 0 auto;
   overflow: hidden;
   min-height: 0;
-  background: #f7f1e8;
-  border-radius: 0; /* card clips the outer rounded square */
+  background: #fbf8f0;
+  /* Rounded square art frame — same size on every card */
+  border-radius: 0;
 }
 
 .rc-thumb-img {
@@ -2829,6 +2832,9 @@ a.ts-square-card:hover .ts-square-card-img {
   object-fit: cover;
   object-position: center;
   display: block;
+  /* Slight zoom clips any baked soft-corner / black rim in the asset */
+  transform: scale(1.12);
+  transform-origin: center center;
 }
 
 .rc-thumb-body {
@@ -2872,6 +2878,8 @@ a.ts-square-card:hover .ts-square-card-img {
   object-fit: cover;
   object-position: center;
   display: block;
+  transform: scale(1.12);
+  transform-origin: center center;
 }
 
 @media (max-width: 860px) {

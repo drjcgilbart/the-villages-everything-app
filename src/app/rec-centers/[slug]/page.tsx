@@ -89,13 +89,14 @@ export default async function RecCenterDetailPage({
       <section className="section" style={{ paddingBottom: 0 }}>
         <div className="shell">
           <figure className="rc-hero-figure">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={center.image}
               alt={`Whimsical illustration of ${center.shortName} recreation center`}
               width={960}
               height={960}
               className="rc-hero-img"
-              priority
+              decoding="async"
             />
             <figcaption className="ts-photo-credit">
               Original whimsical illustration for The Villages Everything App · free to use

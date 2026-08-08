@@ -206,13 +206,14 @@ export function RecCenterBrowser() {
       {selected && filtered.length > 0 && (
         <div className="rc-preview about-panel">
           <div className="rc-preview-art">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={selected.image}
               alt=""
               width={480}
               height={480}
               className="rc-preview-img"
-              priority
+              decoding="async"
             />
           </div>
           <div className="rc-preview-copy">
@@ -287,12 +288,16 @@ export function RecCenterBrowser() {
                 aria-pressed={isActive}
               >
                 <span className="rc-thumb-art">
-                  <Image
+                  {/* Plain img + fixed square frame: avoids next/image cache of old corner artifacts */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={c.image}
                     alt=""
                     width={200}
                     height={200}
                     className="rc-thumb-img"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </span>
                 <span className="rc-thumb-body">
