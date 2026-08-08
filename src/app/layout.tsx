@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DonateMascotFloat } from "@/components/DonateMascotFloat";
@@ -57,6 +59,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <DonateMascotFloat />
         <MascotQuipPopup />
         <ThemeMusicPlayer />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
