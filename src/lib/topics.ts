@@ -171,7 +171,7 @@ export const TOPICS: TopicDef[] = [
     kicker: "Fairways & cart paths",
     description:
       "Leader Board by handicap and best games, find a foursome, celebrate holes-in-one, plus executive trail resources, maps, and cart-path tips.",
-    image: "/graphics/hero-golf-cart.jpg",
+    image: "/graphics/theme-golf.jpg",
     tags: [
       "golf",
       "golfing",
@@ -712,7 +712,7 @@ export const MAIN_TOPICS: {
     label: "Golf",
     blurb:
       "Executive trail, trail fees, course maps, and cart-path optimism — just one more hole.",
-    image: "/graphics/hero-golf-cart.jpg",
+    image: "/graphics/theme-golf.jpg",
   },
   {
     href: "/club-zone",

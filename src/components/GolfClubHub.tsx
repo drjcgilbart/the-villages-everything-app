@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   GolfAce,
@@ -12,6 +13,7 @@ import type {
   GolfRound,
 } from "@/lib/golfClubTypes";
 import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
+import { GOLF_ART } from "@/lib/golfResources";
 
 type Feed = {
   handicapLeaders: GolfHandicapLeader[];
@@ -196,7 +198,16 @@ export function GolfClubHub() {
 
       {/* —— Leaderboard —— */}
       <section className="golf-club-section" id="leaderboard">
-        <div className="section-head">
+        <div className="section-head golf-section-head-art">
+          <div className="golf-section-badge" aria-hidden>
+            <Image
+              src={GOLF_ART.badgeLeader}
+              alt=""
+              width={72}
+              height={72}
+              className="golf-section-badge-img"
+            />
+          </div>
           <div>
             <h2>The Villages Leader Board</h2>
             <p>
@@ -428,7 +439,16 @@ export function GolfClubHub() {
 
       {/* —— Foursome meetup —— */}
       <section className="golf-club-section" id="foursome">
-        <div className="section-head">
+        <div className="section-head golf-section-head-art">
+          <div className="golf-section-badge" aria-hidden>
+            <Image
+              src={GOLF_ART.badgeFoursome}
+              alt=""
+              width={72}
+              height={72}
+              className="golf-section-badge-img"
+            />
+          </div>
           <div>
             <h2>Find a foursome</h2>
             <p>
@@ -623,7 +643,16 @@ export function GolfClubHub() {
 
       {/* —— Holes in one —— */}
       <section className="golf-club-section" id="aces">
-        <div className="section-head">
+        <div className="section-head golf-section-head-art">
+          <div className="golf-section-badge" aria-hidden>
+            <Image
+              src={GOLF_ART.badgeAce}
+              alt=""
+              width={72}
+              height={72}
+              className="golf-section-badge-img"
+            />
+          </div>
           <div>
             <h2>Holes in One</h2>
             <p>
@@ -634,8 +663,14 @@ export function GolfClubHub() {
         </div>
 
         <div className="about-panel golf-ace-banner">
-          <div className="golf-ace-banner-emoji" aria-hidden="true">
-            ⛳
+          <div className="golf-ace-banner-art" aria-hidden="true">
+            <Image
+              src={GOLF_ART.holeInOne}
+              alt=""
+              width={160}
+              height={160}
+              className="golf-ace-banner-img"
+            />
           </div>
           <div>
             <strong>Congratulations, ace heroes!</strong>

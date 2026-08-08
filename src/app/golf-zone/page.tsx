@@ -6,6 +6,8 @@ import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
 import {
+  GOLF_ART,
+  GOLF_FEATURE_CARDS,
   GOLF_HUB,
   GOLF_LINK_GROUPS,
   GOLF_SNAPSHOT,
@@ -53,18 +55,62 @@ export default function GolfZonePage() {
           </div>
           <div className="page-hero-art">
             <Image
-              src={topic.image}
+              src={GOLF_ART.theme}
               alt=""
-              width={topic.image.includes("hero") ? 320 : 260}
-              height={topic.image.includes("hero") ? 180 : 260}
-              className={`page-hero-img${
-                topic.image.includes("hero") ? " page-hero-img-wide" : ""
-              }`}
+              width={280}
+              height={280}
+              className="page-hero-img"
               priority
             />
           </div>
         </div>
       </div>
+
+      <section className="section" id="golf-features" style={{ paddingBottom: 0 }}>
+        <div className="shell">
+          <div className="section-head">
+            <div>
+              <h2>Tee it up</h2>
+              <p>
+                Jump to the Leader Board, find a foursome, toast a hole-in-one,
+                or dig into trail fees and maps.
+              </p>
+            </div>
+          </div>
+          <div className="golf-feature-grid">
+            {GOLF_FEATURE_CARDS.map((card) => (
+              <a
+                key={card.id}
+                href={card.href}
+                className="golf-feature-card about-panel"
+              >
+                <div className="golf-feature-art">
+                  <Image
+                    src={card.image}
+                    alt=""
+                    width={640}
+                    height={640}
+                    className="golf-feature-img"
+                  />
+                  <span className="golf-feature-badge" aria-hidden>
+                    <Image
+                      src={card.badge}
+                      alt=""
+                      width={96}
+                      height={96}
+                      className="golf-feature-badge-img"
+                    />
+                  </span>
+                </div>
+                <div className="golf-feature-body">
+                  <strong>{card.title}</strong>
+                  <span>{card.blurb}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="section" id="golf-club">
         <div className="shell">
@@ -86,8 +132,19 @@ export default function GolfZonePage() {
           <div className="golf-snapshot-grid">
             {GOLF_SNAPSHOT.map((item) => (
               <article key={item.title} className="about-panel golf-snapshot-card">
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
+                <div className="golf-snapshot-art">
+                  <Image
+                    src={item.image}
+                    alt=""
+                    width={640}
+                    height={640}
+                    className="golf-snapshot-img"
+                  />
+                </div>
+                <div className="golf-snapshot-body">
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </div>
               </article>
             ))}
           </div>

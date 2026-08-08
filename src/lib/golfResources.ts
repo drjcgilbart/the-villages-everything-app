@@ -23,22 +23,76 @@ export const GOLF_HUB = {
     "Executive Trail free greens for residents (trail fee if you ride your cart), plus championship / country-club play through Golf The Villages. Cart paths are a lifestyle; the fairways are the hobby.",
 } as const;
 
+/** Whimsical Florida golf art under /public/graphics/golf */
+export const GOLF_ART = {
+  theme: "/graphics/theme-golf.jpg",
+  leaderboard: "/graphics/golf/leaderboard.jpg",
+  foursome: "/graphics/golf/foursome.jpg",
+  holeInOne: "/graphics/golf/hole-in-one.jpg",
+  executiveTrail: "/graphics/golf/executive-trail.jpg",
+  championship: "/graphics/golf/championship.jpg",
+  cartPath: "/graphics/golf/cart-path.jpg",
+  badgeLeader: "/graphics/golf/badge-leader.jpg",
+  badgeAce: "/graphics/golf/badge-ace.jpg",
+  badgeFoursome: "/graphics/golf/badge-foursome.jpg",
+} as const;
+
 export const GOLF_SNAPSHOT = [
   {
     title: "Executive Golf Trail",
     body: "40+ nine-hole executive courses (mostly par 3s, occasional par 4). Greens fees free for residents via amenity fee; trail fee required to use your personal cart on the path network.",
+    image: GOLF_ART.executiveTrail,
   },
   {
     title: "Difficulty levels 1–4",
     body: "Executive courses are rated Level 1 (friendliest) through Level 4 (more challenge) so you can match the day to your game — or your guests.",
+    image: GOLF_ART.leaderboard,
   },
   {
     title: "Championship & clubs",
     body: "Championship and Golf & Country Club courses are a separate system (developer / club side) with green fees and tee-time culture. Great when you want a full 18 and a different vibe.",
+    image: GOLF_ART.championship,
   },
   {
     title: "Cart path reality",
     body: "On par-3 executive holes, carts stay on the path. Par 4s may allow off-path under normal conditions. Wet turf = restrictions. Don’t invent new cart rules mid-round.",
+    image: GOLF_ART.cartPath,
+  },
+] as const;
+
+/** Jump cards for the big club tools on this page */
+export const GOLF_FEATURE_CARDS = [
+  {
+    id: "leaderboard",
+    href: "#leaderboard",
+    title: "Leader Board",
+    blurb: "Handicaps and best scores by course — neighbor-reported, admin-approved.",
+    image: GOLF_ART.leaderboard,
+    badge: GOLF_ART.badgeLeader,
+  },
+  {
+    id: "foursome",
+    href: "#foursome",
+    title: "Find a foursome",
+    blurb: "Post or join when you need one (or three) for the next nine.",
+    image: GOLF_ART.foursome,
+    badge: GOLF_ART.badgeFoursome,
+  },
+  {
+    id: "aces",
+    href: "#aces",
+    title: "Holes in One",
+    blurb: "Celebrate the ace wall — course, hole, and the story that goes with it.",
+    image: GOLF_ART.holeInOne,
+    badge: GOLF_ART.badgeAce,
+  },
+  {
+    id: "resources",
+    href: "#resources",
+    title: "Trail fees & maps",
+    blurb: "Official fees, maps, FAQs, and the cart-path rules that keep fairways green.",
+    image: GOLF_ART.cartPath,
+    badge: GOLF_ART.badgeLeader,
   },
 ] as const;
 
