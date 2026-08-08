@@ -95,7 +95,12 @@ function optionalPhotoUrl(v: unknown): string | undefined {
   if (!t) return undefined;
   if (t.length > 500) throw new Error("Photo URL is too long");
   // Only allow app media proxy or relative paths we control
-  if (t.startsWith("/api/media/") || t.startsWith("/uploads/")) return t;
+  if (
+    t.startsWith("/api/media/") ||
+    t.startsWith("/uploads/") ||
+    t.startsWith("/member-uploads/")
+  )
+    return t;
   if (t.startsWith("https://") && t.includes("blob.vercel-storage.com")) {
     return t;
   }

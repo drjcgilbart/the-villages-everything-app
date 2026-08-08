@@ -45,6 +45,25 @@ export async function GET(
     });
   }
 
+  // 1b) Committed static recovery folder (public/member-uploads) — used when
+  // Vercel Blob Hobby is over quota and uploads can't live in Blob.
+  try {
+    const pub = path.join(process.cwd(), "public", "member-uploads", safe);
+    if (fs.existsSync(pub) && fs.statSync(pub).isFile()) {
+      const data = fs.readFileSync(pub);
+      const ext = path.extname(pub).toLowerCase();
+      const type = TYPES[ext] || "application/octet-stream";
+      return new NextResponse(data, {
+        headers: {
+          "Content-Type": type,
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
+    }
+  } catch {
+    /* fall through */
+  }
+
   // 2) Durable Vercel Blob — stream bytes (works for private stores with token)
   const fromBlob = await fetchUploadBlobBytes(safe);
   if (fromBlob) {
