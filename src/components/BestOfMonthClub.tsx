@@ -326,9 +326,16 @@ export function BestOfMonthClub() {
     }
   }
 
-  function setFileFromInput(next: File | null) {
+  function setFileFromInput(
+    next: File | null,
+    options?: { preserveMsg?: boolean }
+  ) {
     setFile(next);
-    setSubmitMsg(null);
+    // IMPORTANT: do not clear submitMsg when resetting the form after a
+    // successful submit — that was wiping the success banner immediately.
+    if (!options?.preserveMsg) {
+      setSubmitMsg(null);
+    }
     setPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return next && next.type.startsWith("image/")
@@ -342,6 +349,24 @@ export function BestOfMonthClub() {
         text: `Photo is ${Math.round(next.size / 1024 / 1024 * 10) / 10} MB — it will be automatically resized to under 2 MB when you click Submit.`,
       });
     }
+  }
+
+  function showSubmitResult(kind: "ok" | "err", text: string) {
+    setSubmitMsg({ kind, text });
+    setNote(text);
+    // Browser alert so the result is impossible to miss
+    try {
+      window.alert(kind === "ok" ? `Success!\n\n${text}` : `Could not submit\n\n${text}`);
+    } catch {
+      /* ignore */
+    }
+    // Scroll form status into view after alert is dismissed
+    requestAnimationFrame(() => {
+      document.getElementById("bom-submit-status")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
   }
 
   async function submit(e: React.FormEvent) {
@@ -430,26 +455,16 @@ export function BestOfMonthClub() {
       const sizeNote = prepared.compressed
         ? ` Photo auto-resized ${Math.round(prepared.originalBytes / 1024)} KB → ${Math.round(uploadFile.size / 1024)} KB.`
         : "";
-      const okText = `Success! “${t}” is pending admin approval.${sizeNote} Check Admin → Best of Month → Pending.`;
-      setSubmitMsg({ kind: "ok", text: okText });
-      setNote(okText);
+      const okText = `“${t}” is pending admin approval.${sizeNote} Open Admin → Best of Month → Pending to approve it.`;
       setTitle("");
       setDescription("");
-      setFileFromInput(null);
+      // preserveMsg: true — form clear must not erase the success banner
+      setFileFromInput(null, { preserveMsg: true });
+      showSubmitResult("ok", okText);
       await load();
-      // Keep success message in view (form is at bottom of a long page)
-      document.getElementById("bom-submit-status")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
     } catch (err) {
       const text = err instanceof Error ? err.message : "Submit failed";
-      setSubmitMsg({ kind: "err", text });
-      setNote(text);
-      document.getElementById("bom-submit-status")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+      showSubmitResult("err", text);
     } finally {
       setSubmitting(false);
     }
@@ -744,43 +759,44 @@ export function BestOfMonthClub() {
           <div
             id="bom-submit-status"
             role="status"
-            aria-live="polite"
+            aria-live="assertive"
             style={{ gridColumn: "1 / -1" }}
           >
             {submitMsg && (
               <div
-                className={
-                  submitMsg.kind === "err"
-                    ? "msg msg-err"
-                    : submitMsg.kind === "ok"
-                      ? "msg msg-ok"
-                      : "msg"
-                }
                 style={{
                   marginBottom: "0.75rem",
-                  padding: "0.85rem 1rem",
+                  padding: "1rem 1.1rem",
                   borderRadius: 12,
+                  fontSize: "1.05rem",
+                  fontWeight: 600,
+                  lineHeight: 1.45,
+                  color:
+                    submitMsg.kind === "err"
+                      ? "#5c1a12"
+                      : submitMsg.kind === "ok"
+                        ? "#0f3d24"
+                        : "#0c2d4a",
                   background:
                     submitMsg.kind === "err"
-                      ? "rgba(180, 60, 40, 0.12)"
+                      ? "#fde8e4"
                       : submitMsg.kind === "ok"
-                        ? "rgba(40, 140, 80, 0.12)"
-                        : "rgba(40, 100, 180, 0.1)",
+                        ? "#d8f5e4"
+                        : "#e3f0fc",
                   border:
                     submitMsg.kind === "err"
-                      ? "1px solid rgba(180, 60, 40, 0.35)"
+                      ? "2px solid #c44"
                       : submitMsg.kind === "ok"
-                        ? "1px solid rgba(40, 140, 80, 0.35)"
-                        : "1px solid rgba(40, 100, 180, 0.25)",
+                        ? "2px solid #2a8f55"
+                        : "2px solid #3a7fc4",
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.12)",
                 }}
               >
-                <strong>
-                  {submitMsg.kind === "err"
-                    ? "Could not submit: "
-                    : submitMsg.kind === "ok"
-                      ? "Done — "
-                      : ""}
-                </strong>
+                {submitMsg.kind === "err"
+                  ? "❌ Could not submit: "
+                  : submitMsg.kind === "ok"
+                    ? "✅ Success! "
+                    : "⏳ "}
                 {submitMsg.text}
               </div>
             )}
