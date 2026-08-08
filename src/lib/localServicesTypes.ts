@@ -33,8 +33,16 @@ export type LocalServiceListing = {
   phone?: string;
   email?: string;
   website?: string;
-  /** Optional portrait / logo / business card photo */
+  /**
+   * Main photo shown on the card grid (portrait, logo, shop, business card).
+   * Prefer this over photoUrls[0] when both exist.
+   */
   photoUrl?: string;
+  /**
+   * Up to 2 extra photos (shown in the detail pop-out with the main photo).
+   * Total gallery = main + extras (max 3 images).
+   */
+  extraPhotos?: string[];
   /** Who filled the form */
   submittedByName: string;
   status: LocalServiceModStatus;
@@ -53,3 +61,23 @@ export type LocalServicesData = {
   listings: LocalServiceListing[];
   updatedAt: string | null;
 };
+
+/** Main photo first, then extras — max 3 total. */
+export function listingPhotos(l: LocalServiceListing): string[] {
+  const main = (l.photoUrl || "").trim();
+  const extras = Array.isArray(l.extraPhotos)
+    ? l.extraPhotos.map((u) => String(u || "").trim()).filter(Boolean)
+    : [];
+  const all: string[] = [];
+  if (main) all.push(main);
+  for (const u of extras) {
+    if (!all.includes(u)) all.push(u);
+    if (all.length >= 3) break;
+  }
+  return all;
+}
+
+/** Primary image for card thumbnails. */
+export function listingMainPhoto(l: LocalServiceListing): string | undefined {
+  return listingPhotos(l)[0];
+}

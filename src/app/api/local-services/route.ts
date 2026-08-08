@@ -44,6 +44,8 @@ export async function POST(req: Request) {
       email: body.email,
       website: body.website,
       photoUrl: body.photoUrl,
+      extraPhotos: body.extraPhotos,
+      photos: body.photos,
       submittedByName: body.submittedByName,
       replacesId: body.replacesId,
     });

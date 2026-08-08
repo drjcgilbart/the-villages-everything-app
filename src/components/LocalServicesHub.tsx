@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LOCAL_SERVICE_CATEGORIES,
+  listingMainPhoto,
+  listingPhotos,
   type LocalServiceCategory,
   type LocalServiceListing,
 } from "@/lib/localServicesTypes";
@@ -12,11 +14,21 @@ type Feed = {
   categories: readonly string[];
 };
 
+const MAX_PHOTOS = 3;
+
+function truncate(text: string, max = 140) {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1).trimEnd()}…`;
+}
+
 export function LocalServicesHub() {
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [detail, setDetail] = useState<LocalServiceListing | null>(null);
+  const [detailPhotoIdx, setDetailPhotoIdx] = useState(0);
 
   // Form
   const [businessName, setBusinessName] = useState("");
@@ -28,8 +40,8 @@ export function LocalServicesHub() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  /** photos[0] = main, photos[1..2] = extras */
+  const [photos, setPhotos] = useState<string[]>([]);
   const [submittedByName, setSubmittedByName] = useState("");
   const [replacesId, setReplacesId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,6 +68,20 @@ export function LocalServicesHub() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!detail) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDetail(null);
+    }
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [detail]);
+
   const filtered = useMemo(() => {
     const list = feed?.listings || [];
     const q = query.trim().toLowerCase();
@@ -72,7 +98,13 @@ export function LocalServicesHub() {
     });
   }, [feed, category, query]);
 
+  function openDetail(l: LocalServiceListing) {
+    setDetail(l);
+    setDetailPhotoIdx(0);
+  }
+
   function prefillUpdate(l: LocalServiceListing) {
+    setDetail(null);
     setReplacesId(l.id);
     setBusinessName(l.businessName);
     setContactName(l.contactName);
@@ -82,8 +114,7 @@ export function LocalServicesHub() {
     setPhone(l.phone || "");
     setEmail(l.email || "");
     setWebsite(l.website || "");
-    setPhotoUrl(l.photoUrl || "");
-    setPhotoPreview(l.photoUrl || null);
+    setPhotos(listingPhotos(l));
     setSubmittedByName(l.contactName);
     setNote(`Updating “${l.businessName}” — submit for admin approval.`);
     document.getElementById("local-service-form")?.scrollIntoView({
@@ -92,26 +123,53 @@ export function LocalServicesHub() {
     });
   }
 
-  async function onPhotoChange(file: File | null) {
-    if (!file) return;
+  async function uploadPhoto(file: File): Promise<string> {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/local-services/upload", {
+      method: "POST",
+      body: fd,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    return data.url as string;
+  }
+
+  async function onPhotosChange(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const room = MAX_PHOTOS - photos.length;
+    if (room <= 0) {
+      setFormErr("You can add up to 3 photos (1 main + 2 extras).");
+      return;
+    }
     setUploading(true);
     setFormErr(null);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/local-services/upload", {
-        method: "POST",
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setPhotoUrl(data.url);
-      setPhotoPreview(data.url);
+      const batch = Array.from(files).slice(0, room);
+      const urls: string[] = [];
+      for (const file of batch) {
+        urls.push(await uploadPhoto(file));
+      }
+      setPhotos((prev) => [...prev, ...urls].slice(0, MAX_PHOTOS));
     } catch (e) {
       setFormErr(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
     }
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function makeMain(index: number) {
+    if (index <= 0) return;
+    setPhotos((prev) => {
+      const next = [...prev];
+      const [picked] = next.splice(index, 1);
+      next.unshift(picked);
+      return next;
+    });
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -132,7 +190,7 @@ export function LocalServicesHub() {
           phone: phone || undefined,
           email: email || undefined,
           website: website || undefined,
-          photoUrl: photoUrl || undefined,
+          photos: photos.length ? photos : undefined,
           submittedByName: submittedByName || contactName,
           replacesId: replacesId || undefined,
         }),
@@ -142,8 +200,7 @@ export function LocalServicesHub() {
       setNote(data.message || "Submitted for approval.");
       setDescription("");
       setReplacesId("");
-      setPhotoUrl("");
-      setPhotoPreview(null);
+      setPhotos([]);
       await load();
     } catch (err) {
       setFormErr(err instanceof Error ? err.message : "Submit failed");
@@ -160,6 +217,9 @@ export function LocalServicesHub() {
   }
 
   const cats = feed.categories;
+  const detailGallery = detail ? listingPhotos(detail) : [];
+  const detailMain =
+    detailGallery[detailPhotoIdx] || detailGallery[0] || null;
 
   return (
     <div className="local-svc-hub">
@@ -197,74 +257,192 @@ export function LocalServicesHub() {
         </div>
       ) : (
         <div className="local-svc-grid">
-          {filtered.map((l) => (
-            <article key={l.id} className="about-panel local-svc-card">
-              <div className="local-svc-card-media">
-                {l.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={l.photoUrl}
-                    alt=""
-                    className="local-svc-photo"
-                  />
-                ) : (
-                  <div className="local-svc-photo-placeholder" aria-hidden>
-                    ★
-                  </div>
-                )}
-              </div>
-              <div className="local-svc-card-body">
-                <div className="local-svc-card-top">
-                  <span className="pill">{l.category}</span>
-                  {l.village ? (
-                    <span className="pill">{l.village}</span>
+          {filtered.map((l) => {
+            const main = listingMainPhoto(l);
+            const count = listingPhotos(l).length;
+            return (
+              <article
+                key={l.id}
+                className="about-panel local-svc-card local-svc-card-clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => openDetail(l)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openDetail(l);
+                  }
+                }}
+                aria-label={`Open details for ${l.businessName}`}
+              >
+                <div className="local-svc-card-media">
+                  {main ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={main} alt="" className="local-svc-photo" />
+                  ) : (
+                    <div className="local-svc-photo-placeholder" aria-hidden>
+                      ★
+                    </div>
+                  )}
+                  {count > 1 ? (
+                    <span className="local-svc-photo-count">
+                      {count} photos
+                    </span>
                   ) : null}
                 </div>
-                <h3>{l.businessName}</h3>
-                <p className="local-svc-contact">
-                  <strong>{l.contactName}</strong>
+                <div className="local-svc-card-body">
+                  <div className="local-svc-card-top">
+                    <span className="pill">{l.category}</span>
+                    {l.village ? (
+                      <span className="pill">{l.village}</span>
+                    ) : null}
+                  </div>
+                  <h3>{l.businessName}</h3>
+                  <p className="local-svc-contact">
+                    <strong>{l.contactName}</strong>
+                  </p>
+                  <p className="local-svc-desc local-svc-desc-clip">
+                    {truncate(l.description)}
+                  </p>
+                  <p className="local-svc-card-hint">
+                    Click for full details
+                    {count > 0 ? " & photos" : ""}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {detail ? (
+        <div
+          className="local-svc-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="local-svc-lightbox-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDetail(null);
+          }}
+        >
+          <div className="local-svc-lightbox-panel about-panel">
+            <div className="local-svc-lightbox-head">
+              <div>
+                <div className="local-svc-card-top">
+                  <span className="pill">{detail.category}</span>
+                  {detail.village ? (
+                    <span className="pill">{detail.village}</span>
+                  ) : null}
+                </div>
+                <h3 id="local-svc-lightbox-title">{detail.businessName}</h3>
+                <p className="local-svc-contact" style={{ marginBottom: 0 }}>
+                  Contact: <strong>{detail.contactName}</strong>
                 </p>
-                <p className="local-svc-desc">{l.description}</p>
-                <ul className="club-leader-meta">
-                  {l.phone ? (
-                    <li>
-                      <strong>Phone:</strong>{" "}
-                      <a href={`tel:${l.phone.replace(/[^\d+]/g, "")}`}>
-                        {l.phone}
-                      </a>
-                    </li>
-                  ) : null}
-                  {l.email ? (
-                    <li>
-                      <strong>Email:</strong>{" "}
-                      <a href={`mailto:${l.email}`}>{l.email}</a>
-                    </li>
-                  ) : null}
-                  {l.website ? (
-                    <li>
-                      <strong>Website:</strong>{" "}
-                      <a
-                        href={l.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setDetail(null)}
+              >
+                Close
+              </button>
+            </div>
+
+            {detailMain ? (
+              <div className="local-svc-lightbox-media">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={detailMain}
+                  alt={`${detail.businessName} photo`}
+                  className="local-svc-lightbox-hero"
+                />
+                {detailGallery.length > 1 ? (
+                  <div className="local-svc-lightbox-thumbs">
+                    {detailGallery.map((url, i) => (
+                      <button
+                        key={`${url}-${i}`}
+                        type="button"
+                        className={`local-svc-thumb-btn${
+                          i === detailPhotoIdx ? " is-active" : ""
+                        }`}
+                        onClick={() => setDetailPhotoIdx(i)}
+                        aria-label={
+                          i === 0
+                            ? "Show main photo"
+                            : `Show photo ${i + 1}`
+                        }
                       >
-                        Visit site
-                      </a>
-                    </li>
-                  ) : null}
-                </ul>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" />
+                        {i === 0 ? (
+                          <span className="local-svc-thumb-label">Main</span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="local-svc-lightbox-body">
+              <p className="local-svc-lightbox-desc">{detail.description}</p>
+              <ul className="club-leader-meta">
+                {detail.phone ? (
+                  <li>
+                    <strong>Phone:</strong>{" "}
+                    <a
+                      href={`tel:${detail.phone.replace(/[^\d+]/g, "")}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {detail.phone}
+                    </a>
+                  </li>
+                ) : null}
+                {detail.email ? (
+                  <li>
+                    <strong>Email:</strong>{" "}
+                    <a
+                      href={`mailto:${detail.email}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {detail.email}
+                    </a>
+                  </li>
+                ) : null}
+                {detail.website ? (
+                  <li>
+                    <strong>Website:</strong>{" "}
+                    <a
+                      href={detail.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Visit site
+                    </a>
+                  </li>
+                ) : null}
+              </ul>
+              <div className="hero-actions">
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => prefillUpdate(l)}
+                  onClick={() => prefillUpdate(detail)}
                 >
                   Update this listing
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setDetail(null)}
+                >
+                  Done
+                </button>
               </div>
-            </article>
-          ))}
+            </div>
+          </div>
         </div>
-      )}
+      ) : null}
 
       <div
         className="about-panel local-svc-form-panel"
@@ -277,8 +455,8 @@ export function LocalServicesHub() {
         </h2>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
           Tell neighbors what you do. Listings go live only after admin
-          approval. Optional photo: portrait, logo, shop, or business card
-          (JPG/PNG/WebP, under 3&nbsp;MB).
+          approval. Photos optional: 1 main photo for the card, plus up to 2
+          extras in the detail view (JPG/PNG/WebP, under 3&nbsp;MB each).
         </p>
 
         {note ? <div className="msg msg-ok">{note}</div> : null}
@@ -386,31 +564,60 @@ export function LocalServicesHub() {
             />
           </div>
           <div className="field field-full">
-            <label htmlFor="svc-photo">Photo (optional)</label>
+            <label htmlFor="svc-photos">
+              Photos (optional — main + up to 2 more)
+            </label>
             <input
-              id="svc-photo"
+              id="svc-photos"
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp"
-              disabled={uploading || busy}
-              onChange={(e) => onPhotoChange(e.target.files?.[0] || null)}
+              multiple
+              disabled={uploading || busy || photos.length >= MAX_PHOTOS}
+              onChange={(e) => {
+                onPhotosChange(e.target.files);
+                e.target.value = "";
+              }}
             />
+            <p className="panel-hint">
+              First photo is the <strong>main</strong> card image. You can set
+              another as main after upload. {photos.length}/{MAX_PHOTOS}{" "}
+              uploaded.
+            </p>
             {uploading ? (
-              <p className="panel-hint">Uploading photo…</p>
+              <p className="panel-hint">Uploading photo(s)…</p>
             ) : null}
-            {photoPreview ? (
-              <div className="local-svc-form-preview">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoPreview} alt="Upload preview" />
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    setPhotoUrl("");
-                    setPhotoPreview(null);
-                  }}
-                >
-                  Remove photo
-                </button>
+            {photos.length > 0 ? (
+              <div className="local-svc-form-photos">
+                {photos.map((url, i) => (
+                  <div key={`${url}-${i}`} className="local-svc-form-photo">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={i === 0 ? "Main photo" : `Extra photo ${i}`}
+                    />
+                    <span className="local-svc-form-photo-badge">
+                      {i === 0 ? "Main" : `Extra ${i}`}
+                    </span>
+                    <div className="local-svc-form-photo-actions">
+                      {i > 0 ? (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => makeMain(i)}
+                        >
+                          Make main
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => removePhoto(i)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>

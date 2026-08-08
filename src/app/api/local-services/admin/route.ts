@@ -62,6 +62,8 @@ export async function POST(req: Request) {
         email: body.email,
         website: body.website,
         photoUrl: body.photoUrl,
+        extraPhotos: body.extraPhotos,
+        photos: body.photos,
         adminNote: body.adminNote,
       });
       return NextResponse.json({

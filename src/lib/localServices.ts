@@ -102,6 +102,41 @@ function optionalPhotoUrl(v: unknown): string | undefined {
   throw new Error("Invalid photo URL — upload an image first");
 }
 
+/** Parse main + up to 2 extras (or a single photos[] array, first = main). */
+function parsePhotos(input: {
+  photoUrl?: unknown;
+  extraPhotos?: unknown;
+  photos?: unknown;
+}): { photoUrl?: string; extraPhotos?: string[] } {
+  // Prefer explicit photos[] if provided (max 3)
+  if (Array.isArray(input.photos) && input.photos.length > 0) {
+    const urls: string[] = [];
+    for (const raw of input.photos) {
+      const u = optionalPhotoUrl(raw);
+      if (u && !urls.includes(u)) urls.push(u);
+      if (urls.length >= 3) break;
+    }
+    if (urls.length === 0) return {};
+    return {
+      photoUrl: urls[0],
+      extraPhotos: urls.slice(1).length ? urls.slice(1) : undefined,
+    };
+  }
+
+  const photoUrl = optionalPhotoUrl(input.photoUrl);
+  const extrasRaw = Array.isArray(input.extraPhotos) ? input.extraPhotos : [];
+  const extraPhotos: string[] = [];
+  for (const raw of extrasRaw) {
+    const u = optionalPhotoUrl(raw);
+    if (u && u !== photoUrl && !extraPhotos.includes(u)) extraPhotos.push(u);
+    if (extraPhotos.length >= 2) break;
+  }
+  return {
+    photoUrl,
+    extraPhotos: extraPhotos.length ? extraPhotos : undefined,
+  };
+}
+
 export function listApprovedServices(
   data: LocalServicesData = loadLocalServices()
 ): LocalServiceListing[] {
@@ -165,6 +200,8 @@ export async function submitLocalService(input: {
   email?: string;
   website?: string;
   photoUrl?: string;
+  extraPhotos?: string[];
+  photos?: string[];
   submittedByName?: string;
   replacesId?: string;
 }): Promise<LocalServiceListing> {
@@ -177,7 +214,7 @@ export async function submitLocalService(input: {
   const email = optionalText(input.email, 120);
   const phone = optionalText(input.phone, 40);
   const website = normalizeUrl(optionalText(input.website, 200));
-  const photoUrl = optionalPhotoUrl(input.photoUrl);
+  const { photoUrl, extraPhotos } = parsePhotos(input);
   const submittedByName = cleanText(
     input.submittedByName || contactName,
     80,
@@ -221,6 +258,7 @@ export async function submitLocalService(input: {
     email,
     website,
     photoUrl,
+    extraPhotos,
     submittedByName,
     status: "pending",
     createdAt: now,
@@ -307,6 +345,8 @@ export async function updateLocalService(
     email?: string | null;
     website?: string | null;
     photoUrl?: string | null;
+    extraPhotos?: string[] | null;
+    photos?: string[] | null;
     adminNote?: string | null;
   }
 ): Promise<LocalServiceListing> {
@@ -363,11 +403,46 @@ export async function updateLocalService(
   }
 
   let photoUrl = cur.photoUrl;
-  if (input.photoUrl !== undefined) {
-    photoUrl =
-      input.photoUrl === null || input.photoUrl === ""
-        ? undefined
-        : optionalPhotoUrl(input.photoUrl);
+  let extraPhotos = cur.extraPhotos;
+  if (
+    input.photos !== undefined ||
+    input.photoUrl !== undefined ||
+    input.extraPhotos !== undefined
+  ) {
+    const parsed = parsePhotos({
+      photoUrl:
+        input.photoUrl === null
+          ? undefined
+          : input.photoUrl !== undefined
+            ? input.photoUrl
+            : cur.photoUrl,
+      extraPhotos:
+        input.extraPhotos === null
+          ? []
+          : input.extraPhotos !== undefined
+            ? input.extraPhotos
+            : cur.extraPhotos,
+      photos:
+        input.photos === null
+          ? []
+          : input.photos !== undefined
+            ? input.photos
+            : undefined,
+    });
+    // Clearing all photos when empty arrays/nulls were sent
+    if (
+      (Array.isArray(input.photos) && input.photos.length === 0) ||
+      input.photos === null ||
+      (input.photoUrl === null &&
+        (input.extraPhotos === null ||
+          (Array.isArray(input.extraPhotos) && input.extraPhotos.length === 0)))
+    ) {
+      photoUrl = undefined;
+      extraPhotos = undefined;
+    } else {
+      photoUrl = parsed.photoUrl;
+      extraPhotos = parsed.extraPhotos;
+    }
   }
 
   let adminNote = cur.adminNote;
@@ -393,6 +468,7 @@ export async function updateLocalService(
     email,
     website,
     photoUrl,
+    extraPhotos,
     adminNote,
     updatedAt: new Date().toISOString(),
   };

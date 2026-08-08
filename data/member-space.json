@@ -2,10 +2,21 @@
   "spaces": [
     {
       "memberId": "mem-msev5grm-6359fd",
-      "plan": "free",
+      "plan": "porch_waver",
       "favoriteClubIds": [],
-      "updatedAt": "2026-08-05T16:14:58.894Z"
+      "updatedAt": "2026-08-05T16:14:58.894Z",
+      "donationBadges": [],
+      "goldenLoofah": false,
+      "goldenLoofahAt": null,
+      "planExpiresAt": null,
+      "topTierNomination": null
+    },
+    {
+      "memberId": "mem-msggkh7y-a66798",
+      "plan": "porch_waver",
+      "favoriteClubIds": [],
+      "updatedAt": "2026-08-08T09:41:52.849Z"
     }
   ],
-  "updatedAt": "2026-08-05T16:14:58.894Z"
+  "updatedAt": "2026-08-08T09:41:52.849Z"
 }

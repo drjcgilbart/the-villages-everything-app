@@ -1,0 +1,63 @@
+{
+  "listings": [
+    {
+      "id": "svc-msk74tdw-5b5046",
+      "businessName": "Spinnaker Solutions, LLC",
+      "contactName": "Kirk R. Benson",
+      "category": "Professional Services",
+      "description": "Spinnaker Solutions brings structure to complexity, clarifies priorities, and ensures communication drives action rather than confusion. Led by Kirk R. Benson, a retired Naval Officer, senior Navy Civilian, and former Commanding Officer, Spinnaker Solutions draws on decades of experience advising senior leaders, directing large portfolios, and helping organizations move from discussion to disciplined execution. Spinnaker Solutions also supports federal leadership development through an instructor partnership with Management Concepts, delivering professional development and leadership training to federal employees and military personnel nationwide.",
+      "phone": "(352) 461-1621",
+      "email": "Kirk@SpinnakerAdvisor.com",
+      "website": "https://spinnakeradvisor.com/",
+      "photoUrl": "/api/media/msk74r2c-local-svc-Kirk_R._Benson.png",
+      "submittedByName": "Kirk R. Benson",
+      "status": "approved",
+      "createdAt": "2026-08-08T09:53:41.060Z",
+      "updatedAt": "2026-08-08T09:54:02.384Z",
+      "approvedAt": "2026-08-08T09:54:02.384Z"
+    },
+    {
+      "id": "svc-msk6ytkf-792d67",
+      "businessName": "Cardless Gate Entry",
+      "contactName": "Doug",
+      "category": "Other",
+      "description": "Cardless gate entry for automobiles, golf cars, & key fobs. Group installs welcome. Gift cards available.",
+      "phone": "352-391-9494",
+      "photoUrl": "/api/media/msk6yr2a-local-svc-20260808_054607.jpg",
+      "submittedByName": "Doug",
+      "status": "approved",
+      "createdAt": "2026-08-08T09:49:01.359Z",
+      "updatedAt": "2026-08-08T09:49:13.793Z",
+      "approvedAt": "2026-08-08T09:49:13.793Z"
+    },
+    {
+      "id": "svc-msk6r35c-c6e4f2",
+      "businessName": "Rick the Numbers Guy",
+      "contactName": "Rick",
+      "category": "Other",
+      "description": "Supply & install 5 inch floating house numbers (horizontal, vertical, diagonal) on concrete. Call or text Rick (a Moultrie Creek resident) at 410-977-7829.",
+      "phone": "410-977-7829",
+      "photoUrl": "/api/media/msk6owhu-local-svc-Rick_the_Numbers_Guy_8-8-26.jpg",
+      "submittedByName": "Rick",
+      "status": "approved",
+      "createdAt": "2026-08-08T09:43:00.528Z",
+      "updatedAt": "2026-08-08T09:43:22.450Z",
+      "approvedAt": "2026-08-08T09:43:22.450Z"
+    },
+    {
+      "id": "svc-msk6oz2f-ec8d19",
+      "businessName": "Rick the Numbers Guy",
+      "contactName": "Rick",
+      "category": "Other",
+      "description": "Supply & install 5 inch floating house numbers (horizontal, vertical, diagonal) on concrete. Call or text Rick (a Moultrie Creek resident) at 410-977-7829.",
+      "phone": "4109777829",
+      "photoUrl": "/api/media/msk6owhu-local-svc-Rick_the_Numbers_Guy_8-8-26.jpg",
+      "submittedByName": "Rick",
+      "status": "rejected",
+      "createdAt": "2026-08-08T09:41:21.927Z",
+      "updatedAt": "2026-08-08T09:43:22.450Z",
+      "approvedAt": "2026-08-08T09:42:12.636Z"
+    }
+  ],
+  "updatedAt": "2026-08-08T09:54:02.384Z"
+}
