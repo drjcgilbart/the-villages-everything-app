@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isAdminAuthenticated } from "@/lib/auth";
+import {
+  blobConfigured,
+  durableConfigured,
+  redisConfigured,
+} from "@/lib/dataFs";
 import {
   bomMonthKey,
   castBomVoteAsync,
@@ -14,6 +20,7 @@ import type { BomCategory, BomFileType } from "@/lib/bestOfMonthTypes";
 import { BOM_CATEGORIES, BOM_CATEGORY_META } from "@/lib/bestOfMonthTypes";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const VOTER_COOKIE = "tvh_bom_voter";
 
@@ -60,6 +67,9 @@ export async function GET() {
       )
     : null;
 
+  const pending = data.entries.filter((e) => e.status === "pending");
+  const admin = await isAdminAuthenticated();
+
   const res = NextResponse.json({
     monthKey,
     categories: BOM_CATEGORY_META,
@@ -73,7 +83,14 @@ export async function GET() {
           categories: featuredEntries,
         }
       : null,
-    pendingCount: data.entries.filter((e) => e.status === "pending").length,
+    pendingCount: pending.length,
+    // Admin cookie only — so the portal can list pendings even if /admin API fails
+    pendingEntries: admin ? pending : undefined,
+    storage: {
+      redis: redisConfigured(),
+      blob: blobConfigured(),
+      durable: durableConfigured(),
+    },
   });
 
   if (setCookie) {

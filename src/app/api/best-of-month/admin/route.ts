@@ -19,22 +19,40 @@ import {
 } from "@/lib/bestOfMonth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  let data = await loadBomAsync();
-  data = await ensurePastMonthsTabulatedAsync(data);
-  return NextResponse.json({
-    entries: data.entries,
-    results: data.results,
-    monthKey: bomMonthKey(),
-    pending: data.entries.filter((e) => e.status === "pending"),
-    blobConfigured: blobConfigured(),
-    redisConfigured: redisConfigured(),
-    durableConfigured: durableConfigured(),
-  });
+  try {
+    let data = await loadBomAsync();
+    data = await ensurePastMonthsTabulatedAsync(data);
+    const pending = data.entries.filter((e) => e.status === "pending");
+    return NextResponse.json({
+      entries: data.entries,
+      results: data.results,
+      monthKey: bomMonthKey(),
+      pending,
+      pendingCount: pending.length,
+      blobConfigured: blobConfigured(),
+      redisConfigured: redisConfigured(),
+      durableConfigured: durableConfigured(),
+      updatedAt: data.updatedAt,
+    });
+  } catch (err) {
+    console.error("[bom/admin GET]", err);
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error ? err.message : "Failed to load Best of Month",
+        blobConfigured: blobConfigured(),
+        redisConfigured: redisConfigured(),
+        durableConfigured: durableConfigured(),
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {

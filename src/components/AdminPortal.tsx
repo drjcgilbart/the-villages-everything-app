@@ -32,6 +32,7 @@ export function AdminPortal() {
   const [password, setPassword] = useState("");
   const [tab, setTab] = useState<PortalTab>("members");
   const [pendingCount, setPendingCount] = useState(0);
+  const [bomPendingCount, setBomPendingCount] = useState(0);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null
   );
@@ -54,7 +55,7 @@ export function AdminPortal() {
 
   useEffect(() => {
     if (!authed) return;
-    fetch("/api/members/admin", { cache: "no-store" })
+    fetch("/api/members/admin", { cache: "no-store", credentials: "same-origin" })
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data.members)) {
@@ -66,6 +67,24 @@ export function AdminPortal() {
         }
       })
       .catch(() => {});
+
+    // Public feed exposes pendingCount without listing content — badge the tab
+    const loadBomPending = () =>
+      fetch("/api/best-of-month/entries", {
+        cache: "no-store",
+        credentials: "same-origin",
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (typeof data.pendingCount === "number") {
+            setBomPendingCount(data.pendingCount);
+          }
+        })
+        .catch(() => {});
+
+    loadBomPending();
+    const t = setInterval(loadBomPending, 15_000);
+    return () => clearInterval(t);
   }, [authed, tab]);
 
   async function login(e: React.FormEvent) {
@@ -213,6 +232,9 @@ export function AdminPortal() {
             onClick={() => setTab("bestof")}
           >
             Best of Month
+            {bomPendingCount > 0 ? (
+              <span className="admin-tab-badge">{bomPendingCount}</span>
+            ) : null}
           </button>
           <button
             type="button"

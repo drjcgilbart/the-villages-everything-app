@@ -15,33 +15,126 @@ type EditDraft = {
   status: BomEntry["status"];
 };
 
+type StorageInfo = {
+  redis: boolean;
+  blob: boolean;
+  durable: boolean;
+};
+
 export function AdminBestOfMonthPanel() {
   const [entries, setEntries] = useState<BomEntry[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"pending" | "approved" | "all">(
     "pending"
   );
-  const [blobOk, setBlobOk] = useState<boolean | null>(null);
-  const [redisOk, setRedisOk] = useState<boolean | null>(null);
-  const [durableOk, setDurableOk] = useState<boolean | null>(null);
+  const [storage, setStorage] = useState<StorageInfo | null>(null);
+  const [publicPendingCount, setPublicPendingCount] = useState<number | null>(
+    null
+  );
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/best-of-month/admin", { cache: "no-store" });
-    const data = await res.json();
-    if (res.ok) {
-      setEntries(data.entries || []);
-      setBlobOk(Boolean(data.blobConfigured));
-      setRedisOk(Boolean(data.redisConfigured));
-      setDurableOk(Boolean(data.durableConfigured));
+    setLoadError(null);
+    try {
+      // Primary: admin API
+      const res = await fetch("/api/best-of-month/admin", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const data = await res.json().catch(() => ({}));
+
+      // Cross-check: public feed (also returns pendingEntries when admin cookie present)
+      const pubRes = await fetch("/api/best-of-month/entries", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const pub = await pubRes.json().catch(() => ({}));
+      if (typeof pub.pendingCount === "number") {
+        setPublicPendingCount(pub.pendingCount);
+      }
+      if (pub.storage) {
+        setStorage({
+          redis: Boolean(pub.storage.redis),
+          blob: Boolean(pub.storage.blob),
+          durable: Boolean(pub.storage.durable),
+        });
+      }
+
+      if (res.status === 401) {
+        setLoadError(
+          "Admin session expired or not authorized. Log out and log back into Admin, then open Best of Month again."
+        );
+        setEntries([]);
+        return;
+      }
+
+      if (!res.ok) {
+        // Fallback: use pendingEntries from public feed if admin cookie worked there
+        const fallback = Array.isArray(pub.pendingEntries)
+          ? (pub.pendingEntries as BomEntry[])
+          : [];
+        if (fallback.length) {
+          setEntries(fallback);
+          setLoadError(
+            `Admin list API failed (${data.error || res.status}). Showing ${fallback.length} pending from backup feed — refresh after redeploy.`
+          );
+          setLastLoadedAt(new Date().toISOString());
+          return;
+        }
+        setLoadError(data.error || `Failed to load (${res.status})`);
+        setEntries([]);
+        return;
+      }
+
+      let list: BomEntry[] = Array.isArray(data.entries) ? data.entries : [];
+
+      // If admin API returned no pendings but public feed knows about some, merge them in
+      const pubPending = Array.isArray(pub.pendingEntries)
+        ? (pub.pendingEntries as BomEntry[])
+        : [];
+      if (pubPending.length) {
+        const byId = new Map(list.map((e) => [e.id, e]));
+        for (const e of pubPending) {
+          if (e?.id && !byId.has(e.id)) byId.set(e.id, e);
+        }
+        list = Array.from(byId.values());
+      }
+
+      setEntries(list);
+      if (data.blobConfigured !== undefined || data.redisConfigured !== undefined) {
+        setStorage({
+          redis: Boolean(data.redisConfigured),
+          blob: Boolean(data.blobConfigured),
+          durable: Boolean(data.durableConfigured),
+        });
+      }
+      setLastLoadedAt(new Date().toISOString());
+
+      const pendingN = list.filter((e) => e.status === "pending").length;
+      if (
+        typeof pub.pendingCount === "number" &&
+        pub.pendingCount > pendingN
+      ) {
+        setLoadError(
+          `Warning: site reports ${pub.pendingCount} pending submission(s) but this list only has ${pendingN}. Click Refresh. If it stays wrong, Redis/Blob may be out of sync.`
+        );
+      }
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Failed to load");
     }
   }, []);
 
   useEffect(() => {
     load().catch(() => undefined);
+    const t = setInterval(() => {
+      load().catch(() => undefined);
+    }, 12_000);
+    return () => clearInterval(t);
   }, [load]);
 
   function startEdit(e: BomEntry) {
@@ -68,6 +161,7 @@ export function AdminBestOfMonthPanel() {
       const res = await fetch("/api/best-of-month/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ action, id, ...extra }),
       });
       const data = await res.json();
@@ -97,6 +191,7 @@ export function AdminBestOfMonthPanel() {
       const res = await fetch("/api/best-of-month/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           action: "update",
           id,
@@ -123,6 +218,7 @@ export function AdminBestOfMonthPanel() {
     }
   }
 
+  const pendingN = entries.filter((e) => e.status === "pending").length;
   const visible =
     filter === "pending"
       ? entries.filter((e) => e.status === "pending")
@@ -135,34 +231,42 @@ export function AdminBestOfMonthPanel() {
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
         Approve Best of the Month entries, edit titles/descriptions any time,
         or delete posts. Voting is one per category per visitor each month.
+        This list auto-refreshes every 12 seconds.
       </p>
-      {durableOk === false && (
+
+      {storage && !storage.durable && (
         <div className="msg msg-err" style={{ marginBottom: "0.75rem" }}>
-          <strong>Storage warning:</strong> No durable storage is configured on
-          this deployment. Member Best of Month submissions will not reach this
-          admin queue. Add free Upstash Redis (
+          <strong>Storage warning:</strong> No durable storage is configured.
+          Member submissions will not stick. Add free Upstash Redis (
           <code>UPSTASH_REDIS_REST_URL</code> +{" "}
-          <code>UPSTASH_REDIS_REST_TOKEN</code>) or connect Vercel Blob, then
+          <code>UPSTASH_REDIS_REST_TOKEN</code>) in Vercel Production env, then
           Redeploy.
         </div>
       )}
-      {durableOk === true && redisOk === false && blobOk === true && (
+      {storage && storage.durable && !storage.redis && storage.blob && (
         <div className="msg msg-err" style={{ marginBottom: "0.75rem" }}>
           <strong>Storage tip:</strong> Only Vercel Blob is configured. If Blob
-          Hobby is over quota, submissions fail until you add free Redis env
-          vars (see DEPLOY-SIMPLE.md) or the quota resets.
+          Hobby is over quota, submissions fail until you add free Redis.
         </div>
       )}
-      {durableOk === true && (
+      {storage && storage.durable && (
         <p style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
-          Durable storage:{" "}
-          {redisOk ? "Redis connected" : "Redis off"}
+          Durable storage: {storage.redis ? "Redis on" : "Redis off"}
           {" · "}
-          {blobOk ? "Blob connected" : "Blob off"}
-          {redisOk
-            ? " — pending entries are read from Redis first so they appear here."
-            : " — submissions need a working backend to show up for approval."}
+          {storage.blob ? "Blob on" : "Blob off"}
+          {publicPendingCount != null
+            ? ` · site pending count: ${publicPendingCount}`
+            : ""}
+          {lastLoadedAt
+            ? ` · last refresh ${new Date(lastLoadedAt).toLocaleTimeString()}`
+            : ""}
         </p>
+      )}
+
+      {loadError && (
+        <div className="msg msg-err" style={{ marginBottom: "0.75rem" }}>
+          {loadError}
+        </div>
       )}
       {msg && <div className="msg msg-ok">{msg}</div>}
 
@@ -172,7 +276,11 @@ export function AdminBestOfMonthPanel() {
           className={`btn btn-sm ${filter === "pending" ? "btn-primary" : "btn-ghost"}`}
           onClick={() => setFilter("pending")}
         >
-          Pending ({entries.filter((e) => e.status === "pending").length})
+          Pending ({pendingN}
+          {publicPendingCount != null && publicPendingCount !== pendingN
+            ? ` / site ${publicPendingCount}`
+            : ""}
+          )
         </button>
         <button
           type="button"
@@ -192,6 +300,14 @@ export function AdminBestOfMonthPanel() {
           type="button"
           className="btn btn-ghost btn-sm"
           disabled={busy}
+          onClick={() => load()}
+        >
+          Refresh now
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          disabled={busy}
           onClick={() => act("tabulate-previous")}
         >
           Tabulate previous month now
@@ -199,7 +315,13 @@ export function AdminBestOfMonthPanel() {
       </div>
 
       {visible.length === 0 ? (
-        <div className="empty-state">No entries in this filter.</div>
+        <div className="empty-state">
+          {filter === "pending"
+            ? publicPendingCount && publicPendingCount > 0
+              ? `No pending rows in this panel, but the site reports ${publicPendingCount} pending. Click Refresh now. If still empty, log out of Admin and log back in.`
+              : "No pending entries waiting for approval."
+            : "No entries in this filter."}
+        </div>
       ) : (
         <div className="admin-list">
           {visible.map((e) => {
@@ -389,8 +511,8 @@ export function AdminBestOfMonthPanel() {
                       fontSize: "0.9rem",
                     }}
                   >
-                    Image failed to load (URL may be from before Blob was set
-                    up). Ask the villager to re-submit a new photo.
+                    Image failed to load (storage may still be blocked for this
+                    file). You can still approve/reject the text entry.
                   </p>
                 )}
 

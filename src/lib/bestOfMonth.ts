@@ -92,15 +92,22 @@ export async function loadBomAsync(): Promise<BomData> {
     const text = await pullDurableJson(BOM_FILE);
     if (text) {
       try {
-        JSON.parse(text); // validate
-        cacheDurableJson(BOM_FILE, text);
+        const parsed = JSON.parse(text) as BomData;
+        // Normalize + cache so loadBom() cannot fall through to a stale seed
+        const normalized: BomData = {
+          entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+          votes: Array.isArray(parsed.votes) ? parsed.votes : [],
+          results: Array.isArray(parsed.results) ? parsed.results : [],
+          updatedAt: parsed.updatedAt || null,
+        };
+        cacheDurableJson(BOM_FILE, JSON.stringify(normalized, null, 2));
+        return normalized;
       } catch {
-        /* fall through to local/memory */
+        /* fall through to hydrate / local */
       }
-    } else {
-      await ensureDurableHydrated();
     }
-  } else {
+    await ensureDurableHydrated();
+  } else if (isEphemeralHost()) {
     await ensureDurableHydrated();
   }
   return loadBom();
@@ -112,10 +119,90 @@ export function saveBom(data: BomData) {
   return data;
 }
 
-export async function saveBomAsync(data: BomData) {
-  data.updatedAt = new Date().toISOString();
-  await writeJsonFileAsync(BOM_FILE, data);
-  return data;
+/**
+ * Union remote + local BOM so concurrent serverless submits don't wipe each
+ * other's pending entries (last full replace loses races).
+ */
+function mergeBomData(remote: BomData, local: BomData, removeIds?: string[]): BomData {
+  const entryMap = new Map<string, BomEntry>();
+  for (const e of remote.entries || []) {
+    if (e?.id) entryMap.set(e.id, e);
+  }
+  for (const e of local.entries || []) {
+    if (e?.id) entryMap.set(e.id, e); // local wins same id (status edits)
+  }
+  if (removeIds?.length) {
+    for (const id of removeIds) entryMap.delete(id);
+  }
+
+  const voteMap = new Map<string, BomVote>();
+  for (const v of remote.votes || []) {
+    if (v?.id) voteMap.set(v.id, v);
+  }
+  for (const v of local.votes || []) {
+    if (v?.id) voteMap.set(v.id, v);
+  }
+  // Drop votes for deleted entries
+  for (const [id, v] of voteMap) {
+    if (!entryMap.has(v.entryId)) voteMap.delete(id);
+  }
+
+  const resultMap = new Map<string, BomMonthResults>();
+  for (const r of remote.results || []) {
+    if (r?.monthKey) resultMap.set(r.monthKey, r);
+  }
+  for (const r of local.results || []) {
+    if (r?.monthKey) resultMap.set(r.monthKey, r);
+  }
+
+  // Recompute vote totals from merged votes
+  const counts = new Map<string, number>();
+  for (const v of voteMap.values()) {
+    counts.set(v.entryId, (counts.get(v.entryId) || 0) + 1);
+  }
+  const entries = Array.from(entryMap.values())
+    .map((e) => ({ ...e, votes: counts.get(e.id) || 0 }))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  return {
+    entries,
+    votes: Array.from(voteMap.values()),
+    results: Array.from(resultMap.values()).sort((a, b) =>
+      b.monthKey.localeCompare(a.monthKey)
+    ),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export async function saveBomAsync(
+  data: BomData,
+  options?: { removeIds?: string[] }
+) {
+  // Re-pull durable before write so concurrent instances don't clobber pendings.
+  // Use pullDurableJson directly (not loadBomAsync) to avoid any in-process
+  // memory that already reflects `data` from the caller.
+  let remote = emptyData();
+  try {
+    const { pullDurableJson, isEphemeralHost, durableConfigured } =
+      await import("./dataFs");
+    if (isEphemeralHost() && durableConfigured()) {
+      const text = await pullDurableJson(BOM_FILE);
+      if (text) {
+        const parsed = JSON.parse(text) as BomData;
+        remote = {
+          entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+          votes: Array.isArray(parsed.votes) ? parsed.votes : [],
+          results: Array.isArray(parsed.results) ? parsed.results : [],
+          updatedAt: parsed.updatedAt || null,
+        };
+      }
+    }
+  } catch {
+    remote = emptyData();
+  }
+  const merged = mergeBomData(remote, data, options?.removeIds);
+  await writeJsonFileAsync(BOM_FILE, merged);
+  return merged;
 }
 
 export function isBomCategory(v: string): v is BomCategory {
@@ -431,7 +518,8 @@ export async function deleteBomEntryAsync(id: string): Promise<void> {
     ...e,
     votes: counts.get(e.id) || 0,
   }));
-  await saveBomAsync(data);
+  // removeIds ensures a concurrent merge cannot resurrect the deleted row
+  await saveBomAsync(data, { removeIds: [id] });
 }
 
 function recountVotes(data: BomData, entryIds: string[]) {
