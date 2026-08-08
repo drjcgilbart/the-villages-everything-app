@@ -1,5 +1,8 @@
 import crypto from "crypto";
 import {
+  bomPendingQueueDelete,
+  bomPendingQueueList,
+  bomPendingQueueSet,
   ensureDurableHydrated,
   readJsonFile,
   resolveUploadFile,
@@ -73,6 +76,47 @@ export function loadBom(): BomData {
   };
 }
 
+/** Merge dedicated Redis pending-hash entries into BOM data (admin safety net). */
+async function mergePendingQueueInto(data: BomData): Promise<BomData> {
+  try {
+    const rawList = await bomPendingQueueList();
+    if (!rawList.length) return data;
+    const byId = new Map(data.entries.map((e) => [e.id, e]));
+    for (const raw of rawList) {
+      try {
+        const e = JSON.parse(raw) as BomEntry;
+        if (!e?.id) continue;
+        // Queue wins only when main file is missing this id (or still pending)
+        const existing = byId.get(e.id);
+        if (!existing) {
+          byId.set(e.id, { ...e, status: e.status || "pending" });
+        } else if (
+          existing.status === "pending" ||
+          e.status === "pending"
+        ) {
+          // Keep richer / newer pending row
+          byId.set(e.id, {
+            ...existing,
+            ...e,
+            status:
+              existing.status === "approved" || existing.status === "rejected"
+                ? existing.status
+                : "pending",
+          });
+        }
+      } catch {
+        /* skip bad row */
+      }
+    }
+    data.entries = Array.from(byId.values()).sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt)
+    );
+  } catch (err) {
+    console.error("[bom] merge pending queue failed", err);
+  }
+  return data;
+}
+
 /**
  * Prefer this on serverless so durable entries are visible across instances.
  * CRITICAL: must pull Redis first, then Blob. Writes prefer Redis (and skip
@@ -86,35 +130,64 @@ export async function loadBomAsync(): Promise<BomData> {
     durableConfigured,
     cacheDurableJson,
   } = await import("./dataFs");
+  let data: BomData | null = null;
   if (isEphemeralHost() && durableConfigured()) {
     // Always re-pull this file (not only the multi-file hydrate TTL cache)
     // so submits/approvals from another instance show up immediately.
-    const text = await pullDurableJson(BOM_FILE);
-    if (text) {
-      try {
-        const parsed = JSON.parse(text) as BomData;
-        // Normalize + cache so loadBom() cannot fall through to a stale seed
-        const normalized: BomData = {
-          entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-          votes: Array.isArray(parsed.votes) ? parsed.votes : [],
-          results: Array.isArray(parsed.results) ? parsed.results : [],
-          updatedAt: parsed.updatedAt || null,
-        };
-        cacheDurableJson(BOM_FILE, JSON.stringify(normalized, null, 2));
-        return normalized;
-      } catch {
-        /* fall through to hydrate / local */
+    try {
+      const text = await pullDurableJson(BOM_FILE);
+      if (text) {
+        try {
+          const parsed = JSON.parse(text) as BomData;
+          // Normalize + cache so loadBom() cannot fall through to a stale seed
+          data = {
+            entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+            votes: Array.isArray(parsed.votes) ? parsed.votes : [],
+            results: Array.isArray(parsed.results) ? parsed.results : [],
+            updatedAt: parsed.updatedAt || null,
+          };
+          cacheDurableJson(BOM_FILE, JSON.stringify(data, null, 2));
+        } catch {
+          /* fall through */
+        }
       }
+    } catch (err) {
+      console.error("[bom] loadBomAsync durable pull failed", err);
+      // Still try pending queue + local so admin is not completely empty
     }
-    await ensureDurableHydrated();
+    if (!data) {
+      await ensureDurableHydrated().catch(() => undefined);
+      data = loadBom();
+    }
   } else if (isEphemeralHost()) {
-    await ensureDurableHydrated();
+    await ensureDurableHydrated().catch(() => undefined);
+    data = loadBom();
+  } else {
+    data = loadBom();
   }
-  return loadBom();
+
+  // Always fold in append-only pending hash (survives full-file wipes)
+  data = await mergePendingQueueInto(data);
+  cacheDurableJson(
+    BOM_FILE,
+    JSON.stringify(
+      {
+        entries: data.entries,
+        votes: data.votes,
+        results: data.results,
+        updatedAt: data.updatedAt,
+      },
+      null,
+      2
+    )
+  );
+  return data;
 }
 
 export function saveBom(data: BomData) {
   data.updatedAt = new Date().toISOString();
+  // Local disk only on serverless (writeJsonFile skips durable fire-and-forget).
+  // Use saveBomAsync for any path that must persist on Vercel.
   writeJsonFile(BOM_FILE, data);
   return data;
 }
@@ -181,12 +254,16 @@ export async function saveBomAsync(
   // Re-pull durable before write so concurrent instances don't clobber pendings.
   // Use pullDurableJson directly (not loadBomAsync) to avoid any in-process
   // memory that already reflects `data` from the caller.
+  const { pullDurableJson, isEphemeralHost, durableConfigured, redisConfigured } =
+    await import("./dataFs");
+
   let remote = emptyData();
-  try {
-    const { pullDurableJson, isEphemeralHost, durableConfigured } =
-      await import("./dataFs");
-    if (isEphemeralHost() && durableConfigured()) {
+  let remoteOk = !isEphemeralHost() || !durableConfigured();
+
+  if (isEphemeralHost() && durableConfigured()) {
+    try {
       const text = await pullDurableJson(BOM_FILE);
+      remoteOk = true;
       if (text) {
         const parsed = JSON.parse(text) as BomData;
         remote = {
@@ -196,12 +273,46 @@ export async function saveBomAsync(
           updatedAt: parsed.updatedAt || null,
         };
       }
+    } catch (err) {
+      // If Redis is configured but unreachable, refuse to write a partial
+      // local/seed snapshot (that was wiping live pendings).
+      if (redisConfigured()) {
+        throw new Error(
+          `Could not save best-of-month.json: durable storage read failed before merge. ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      }
+      remoteOk = true; // blob-only path may still proceed with empty remote
     }
-  } catch {
-    remote = emptyData();
   }
+
+  if (!remoteOk) {
+    throw new Error("Could not read durable Best of Month data before save");
+  }
+
+  // Also fold pending-hash into remote so we never drop queue-only rows
+  remote = await mergePendingQueueInto(remote);
+
   const merged = mergeBomData(remote, data, options?.removeIds);
   await writeJsonFileAsync(BOM_FILE, merged);
+
+  // Keep pending-hash in sync with merged pending set
+  for (const e of merged.entries) {
+    if (e.status === "pending") {
+      await bomPendingQueueSet(e.id, JSON.stringify(e)).catch((err) =>
+        console.error("[bom] pending queue set failed", e.id, err)
+      );
+    } else {
+      await bomPendingQueueDelete(e.id);
+    }
+  }
+  if (options?.removeIds?.length) {
+    for (const id of options.removeIds) {
+      await bomPendingQueueDelete(id);
+    }
+  }
+
   return merged;
 }
 
@@ -287,7 +398,7 @@ export function tabulateMonth(data: BomData, monthKey: string): BomData {
   return data;
 }
 
-/** Force-tabulate previous month (cron / manual). */
+/** Force-tabulate previous month (cron / manual). Prefer async on Vercel. */
 export function tabulatePreviousMonthIfNeeded(): BomData {
   let data = loadBom();
   data = ensurePastMonthsTabulated(data);
@@ -298,7 +409,25 @@ export function tabulatePreviousMonthIfNeeded(): BomData {
     );
     if (hasEntries) {
       data = tabulateMonth(data, prev);
+      // Local-only; durable write must use tabulatePreviousMonthIfNeededAsync
       saveBom(data);
+    }
+  }
+  return data;
+}
+
+/** Serverless-safe tabulate: loads Redis, merges, durable-saves. */
+export async function tabulatePreviousMonthIfNeededAsync(): Promise<BomData> {
+  let data = await loadBomAsync();
+  data = await ensurePastMonthsTabulatedAsync(data);
+  const prev = previousMonthKey(bomMonthKey());
+  if (!data.results.some((r) => r.monthKey === prev)) {
+    const hasEntries = data.entries.some(
+      (e) => e.status === "approved" && e.monthKey === prev
+    );
+    if (hasEntries) {
+      data = tabulateMonth(data, prev);
+      data = await saveBomAsync(data);
     }
   }
   return data;
@@ -413,6 +542,8 @@ export async function submitBomEntryAsync(input: {
     votes: 0,
   };
   data.entries.unshift(entry);
+  // Write pending hash FIRST so admin sees it even if full-file save races
+  await bomPendingQueueSet(entry.id, JSON.stringify(entry));
   await saveBomAsync(data);
   return entry;
 }
@@ -437,6 +568,11 @@ export async function setBomEntryStatusAsync(
   const idx = data.entries.findIndex((e) => e.id === id);
   if (idx < 0) throw new Error("Entry not found");
   data.entries[idx] = { ...data.entries[idx], status };
+  if (status === "pending") {
+    await bomPendingQueueSet(id, JSON.stringify(data.entries[idx]));
+  } else {
+    await bomPendingQueueDelete(id);
+  }
   await saveBomAsync(data);
   return data.entries[idx];
 }

@@ -12,7 +12,7 @@ import {
   updateBomEntryAsync,
   deleteBomEntryAsync,
   tabulateMonth,
-  tabulatePreviousMonthIfNeeded,
+  tabulatePreviousMonthIfNeededAsync,
   bomMonthKey,
   previousMonthKey,
   saveBomAsync,
@@ -111,10 +111,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "tabulate-previous") {
-      // keep sync helper but force hydrate + durable save path first
-      await loadBomAsync();
-      const data = tabulatePreviousMonthIfNeeded();
-      await saveBomAsync(data);
+      const data = await tabulatePreviousMonthIfNeededAsync();
       return NextResponse.json({ ok: true, results: data.results[0] || null });
     }
 

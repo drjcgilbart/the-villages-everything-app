@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { tabulatePreviousMonthIfNeeded } from "@/lib/bestOfMonth";
+import { tabulatePreviousMonthIfNeededAsync } from "@/lib/bestOfMonth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 /**
  * Cron (1st of each month): tabulate previous month winners + honorable mentions.
  * Page loads also call ensurePastMonthsTabulated as a safety net.
+ * Must use async durable load — sync seed write was wiping live pendings.
  */
 export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET;
@@ -23,7 +25,7 @@ export async function GET(req: Request) {
     }
   }
 
-  const data = tabulatePreviousMonthIfNeeded();
+  const data = await tabulatePreviousMonthIfNeededAsync();
   return NextResponse.json({
     ok: true,
     resultsCount: data.results.length,

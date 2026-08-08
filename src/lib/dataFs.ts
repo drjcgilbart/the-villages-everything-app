@@ -168,7 +168,8 @@ async function pullJsonFromRedis(filename: string): Promise<string | null> {
     return text || null;
   } catch (err) {
     console.error("[dataFs] redis pull failed", filename, err);
-    return null;
+    // Signal hard failure to callers that must not fall back to stale Blob
+    throw err;
   }
 }
 
@@ -176,15 +177,79 @@ async function pullJsonFromRedis(filename: string): Promise<string | null> {
  * Fresh single-file durable pull: Redis first (preferred while Blob Hobby is
  * capped), then Blob. Use this for admin queues so pending entries written to
  * Redis are not hidden by a stale Blob copy.
+ *
+ * If Redis is configured and errors, we do NOT fall back to Blob (stale seed
+ * + a later write would wipe live pending submissions).
  */
 export async function pullDurableJson(
   filename: string
 ): Promise<string | null> {
   const base = path.basename(filename);
   if (!base || !DURABLE_JSON.has(base)) return null;
-  const fromRedis = await pullJsonFromRedis(base);
-  if (fromRedis) return fromRedis;
+  if (redisConfigured()) {
+    try {
+      const fromRedis = await pullJsonFromRedis(base);
+      if (fromRedis) return fromRedis;
+      // Key missing — optional Blob seed for first boot only
+    } catch (err) {
+      console.error(
+        "[dataFs] redis pull hard-fail (not falling back to Blob)",
+        base,
+        err
+      );
+      throw err instanceof Error
+        ? err
+        : new Error("Redis pull failed for " + base);
+    }
+  }
   return pullJsonFromBlob(base);
+}
+
+/** Append-only pending BOM queue — survives full-file overwrites of best-of-month.json */
+const BOM_PENDING_HASH = "tvh-bom:pending-hash";
+
+export async function bomPendingQueueSet(
+  id: string,
+  entryJson: string
+): Promise<void> {
+  if (!redisConfigured()) return;
+  await redisCommand(["HSET", BOM_PENDING_HASH, id, entryJson]);
+}
+
+export async function bomPendingQueueDelete(id: string): Promise<void> {
+  if (!redisConfigured()) return;
+  try {
+    await redisCommand(["HDEL", BOM_PENDING_HASH, id]);
+  } catch (err) {
+    console.error("[dataFs] bom pending delete failed", id, err);
+  }
+}
+
+/** All pending BOM entries from the dedicated Redis hash (admin safety net). */
+export async function bomPendingQueueList(): Promise<string[]> {
+  if (!redisConfigured()) return [];
+  try {
+    const result = await redisCommand(["HGETALL", BOM_PENDING_HASH]);
+    if (result == null) return [];
+    // Upstash may return { field: value } or [field, value, field, value]
+    if (Array.isArray(result)) {
+      const out: string[] = [];
+      for (let i = 1; i < result.length; i += 2) {
+        const v = result[i];
+        if (v != null) out.push(String(v));
+      }
+      return out;
+    }
+    if (typeof result === "object") {
+      return Object.values(result as Record<string, unknown>).map((v) =>
+        String(v)
+      );
+    }
+    return [];
+  } catch (err) {
+    console.error("[dataFs] bom pending list failed", err);
+    return [];
+  }
 }
 
 function redisUploadKey(name: string) {
@@ -613,7 +678,14 @@ export async function hydrateDurableJsonFromBlob(): Promise<{
   const loaded: string[] = [];
   for (const file of DURABLE_JSON) {
     // Prefer Redis (active during Blob Hobby lockout), then Blob
-    let text = await pullJsonFromRedis(file);
+    let text: string | null = null;
+    try {
+      text = await pullJsonFromRedis(file);
+    } catch {
+      // Don't use stale Blob for a failed Redis when we might write later;
+      // skip this file in bulk hydrate.
+      continue;
+    }
     if (!text) text = await pullJsonFromBlob(file);
     if (!text) continue;
     try {
@@ -688,8 +760,21 @@ export function writeJsonFile(filename: string, data: unknown): void {
   const p = path.join(dir, base);
   fs.writeFileSync(/*turbopackIgnore: true*/ p, json, "utf8");
 
-  // Fire-and-forget durable sync (admin + membership critical files)
+  /**
+   * CRITICAL: On serverless, never fire-and-forget durable sync for JSON that
+   * may be a stale git seed (sync loadBom() without Redis). That path wiped
+   * Best of Month pending submissions from Redis.
+   * Callers on Vercel must use writeJsonFileAsync (merge-aware) instead.
+   */
   if (DURABLE_JSON.has(base) && durableConfigured()) {
+    if (isEphemeralHost()) {
+      console.warn(
+        "[dataFs] Skipping durable fire-and-forget for",
+        base,
+        "on serverless — use writeJsonFileAsync to avoid wiping Redis"
+      );
+      return;
+    }
     void syncDurableJson(base, json).catch((err) =>
       console.error("[dataFs] fire-and-forget durable put failed", base, err)
     );
