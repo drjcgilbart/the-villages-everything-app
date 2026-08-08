@@ -40,47 +40,145 @@ function formatMonth(key: string) {
   });
 }
 
+/** Must stay under Redis fallback limit (~4 MB raw; base64 is larger). */
+const BOM_MAX_UPLOAD_BYTES = 1.8 * 1024 * 1024;
+
+function canvasToJpegBlob(
+  canvas: HTMLCanvasElement,
+  quality: number
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), "image/jpeg", quality);
+  });
+}
+
+/** Load image into a canvas-drawable source (bitmap preferred, <img> fallback). */
+async function loadImageSource(
+  file: File
+): Promise<
+  | { kind: "bitmap"; bitmap: ImageBitmap }
+  | { kind: "img"; img: HTMLImageElement; objectUrl: string }
+> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return { kind: "bitmap", bitmap };
+    } catch {
+      /* fall through to Image() */
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () =>
+        reject(
+          new Error(
+            "Could not read this photo in the browser. Please save it as a JPG (not HEIC) and try again."
+          )
+        );
+      el.src = objectUrl;
+    });
+    return { kind: "img", img, objectUrl };
+  } catch (err) {
+    URL.revokeObjectURL(objectUrl);
+    throw err;
+  }
+}
+
 /**
- * Phone photos are often 5–12 MB. While Vercel Blob is over quota, Redis only
- * accepts ~3 MB — so we resize/compress JPGs in the browser before upload.
+ * Automatically resize/compress phone photos until they are small enough to
+ * upload (while Vercel Blob is over quota we store in Redis ~2 MB target).
+ * 4–12 MB Corvette / iPhone photos become ~400 KB–1.5 MB JPEGs.
  */
-async function prepareBomUploadFile(file: File): Promise<File> {
+async function prepareBomUploadFile(
+  file: File
+): Promise<{ file: File; originalBytes: number; compressed: boolean }> {
   const name = file.name || "photo.jpg";
+  const originalBytes = file.size;
   const isPdf =
     file.type === "application/pdf" || /\.pdf$/i.test(name);
-  if (isPdf) return file;
-
-  // Already small enough — keep original
-  if (file.size <= 2.5 * 1024 * 1024 && file.type === "image/jpeg") {
-    return file;
+  if (isPdf) {
+    if (file.size > BOM_MAX_UPLOAD_BYTES) {
+      throw new Error(
+        "PDF is too large (max about 1.8 MB). Please use a smaller PDF or a JPG photo."
+      );
+    }
+    return { file, originalBytes, compressed: false };
   }
 
-  // Try canvas resize (works for jpeg/png/webp; HEIC may fail in some browsers)
+  // Already safely small JPEG — skip work
+  if (file.size <= BOM_MAX_UPLOAD_BYTES && /jpe?g$/i.test(name) && file.type === "image/jpeg") {
+    return { file, originalBytes, compressed: false };
+  }
+
+  const source = await loadImageSource(file);
+  const srcW =
+    source.kind === "bitmap" ? source.bitmap.width : source.img.naturalWidth;
+  const srcH =
+    source.kind === "bitmap" ? source.bitmap.height : source.img.naturalHeight;
+
+  if (!srcW || !srcH) {
+    if (source.kind === "img") URL.revokeObjectURL(source.objectUrl);
+    if (source.kind === "bitmap") source.bitmap.close?.();
+    throw new Error("Could not read photo dimensions. Try exporting as JPG.");
+  }
+
+  // Try progressively smaller dimensions + lower quality until under limit
+  const edgeSteps = [1920, 1600, 1280, 1024, 800, 640];
+  const qualitySteps = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35];
+
+  let best: Blob | null = null;
+
   try {
-    const bitmap = await createImageBitmap(file);
-    const maxEdge = 1600;
-    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
-    const w = Math.max(1, Math.round(bitmap.width * scale));
-    const h = Math.max(1, Math.round(bitmap.height * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
-    ctx.drawImage(bitmap, 0, 0, w, h);
-    bitmap.close?.();
+    for (const maxEdge of edgeSteps) {
+      const scale = Math.min(1, maxEdge / Math.max(srcW, srcH));
+      const w = Math.max(1, Math.round(srcW * scale));
+      const h = Math.max(1, Math.round(srcH * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) continue;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      if (source.kind === "bitmap") {
+        ctx.drawImage(source.bitmap, 0, 0, w, h);
+      } else {
+        ctx.drawImage(source.img, 0, 0, w, h);
+      }
 
-    const blob: Blob | null = await new Promise((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.82)
-    );
-    if (!blob || blob.size < 500) return file;
-
-    const base = name.replace(/\.[^.]+$/, "") || "photo";
-    return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
-  } catch {
-    // HEIC / unsupported — send as-is; server will error with a clear message if too large
-    return file;
+      for (const q of qualitySteps) {
+        const blob = await canvasToJpegBlob(canvas, q);
+        if (!blob || blob.size < 200) continue;
+        best = blob;
+        if (blob.size <= BOM_MAX_UPLOAD_BYTES) {
+          const base = name.replace(/\.[^.]+$/, "") || "photo";
+          const out = new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+          return { file: out, originalBytes, compressed: true };
+        }
+      }
+    }
+  } finally {
+    if (source.kind === "bitmap") source.bitmap.close?.();
+    if (source.kind === "img") URL.revokeObjectURL(source.objectUrl);
   }
+
+  if (best && best.size <= BOM_MAX_UPLOAD_BYTES * 1.15) {
+    // Slightly over — still try (server allows up to 4 MB raw)
+    const base = name.replace(/\.[^.]+$/, "") || "photo";
+    return {
+      file: new File([best], `${base}.jpg`, { type: "image/jpeg" }),
+      originalBytes,
+      compressed: true,
+    };
+  }
+
+  throw new Error(
+    `Could not compress this photo under ${Math.round(BOM_MAX_UPLOAD_BYTES / (1024 * 1024) * 10) / 10} MB (started at ${Math.round(originalBytes / 1024)} KB). Try a different JPG or screenshot the photo and upload that.`
+  );
 }
 
 function EntryMedia({
@@ -237,6 +335,13 @@ export function BestOfMonthClub() {
         ? URL.createObjectURL(next)
         : null;
     });
+    // Pre-check: show that a big photo will be auto-resized on submit
+    if (next && next.type.startsWith("image/") && next.size > BOM_MAX_UPLOAD_BYTES) {
+      setSubmitMsg({
+        kind: "info",
+        text: `Photo is ${Math.round(next.size / 1024 / 1024 * 10) / 10} MB — it will be automatically resized to under 2 MB when you click Submit.`,
+      });
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -264,24 +369,22 @@ export function BestOfMonthClub() {
     setNote(null);
 
     try {
-      // Compress large phone photos so they survive Redis storage (Blob quota)
+      // Always auto-resize large phone photos (e.g. 4.6 MB Corvette shots)
       setSubmitMsg({
         kind: "info",
-        text: `Preparing photo (${Math.round(file.size / 1024)} KB)…`,
+        text: `Resizing photo if needed (${Math.round(file.size / 1024)} KB)…`,
       });
       const prepared = await prepareBomUploadFile(file);
-      if (prepared.size > 12 * 1024 * 1024) {
-        throw new Error(
-          "Photo is still over 12 MB after compression. Please choose a smaller JPG (or take a lower-resolution photo)."
-        );
-      }
+      const uploadFile = prepared.file;
 
       setSubmitMsg({
         kind: "info",
-        text: `Uploading ${Math.round(prepared.size / 1024)} KB…`,
+        text: prepared.compressed
+          ? `Photo compressed ${Math.round(prepared.originalBytes / 1024)} KB → ${Math.round(uploadFile.size / 1024)} KB. Uploading…`
+          : `Uploading ${Math.round(uploadFile.size / 1024)} KB…`,
       });
       const fd = new FormData();
-      fd.append("file", prepared);
+      fd.append("file", uploadFile);
       const up = await fetch("/api/best-of-month/upload", {
         method: "POST",
         body: fd,
@@ -324,10 +427,9 @@ export function BestOfMonthClub() {
       }
       if (!res.ok) throw new Error(data.error || "Submit failed");
 
-      const sizeNote =
-        prepared.size !== file.size
-          ? ` Photo optimized ${Math.round(file.size / 1024)} KB → ${Math.round(prepared.size / 1024)} KB.`
-          : "";
+      const sizeNote = prepared.compressed
+        ? ` Photo auto-resized ${Math.round(prepared.originalBytes / 1024)} KB → ${Math.round(uploadFile.size / 1024)} KB.`
+        : "";
       const okText = `Success! “${t}” is pending admin approval.${sizeNote} Check Admin → Best of Month → Pending.`;
       setSubmitMsg({ kind: "ok", text: okText });
       setNote(okText);
@@ -631,8 +733,9 @@ export function BestOfMonthClub() {
             <h2>Enter this month</h2>
             <p>
               Upload a <strong>JPG</strong> or <strong>PDF</strong>. Large phone
-              photos are automatically resized before upload. Entries need admin
-              approval before they appear for voting.
+              photos (even 5–12 MB) are <strong>automatically resized</strong>{" "}
+              before upload so they always fit. Entries need admin approval
+              before they appear for voting.
             </p>
           </div>
         </div>
