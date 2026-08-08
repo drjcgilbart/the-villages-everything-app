@@ -5,6 +5,7 @@ import {
   durableConfigured,
   ensureDurableHydrated,
   isEphemeralHost,
+  missingDurableStorageHelp,
   redisConfigured,
 } from "@/lib/dataFs";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
@@ -61,15 +62,13 @@ export async function GET() {
   }
   await ensureDurableHydrated();
   const durable = durableConfigured();
+  const redis = redisConfigured();
+  const blob = blobConfigured();
   let durableHint: string | null = null;
-  if (isEphemeralHost() && !durable) {
-    durableHint =
-      "No durable storage is configured. Member changes will not stick on Vercel. Add free Upstash Redis (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN) or a working Blob store — see DEPLOY-SIMPLE.md.";
-  } else if (isEphemeralHost() && !redisConfigured() && blobConfigured()) {
-    durableHint =
-      "Only Vercel Blob is configured. If Blob Hobby hit its monthly limit, member saves fail until the reset date — add free Upstash Redis env vars as a fallback (DEPLOY-SIMPLE.md).";
+  if (isEphemeralHost() && !redis) {
+    // Blob Hobby is over quota for this project — Redis is required until reset/Pro
+    durableHint = missingDurableStorageHelp();
   } else if (!isEphemeralHost()) {
-    // Local admin: disk under data/ is the source of truth
     durableHint = null;
   }
   return NextResponse.json({
@@ -81,8 +80,9 @@ export async function GET() {
       rank: t.rank,
     })),
     durableStorage: durable,
-    redisStorage: redisConfigured(),
-    blobStorage: blobConfigured(),
+    redisStorage: redis,
+    blobStorage: blob,
+    storageCode: "storage-v2",
     durableHint,
   });
 }

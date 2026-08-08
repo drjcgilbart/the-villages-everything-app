@@ -95,19 +95,25 @@ Then **Redeploy** (Deployments → ⋮ → Redeploy) so they take effect.
 
 On Vercel there is **no permanent disk**. Member saves need durable storage.
 
-#### Option A — Free Upstash Redis (use this when Blob Hobby is over quota)
+#### Option A — Free Redis (required while Blob Hobby is over quota)
 
-If Storage says *“You have reached your usage limits… Hobby plan. Access resumes on 9/6/26”*, Blob writes will fail until that date (or until you upgrade to Pro).
+If Storage says *“You have reached your usage limits… Hobby plan. Access resumes on 9/6/26”*, **Blob cannot save members** until that date (or Pro). You must add Redis.
 
-1. Sign up at [upstash.com](https://upstash.com) (free tier is enough)  
-2. **Create database** → Redis → pick a US region  
-3. Open the database → **REST API**  
-4. Copy **UPSTASH_REDIS_REST_URL** and **UPSTASH_REDIS_REST_TOKEN**  
-5. Paste both into Vercel → **Settings** → **Environment Variables** → **Production**  
-6. Deploy a build that includes Redis support (push latest code + redeploy)  
-7. Retry Admin → Members  
+**Path 1 — Vercel dashboard (easiest)**  
+1. Vercel project → **Storage** → **Create Database** → **KV** (or Upstash Redis)  
+2. Connect it to this project for **Production**  
+3. Vercel adds env vars automatically (`KV_REST_API_URL` + `KV_REST_API_TOKEN`, or Upstash names)  
+4. **Redeploy** Production  
+5. Retry Admin → Members  
 
-The app **prefers Redis** when configured, so Blob lockouts no longer block members.
+**Path 2 — upstash.com**  
+1. Sign up at [upstash.com](https://upstash.com) → **Create database** → Redis  
+2. Copy **UPSTASH_REDIS_REST_URL** and **UPSTASH_REDIS_REST_TOKEN**  
+3. Vercel → **Settings** → **Environment Variables** → **Production** → paste both  
+4. **Redeploy** Production  
+5. Retry Admin → Members  
+
+The app accepts either env name pair and **prefers Redis** over Blob.
 
 #### Option B — Vercel Blob
 

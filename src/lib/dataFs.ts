@@ -71,12 +71,30 @@ export function blobConfigured(): boolean {
   );
 }
 
-/** Free-tier durable JSON via Upstash Redis REST (no npm package required). */
-export function redisConfigured(): boolean {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
-      process.env.UPSTASH_REDIS_REST_TOKEN?.trim()
+/**
+ * Free-tier durable JSON via Redis REST (no npm package required).
+ * Accepts Upstash names OR Vercel Marketplace KV names:
+ *   UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
+ *   KV_REST_API_URL / KV_REST_API_TOKEN  (Vercel KV / Upstash integration)
+ */
+function redisRestUrl(): string {
+  return (
+    process.env.UPSTASH_REDIS_REST_URL?.trim() ||
+    process.env.KV_REST_API_URL?.trim() ||
+    ""
   );
+}
+
+function redisRestToken(): string {
+  return (
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
+    process.env.KV_REST_API_TOKEN?.trim() ||
+    ""
+  );
+}
+
+export function redisConfigured(): boolean {
+  return Boolean(redisRestUrl() && redisRestToken());
 }
 
 /** Any durable backend for admin/member JSON on serverless. */
@@ -101,10 +119,10 @@ function redisKey(filename: string) {
 }
 
 async function redisCommand(command: string[]): Promise<unknown> {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  const url = redisRestUrl();
+  const token = redisRestToken();
   if (!url || !token) {
-    throw new Error("Upstash Redis is not configured");
+    throw new Error("Redis is not configured");
   }
   const res = await fetch(`${url.replace(/\/$/, "")}`, {
     method: "POST",
@@ -118,12 +136,22 @@ async function redisCommand(command: string[]): Promise<unknown> {
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(
-      `Upstash Redis HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}`
+      `Redis HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}`
     );
   }
   const data = (await res.json()) as { result?: unknown; error?: string };
-  if (data.error) throw new Error(`Upstash Redis: ${data.error}`);
+  if (data.error) throw new Error(`Redis: ${data.error}`);
   return data.result;
+}
+
+/** Clear steps when Blob is dead and Redis is missing (Hobby quota case). */
+export function missingDurableStorageHelp(): string {
+  return (
+    "Vercel Blob Hobby is over quota (or failing), so member saves need free Redis. " +
+    "In Vercel → Storage (or upstash.com): create Redis/KV, then set Production env " +
+    "UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL + KV_REST_API_TOKEN), " +
+    "then Redeploy. Blob alone cannot save until the Hobby limit resets (e.g. 9/6/26) or you upgrade to Pro."
+  );
 }
 
 async function pushJsonToRedis(filename: string, json: string): Promise<void> {
@@ -367,10 +395,19 @@ async function pushJsonToBlob(filename: string, json: string): Promise<void> {
  * Local disk hosts: never fail the request.
  */
 async function syncDurableJson(filename: string, json: string): Promise<void> {
-  if (!DURABLE_JSON.has(filename) || !durableConfigured()) return;
+  if (!DURABLE_JSON.has(filename)) return;
+
+  // No remote backend at all
+  if (!durableConfigured()) {
+    if (!isEphemeralHost()) return;
+    throw new Error(
+      `Could not save ${filename}. ${missingDurableStorageHelp()}`
+    );
+  }
 
   const errors: string[] = [];
   let ok = false;
+  let blobQuota = false;
 
   // Prefer Redis first when configured (works while Blob Hobby is locked).
   if (redisConfigured()) {
@@ -384,11 +421,14 @@ async function syncDurableJson(filename: string, json: string): Promise<void> {
     }
   }
 
-  if (blobConfigured()) {
+  // Skip Blob when Redis already succeeded (saves quota / avoids noise).
+  // If Redis missing or failed, still try Blob.
+  if (!ok && blobConfigured()) {
     try {
       await pushJsonToBlob(filename, json);
       ok = true;
     } catch (err) {
+      if (isBlobQuotaError(err)) blobQuota = true;
       errors.push(`Blob: ${formatBlobError(err)}`);
       console.error("[dataFs] blob put failed", filename, err);
     }
@@ -411,8 +451,16 @@ async function syncDurableJson(filename: string, json: string): Promise<void> {
     return;
   }
 
+  // Always surface Redis setup when Blob is the only (failing) option
+  if (!redisConfigured() || blobQuota) {
+    throw new Error(
+      `Could not save ${filename}. ${missingDurableStorageHelp()} ` +
+        `(details: ${errors.join(" · ") || "blob failed"}) [storage-v2]`
+    );
+  }
+
   throw new Error(
-    `Could not save ${filename} to durable storage. ${errors.join(" · ") || "No backend configured."}`
+    `Could not save ${filename} to durable storage. ${errors.join(" · ") || "No backend configured."} [storage-v2]`
   );
 }
 
@@ -612,18 +660,10 @@ export async function writeJsonFileAsync(
   fs.writeFileSync(/*turbopackIgnore: true*/ p, json, "utf8");
 
   // Local: disk write is enough (remote optional). Serverless: await Redis/Blob.
-  if (DURABLE_JSON.has(base) && durableConfigured()) {
-    await syncDurableJson(base, json);
-  } else if (
-    DURABLE_JSON.has(base) &&
-    isEphemeralHost() &&
-    !durableConfigured()
-  ) {
-    throw new Error(
-      `Could not save ${base}: no durable storage configured. ` +
-        "Vercel Blob Hobby is over quota (or not connected). Add free Upstash Redis: " +
-        "UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in Vercel env, then redeploy. See DEPLOY-SIMPLE.md."
-    );
+  if (DURABLE_JSON.has(base)) {
+    if (isEphemeralHost() || durableConfigured()) {
+      await syncDurableJson(base, json);
+    }
   }
 }
 

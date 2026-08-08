@@ -212,10 +212,7 @@ export function AdminMembersPanel() {
 
       {durableHint && (
         <div className="msg msg-err" style={{ marginBottom: "1rem" }}>
-          <strong>Storage warning:</strong> {durableHint}{" "}
-          In Vercel: Storage → create Blob → add{" "}
-          <code>BLOB_READ_WRITE_TOKEN</code> to the project env, then redeploy.
-          After that, re-apply plan/loofah for each member so it syncs site-wide.
+          <strong>Storage warning:</strong> {durableHint}
         </div>
       )}
 
