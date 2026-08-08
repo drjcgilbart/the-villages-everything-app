@@ -124,6 +124,33 @@ export function resolveJsonPath(filename: string): string | null {
 
 export function readJsonFile<T>(filename: string): T | null {
   const base = path.basename(filename);
+  if (!base || base.includes("..") || base.includes("/") || base.includes("\\")) {
+    return null;
+  }
+
+  /**
+   * Local/dev: always read from disk so edits to data/*.json (or git pulls)
+   * show up after a browser refresh without restarting `next dev`.
+   * Serverless: prefer process memory (and Blob hydration) so durable writes
+   * stay visible on the same warm instance.
+   */
+  if (!isEphemeralHost()) {
+    const bundled = bundleJsonPath(base);
+    try {
+      if (
+        fs.existsSync(/*turbopackIgnore: true*/ bundled) &&
+        fs.statSync(/*turbopackIgnore: true*/ bundled).isFile()
+      ) {
+        const raw = fs.readFileSync(/*turbopackIgnore: true*/ bundled, "utf8");
+        memoryJson.set(base, raw);
+        return JSON.parse(raw) as T;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
   if (memoryJson.has(base)) {
     try {
       return JSON.parse(memoryJson.get(base)!) as T;
