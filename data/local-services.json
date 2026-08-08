@@ -27,8 +27,11 @@
       "submittedByName": "Doug",
       "status": "approved",
       "createdAt": "2026-08-08T09:49:01.359Z",
-      "updatedAt": "2026-08-08T09:49:13.793Z",
-      "approvedAt": "2026-08-08T09:49:13.793Z"
+      "updatedAt": "2026-08-08T10:05:39.590Z",
+      "approvedAt": "2026-08-08T09:49:13.793Z",
+      "extraPhotos": [
+        "/api/media/msk7k4ff-local-svc-20260808_054614.jpg"
+      ]
     },
     {
       "id": "svc-msk6r35c-c6e4f2",
@@ -59,5 +62,5 @@
       "approvedAt": "2026-08-08T09:42:12.636Z"
     }
   ],
-  "updatedAt": "2026-08-08T09:54:02.384Z"
+  "updatedAt": "2026-08-08T10:05:39.590Z"
 }

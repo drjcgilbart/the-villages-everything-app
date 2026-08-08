@@ -1,18 +1,44 @@
 {
   "restaurants": [
     {
+      "id": "rest-mskok7lo-58cb3d",
+      "name": "Kumo Sushi & Hibachi",
+      "slug": "kumo-sushi-hibachi",
+      "cuisine": "Asian",
+      "tags": [],
+      "area": "Lake Deaton Plaza",
+      "address": "637 Kristine Way, The Villages, FL 32163",
+      "phone": "352-235-9323",
+      "website": "https://www.kumothevillagesfl.com/",
+      "priceRange": "$$",
+      "description": "Casual Japanese spot for sushi and hibachi dishes, plus beer, sake and wine.",
+      "specialties": [],
+      "featured": false,
+      "createdAt": "2026-08-08T18:01:32.796Z",
+      "updatedAt": "2026-08-08T18:01:32.796Z"
+    },
+    {
       "id": "rest-bella-vita",
       "name": "Bella Vita Italian Steakhouse",
       "slug": "bella-vita-italian-steakhouse",
       "cuisine": "Italian",
-      "tags": ["steak", "date-night", "wine", "town-square"],
+      "tags": [
+        "steak",
+        "date-night",
+        "wine",
+        "town-square"
+      ],
       "area": "Spanish Springs",
       "address": "1101 Main St, The Villages, FL 32159",
       "phone": "(352) 775-2353",
       "website": "https://www.bellavitaitaliansteakhouse.com/",
       "priceRange": "$$$",
       "description": "Italian steakhouse on Spanish Springs Town Square — steaks, pasta, and a polished dinner atmosphere right on Main Street.",
-      "specialties": ["Prime steaks", "Classic pasta", "Wine list"],
+      "specialties": [
+        "Prime steaks",
+        "Classic pasta",
+        "Wine list"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -22,14 +48,22 @@
       "name": "Coastal Del Mar",
       "slug": "coastal-del-mar",
       "cuisine": "Seafood",
-      "tags": ["seafood", "dinner", "town-square"],
+      "tags": [
+        "seafood",
+        "dinner",
+        "town-square"
+      ],
       "area": "Spanish Springs",
       "address": "990 Del Mar Dr, The Villages, FL 32159",
       "phone": "(352) 268-3701",
       "website": "https://www.coastaldelmarseafood.com/",
       "priceRange": "$$$",
       "description": "Coastal-inspired seafood on Spanish Springs Town Square — fish, lobster, and elevated plates without leaving the square.",
-      "specialties": ["Fresh fish", "Lobster", "Coastal entrées"],
+      "specialties": [
+        "Fresh fish",
+        "Lobster",
+        "Coastal entrées"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -39,14 +73,23 @@
       "name": "Ay! Jalisco",
       "slug": "ay-jalisco",
       "cuisine": "Mexican",
-      "tags": ["margaritas", "fajitas", "town-square", "family"],
+      "tags": [
+        "margaritas",
+        "fajitas",
+        "town-square",
+        "family"
+      ],
       "area": "Spanish Springs",
       "address": "1154 Main St, Lady Lake, FL 32159",
       "phone": "(352) 259-6582",
       "website": "https://ayjaliscorestaurants.com/",
       "priceRange": "$$",
       "description": "Long-time Spanish Springs Mexican favorite for fajitas, burritos, taco salads, and a full margarita bar on the square.",
-      "specialties": ["Fajitas", "Taco salads", "Margaritas"],
+      "specialties": [
+        "Fajitas",
+        "Taco salads",
+        "Margaritas"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -56,14 +99,22 @@
       "name": "First Watch (Spanish Plaines)",
       "slug": "first-watch-spanish-plaines",
       "cuisine": "Breakfast",
-      "tags": ["brunch", "daytime-only", "healthy"],
+      "tags": [
+        "brunch",
+        "daytime-only",
+        "healthy"
+      ],
       "area": "Spanish Springs area",
       "address": "1568 Bella Cruz Dr, Lady Lake, FL 32159",
       "phone": "(352) 633-1520",
       "website": "https://firstwatch.com/locations/spanish-plaines",
       "priceRange": "$$",
       "description": "Daytime breakfast and brunch classics near Spanish Springs — fresh plates, coffee, and lunch before 2:30 p.m.",
-      "specialties": ["Avocado toast", "Omelets", "Fresh juices"],
+      "specialties": [
+        "Avocado toast",
+        "Omelets",
+        "Fresh juices"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -72,14 +123,23 @@
       "name": "Chop House at Lake Sumter",
       "slug": "chop-house-at-lake-sumter",
       "cuisine": "Steakhouse",
-      "tags": ["steak", "date-night", "town-square", "upscale"],
+      "tags": [
+        "steak",
+        "date-night",
+        "town-square",
+        "upscale"
+      ],
       "area": "Lake Sumter Landing",
       "address": "1045 Old Camp Rd, The Villages, FL 32162",
       "phone": "(352) 750-6000",
       "website": "https://www.chophousedining.com/",
       "priceRange": "$$$$",
       "description": "Upscale steaks and seafood at Lake Sumter Landing — a go-to special-occasion spot for Villagers.",
-      "specialties": ["Aged steaks", "Seafood", "Classic sides"],
+      "specialties": [
+        "Aged steaks",
+        "Seafood",
+        "Classic sides"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -89,14 +149,23 @@
       "name": "Redsauce",
       "slug": "redsauce",
       "cuisine": "Italian",
-      "tags": ["pasta", "family", "town-square", "lunch"],
+      "tags": [
+        "pasta",
+        "family",
+        "town-square",
+        "lunch"
+      ],
       "area": "Lake Sumter Landing",
       "address": "1000 Canal St, The Villages, FL 32162",
       "phone": "(352) 750-2930",
       "website": "https://www.redsaucethevillages.com/",
       "priceRange": "$$",
       "description": "Italian-American favorite on Canal Street at Lake Sumter Landing — pasta, sandwiches, and family-friendly service.",
-      "specialties": ["Homemade pasta", "Italian sandwiches", "Wine"],
+      "specialties": [
+        "Homemade pasta",
+        "Italian sandwiches",
+        "Wine"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -106,13 +175,21 @@
       "name": "Thai Ruby",
       "slug": "thai-ruby",
       "cuisine": "Asian",
-      "tags": ["thai", "noodles", "town-square"],
+      "tags": [
+        "thai",
+        "noodles",
+        "town-square"
+      ],
       "area": "Lake Sumter Landing",
       "address": "1064 Canal St, The Villages, FL 32162",
       "phone": "(352) 205-8288",
       "priceRange": "$$",
       "description": "Long-time Lake Sumter Landing Thai restaurant known for authentic flavors and generous portions.",
-      "specialties": ["Pad Thai", "Curries", "Thai classics"],
+      "specialties": [
+        "Pad Thai",
+        "Curries",
+        "Thai classics"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -121,14 +198,24 @@
       "name": "Cody's Original Roadhouse (Lake Sumter)",
       "slug": "codys-lake-sumter",
       "cuisine": "American",
-      "tags": ["steak", "casual", "happy-hour", "town-square", "family"],
+      "tags": [
+        "steak",
+        "casual",
+        "happy-hour",
+        "town-square",
+        "family"
+      ],
       "area": "Lake Sumter Landing",
       "address": "1041 Lakeshore Dr, The Villages, FL 32162",
       "phone": "(352) 259-8500",
       "website": "https://www.codysamerican.com/",
       "priceRange": "$$",
       "description": "Casual roadhouse dining at Lake Sumter Landing — steaks, ribs, burgers, and a big menu for groups.",
-      "specialties": ["Hand-cut steaks", "Ribs", "Happy hour"],
+      "specialties": [
+        "Hand-cut steaks",
+        "Ribs",
+        "Happy hour"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -137,14 +224,23 @@
       "name": "City Fire (Lake Sumter)",
       "slug": "city-fire-lake-sumter",
       "cuisine": "American",
-      "tags": ["flatbreads", "live-music", "bar", "town-square"],
+      "tags": [
+        "flatbreads",
+        "live-music",
+        "bar",
+        "town-square"
+      ],
       "area": "Lake Sumter Landing",
       "address": "Lake Sumter Landing Market Square, The Villages, FL 32162",
       "phone": "(352) 205-7169",
       "website": "https://www.cityfirethevillages.com/",
       "priceRange": "$$",
       "description": "American oven & bar at Lake Sumter Landing — burgers, salads, flatbreads, and square-side energy. Oven kitchen (no traditional fries).",
-      "specialties": ["Flatbreads", "Burgers", "Salads"],
+      "specialties": [
+        "Flatbreads",
+        "Burgers",
+        "Salads"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -153,14 +249,23 @@
       "name": "Flying Biscuit Café",
       "slug": "flying-biscuit-cafe",
       "cuisine": "Breakfast",
-      "tags": ["brunch", "southern", "biscuits", "town-square"],
+      "tags": [
+        "brunch",
+        "southern",
+        "biscuits",
+        "town-square"
+      ],
       "area": "Lake Sumter Landing",
       "address": "1101 Canal St, The Villages, FL 32162",
       "phone": "(352) 633-7704",
       "website": "https://flyingbiscuit.com/locations-2/thevillages/",
       "priceRange": "$$",
       "description": "Southern-style breakfast and brunch at Lake Sumter Landing — biscuits, grits, omelets, and all-day morning favorites.",
-      "specialties": ["Biscuits", "Grits", "Omelets"],
+      "specialties": [
+        "Biscuits",
+        "Grits",
+        "Omelets"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -170,14 +275,23 @@
       "name": "TooJay's Deli (Lake Sumter)",
       "slug": "toojays-lake-sumter",
       "cuisine": "American",
-      "tags": ["deli", "breakfast", "lunch", "bakery"],
+      "tags": [
+        "deli",
+        "breakfast",
+        "lunch",
+        "bakery"
+      ],
       "area": "Lake Sumter Landing",
       "address": "1129 Canal St, The Villages, FL 32162",
       "phone": "(352) 430-0410",
       "website": "https://www.toojays.com/locations/lake-sumter-landing/",
       "priceRange": "$$",
       "description": "Deli, bakery, and restaurant on Canal Street — bagels, lox, sandwiches, and classic deli plates for breakfast through dinner.",
-      "specialties": ["Bagels & lox", "Deli sandwiches", "Pastries"],
+      "specialties": [
+        "Bagels & lox",
+        "Deli sandwiches",
+        "Pastries"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -186,14 +300,23 @@
       "name": "Johnny Rockets",
       "slug": "johnny-rockets-lake-sumter",
       "cuisine": "American",
-      "tags": ["burgers", "shakes", "casual", "family"],
+      "tags": [
+        "burgers",
+        "shakes",
+        "casual",
+        "family"
+      ],
       "area": "Lake Sumter Landing",
       "address": "976 Old Mill Run, The Villages, FL 32162",
       "phone": "(352) 259-0051",
       "website": "https://locations.johnnyrockets.com/ll/US/FL/The-Villages/976-Old-Mill-Run",
       "priceRange": "$",
       "description": "Classic burgers, fries, and shakes at Lake Sumter Landing — quick, casual, and family-friendly.",
-      "specialties": ["Burgers", "Milkshakes", "Fries"],
+      "specialties": [
+        "Burgers",
+        "Milkshakes",
+        "Fries"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -202,13 +325,21 @@
       "name": "VKI Japanese Restaurant",
       "slug": "vki-japanese",
       "cuisine": "Asian",
-      "tags": ["sushi", "hibachi", "town-square"],
+      "tags": [
+        "sushi",
+        "hibachi",
+        "town-square"
+      ],
       "area": "Lake Sumter Landing",
       "address": "Lake Sumter Landing Market Square, The Villages, FL 32162",
       "phone": "(352) 259-9887",
       "priceRange": "$$",
       "description": "Japanese steakhouse and sushi near Lake Sumter Landing — hibachi, rolls, and group-friendly dinners.",
-      "specialties": ["Hibachi", "Sushi rolls", "Japanese classics"],
+      "specialties": [
+        "Hibachi",
+        "Sushi rolls",
+        "Japanese classics"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -217,14 +348,23 @@
       "name": "R.J. Gator's",
       "slug": "rj-gators-lake-sumter",
       "cuisine": "American",
-      "tags": ["casual", "waterfront", "bar", "town-square"],
+      "tags": [
+        "casual",
+        "waterfront",
+        "bar",
+        "town-square"
+      ],
       "area": "Lake Sumter Landing",
       "address": "Lake Sumter Landing Market Square, The Villages, FL 32162",
       "phone": "(352) 751-6935",
       "website": "https://www.rjgatorsthevillagesfl.com/",
       "priceRange": "$$",
       "description": "Casual sea grill & bar energy at Lake Sumter Landing — sandwiches, seafood-leaning plates, and patio people-watching.",
-      "specialties": ["Casual grill fare", "Seafood bites", "Patio dining"],
+      "specialties": [
+        "Casual grill fare",
+        "Seafood bites",
+        "Patio dining"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -233,14 +373,23 @@
       "name": "Prima Italian Steakhouse",
       "slug": "prima-italian-steakhouse",
       "cuisine": "Italian",
-      "tags": ["steak", "italian", "date-night", "town-square"],
+      "tags": [
+        "steak",
+        "italian",
+        "date-night",
+        "town-square"
+      ],
       "area": "Brownwood Paddock Square",
       "address": "3660 Kiessel Rd, The Villages, FL 32163",
       "phone": "(352) 391-9939",
       "website": "https://www.primaitaliansteakhouse.com/",
       "priceRange": "$$$",
       "description": "Modern Italian steakhouse on Brownwood Paddock Square — hand-cut steaks, Italian classics, and seafood.",
-      "specialties": ["Hand-cut steaks", "Italian classics", "Seafood"],
+      "specialties": [
+        "Hand-cut steaks",
+        "Italian classics",
+        "Seafood"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -250,14 +399,23 @@
       "name": "Bluefin Grill & Bar",
       "slug": "bluefin-grill-bar",
       "cuisine": "Seafood",
-      "tags": ["seafood", "steak", "cocktails", "town-square"],
+      "tags": [
+        "seafood",
+        "steak",
+        "cocktails",
+        "town-square"
+      ],
       "area": "Brownwood Paddock Square",
       "address": "2738 Brownwood Blvd, The Villages, FL 32163",
       "phone": "(352) 571-5344",
       "website": "https://www.bluefingrillbar.com/",
       "priceRange": "$$$",
       "description": "Upscale seafood and steak with a lively bar scene on Brownwood Paddock Square.",
-      "specialties": ["Seafood", "Steaks", "Craft cocktails"],
+      "specialties": [
+        "Seafood",
+        "Steaks",
+        "Craft cocktails"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -267,14 +425,23 @@
       "name": "City Fire (Brownwood)",
       "slug": "city-fire-brownwood",
       "cuisine": "American",
-      "tags": ["flatbreads", "live-music", "bar", "town-square"],
+      "tags": [
+        "flatbreads",
+        "live-music",
+        "bar",
+        "town-square"
+      ],
       "area": "Brownwood Paddock Square",
       "address": "2716 Brownwood Blvd, The Villages, FL 32163",
       "phone": "(352) 561-2078",
       "website": "https://www.cityfirethevillages.com/",
       "priceRange": "$$",
       "description": "American oven & bar on Brownwood — flatbreads, burgers, salads, live music, and square nightlife. Oven kitchen (no traditional fries).",
-      "specialties": ["Flatbreads", "Burgers", "Live music nights"],
+      "specialties": [
+        "Flatbreads",
+        "Burgers",
+        "Live music nights"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -283,14 +450,23 @@
       "name": "Cody's Original Roadhouse (Brownwood)",
       "slug": "codys-brownwood",
       "cuisine": "American",
-      "tags": ["steak", "casual", "family", "town-square"],
+      "tags": [
+        "steak",
+        "casual",
+        "family",
+        "town-square"
+      ],
       "area": "Brownwood Paddock Square",
       "address": "3731 Meggison Rd, The Villages, FL 32163",
       "phone": "(352) 430-2996",
       "website": "https://www.codysamerican.com/",
       "priceRange": "$$",
       "description": "Brownwood location of Cody's — extensive menu, casual roadhouse fare, and reliable group dining near the square.",
-      "specialties": ["Steaks", "Ribs", "Family plates"],
+      "specialties": [
+        "Steaks",
+        "Ribs",
+        "Family plates"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -299,14 +475,23 @@
       "name": "Fiesta Grande Mexican Grill (Brownwood)",
       "slug": "fiesta-grande-brownwood",
       "cuisine": "Mexican",
-      "tags": ["margaritas", "fajitas", "family", "town-square"],
+      "tags": [
+        "margaritas",
+        "fajitas",
+        "family",
+        "town-square"
+      ],
       "area": "Brownwood Paddock Square",
       "address": "3647 Kiessel Rd, The Villages, FL 32163",
       "phone": "(352) 571-5234",
       "website": "https://fiestagranderestaurant.com/fiestagrandebrownwood",
       "priceRange": "$$",
       "description": "Scratch Mexican on Brownwood Paddock Square — generous portions, classic dishes, and large margaritas.",
-      "specialties": ["Fajitas", "Tacos", "Margaritas"],
+      "specialties": [
+        "Fajitas",
+        "Tacos",
+        "Margaritas"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -315,14 +500,22 @@
       "name": "Another Broken Egg Café",
       "slug": "another-broken-egg",
       "cuisine": "Breakfast",
-      "tags": ["brunch", "mimosas", "omelets"],
+      "tags": [
+        "brunch",
+        "mimosas",
+        "omelets"
+      ],
       "area": "Brownwood area",
       "address": "3713 Meggison Rd, The Villages, FL 32163",
       "phone": "(352) 775-1942",
       "website": "https://www.anotherbrokenegg.com/locations/the-villages-fl/",
       "priceRange": "$$",
       "description": "Breakfast and brunch café near Brownwood — omelets, benedicts, pancakes, and brunch cocktails.",
-      "specialties": ["Omelets", "Eggs Benedict", "Mimosas"],
+      "specialties": [
+        "Omelets",
+        "Eggs Benedict",
+        "Mimosas"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -331,14 +524,22 @@
       "name": "4 Rivers Smokehouse (Middleton)",
       "slug": "4-rivers-smokehouse-middleton",
       "cuisine": "BBQ",
-      "tags": ["brisket", "casual", "takeout"],
+      "tags": [
+        "brisket",
+        "casual",
+        "takeout"
+      ],
       "area": "Middleton",
       "address": "7679 Middleton Dr, Middleton, FL 34762",
       "phone": "(352) 707-8544",
       "website": "https://www.4rsmokehouse.com/locations/middleton",
       "priceRange": "$$",
       "description": "Florida BBQ in Middleton — brisket, pulled pork, ribs, and classic sides in a fast-casual setting.",
-      "specialties": ["Brisket", "Pulled pork", "Ribs"],
+      "specialties": [
+        "Brisket",
+        "Pulled pork",
+        "Ribs"
+      ],
       "featured": true,
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
@@ -348,14 +549,23 @@
       "name": "Portillo's (Middleton)",
       "slug": "portillos-middleton",
       "cuisine": "American",
-      "tags": ["chicago", "hot-dogs", "casual", "family"],
+      "tags": [
+        "chicago",
+        "hot-dogs",
+        "casual",
+        "family"
+      ],
       "area": "Middleton",
       "address": "2283 Doctor Randy McDaniel Way, Middleton, FL 33585",
       "phone": "(352) 723-9660",
       "website": "https://locations.portillos.com/portillos-the-villages",
       "priceRange": "$",
       "description": "Chicago-style favorites in Middleton — Italian beef, hot dogs, burgers, chopped salads, and shakes.",
-      "specialties": ["Italian beef", "Chicago hot dogs", "Chocolate cake shake"],
+      "specialties": [
+        "Italian beef",
+        "Chicago hot dogs",
+        "Chocolate cake shake"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -364,14 +574,23 @@
       "name": "Mezza Luna",
       "slug": "mezza-luna",
       "cuisine": "Italian",
-      "tags": ["pizza", "pasta", "neighborhood", "family"],
+      "tags": [
+        "pizza",
+        "pasta",
+        "neighborhood",
+        "family"
+      ],
       "area": "Colony Plaza area",
       "address": "243 Colony Blvd, The Villages, FL 32162",
       "phone": "(352) 753-3824",
       "website": "https://mezzalunagrill.com/",
       "priceRange": "$$",
       "description": "Neighborhood Italian since 2013 — Neapolitan-inspired recipes, pizza, pasta, and Florida-friendly portions.",
-      "specialties": ["Pizza", "Pasta", "Italian entrées"],
+      "specialties": [
+        "Pizza",
+        "Pasta",
+        "Italian entrées"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -380,14 +599,23 @@
       "name": "Piesanos Stone Fired Pizza (Southern Trace)",
       "slug": "piesanos-southern-trace",
       "cuisine": "Italian",
-      "tags": ["pizza", "pasta", "casual", "takeout"],
+      "tags": [
+        "pizza",
+        "pasta",
+        "casual",
+        "takeout"
+      ],
       "area": "Southern Trace / Lake Deaton area",
       "address": "3539 Wedgewood Ln, The Villages, FL 32162",
       "phone": "(352) 580-9220",
       "website": "https://piesanos.com/locations/the-villages-southern-trace/",
       "priceRange": "$$",
       "description": "Stone-fired pizza and Italian-American comfort food — a longtime Villages casual favorite.",
-      "specialties": ["Stone-fired pizza", "Pasta", "Sandwiches"],
+      "specialties": [
+        "Stone-fired pizza",
+        "Pasta",
+        "Sandwiches"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     },
@@ -396,21 +624,71 @@
       "name": "Fiesta Grande Mexican Grill (Colony Blvd)",
       "slug": "fiesta-grande-colony",
       "cuisine": "Mexican",
-      "tags": ["margaritas", "family", "casual"],
+      "tags": [
+        "margaritas",
+        "family",
+        "casual"
+      ],
       "area": "Colony Plaza area",
       "address": "297 Colony Blvd, The Villages, FL 32162",
       "phone": "(352) 751-0400",
       "website": "https://fiestagranderestaurant.com/fiestagrandevillages",
       "priceRange": "$$",
       "description": "Scratch-made Mexican on Colony Boulevard — tacos, fajitas, and classic plates since 2006.",
-      "specialties": ["Tacos", "Fajitas", "Mexican classics"],
+      "specialties": [
+        "Tacos",
+        "Fajitas",
+        "Mexican classics"
+      ],
       "createdAt": "2026-08-08T16:00:00.000Z",
       "updatedAt": "2026-08-08T16:00:00.000Z"
     }
   ],
-  "reviews": [],
+  "reviews": [
+    {
+      "id": "rev-mskon0d8-ba89b2",
+      "restaurantId": "rest-mskok7lo-58cb3d",
+      "authorName": "Jonathan",
+      "authorMemberId": null,
+      "rating": 4,
+      "title": "Very good local option for Japanese food",
+      "body": "I definitely enjoy this place.  The food is very good, portions are good, prices are reasonable.  I was able to get a table last minute on Christmas last year so that's a bonus!  If you feel like Japanese food and don't want to drive an hour to Orlando, this is a very good local option.",
+      "wouldReturn": true,
+      "createdAt": "2026-08-08T18:03:43.388Z"
+    },
+    {
+      "id": "rev-mskoet39-a96b34",
+      "restaurantId": "rest-4-rivers",
+      "authorName": "Jonathan",
+      "authorMemberId": null,
+      "rating": 5,
+      "title": "Probably the best BBQ joint in the Villages!",
+      "body": "I have ordered take-out from 4 Rivers Smokehouse in Middletown several times, and gotten the \"Messy Pig\" sandwich every time.  It is EXCELLENT although the name is very fitting.  If you're not going to eat this right away, then get the bun on the side b/c it will fall apart in your hands.  Tastes incredible though, so that doesn't bother me at all!",
+      "wouldReturn": true,
+      "dish": "Messy Pig",
+      "createdAt": "2026-08-08T17:57:20.709Z"
+    }
+  ],
   "interviews": [],
-  "suggestions": [],
-  "updatedAt": "2026-08-08T16:00:00.000Z",
-  "sourceNote": "Seeded with real The Villages–area restaurants verified from official square directories (thevillages.com), restaurant websites, and public listings (Aug 2026). Phones/hours can change — confirm before you go."
+  "suggestions": [
+    {
+      "id": "sug-mskojx4a-2cfaf5",
+      "name": "Kumo Sushi & Hibachi",
+      "cuisine": "Asian",
+      "tags": [],
+      "area": "Lake Deaton Plaza",
+      "address": "637 Kristine Way, The Villages, FL 32163",
+      "phone": "352-235-9323",
+      "website": "https://www.kumothevillagesfl.com/",
+      "priceRange": "$$",
+      "description": "Casual Japanese spot for sushi and hibachi dishes, plus beer, sake and wine.",
+      "specialties": [],
+      "suggestedBy": "Jonathan",
+      "status": "approved",
+      "createdAt": "2026-08-08T18:01:19.211Z",
+      "reviewedAt": "2026-08-08T18:01:32.796Z",
+      "approvedRestaurantId": "rest-mskok7lo-58cb3d"
+    }
+  ],
+  "updatedAt": "2026-08-08T18:03:43.388Z"
 }
