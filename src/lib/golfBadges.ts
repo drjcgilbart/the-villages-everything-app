@@ -10,8 +10,6 @@
  */
 
 import { loadGolfClub } from "./golfClub";
-import type { GolfRound, ScoreRing } from "./golfClubTypes";
-import { scoreRingForRound } from "./golfClubTypes";
 import type { BadgeDef } from "./memberBadgeTypes";
 
 export type { ScoreRing } from "./golfClubTypes";
