@@ -19,6 +19,47 @@ function uid(prefix = "id") {
 }
 
 /**
+ * Independent YouTube voices useful for buyers/sellers researching The Villages.
+ * Not partner agents unless separately listed below — channel links only.
+ */
+export type RealEstateYoutubeCreator = {
+  id: string;
+  name: string;
+  aka?: string;
+  handle: string;
+  channelUrl: string;
+  blurb: string;
+};
+
+export const REAL_ESTATE_YOUTUBE_CREATORS: RealEstateYoutubeCreator[] = [
+  {
+    id: "jerry-and-linda",
+    name: "THE VILLAGES FLORIDA NEWCOMERS",
+    aka: "Jerry and Linda",
+    handle: "@JERRYANDLINDA",
+    channelUrl: "https://www.youtube.com/@JERRYANDLINDA",
+    blurb:
+      "Jerry and Linda share retirement life in The Villages — home buying, amenities, health care, golf, and the practical questions newcomers ask before (and after) the move.",
+  },
+  {
+    id: "ira-miller",
+    name: "Ira Miller — R/E Broker, Contractor, Home Inspector",
+    handle: "@HomesAroundTheVillages",
+    channelUrl: "https://www.youtube.com/@HomesAroundTheVillages",
+    blurb:
+      "Long-time local broker (IM Realty) with contractor and home-inspector credentials — home tours, market walks, and buyer-focused coverage of homes around The Villages.",
+  },
+  {
+    id: "robyn-cavallaro",
+    name: "Robyn Cavallaro | The Villages Florida REALTOR®",
+    handle: "@Robyncavallaro",
+    channelUrl: "https://www.youtube.com/@Robyncavallaro",
+    blurb:
+      "Villages REALTOR® content for buyers and sellers — home tours, cost-of-living explainers, bonds/taxes FAQs, and life-in-The-Villages guidance.",
+  },
+];
+
+/**
  * Free live market links — always open current public results (not scraped).
  * Kept in code (not frozen in JSON) so we can refresh the catalog anytime.
  */

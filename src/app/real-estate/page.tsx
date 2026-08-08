@@ -11,6 +11,7 @@ import {
   listingCardImage,
   loadRealEstate,
   marketSummary,
+  REAL_ESTATE_YOUTUBE_CREATORS,
 } from "@/lib/realEstate";
 import { formatDate } from "@/lib/format";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Real Estate",
   description:
-    "Homes for sale in The Villages, FL — featured listings, live market searches, and connect with local real estate agents.",
+    "Homes for sale in The Villages, FL — featured listings, live market searches, partner agents, and YouTube creators covering the local market.",
 };
 
 export default function RealEstatePage() {
@@ -39,10 +40,20 @@ export default function RealEstatePage() {
             <h1>Real Estate in The Villages</h1>
             <p>
               See featured homes on this site, jump to <strong>live market</strong>{" "}
-              searches that stay current, and connect with partner agents who
-              know Edenfield from the historic side. Updated on demand — and
-              hourly when the site is deployed with cron.
+              searches that stay current, watch local YouTube voices (Jerry
+              &amp; Linda, Ira Miller, Robyn Cavallaro, and more), and connect
+              with partner agents who know Edenfield from the historic side.
+              Updated on demand — and hourly when the site is deployed with
+              cron.
             </p>
+            <div className="hero-actions" style={{ marginTop: "0.85rem" }}>
+              <a href="#re-youtube" className="btn btn-ghost btn-sm">
+                YouTube creators
+              </a>
+              <a href="#connect-agent" className="btn btn-ghost btn-sm">
+                Connect with an agent
+              </a>
+            </div>
             <div className="dining-summary-stats">
               <div className="stat">
                 <strong>{summary.activeCount}</strong>
@@ -225,6 +236,44 @@ export default function RealEstatePage() {
               })}
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="section" id="re-youtube" style={{ paddingTop: 0 }}>
+        <div className="shell">
+          <div className="section-head">
+            <div>
+              <h2>YouTube creators · real estate &amp; living here</h2>
+              <p>
+                Independent channels many buyers watch before calling an agent.
+                Open each channel for home tours, market talk, and newcomer
+                Q&amp;A — not affiliated with this site unless listed as a
+                partner agent below.
+              </p>
+            </div>
+          </div>
+          <div className="news-outlet-grid re-youtube-grid">
+            {REAL_ESTATE_YOUTUBE_CREATORS.map((c) => (
+              <article key={c.id} className="about-panel news-outlet-card re-youtube-card">
+                <span className="pill pill-rank">YouTube</span>
+                <strong>{c.name}</strong>
+                {c.aka && (
+                  <span className="re-youtube-aka">Also known as {c.aka}</span>
+                )}
+                <span className="re-youtube-handle">{c.handle}</span>
+                <span>{c.blurb}</span>
+                <a
+                  href={c.channelUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary btn-sm"
+                  style={{ marginTop: "0.65rem", alignSelf: "flex-start" }}
+                >
+                  Open YouTube channel
+                </a>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -925,6 +925,30 @@ a {
   margin-top: 0.25rem;
 }
 
+.re-youtube-grid {
+  align-items: stretch;
+}
+
+.re-youtube-card {
+  height: 100%;
+}
+
+.re-youtube-aka {
+  font-size: 0.88rem !important;
+  font-weight: 600;
+  color: var(--ink) !important;
+}
+
+.re-youtube-handle {
+  font-size: 0.82rem !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+#re-youtube {
+  scroll-margin-top: 5.5rem;
+}
+
 .news-beat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
