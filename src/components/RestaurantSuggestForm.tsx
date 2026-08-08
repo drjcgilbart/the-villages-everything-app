@@ -86,7 +86,7 @@ export function RestaurantSuggestForm() {
             onChange={(e) => setName(e.target.value)}
             required
             maxLength={120}
-            placeholder="e.g. Cart Path Pizza Co."
+            placeholder="e.g. Bella Vita Italian Steakhouse"
           />
         </div>
         <div className="field">
