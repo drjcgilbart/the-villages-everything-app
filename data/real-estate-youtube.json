@@ -1,0 +1,37 @@
+{
+  "updatedAt": "2026-08-08T18:17:54.836Z",
+  "source": "manual",
+  "lastError": null,
+  "creators": {
+    "jerry-and-linda": {
+      "video": {
+        "videoId": "PcFEC--kS9g",
+        "title": "Is The Villages Really Florida's Friendliest Home Town?",
+        "publishedAt": "2026-08-06T00:22:31+00:00",
+        "pickReason": "villages-match"
+      },
+      "fetchedAt": "2026-08-08T18:17:54.949Z",
+      "candidatesChecked": 15
+    },
+    "ira-miller": {
+      "video": {
+        "videoId": "BhnHlHzxaUY",
+        "title": "This Beautiful Courtyard Villa at 1411 Franklin Ct. The Villages, FL! | Virtual Open House",
+        "publishedAt": "2026-08-05T17:12:50+00:00",
+        "pickReason": "villages-match"
+      },
+      "fetchedAt": "2026-08-08T18:17:54.975Z",
+      "candidatesChecked": 15
+    },
+    "robyn-cavallaro": {
+      "video": {
+        "videoId": "raN0SuYNAJs",
+        "title": "Hidden Costs, Swingers and Real Estate Traps: 6 Shocking Truths About The Villages",
+        "publishedAt": "2026-08-07T22:19:52+00:00",
+        "pickReason": "villages-match"
+      },
+      "fetchedAt": "2026-08-08T18:17:55.105Z",
+      "candidatesChecked": 15
+    }
+  }
+}

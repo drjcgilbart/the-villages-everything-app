@@ -925,28 +925,61 @@ a {
   margin-top: 0.25rem;
 }
 
-.re-youtube-grid {
-  align-items: stretch;
+.re-youtube-stack {
+  display: grid;
+  gap: 1.25rem;
 }
 
-.re-youtube-card {
-  height: 100%;
+.re-youtube-card-wide {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.re-youtube-copy h3 {
+  margin: 0.35rem 0 0.4rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.25rem;
 }
 
 .re-youtube-aka {
-  font-size: 0.88rem !important;
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: var(--ink) !important;
+  color: var(--ink);
 }
 
-.re-youtube-handle {
-  font-size: 0.82rem !important;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+.re-youtube-latest-label {
+  margin: 0.65rem 0 0.75rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.re-youtube-updated {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.re-youtube-feed .news-feed-label {
+  margin: 0 0 0.45rem;
+}
+
+.re-youtube-channel-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.88rem;
 }
 
 #re-youtube {
   scroll-margin-top: 5.5rem;
+}
+
+@media (max-width: 860px) {
+  .re-youtube-card-wide {
+    grid-template-columns: 1fr;
+  }
 }
 
 .news-beat-grid {

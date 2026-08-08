@@ -11,8 +11,11 @@ import {
   listingCardImage,
   loadRealEstate,
   marketSummary,
-  REAL_ESTATE_YOUTUBE_CREATORS,
 } from "@/lib/realEstate";
+import {
+  ensureYoutubeCacheFresh,
+  getCreatorsWithLatestVideos,
+} from "@/lib/realEstateYoutube";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +25,7 @@ export const metadata = {
     "Homes for sale in The Villages, FL — featured listings, live market searches, partner agents, and YouTube creators covering the local market.",
 };
 
-export default function RealEstatePage() {
+export default async function RealEstatePage() {
   const data = loadRealEstate();
   const listings = getPublicListings();
   const agents = getPublicAgents();
@@ -30,6 +33,10 @@ export default function RealEstatePage() {
   const preferred = agents.filter((a) => a.tier === "preferred");
   const featuredAgents = agents.filter((a) => a.tier === "featured");
   const listedAgents = agents.filter((a) => a.tier === "listed");
+
+  // Soft-refresh YouTube picks when stale (cron is primary on Vercel)
+  const ytCache = await ensureYoutubeCacheFresh(20);
+  const youtubeCreators = getCreatorsWithLatestVideos(ytCache);
 
   return (
     <>
@@ -246,33 +253,110 @@ export default function RealEstatePage() {
               <h2>YouTube creators · real estate &amp; living here</h2>
               <p>
                 Independent channels many buyers watch before calling an agent.
-                Open each channel for home tours, market talk, and newcomer
-                Q&amp;A — not affiliated with this site unless listed as a
+                Each card shows a recent Villages-related video (refreshed
+                daily). Click the video title or channel button to open their
+                YouTube page — not affiliated with this site unless listed as a
                 partner agent below.
               </p>
+              {ytCache.updatedAt && (
+                <p className="re-youtube-updated">
+                  Video picks last checked{" "}
+                  {formatDate(ytCache.updatedAt)}
+                  {ytCache.source ? ` · ${ytCache.source}` : ""}
+                </p>
+              )}
             </div>
           </div>
-          <div className="news-outlet-grid re-youtube-grid">
-            {REAL_ESTATE_YOUTUBE_CREATORS.map((c) => (
-              <article key={c.id} className="about-panel news-outlet-card re-youtube-card">
-                <span className="pill pill-rank">YouTube</span>
-                <strong>{c.name}</strong>
-                {c.aka && (
-                  <span className="re-youtube-aka">Also known as {c.aka}</span>
-                )}
-                <span className="re-youtube-handle">{c.handle}</span>
-                <span>{c.blurb}</span>
-                <a
-                  href={c.channelUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary btn-sm"
-                  style={{ marginTop: "0.65rem", alignSelf: "flex-start" }}
-                >
-                  Open YouTube channel
-                </a>
-              </article>
-            ))}
+          <div className="re-youtube-stack">
+            {youtubeCreators.map((c) => {
+              const video = c.latestVideo;
+              const watchUrl = video
+                ? `https://www.youtube.com/watch?v=${video.videoId}`
+                : c.channelUrl;
+              const embedSrc = video
+                ? `https://www.youtube.com/embed/${video.videoId}`
+                : `https://www.youtube.com/embed/videoseries?list=${c.uploadsPlaylistId}`;
+
+              return (
+                <article key={c.id} className="about-panel re-youtube-card-wide">
+                  <div className="re-youtube-copy">
+                    <div className="card-meta">
+                      <span className="pill pill-rank">YouTube</span>
+                      <span>{c.handle}</span>
+                    </div>
+                    <h3>{c.name}</h3>
+                    {c.aka && (
+                      <p className="re-youtube-aka">Also known as {c.aka}</p>
+                    )}
+                    <p>{c.blurb}</p>
+                    {video && (
+                      <p className="re-youtube-latest-label">
+                        {video.pickReason === "villages-match"
+                          ? "Latest Villages-related pick"
+                          : "Latest upload"}
+                        {": "}
+                        <a
+                          href={watchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-link"
+                        >
+                          {video.title}
+                        </a>
+                      </p>
+                    )}
+                    <div className="fd-creator-actions">
+                      <a
+                        href={c.channelUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary btn-sm"
+                      >
+                        Open channel
+                      </a>
+                      {video && (
+                        <a
+                          href={watchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-ghost btn-sm"
+                        >
+                          Watch on YouTube
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="re-youtube-feed">
+                    <p className="news-feed-label">
+                      {video ? "Featured video" : "Latest from this channel"}
+                    </p>
+                    <div className="fd-video-frame re-youtube-frame">
+                      <iframe
+                        src={embedSrc}
+                        title={
+                          video
+                            ? `${c.name}: ${video.title}`
+                            : `${c.name} latest uploads`
+                        }
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                    <p className="re-youtube-channel-hint">
+                      <a
+                        href={c.channelUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-link"
+                      >
+                        Go to {c.handle} channel →
+                      </a>
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>

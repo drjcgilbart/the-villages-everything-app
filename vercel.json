@@ -5,6 +5,10 @@
       "schedule": "0 12 * * *"
     },
     {
+      "path": "/api/real-estate/youtube-refresh",
+      "schedule": "15 12 * * *"
+    },
+    {
       "path": "/api/entertainment/refresh",
       "schedule": "0 11 * * *"
     },

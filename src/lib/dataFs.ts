@@ -33,6 +33,7 @@ const DURABLE_JSON = new Set([
   "club-listings.json",
   "calendar-events.json",
   "local-services.json",
+  "real-estate-youtube.json",
 ]);
 
 export function isEphemeralHost(): boolean {
