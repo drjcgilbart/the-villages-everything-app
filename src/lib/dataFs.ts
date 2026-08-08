@@ -6,7 +6,10 @@ import path from "path";
  *
  * Bundled seeds: process.cwd()/data (read-only on serverless)
  * Runtime writes: /tmp/tvh-data (ephemeral per instance)
- * Durable writes (when BLOB_READ_WRITE_TOKEN is set): Vercel Blob
+ * Durable JSON (any of these):
+ *   - Upstash Redis REST (UPSTASH_REDIS_REST_URL + TOKEN) — free tier; use when
+ *     Vercel Blob Hobby is over quota
+ *   - Vercel Blob (BLOB_READ_WRITE_TOKEN / BLOB_STORE_ID)
  * Process memory cache: keeps latest writes visible on the same instance
  */
 
@@ -36,7 +39,19 @@ const DURABLE_JSON = new Set([
   "real-estate-youtube.json",
 ]);
 
+/**
+ * True on real serverless hosts (Vercel production/preview, Lambda, etc.).
+ * False for local `next dev`, `next start` on your PC, and `vercel dev`
+ * (VERCEL_ENV=development) — those should use the project `data/` folder.
+ */
 export function isEphemeralHost(): boolean {
+  // Local tooling: never treat as serverless read-only disk
+  if (
+    process.env.VERCEL_ENV === "development" ||
+    process.env.NODE_ENV === "development"
+  ) {
+    return false;
+  }
   return Boolean(
     process.env.VERCEL ||
       process.env.AWS_LAMBDA_FUNCTION_NAME ||
@@ -44,8 +59,167 @@ export function isEphemeralHost(): boolean {
   );
 }
 
+/**
+ * True when Vercel Blob can authenticate:
+ * - static `BLOB_READ_WRITE_TOKEN`, and/or
+ * - OIDC on Vercel via `BLOB_STORE_ID` (+ platform `VERCEL_OIDC_TOKEN`)
+ */
 export function blobConfigured(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN?.trim() ||
+      process.env.BLOB_STORE_ID?.trim()
+  );
+}
+
+/** Free-tier durable JSON via Upstash Redis REST (no npm package required). */
+export function redisConfigured(): boolean {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
+      process.env.UPSTASH_REDIS_REST_TOKEN?.trim()
+  );
+}
+
+/** Any durable backend for admin/member JSON on serverless. */
+export function durableConfigured(): boolean {
+  return blobConfigured() || redisConfigured();
+}
+
+/**
+ * Durable sync is required on serverless when a backend is configured.
+ * Locally, disk is the source of truth; remote sync is optional.
+ */
+export function blobRequired(): boolean {
+  return isEphemeralHost() && durableConfigured();
+}
+
+export function durableRequired(): boolean {
+  return isEphemeralHost() && durableConfigured();
+}
+
+function redisKey(filename: string) {
+  return `tvh-data:${path.basename(filename)}`;
+}
+
+async function redisCommand(command: string[]): Promise<unknown> {
+  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  if (!url || !token) {
+    throw new Error("Upstash Redis is not configured");
+  }
+  const res = await fetch(`${url.replace(/\/$/, "")}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(command),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Upstash Redis HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}`
+    );
+  }
+  const data = (await res.json()) as { result?: unknown; error?: string };
+  if (data.error) throw new Error(`Upstash Redis: ${data.error}`);
+  return data.result;
+}
+
+async function pushJsonToRedis(filename: string, json: string): Promise<void> {
+  if (!redisConfigured() || !DURABLE_JSON.has(filename)) return;
+  await redisCommand(["SET", redisKey(filename), json]);
+}
+
+async function pullJsonFromRedis(filename: string): Promise<string | null> {
+  if (!redisConfigured() || !DURABLE_JSON.has(filename)) return null;
+  try {
+    const result = await redisCommand(["GET", redisKey(filename)]);
+    if (result == null) return null;
+    const text = String(result);
+    return text || null;
+  } catch (err) {
+    console.error("[dataFs] redis pull failed", filename, err);
+    return null;
+  }
+}
+
+/**
+ * Do NOT pass an explicit `token` into @vercel/blob when possible.
+ * An explicit token always wins over OIDC — a stale BLOB_READ_WRITE_TOKEN
+ * on Production will break saves even when the store is correctly connected.
+ * Let the SDK resolve: OIDC + BLOB_STORE_ID → else env BLOB_READ_WRITE_TOKEN.
+ */
+function blobAuthOptions(): { token?: string } {
+  // Only force the static token off-Vercel (local / non-OIDC hosts).
+  if (!process.env.VERCEL && process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+    return { token: process.env.BLOB_READ_WRITE_TOKEN.trim() };
+  }
+  return {};
+}
+
+type BlobAccess = "public" | "private";
+
+function isBlobQuotaError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /usage limits?|hobby plan|access resumes|quota|rate limit|402|403/i.test(
+    msg
+  );
+}
+
+function formatBlobError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const name = err.name || "Error";
+  if (
+    isBlobQuotaError(err) ||
+    /usage limits?|hobby plan|access resumes/i.test(err.message)
+  ) {
+    return (
+      "Vercel Blob Hobby plan is over its monthly limit (access resumes on the date shown in Vercel Storage). " +
+      "Until then, add free Upstash Redis env vars UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (see DEPLOY-SIMPLE.md), or upgrade Blob to Pro."
+    );
+  }
+  // Helpful common cases from @vercel/blob
+  if (name.includes("StoreNotFound") || /store not found/i.test(err.message)) {
+    return "Blob store not found — connect a Blob store to this Vercel project (Storage → Blob) and redeploy.";
+  }
+  if (name.includes("Access") || /access/i.test(err.message)) {
+    return `Blob access denied (${err.message}). Store may be private while code used public, or token is wrong.`;
+  }
+  if (/no token|token not found|BLOB_READ_WRITE/i.test(err.message)) {
+    return "No Blob credentials. Set BLOB_READ_WRITE_TOKEN or connect the store (BLOB_STORE_ID) for Production, then redeploy.";
+  }
+  return err.message;
+}
+
+/** put JSON/bytes trying store access modes private then public. */
+async function putBlobWithAccess(
+  pathname: string,
+  body: Buffer | string,
+  contentType: string
+): Promise<{ url?: string }> {
+  const { put } = await import("@vercel/blob");
+  const auth = blobAuthOptions();
+  const baseOpts = {
+    addRandomSuffix: false as const,
+    allowOverwrite: true,
+    contentType,
+    ...auth,
+  };
+  // Prefer private (admin/member data); fall back to public stores.
+  const modes: BlobAccess[] = ["private", "public"];
+  let lastErr: unknown;
+  for (const access of modes) {
+    try {
+      const result = await put(pathname, body, { ...baseOpts, access });
+      return { url: result?.url };
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(formatBlobError(lastErr));
 }
 
 /** Directory we are allowed to create and write into. */
@@ -173,58 +347,131 @@ export function readJsonFile<T>(filename: string): T | null {
 
 async function pushJsonToBlob(filename: string, json: string): Promise<void> {
   if (!blobConfigured() || !DURABLE_JSON.has(filename)) return;
-  const { put } = await import("@vercel/blob");
-  const body = Buffer.from(json, "utf8");
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  const baseOpts = {
-    addRandomSuffix: false as const,
-    allowOverwrite: true,
-    contentType: "application/json",
-    token,
-  };
-  // Private stores reject access:"public" — try public then private.
   try {
-    await put(blobPathname(filename), body, {
-      ...baseOpts,
-      access: "public",
-    });
-  } catch (publicErr) {
-    try {
-      await put(blobPathname(filename), body, {
-        ...baseOpts,
-        access: "private",
-      });
-    } catch (privateErr) {
-      console.error("[dataFs] blob put failed", filename, privateErr);
-      throw new Error(
-        `Could not save ${filename} to Vercel Blob. Check BLOB_READ_WRITE_TOKEN and that the Blob store is connected to this project.`
-      );
-    }
+    await putBlobWithAccess(
+      blobPathname(filename),
+      Buffer.from(json, "utf8"),
+      "application/json"
+    );
+  } catch (err) {
+    console.error("[dataFs] blob put failed", filename, err);
+    throw new Error(
+      `Could not save ${filename} to Vercel Blob. ${formatBlobError(err)}`
+    );
   }
 }
 
-/** Pull one durable JSON file from Blob (auth header supports private stores). */
+/**
+ * Sync durable JSON to Redis and/or Blob.
+ * Success if **any** backend works (so Hobby Blob quota does not block Redis).
+ * Local disk hosts: never fail the request.
+ */
+async function syncDurableJson(filename: string, json: string): Promise<void> {
+  if (!DURABLE_JSON.has(filename) || !durableConfigured()) return;
+
+  const errors: string[] = [];
+  let ok = false;
+
+  // Prefer Redis first when configured (works while Blob Hobby is locked).
+  if (redisConfigured()) {
+    try {
+      await pushJsonToRedis(filename, json);
+      ok = true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`Redis: ${msg}`);
+      console.error("[dataFs] redis put failed", filename, err);
+    }
+  }
+
+  if (blobConfigured()) {
+    try {
+      await pushJsonToBlob(filename, json);
+      ok = true;
+    } catch (err) {
+      errors.push(`Blob: ${formatBlobError(err)}`);
+      console.error("[dataFs] blob put failed", filename, err);
+    }
+  }
+
+  if (ok) {
+    invalidateHydrateLatch();
+    memoryJson.set(filename, json);
+    lastHydrateAt = Date.now();
+    return;
+  }
+
+  // Nothing remote worked
+  if (!isEphemeralHost()) {
+    console.warn(
+      "[dataFs] Durable sync skipped (local disk is source of truth):",
+      filename,
+      errors.join(" | ")
+    );
+    return;
+  }
+
+  throw new Error(
+    `Could not save ${filename} to durable storage. ${errors.join(" · ") || "No backend configured."}`
+  );
+}
+
+/** Pull one durable JSON file from Blob (works for private stores via SDK get). */
 export async function pullJsonFromBlob(
   filename: string
 ): Promise<string | null> {
   if (!blobConfigured() || !DURABLE_JSON.has(filename)) return null;
+  const pathname = blobPathname(filename);
   try {
+    const { get } = await import("@vercel/blob");
+    const auth = blobAuthOptions();
+    for (const access of ["private", "public"] as BlobAccess[]) {
+      try {
+        const result = await get(pathname, {
+          access,
+          useCache: false,
+          ...auth,
+        });
+        if (!result?.stream) continue;
+        const chunks: Buffer[] = [];
+        const reader = result.stream.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) chunks.push(Buffer.from(value));
+        }
+        const text = Buffer.concat(chunks).toString("utf8");
+        if (text) return text;
+      } catch {
+        /* try other access mode */
+      }
+    }
+    // Fallback: list + get by URL (older blobs)
     const { list } = await import("@vercel/blob");
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    const pathname = blobPathname(filename);
-    const { blobs } = await list({
-      prefix: pathname,
-      token,
-      limit: 5,
-    });
+    const { blobs } = await list({ prefix: pathname, limit: 5, ...auth });
     const hit = blobs.find((b) => b.pathname === pathname);
     if (!hit?.url) return null;
-    const res = await fetch(hit.url, {
-      cache: "no-store",
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    if (!res.ok) return null;
-    return await res.text();
+    for (const access of ["private", "public"] as BlobAccess[]) {
+      try {
+        const result = await get(hit.url, {
+          access,
+          useCache: false,
+          ...auth,
+        });
+        if (!result?.stream) continue;
+        const chunks: Buffer[] = [];
+        const reader = result.stream.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) chunks.push(Buffer.from(value));
+        }
+        return Buffer.concat(chunks).toString("utf8");
+      } catch {
+        /* next */
+      }
+    }
+    return null;
   } catch (err) {
     console.error("[dataFs] blob pull failed", filename, err);
     return null;
@@ -232,20 +479,24 @@ export async function pullJsonFromBlob(
 }
 
 /**
- * Hydrate durable JSON from Vercel Blob into memory + /tmp.
+ * Hydrate durable JSON from Redis + Blob into memory + /tmp.
+ * Redis wins over Blob when both have a file (Redis is preferred while Blob is capped).
  * Call from root layout / admin API so every instance sees admin grants.
  */
 export async function hydrateDurableJsonFromBlob(): Promise<{
   ok: boolean;
   blob: boolean;
+  redis: boolean;
   files: string[];
 }> {
-  if (!blobConfigured()) {
-    return { ok: false, blob: false, files: [] };
+  if (!durableConfigured()) {
+    return { ok: false, blob: false, redis: false, files: [] };
   }
   const loaded: string[] = [];
   for (const file of DURABLE_JSON) {
-    const text = await pullJsonFromBlob(file);
+    // Prefer Redis (active during Blob Hobby lockout), then Blob
+    let text = await pullJsonFromRedis(file);
+    if (!text) text = await pullJsonFromBlob(file);
     if (!text) continue;
     try {
       JSON.parse(text); // validate
@@ -265,20 +516,25 @@ export async function hydrateDurableJsonFromBlob(): Promise<{
       /* skip corrupt */
     }
   }
-  return { ok: true, blob: true, files: loaded };
+  return {
+    ok: true,
+    blob: blobConfigured(),
+    redis: redisConfigured(),
+    files: loaded,
+  };
 }
 
 let hydrateOnce: Promise<void> | null = null;
-/** Last successful hydrate time — re-pull from Blob so other instances see approvals. */
+/** Last successful hydrate time — re-pull so other instances see approvals. */
 let lastHydrateAt = 0;
 const HYDRATE_TTL_MS = 4_000;
 
 /**
- * Coalesce concurrent hydrates, but re-pull from Blob every few seconds on
+ * Coalesce concurrent hydrates, but re-pull every few seconds on
  * serverless so admin approvals/submits appear on every instance.
  */
 export function ensureDurableHydrated(): Promise<void> {
-  if (!isEphemeralHost() || !blobConfigured()) {
+  if (!isEphemeralHost() || !durableConfigured()) {
     return Promise.resolve();
   }
   const now = Date.now();
@@ -315,9 +571,9 @@ export function writeJsonFile(filename: string, data: unknown): void {
   fs.writeFileSync(/*turbopackIgnore: true*/ p, json, "utf8");
 
   // Fire-and-forget durable sync (admin + membership critical files)
-  if (DURABLE_JSON.has(base) && blobConfigured()) {
-    void pushJsonToBlob(base, json).catch((err) =>
-      console.error("[dataFs] fire-and-forget blob put failed", base, err)
+  if (DURABLE_JSON.has(base) && durableConfigured()) {
+    void syncDurableJson(base, json).catch((err) =>
+      console.error("[dataFs] fire-and-forget durable put failed", base, err)
     );
   }
 }
@@ -355,13 +611,19 @@ export async function writeJsonFileAsync(
   const p = path.join(dir, base);
   fs.writeFileSync(/*turbopackIgnore: true*/ p, json, "utf8");
 
-  if (DURABLE_JSON.has(base) && blobConfigured()) {
-    await pushJsonToBlob(base, json);
-    // Let other instances re-pull promptly
-    invalidateHydrateLatch();
-    // Keep this instance's memory as source of truth until next TTL pull
-    memoryJson.set(base, json);
-    lastHydrateAt = Date.now();
+  // Local: disk write is enough (remote optional). Serverless: await Redis/Blob.
+  if (DURABLE_JSON.has(base) && durableConfigured()) {
+    await syncDurableJson(base, json);
+  } else if (
+    DURABLE_JSON.has(base) &&
+    isEphemeralHost() &&
+    !durableConfigured()
+  ) {
+    throw new Error(
+      `Could not save ${base}: no durable storage configured. ` +
+        "Vercel Blob Hobby is over quota (or not connected). Add free Upstash Redis: " +
+        "UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in Vercel env, then redeploy. See DEPLOY-SIMPLE.md."
+    );
   }
 }
 
@@ -426,38 +688,25 @@ export async function saveUploadFile(
   }
 
   if (blobConfigured()) {
-    const { put } = await import("@vercel/blob");
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
     const pathname = blobUploadPathname(name);
-    const baseOpts = {
-      addRandomSuffix: false as const,
-      allowOverwrite: true,
-      contentType: mime,
-      token,
-    };
-    let blobUrl: string | undefined;
     try {
-      const result = await put(pathname, buffer, {
-        ...baseOpts,
-        access: "public",
-      });
-      blobUrl = result?.url;
-    } catch {
-      try {
-        const result = await put(pathname, buffer, {
-          ...baseOpts,
-          access: "private",
-        });
-        blobUrl = result?.url;
-      } catch (err) {
-        console.error("[dataFs] upload blob put failed", name, err);
+      const result = await putBlobWithAccess(pathname, buffer, mime);
+      // App URL always proxies through /api/media (works for private blobs)
+      return { url: appUrl, name, blobUrl: result.url };
+    } catch (err) {
+      console.error("[dataFs] upload blob put failed", name, err);
+      // Local: file is already on disk under data/uploads — keep going.
+      if (blobRequired()) {
         throw new Error(
-          "Photo storage failed (Vercel Blob). Confirm BLOB_READ_WRITE_TOKEN is set for Production and redeploy."
+          `Photo storage failed (Vercel Blob). ${formatBlobError(err)}`
         );
       }
+      console.warn(
+        "[dataFs] Blob upload skipped; using local disk file:",
+        name
+      );
+      return { url: appUrl, name };
     }
-    // App URL always proxies through /api/media (works for private blobs)
-    return { url: appUrl, name, blobUrl };
   }
 
   if (isEphemeralHost()) {
@@ -479,11 +728,11 @@ export async function resolveUploadBlobUrl(
   try {
     const { list } = await import("@vercel/blob");
     const pathname = blobUploadPathname(base);
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const auth = blobAuthOptions();
     const { blobs } = await list({
       prefix: pathname,
-      token,
       limit: 5,
+      ...auth,
     });
     const hit = blobs.find(
       (b) => b.pathname === pathname || b.pathname.endsWith(`/${base}`)
@@ -495,28 +744,69 @@ export async function resolveUploadBlobUrl(
   }
 }
 
-/** Fetch upload bytes from Blob (supports private stores via Bearer token). */
+async function streamToBuffer(
+  stream: ReadableStream<Uint8Array>
+): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  const reader = stream.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks);
+}
+
+/** Fetch upload bytes from Blob (private stores via SDK get + OIDC/token). */
 export async function fetchUploadBlobBytes(
   name: string
 ): Promise<{ data: Buffer; contentType: string } | null> {
-  const blobUrl = await resolveUploadBlobUrl(name);
-  if (!blobUrl) return null;
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (!blobConfigured()) return null;
+  const base = path.basename(String(name || ""));
+  if (!base || base === "." || base === "..") return null;
+  const pathname = blobUploadPathname(base);
+  const auth = blobAuthOptions();
   try {
-    const res = await fetch(blobUrl, {
-      cache: "no-store",
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    if (!res.ok) {
-      console.error("[dataFs] blob fetch failed", name, res.status);
-      return null;
+    const { get } = await import("@vercel/blob");
+    for (const access of ["private", "public"] as BlobAccess[]) {
+      try {
+        const result = await get(pathname, {
+          access,
+          useCache: false,
+          ...auth,
+        });
+        if (!result?.stream) continue;
+        const data = await streamToBuffer(result.stream);
+        const contentType =
+          result.blob?.contentType ||
+          guessUploadContentType(base) ||
+          "application/octet-stream";
+        return { data, contentType };
+      } catch {
+        /* try other mode / URL */
+      }
     }
-    const data = Buffer.from(await res.arrayBuffer());
-    const contentType =
-      res.headers.get("content-type") ||
-      guessUploadContentType(name) ||
-      "application/octet-stream";
-    return { data, contentType };
+    const blobUrl = await resolveUploadBlobUrl(base);
+    if (!blobUrl) return null;
+    for (const access of ["private", "public"] as BlobAccess[]) {
+      try {
+        const result = await get(blobUrl, {
+          access,
+          useCache: false,
+          ...auth,
+        });
+        if (!result?.stream) continue;
+        const data = await streamToBuffer(result.stream);
+        const contentType =
+          result.blob?.contentType ||
+          guessUploadContentType(base) ||
+          "application/octet-stream";
+        return { data, contentType };
+      } catch {
+        /* next */
+      }
+    }
+    return null;
   } catch (err) {
     console.error("[dataFs] blob fetch error", name, err);
     return null;

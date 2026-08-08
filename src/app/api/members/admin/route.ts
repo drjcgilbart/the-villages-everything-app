@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
   blobConfigured,
+  durableConfigured,
   ensureDurableHydrated,
+  isEphemeralHost,
+  redisConfigured,
 } from "@/lib/dataFs";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
 import {
@@ -57,6 +60,18 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   await ensureDurableHydrated();
+  const durable = durableConfigured();
+  let durableHint: string | null = null;
+  if (isEphemeralHost() && !durable) {
+    durableHint =
+      "No durable storage is configured. Member changes will not stick on Vercel. Add free Upstash Redis (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN) or a working Blob store — see DEPLOY-SIMPLE.md.";
+  } else if (isEphemeralHost() && !redisConfigured() && blobConfigured()) {
+    durableHint =
+      "Only Vercel Blob is configured. If Blob Hobby hit its monthly limit, member saves fail until the reset date — add free Upstash Redis env vars as a fallback (DEPLOY-SIMPLE.md).";
+  } else if (!isEphemeralHost()) {
+    // Local admin: disk under data/ is the source of truth
+    durableHint = null;
+  }
   return NextResponse.json({
     members: membersWithPlans(),
     tiers: HUB_TIERS.map((t) => ({
@@ -65,10 +80,10 @@ export async function GET() {
       shortLabel: t.shortLabel,
       rank: t.rank,
     })),
-    durableStorage: blobConfigured(),
-    durableHint: blobConfigured()
-      ? null
-      : "BLOB_READ_WRITE_TOKEN is not set. Badge/plan changes only last on this server instance. Add a Vercel Blob store and token so updates show site-wide.",
+    durableStorage: durable,
+    redisStorage: redisConfigured(),
+    blobStorage: blobConfigured(),
+    durableHint,
   });
 }
 
@@ -86,7 +101,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         member,
         members: membersWithPlans(),
-        durableStorage: blobConfigured(),
+        durableStorage: durableConfigured(),
       });
     }
 
@@ -104,7 +119,7 @@ export async function POST(req: Request) {
         plan,
         planLabel: publicSpacePayload(getMemberSpace(id)).planLabel,
         members: membersWithPlans(),
-        durableStorage: blobConfigured(),
+        durableStorage: durableConfigured(),
       });
     }
 
@@ -128,7 +143,7 @@ export async function POST(req: Request) {
         memberId: id,
         goldenLoofah: !!getMemberSpace(id).goldenLoofah,
         members: membersWithPlans(),
-        durableStorage: blobConfigured(),
+        durableStorage: durableConfigured(),
       });
     }
 
@@ -143,7 +158,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         memberId: id,
         members: membersWithPlans(),
-        durableStorage: blobConfigured(),
+        durableStorage: durableConfigured(),
       });
     }
 
@@ -154,7 +169,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         memberId: id,
         members: membersWithPlans(),
-        durableStorage: blobConfigured(),
+        durableStorage: durableConfigured(),
       });
     }
 
@@ -167,7 +182,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       member,
       members: membersWithPlans(),
-      durableStorage: blobConfigured(),
+      durableStorage: durableConfigured(),
     });
   } catch (err) {
     return NextResponse.json(

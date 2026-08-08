@@ -82,12 +82,40 @@ In Vercel → Project → **Settings** → **Environment Variables**, add at lea
 | `ADMIN_SECRET` | a long random string |
 | `NEXT_PUBLIC_SITE_URL` | `https://www.thevillageseverythingapp.com` |
 | `CRON_SECRET` (optional) | Long random string — locks Vercel cron refresh routes |
-| `BLOB_READ_WRITE_TOKEN` (optional but recommended) | Vercel Blob — keeps dining, members, **entertainment schedule**, etc. across deploys |
+| `UPSTASH_REDIS_REST_URL` | Free Upstash Redis REST URL — **recommended** while Blob Hobby is over quota |
+| `UPSTASH_REDIS_REST_TOKEN` | Free Upstash Redis REST token |
+| `BLOB_READ_WRITE_TOKEN` (optional if Redis is set) | Auto-added when you create/connect a **Blob** store |
 | `SITE_PASSWORD` | shared beta unlock password (keep set even when public so Admin can re-enable the wall) |
 | `STRIPE_SECRET_KEY` | your **live** Stripe secret key (if donations) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | your **live** publishable key |
 
 Then **Redeploy** (Deployments → ⋮ → Redeploy) so they take effect.
+
+### Durable storage (Admin → Members on the live site)
+
+On Vercel there is **no permanent disk**. Member saves need durable storage.
+
+#### Option A — Free Upstash Redis (use this when Blob Hobby is over quota)
+
+If Storage says *“You have reached your usage limits… Hobby plan. Access resumes on 9/6/26”*, Blob writes will fail until that date (or until you upgrade to Pro).
+
+1. Sign up at [upstash.com](https://upstash.com) (free tier is enough)  
+2. **Create database** → Redis → pick a US region  
+3. Open the database → **REST API**  
+4. Copy **UPSTASH_REDIS_REST_URL** and **UPSTASH_REDIS_REST_TOKEN**  
+5. Paste both into Vercel → **Settings** → **Environment Variables** → **Production**  
+6. Deploy a build that includes Redis support (push latest code + redeploy)  
+7. Retry Admin → Members  
+
+The app **prefers Redis** when configured, so Blob lockouts no longer block members.
+
+#### Option B — Vercel Blob
+
+1. Project → **Storage** → create/connect **Blob** for Production  
+2. Confirm `BLOB_READ_WRITE_TOKEN` / `BLOB_STORE_ID` exist  
+3. Redeploy  
+
+Hobby Blob has a monthly cap. When hit, use Option A or wait for the reset date.
 
 ### Private beta (site-wide password wall)
 
