@@ -40,6 +40,49 @@ function formatMonth(key: string) {
   });
 }
 
+/**
+ * Phone photos are often 5–12 MB. While Vercel Blob is over quota, Redis only
+ * accepts ~3 MB — so we resize/compress JPGs in the browser before upload.
+ */
+async function prepareBomUploadFile(file: File): Promise<File> {
+  const name = file.name || "photo.jpg";
+  const isPdf =
+    file.type === "application/pdf" || /\.pdf$/i.test(name);
+  if (isPdf) return file;
+
+  // Already small enough — keep original
+  if (file.size <= 2.5 * 1024 * 1024 && file.type === "image/jpeg") {
+    return file;
+  }
+
+  // Try canvas resize (works for jpeg/png/webp; HEIC may fail in some browsers)
+  try {
+    const bitmap = await createImageBitmap(file);
+    const maxEdge = 1600;
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.82)
+    );
+    if (!blob || blob.size < 500) return file;
+
+    const base = name.replace(/\.[^.]+$/, "") || "photo";
+    return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+  } catch {
+    // HEIC / unsupported — send as-is; server will error with a clear message if too large
+    return file;
+  }
+}
+
 function EntryMedia({
   entry,
   large,
@@ -188,8 +231,16 @@ export function BestOfMonthClub() {
     setSubmitting(true);
     setNote(null);
     try {
+      // Compress large phone photos so they survive Redis storage (Blob quota)
+      const prepared = await prepareBomUploadFile(file);
+      if (prepared.size > 12 * 1024 * 1024) {
+        throw new Error(
+          "Photo is still over 12 MB after compression. Please choose a smaller JPG."
+        );
+      }
+
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", prepared);
       const up = await fetch("/api/best-of-month/upload", {
         method: "POST",
         body: fd,
@@ -212,7 +263,13 @@ export function BestOfMonthClub() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submit failed");
-      setNote(data.message);
+      const sizeNote =
+        prepared.size !== file.size
+          ? ` (photo optimized from ${Math.round(file.size / 1024)} KB → ${Math.round(prepared.size / 1024)} KB)`
+          : "";
+      setNote(
+        `${data.message || "Submitted for approval."}${sizeNote} Title: “${title.trim()}”.`
+      );
       setTitle("");
       setDescription("");
       setFile(null);
@@ -501,8 +558,9 @@ export function BestOfMonthClub() {
           <div>
             <h2>Enter this month</h2>
             <p>
-              Upload a <strong>JPG</strong> or <strong>PDF</strong>. Entries need
-              admin approval before they appear for voting.
+              Upload a <strong>JPG</strong> or <strong>PDF</strong>. Large phone
+              photos are automatically resized before upload. Entries need admin
+              approval before they appear for voting.
             </p>
           </div>
         </div>

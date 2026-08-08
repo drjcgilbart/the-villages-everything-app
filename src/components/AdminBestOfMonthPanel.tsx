@@ -475,6 +475,35 @@ export function AdminBestOfMonthPanel() {
                       by {e.submitterName}
                       {e.description ? ` — ${e.description}` : ""}
                     </p>
+                    <p
+                      style={{
+                        margin: "0 0 0.5rem",
+                        fontSize: "0.8rem",
+                        color: "var(--muted)",
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      id: {e.id}
+                      {e.createdAt
+                        ? ` · ${new Date(e.createdAt).toLocaleString()}`
+                        : ""}
+                      <br />
+                      image: {e.imageUrl}
+                    </p>
+                    {/carfix|curlcar|live repro|grok probe|deployprobe|jonathan test|curl test/i.test(
+                      `${e.title} ${e.submitterName} ${e.description || ""}`
+                    ) && (
+                      <p
+                        style={{
+                          margin: "0 0 0.5rem",
+                          color: "#9a3a2e",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        Likely a <strong>debug/test entry</strong> (not a real
+                        villager Corvette upload). Safe to Delete.
+                      </p>
+                    )}
                   </>
                 )}
 

@@ -256,8 +256,8 @@ function redisUploadKey(name: string) {
   return `tvh-upload:${path.basename(name)}`;
 }
 
-/** Max raw upload size we'll store in Redis (base64 expands ~33%). */
-const REDIS_UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+/** Max raw upload size we'll store in Redis (base64 expands ~33%). Client compresses first. */
+const REDIS_UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
 
 async function pushUploadToRedis(
   name: string,
