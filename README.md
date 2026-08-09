@@ -8,6 +8,16 @@ Personal blog, videos, and photos still live under **My Retirement Reboot** / me
 
 **Deploy steps:** see [DEPLOY-SIMPLE.md](./DEPLOY-SIMPLE.md)
 
+### Three ways people use it
+
+| Version | How | Docs |
+|---------|-----|------|
+| **PC / browser** | This Next.js website (Vercel) | This README + DEPLOY-SIMPLE.md |
+| **iPhone** | App Store app (Expo shell → same live site) | [mobile/README.md](./mobile/README.md) |
+| **Android** | Google Play app (same Expo project) | [mobile/STORE-PUBLISH-GUIDE.md](./mobile/STORE-PUBLISH-GUIDE.md) |
+
+You maintain **one website**. Phone apps are a native wrapper with your icon/splash; store content updates when you deploy the site. First-time store setup needs Apple ($99/yr) and Google ($25 once) developer accounts — full walkthrough in the mobile folder.
+
 ---
 
 ## Features

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   THEME_TRACKS,
   createThemeMusicEngine,
@@ -18,10 +19,19 @@ export function ThemeMusicPlayer() {
   const [open, setOpen] = useState(false);
   const [trackId, setTrackId] = useState<TrackId>("sunny-morning");
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [inNativeApp, setInNativeApp] = useState(false);
 
   const active = THEME_TRACKS.find((t) => t.id === trackId) || THEME_TRACKS[0];
 
   useEffect(() => {
+    setHydrated(true);
+    setInNativeApp(isNativeAppShell());
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || inNativeApp) return;
+
     let initial: TrackId = "sunny-morning";
     try {
       const v = localStorage.getItem(STORAGE_VOL);
@@ -42,7 +52,7 @@ export function ThemeMusicPlayer() {
       engineRef.current?.dispose();
       engineRef.current = null;
     };
-  }, []);
+  }, [hydrated, inNativeApp]);
 
   useEffect(() => {
     engineRef.current?.setVolume(volume);
@@ -100,6 +110,9 @@ export function ThemeMusicPlayer() {
     const next = THEME_TRACKS[(idx + dir + THEME_TRACKS.length) % THEME_TRACKS.length];
     selectTrack(next.id);
   }
+
+  // Phone app WebView: no floating music control (desktop/browser still has it)
+  if (!hydrated || inNativeApp) return null;
 
   return (
     <div className={`theme-music ${open ? "open" : ""} ${playing ? "playing" : ""}`}>

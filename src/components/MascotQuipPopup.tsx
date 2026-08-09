@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   pickVillagerQuip,
   quipKindLabel,
@@ -120,7 +121,8 @@ export function MascotQuipPopup() {
     setOpen(false);
   }
 
-  if (!hydrated) return null;
+  // Phone app WebView: keep screen clear (desktop/browser still gets quips)
+  if (!hydrated || isNativeAppShell()) return null;
 
   return (
     <>

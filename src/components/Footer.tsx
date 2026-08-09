@@ -61,7 +61,11 @@ export function Footer() {
           Original site graphics created for this project (not stock photos). Not
           affiliated with The Villages® brand or developer. Just one person
           living the plot twist — and building a map for the rest of us. ©{" "}
-          {new Date().getFullYear()}
+          {new Date().getFullYear()}{" "}
+          ·{" "}
+          <Link href="/privacy" className="text-link">
+            Privacy
+          </Link>
         </p>
       </div>
     </footer>
