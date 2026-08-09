@@ -47,9 +47,9 @@ export default async function RealEstatePage() {
             <h1>Real Estate in The Villages</h1>
             <p>
               See featured homes on this site, jump to <strong>live market</strong>{" "}
-              searches that stay current, watch local YouTube voices (Jerry
-              &amp; Linda, Ira Miller, Robyn Cavallaro, and more), and connect
-              with partner agents who know Edenfield from the historic side.
+              searches that stay current, watch local YouTube voices (Ira Miller,
+              Robyn Cavallaro, and more), and connect with partner agents who
+              know Edenfield from the historic side.
               Updated on demand — and hourly when the site is deployed with
               cron.
             </p>

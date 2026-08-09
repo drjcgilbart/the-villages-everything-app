@@ -103,6 +103,23 @@ export const NEWS_CREATORS: NewsCreator[] = [
     featuredVideoTitle: "Can You Afford to Live in The Villages?",
   },
   {
+    id: "jerry-and-linda",
+    name: "THE VILLAGES FLORIDA NEWCOMERS",
+    handle: "@JERRYANDLINDA",
+    channelUrl: "https://www.youtube.com/@JERRYANDLINDA",
+    // UCQ6UhOOGU1M8hNezBwkM-yw → UU uploads playlist
+    uploadsPlaylistId: "UUQ6UhOOGU1M8hNezBwkM-yw",
+    blurb:
+      "Jerry and Linda share retirement life in The Villages — amenities, health care, golf, home questions, and the practical stuff newcomers ask before (and after) the move.",
+    strengths: [
+      "Newcomer Q&A and practical living tips",
+      "Amenities, golf, and day-to-day lifestyle",
+      "Friendly “should we move here?” perspective",
+    ],
+    featuredVideoId: "PcFEC--kS9g",
+    featuredVideoTitle: "Is The Villages Really Florida's Friendliest Home Town?",
+  },
+  {
     id: "michael-tiffany",
     name: "Michael & Tiffany",
     handle: "@MichaelTiffanyTVE",

@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 
 const creators = [
-  { id: "jerry-and-linda", channelId: "UCQ6UhOOGU1M8hNezBwkM-yw" },
   { id: "ira-miller", channelId: "UCA9UhkWKJAOhiaBETs51XEg" },
   { id: "robyn-cavallaro", channelId: "UCzva_dnyNNgkESClIew-QAA" },
 ];

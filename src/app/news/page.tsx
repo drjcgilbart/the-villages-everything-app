@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Local News",
   description:
-    "Curated current events for The Villages, Florida — local news outlets, YouTube creators like Skip Smith, Gary Abbott, and Michael & Tiffany, plus live channel feeds.",
+    "Curated current events for The Villages, Florida — local news outlets, YouTube creators like Skip Smith, Gary Abbott, Jerry & Linda, and Michael & Tiffany, plus live channel feeds.",
 };
 
 export default function NewsPage() {
@@ -25,10 +25,10 @@ export default function NewsPage() {
               Curated doorways to what&apos;s happening now — local papers and
               sites that stay fresh, plus YouTube voices like{" "}
               <strong>The Villages Skip Smith</strong>,{" "}
-              <strong>Gary Abbott</strong>, and{" "}
-              <strong>Michael &amp; Tiffany</strong> with live channel feeds.
-              We don&apos;t invent the news; we point you at the good sources
-              and the entertaining narrators.
+              <strong>Gary Abbott</strong>, <strong>Jerry &amp; Linda</strong>,
+              and <strong>Michael &amp; Tiffany</strong> with live channel
+              feeds. We don&apos;t invent the news; we point you at the good
+              sources and the entertaining narrators.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
               <a href="#creators" className="btn btn-primary">

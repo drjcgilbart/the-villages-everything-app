@@ -51,16 +51,6 @@ const STALE_HOURS = 20;
 
 export const REAL_ESTATE_YOUTUBE_CREATORS: RealEstateYoutubeCreator[] = [
   {
-    id: "jerry-and-linda",
-    name: "THE VILLAGES FLORIDA NEWCOMERS",
-    aka: "Jerry and Linda",
-    handle: "@JERRYANDLINDA",
-    channelUrl: "https://www.youtube.com/@JERRYANDLINDA",
-    channelId: "UCQ6UhOOGU1M8hNezBwkM-yw",
-    blurb:
-      "Jerry and Linda share retirement life in The Villages — home buying, amenities, health care, golf, and the practical questions newcomers ask before (and after) the move.",
-  },
-  {
     id: "ira-miller",
     name: "Ira Miller — R/E Broker, Contractor, Home Inspector",
     handle: "@HomesAroundTheVillages",
