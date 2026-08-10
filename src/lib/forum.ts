@@ -1,5 +1,10 @@
 import crypto from "crypto";
-import { readJsonFile, writeJsonFile } from "./dataFs";
+import {
+  ensureDurableHydrated,
+  readJsonFile,
+  writeJsonFile,
+  writeJsonFileAsync,
+} from "./dataFs";
 import type {
   ForumCategory,
   ForumData,
@@ -175,9 +180,34 @@ export function loadForum(): ForumData {
   };
 }
 
+/** Prefer in API routes so Redis/Blob is hydrated before read on Vercel. */
+export async function loadForumAsync(): Promise<ForumData> {
+  await ensureDurableHydrated();
+  return loadForum();
+}
+
 export function saveForum(data: ForumData) {
   data.updatedAt = new Date().toISOString();
   writeJsonFile(FORUM_FILE, data);
+  return data;
+}
+
+/**
+ * Prefer in API routes so durable storage finishes before the response.
+ * On Vercel, sync writeJsonFile only hits memory//tmp and skips Redis/Blob —
+ * that caused new posts to 404 after redirect (other instances never saw them).
+ */
+export async function saveForumAsync(data: ForumData) {
+  data.updatedAt = new Date().toISOString();
+  try {
+    await writeJsonFileAsync(FORUM_FILE, data);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not save forum data on this host"
+    );
+  }
   return data;
 }
 
@@ -250,14 +280,14 @@ export function categoryStats(categoryId: string) {
   return { threadCount: threads.length, replyCount: replies };
 }
 
-export function createThread(input: {
+export async function createThread(input: {
   categoryId: string;
   title: string;
   authorName: string;
   body: string;
   authorMemberId?: string | null;
 }) {
-  const data = loadForum();
+  const data = await loadForumAsync();
   if (!data.categories.some((c) => c.id === input.categoryId)) {
     throw new Error("Forum topic not found");
   }
@@ -280,17 +310,17 @@ export function createThread(input: {
     updatedAt: now,
   };
   data.threads.unshift(thread);
-  saveForum(data);
+  await saveForumAsync(data);
   return thread;
 }
 
-export function createReply(input: {
+export async function createReply(input: {
   threadId: string;
   authorName: string;
   body: string;
   authorMemberId?: string | null;
 }) {
-  const data = loadForum();
+  const data = await loadForumAsync();
   const thread = data.threads.find((t) => t.id === input.threadId);
   if (!thread || thread.hidden) throw new Error("Conversation not found");
   if (thread.locked) throw new Error("This conversation is locked");
@@ -311,24 +341,24 @@ export function createReply(input: {
   };
   data.replies.push(reply);
   thread.updatedAt = now;
-  saveForum(data);
+  await saveForumAsync(data);
   return reply;
 }
 
-export function setThreadHidden(id: string, hidden: boolean) {
-  const data = loadForum();
+export async function setThreadHidden(id: string, hidden: boolean) {
+  const data = await loadForumAsync();
   const idx = data.threads.findIndex((t) => t.id === id);
   if (idx < 0) throw new Error("Thread not found");
   data.threads[idx] = { ...data.threads[idx], hidden: !!hidden };
-  return saveForum(data);
+  return saveForumAsync(data);
 }
 
-export function setReplyHidden(id: string, hidden: boolean) {
-  const data = loadForum();
+export async function setReplyHidden(id: string, hidden: boolean) {
+  const data = await loadForumAsync();
   const idx = data.replies.findIndex((r) => r.id === id);
   if (idx < 0) throw new Error("Reply not found");
   data.replies[idx] = { ...data.replies[idx], hidden: !!hidden };
-  return saveForum(data);
+  return saveForumAsync(data);
 }
 
 export function forumSummary() {

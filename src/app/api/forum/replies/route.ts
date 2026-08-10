@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { createReply, getRepliesForThread, setReplyHidden } from "@/lib/forum";
+import {
+  createReply,
+  getRepliesForThread,
+  loadForumAsync,
+  setReplyHidden,
+} from "@/lib/forum";
 import { getSessionMember } from "@/lib/memberAuth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(req: Request) {
+  await loadForumAsync();
   const { searchParams } = new URL(req.url);
   const threadId = searchParams.get("threadId");
   if (!threadId) {
@@ -18,10 +25,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     if (body.website || body.company) {
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, reply: null });
     }
     const session = await getSessionMember();
-    const reply = createReply({
+    const reply = await createReply({
       threadId: String(body.threadId || ""),
       authorName: String(body.authorName || session?.name || ""),
       body: String(body.body || ""),
@@ -42,7 +49,7 @@ export async function PATCH(req: Request) {
   }
   try {
     const body = await req.json();
-    const data = setReplyHidden(String(body.id || ""), !!body.hidden);
+    const data = await setReplyHidden(String(body.id || ""), !!body.hidden);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(

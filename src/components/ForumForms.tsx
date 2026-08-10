@@ -58,13 +58,21 @@ export function NewThreadForm({
           website: honeypot,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not start conversation");
+      const threadId = data?.thread?.id;
+      if (!threadId) {
+        // Honeypot silent-success or incomplete save — stay put with a clear error
+        throw new Error(
+          data.error ||
+            "Conversation was not created. Please try again in a moment."
+        );
+      }
       setAuthorName(authorName);
       setTitle("");
       setBody("");
       setOpen(false);
-      router.push(`/forums/${categorySlug}/${data.thread.id}`);
+      router.push(`/forums/${categorySlug}/${threadId}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start conversation");
@@ -127,10 +135,10 @@ export function NewThreadForm({
           placeholder="What’s on your mind?"
         />
       </div>
-      {/* Honeypot */}
+      {/* Honeypot — random name so password managers don't autofill it */}
       <input
         type="text"
-        name="website"
+        name="tvi_forum_hp"
         value={honeypot}
         onChange={(e) => setHoneypot(e.target.value)}
         className="forum-honeypot"
@@ -178,8 +186,13 @@ export function ReplyForm({ threadId }: { threadId: string }) {
           website: honeypot,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not post");
+      if (!data?.reply?.id) {
+        throw new Error(
+          data.error || "Reply was not saved. Please try again in a moment."
+        );
+      }
       setAuthorName(authorName);
       setBody("");
       router.refresh();
@@ -218,7 +231,7 @@ export function ReplyForm({ threadId }: { threadId: string }) {
       </div>
       <input
         type="text"
-        name="website"
+        name="tvi_forum_hp"
         value={honeypot}
         onChange={(e) => setHoneypot(e.target.value)}
         className="forum-honeypot"

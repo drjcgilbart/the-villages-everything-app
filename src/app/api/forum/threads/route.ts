@@ -3,13 +3,16 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import {
   createThread,
   getVisibleThreads,
+  loadForumAsync,
   setThreadHidden,
 } from "@/lib/forum";
 import { getSessionMember } from "@/lib/memberAuth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(req: Request) {
+  await loadForumAsync();
   const { searchParams } = new URL(req.url);
   const categoryId = searchParams.get("categoryId") || undefined;
   return NextResponse.json({ threads: getVisibleThreads(categoryId || undefined) });
@@ -18,12 +21,12 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // Honeypot — bots fill this
+    // Honeypot — bots fill this (silent success, no thread created)
     if (body.website || body.company) {
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, thread: null });
     }
     const session = await getSessionMember();
-    const thread = createThread({
+    const thread = await createThread({
       categoryId: String(body.categoryId || ""),
       title: String(body.title || ""),
       authorName: String(body.authorName || session?.name || ""),
@@ -45,7 +48,7 @@ export async function PATCH(req: Request) {
   }
   try {
     const body = await req.json();
-    const data = setThreadHidden(String(body.id || ""), !!body.hidden);
+    const data = await setThreadHidden(String(body.id || ""), !!body.hidden);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
