@@ -5,7 +5,7 @@ import { MemberName } from "@/components/MemberName";
 import {
   getCategoryBySlug,
   getRepliesForThread,
-  getThreadById,
+  getThreadByIdAsync,
 } from "@/lib/forum";
 import { formatDate } from "@/lib/format";
 
@@ -17,7 +17,7 @@ export async function generateMetadata({
   params: Promise<{ category: string; threadId: string }>;
 }) {
   const { threadId } = await params;
-  const thread = getThreadById(threadId);
+  const thread = await getThreadByIdAsync(threadId);
   if (!thread) return { title: "Conversation" };
   return {
     title: thread.title,
@@ -31,8 +31,10 @@ export default async function ForumThreadPage({
   params: Promise<{ category: string; threadId: string }>;
 }) {
   const { category: slug, threadId } = await params;
+  // Fresh durable pull (+ retry) so posts from another serverless instance
+  // resolve on the first request after create (not blocked by hydrate TTL).
+  const thread = await getThreadByIdAsync(threadId);
   const cat = getCategoryBySlug(slug);
-  const thread = getThreadById(threadId);
   if (!cat || !thread || thread.categoryId !== cat.id) notFound();
 
   const replies = getRepliesForThread(thread.id);

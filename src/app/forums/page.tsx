@@ -6,6 +6,7 @@ import {
   forumSummary,
   getCategories,
   getVisibleThreads,
+  loadForumAsync,
 } from "@/lib/forum";
 import { formatDate } from "@/lib/format";
 
@@ -16,7 +17,8 @@ export const metadata = {
     "Public community forums for The Villages, Florida — start conversations, reply, and chat with neighbors.",
 };
 
-export default function ForumsPage() {
+export default async function ForumsPage() {
+  await loadForumAsync();
   const categories = getCategories();
   const summary = forumSummary();
   const recent = getVisibleThreads().slice(0, 6);

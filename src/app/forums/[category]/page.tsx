@@ -6,6 +6,7 @@ import {
   countReplies,
   getCategoryBySlug,
   getVisibleThreads,
+  loadForumAsync,
 } from "@/lib/forum";
 import { formatDate } from "@/lib/format";
 
@@ -17,6 +18,7 @@ export async function generateMetadata({
   params: Promise<{ category: string }>;
 }) {
   const { category: slug } = await params;
+  await loadForumAsync();
   const cat = getCategoryBySlug(slug);
   if (!cat) return { title: "Forum" };
   return {
@@ -31,6 +33,7 @@ export default async function ForumCategoryPage({
   params: Promise<{ category: string }>;
 }) {
   const { category: slug } = await params;
+  await loadForumAsync();
   const cat = getCategoryBySlug(slug);
   if (!cat) notFound();
 

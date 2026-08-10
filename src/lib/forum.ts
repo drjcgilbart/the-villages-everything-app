@@ -1,6 +1,10 @@
 import crypto from "crypto";
 import {
+  cacheDurableJson,
+  durableConfigured,
   ensureDurableHydrated,
+  isEphemeralHost,
+  pullDurableJson,
   readJsonFile,
   writeJsonFile,
   writeJsonFileAsync,
@@ -180,9 +184,26 @@ export function loadForum(): ForumData {
   };
 }
 
-/** Prefer in API routes so Redis/Blob is hydrated before read on Vercel. */
+/**
+ * Always re-read forum.json from durable storage on serverless.
+ * Global hydrate has a multi-second TTL, so a warm instance can still
+ * serve a stale copy right after another instance created a thread —
+ * that caused immediate 404s on the new conversation URL.
+ */
 export async function loadForumAsync(): Promise<ForumData> {
-  await ensureDurableHydrated();
+  if (isEphemeralHost() && durableConfigured()) {
+    try {
+      const text = await pullDurableJson(FORUM_FILE);
+      if (text) {
+        cacheDurableJson(FORUM_FILE, text);
+      }
+    } catch (err) {
+      console.error("[forum] durable pull failed; falling back to bulk hydrate", err);
+      await ensureDurableHydrated().catch(() => undefined);
+    }
+  } else {
+    await ensureDurableHydrated().catch(() => undefined);
+  }
   return loadForum();
 }
 
@@ -253,6 +274,16 @@ export function getThreadById(id: string): ForumThread | null {
   const t = loadForum().threads.find((x) => x.id === id) || null;
   if (t?.hidden) return null;
   return t;
+}
+
+/** Fresh durable pull (+ one retry) so newly posted threads resolve on first view. */
+export async function getThreadByIdAsync(id: string): Promise<ForumThread | null> {
+  await loadForumAsync();
+  let t = getThreadById(id);
+  if (t) return t;
+  // Write may have completed on another instance a moment earlier
+  await loadForumAsync();
+  return getThreadById(id);
 }
 
 export function getRepliesForThread(threadId: string) {

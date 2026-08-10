@@ -33,7 +33,6 @@ export function NewThreadForm({
   categoryId: string;
   categorySlug: string;
 }) {
-  const router = useRouter();
   const { authorName, setAuthorName, setAuthorNameLocal } = useDisplayName();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -72,11 +71,11 @@ export function NewThreadForm({
       setTitle("");
       setBody("");
       setOpen(false);
-      router.push(`/forums/${categorySlug}/${threadId}`);
-      router.refresh();
+      // Full navigation so the thread page always does a fresh server read
+      // (soft client transitions can hit a warm instance with stale forum cache).
+      window.location.assign(`/forums/${categorySlug}/${threadId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start conversation");
-    } finally {
       setBusy(false);
     }
   }
