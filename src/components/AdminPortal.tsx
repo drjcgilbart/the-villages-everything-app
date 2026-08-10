@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminBestOfMonthPanel } from "@/components/AdminBestOfMonthPanel";
 import { AdminClubsPanel } from "@/components/AdminClubsPanel";
 import { AdminDiningPanel } from "@/components/AdminDiningPanel";
+import { AdminForumPanel } from "@/components/AdminForumPanel";
 import { AdminGolfPanel } from "@/components/AdminGolfPanel";
 import { AdminLocalServicesPanel } from "@/components/AdminLocalServicesPanel";
 import { AdminMembersPanel } from "@/components/AdminMembersPanel";
@@ -21,6 +22,7 @@ type PortalTab =
   | "golf"
   | "clubs"
   | "localsvc"
+  | "forums"
   | "access";
 
 /**
@@ -259,6 +261,13 @@ export function AdminPortal() {
           </button>
           <button
             type="button"
+            className={tab === "forums" ? "active" : ""}
+            onClick={() => setTab("forums")}
+          >
+            Forums
+          </button>
+          <button
+            type="button"
             className={tab === "access" ? "active" : ""}
             onClick={() => setTab("access")}
           >
@@ -274,6 +283,7 @@ export function AdminPortal() {
         {tab === "golf" && <AdminGolfPanel />}
         {tab === "clubs" && <AdminClubsPanel />}
         {tab === "localsvc" && <AdminLocalServicesPanel />}
+        {tab === "forums" && <AdminForumPanel />}
         {tab === "access" && <AdminSiteGatePanel />}
       </div>
     </div>

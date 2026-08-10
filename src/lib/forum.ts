@@ -14,12 +14,49 @@ import type {
   ForumData,
   ForumReply,
   ForumThread,
+  PublicForumReply,
+  PublicForumThread,
 } from "./forumTypes";
 
 const FORUM_FILE = "forum.json";
 
 function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
+}
+
+/** One-time secret returned to the browser so the author can edit later. */
+export function mintEditToken(): string {
+  return crypto.randomBytes(18).toString("base64url");
+}
+
+export function hashEditToken(token: string): string {
+  return crypto.createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+export function verifyEditToken(
+  token: string | null | undefined,
+  hash: string | null | undefined
+): boolean {
+  if (!token || !hash) return false;
+  const got = hashEditToken(token);
+  try {
+    const a = Buffer.from(got);
+    const b = Buffer.from(String(hash));
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+export function toPublicThread(t: ForumThread): PublicForumThread {
+  const { editTokenHash: _h, ...rest } = t;
+  return rest;
+}
+
+export function toPublicReply(r: ForumReply): PublicForumReply {
+  const { editTokenHash: _h, ...rest } = r;
+  return rest;
 }
 
 export function slugify(text: string) {
@@ -317,7 +354,7 @@ export async function createThread(input: {
   authorName: string;
   body: string;
   authorMemberId?: string | null;
-}) {
+}): Promise<{ thread: PublicForumThread; editToken: string }> {
   const data = await loadForumAsync();
   if (!data.categories.some((c) => c.id === input.categoryId)) {
     throw new Error("Forum topic not found");
@@ -330,19 +367,21 @@ export async function createThread(input: {
   if (body.length < 8) throw new Error("Say a little more to get the chat going");
 
   const now = new Date().toISOString();
+  const editToken = mintEditToken();
   const thread: ForumThread = {
     id: uid("thread"),
     categoryId: input.categoryId,
     title,
     authorName,
     authorMemberId: input.authorMemberId || null,
+    editTokenHash: hashEditToken(editToken),
     body,
     createdAt: now,
     updatedAt: now,
   };
   data.threads.unshift(thread);
   await saveForumAsync(data);
-  return thread;
+  return { thread: toPublicThread(thread), editToken };
 }
 
 export async function createReply(input: {
@@ -350,7 +389,7 @@ export async function createReply(input: {
   authorName: string;
   body: string;
   authorMemberId?: string | null;
-}) {
+}): Promise<{ reply: PublicForumReply; editToken: string }> {
   const data = await loadForumAsync();
   const thread = data.threads.find((t) => t.id === input.threadId);
   if (!thread || thread.hidden) throw new Error("Conversation not found");
@@ -362,34 +401,217 @@ export async function createReply(input: {
   if (body.length < 2) throw new Error("Message is empty");
 
   const now = new Date().toISOString();
+  const editToken = mintEditToken();
   const reply: ForumReply = {
     id: uid("reply"),
     threadId: input.threadId,
     authorName,
     authorMemberId: input.authorMemberId || null,
+    editTokenHash: hashEditToken(editToken),
     body,
     createdAt: now,
+    updatedAt: now,
   };
   data.replies.push(reply);
   thread.updatedAt = now;
   await saveForumAsync(data);
-  return reply;
+  return { reply: toPublicReply(reply), editToken };
+}
+
+export function assertCanEditPost(opts: {
+  isAdmin: boolean;
+  authorMemberId?: string | null;
+  editTokenHash?: string | null;
+  editToken?: string | null;
+  sessionMemberId?: string | null;
+}): "admin" | "owner" {
+  if (opts.isAdmin) return "admin";
+  if (verifyEditToken(opts.editToken, opts.editTokenHash)) return "owner";
+  if (
+    opts.sessionMemberId &&
+    opts.authorMemberId &&
+    opts.sessionMemberId === opts.authorMemberId
+  ) {
+    return "owner";
+  }
+  throw Object.assign(
+    new Error(
+      "You can only edit your own posts from the browser that created them (or while signed in as the same Hub member)."
+    ),
+    { code: 403 }
+  );
+}
+
+export async function updateThread(
+  id: string,
+  input: {
+    title?: string;
+    body?: string;
+    authorName?: string;
+    hidden?: boolean;
+    locked?: boolean;
+    pinned?: boolean;
+    categoryId?: string;
+  },
+  auth: {
+    isAdmin: boolean;
+    editToken?: string | null;
+    sessionMemberId?: string | null;
+  }
+): Promise<PublicForumThread> {
+  const data = await loadForumAsync();
+  const idx = data.threads.findIndex((t) => t.id === id);
+  if (idx < 0) throw new Error("Conversation not found");
+  const cur = data.threads[idx];
+
+  const role = assertCanEditPost({
+    isAdmin: auth.isAdmin,
+    authorMemberId: cur.authorMemberId,
+    editTokenHash: cur.editTokenHash,
+    editToken: auth.editToken,
+    sessionMemberId: auth.sessionMemberId,
+  });
+
+  const now = new Date().toISOString();
+  const next: ForumThread = { ...cur };
+
+  if (input.title !== undefined) {
+    const title = String(input.title || "").trim().slice(0, 140);
+    if (title.length < 4) throw new Error("Give your conversation a clearer title");
+    next.title = title;
+  }
+  if (input.body !== undefined) {
+    const body = cleanBody(input.body);
+    if (body.length < 8) throw new Error("Say a little more in the opening message");
+    next.body = body;
+  }
+  if (input.authorName !== undefined && role === "admin") {
+    next.authorName = cleanName(input.authorName);
+  }
+
+  // Moderation flags — admin only
+  if (role === "admin") {
+    if (input.hidden !== undefined) next.hidden = !!input.hidden;
+    if (input.locked !== undefined) next.locked = !!input.locked;
+    if (input.pinned !== undefined) next.pinned = !!input.pinned;
+    if (input.categoryId !== undefined) {
+      if (!data.categories.some((c) => c.id === input.categoryId)) {
+        throw new Error("Forum topic not found");
+      }
+      next.categoryId = input.categoryId;
+    }
+  }
+
+  const contentChanged =
+    input.title !== undefined ||
+    input.body !== undefined ||
+    (role === "admin" && input.authorName !== undefined);
+  if (contentChanged) {
+    next.editedAt = now;
+    next.updatedAt = now;
+  }
+
+  data.threads[idx] = next;
+  await saveForumAsync(data);
+  return toPublicThread(next);
+}
+
+export async function updateReply(
+  id: string,
+  input: {
+    body?: string;
+    authorName?: string;
+    hidden?: boolean;
+  },
+  auth: {
+    isAdmin: boolean;
+    editToken?: string | null;
+    sessionMemberId?: string | null;
+  }
+): Promise<PublicForumReply> {
+  const data = await loadForumAsync();
+  const idx = data.replies.findIndex((r) => r.id === id);
+  if (idx < 0) throw new Error("Message not found");
+  const cur = data.replies[idx];
+
+  const role = assertCanEditPost({
+    isAdmin: auth.isAdmin,
+    authorMemberId: cur.authorMemberId,
+    editTokenHash: cur.editTokenHash,
+    editToken: auth.editToken,
+    sessionMemberId: auth.sessionMemberId,
+  });
+
+  const now = new Date().toISOString();
+  const next: ForumReply = { ...cur };
+
+  if (input.body !== undefined) {
+    const body = cleanBody(input.body);
+    if (body.length < 2) throw new Error("Message is empty");
+    next.body = body;
+    next.editedAt = now;
+    next.updatedAt = now;
+  }
+  if (input.authorName !== undefined && role === "admin") {
+    next.authorName = cleanName(input.authorName);
+  }
+  if (role === "admin" && input.hidden !== undefined) {
+    next.hidden = !!input.hidden;
+  }
+
+  data.replies[idx] = next;
+
+  // Bump parent conversation activity when content changes
+  if (input.body !== undefined) {
+    const tIdx = data.threads.findIndex((t) => t.id === cur.threadId);
+    if (tIdx >= 0) {
+      data.threads[tIdx] = { ...data.threads[tIdx], updatedAt: now };
+    }
+  }
+
+  await saveForumAsync(data);
+  return toPublicReply(next);
 }
 
 export async function setThreadHidden(id: string, hidden: boolean) {
-  const data = await loadForumAsync();
-  const idx = data.threads.findIndex((t) => t.id === id);
-  if (idx < 0) throw new Error("Thread not found");
-  data.threads[idx] = { ...data.threads[idx], hidden: !!hidden };
-  return saveForumAsync(data);
+  return updateThread(id, { hidden }, { isAdmin: true });
 }
 
 export async function setReplyHidden(id: string, hidden: boolean) {
+  return updateReply(id, { hidden }, { isAdmin: true });
+}
+
+/** Permanent delete — admin only (enforced by API). */
+export async function deleteThread(id: string) {
   const data = await loadForumAsync();
-  const idx = data.replies.findIndex((r) => r.id === id);
-  if (idx < 0) throw new Error("Reply not found");
-  data.replies[idx] = { ...data.replies[idx], hidden: !!hidden };
-  return saveForumAsync(data);
+  const before = data.threads.length;
+  data.threads = data.threads.filter((t) => t.id !== id);
+  if (data.threads.length === before) throw new Error("Conversation not found");
+  data.replies = data.replies.filter((r) => r.threadId !== id);
+  await saveForumAsync(data);
+  return { ok: true as const };
+}
+
+export async function deleteReply(id: string) {
+  const data = await loadForumAsync();
+  const before = data.replies.length;
+  data.replies = data.replies.filter((r) => r.id !== id);
+  if (data.replies.length === before) throw new Error("Message not found");
+  await saveForumAsync(data);
+  return { ok: true as const };
+}
+
+/** Admin list: all threads including hidden, newest first. */
+export function getAllThreads() {
+  return loadForum()
+    .threads.slice()
+    .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+}
+
+export function getAllReplies() {
+  return loadForum()
+    .replies.slice()
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 
 export function forumSummary() {

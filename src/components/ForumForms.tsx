@@ -2,14 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-const NAME_KEY = "tvi-forum-display-name";
+import {
+  FORUM_NAME_KEY,
+  saveForumEditToken,
+} from "@/lib/forumClient";
 
 function useDisplayName() {
   const [authorName, setAuthorName] = useState("");
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(NAME_KEY);
+      const saved = localStorage.getItem(FORUM_NAME_KEY);
       if (saved) setAuthorName(saved);
     } catch {
       /* ignore */
@@ -18,7 +20,7 @@ function useDisplayName() {
   function persist(name: string) {
     setAuthorName(name);
     try {
-      localStorage.setItem(NAME_KEY, name.trim().slice(0, 40));
+      localStorage.setItem(FORUM_NAME_KEY, name.trim().slice(0, 40));
     } catch {
       /* ignore */
     }
@@ -61,18 +63,19 @@ export function NewThreadForm({
       if (!res.ok) throw new Error(data.error || "Could not start conversation");
       const threadId = data?.thread?.id;
       if (!threadId) {
-        // Honeypot silent-success or incomplete save — stay put with a clear error
         throw new Error(
           data.error ||
             "Conversation was not created. Please try again in a moment."
         );
+      }
+      if (data.editToken) {
+        saveForumEditToken(threadId, String(data.editToken));
       }
       setAuthorName(authorName);
       setTitle("");
       setBody("");
       setOpen(false);
       // Full navigation so the thread page always does a fresh server read
-      // (soft client transitions can hit a warm instance with stale forum cache).
       window.location.assign(`/forums/${categorySlug}/${threadId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start conversation");
@@ -97,6 +100,7 @@ export function NewThreadForm({
       <h3 style={{ margin: 0 }}>Start a conversation</h3>
       <p className="review-form-lead">
         Create a sub-topic in this forum. Be kind — this is your neighbors.
+        You can edit your own posts later from this browser.
       </p>
       <div className="form-row">
         <div className="field">
@@ -134,7 +138,6 @@ export function NewThreadForm({
           placeholder="What’s on your mind?"
         />
       </div>
-      {/* Honeypot — random name so password managers don't autofill it */}
       <input
         type="text"
         name="tvi_forum_hp"
@@ -191,6 +194,9 @@ export function ReplyForm({ threadId }: { threadId: string }) {
         throw new Error(
           data.error || "Reply was not saved. Please try again in a moment."
         );
+      }
+      if (data.editToken) {
+        saveForumEditToken(String(data.reply.id), String(data.editToken));
       }
       setAuthorName(authorName);
       setBody("");

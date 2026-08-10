@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ReplyForm } from "@/components/ForumForms";
+import { ForumPost } from "@/components/ForumPost";
 import { MemberName } from "@/components/MemberName";
 import {
   getCategoryBySlug,
@@ -8,6 +9,7 @@ import {
   getThreadByIdAsync,
 } from "@/lib/forum";
 import { formatDate } from "@/lib/format";
+import { resolveAuthorBadges } from "@/lib/memberBadges";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +70,7 @@ export default async function ForumThreadPage({
               memberId={thread.authorMemberId}
               as="strong"
             />
+            {thread.editedAt ? " · Edited" : ""}
             {thread.locked ? " · Locked" : ""}
           </p>
         </div>
@@ -76,42 +79,39 @@ export default async function ForumThreadPage({
       <section className="section">
         <div className="shell forum-thread-layout">
           <div className="forum-chat">
-            <div className="forum-post about-panel forum-post-op">
-              <div className="forum-post-head">
-                <MemberName
-                  name={thread.authorName}
-                  memberId={thread.authorMemberId}
-                  as="strong"
-                />
-                <time dateTime={thread.createdAt}>
-                  {formatDate(thread.createdAt)}
-                </time>
-              </div>
-              <div className="forum-post-body">
-                {thread.body.split(/\n+/).map((p, i) => (
-                  <p key={i}>{p}</p>
-                ))}
-              </div>
-            </div>
+            <ForumPost
+              kind="thread"
+              id={thread.id}
+              authorName={thread.authorName}
+              authorMemberId={thread.authorMemberId}
+              badges={resolveAuthorBadges({
+                memberId: thread.authorMemberId,
+                authorName: thread.authorName,
+              })}
+              body={thread.body}
+              title={thread.title}
+              createdAt={thread.createdAt}
+              editedAt={thread.editedAt}
+              locked={thread.locked}
+              className="forum-post-op"
+            />
 
             {replies.map((reply) => (
-              <div key={reply.id} className="forum-post about-panel">
-                <div className="forum-post-head">
-                  <MemberName
-                    name={reply.authorName}
-                    memberId={reply.authorMemberId}
-                    as="strong"
-                  />
-                  <time dateTime={reply.createdAt}>
-                    {formatDate(reply.createdAt)}
-                  </time>
-                </div>
-                <div className="forum-post-body">
-                  {reply.body.split(/\n+/).map((p, i) => (
-                    <p key={i}>{p}</p>
-                  ))}
-                </div>
-              </div>
+              <ForumPost
+                key={reply.id}
+                kind="reply"
+                id={reply.id}
+                authorName={reply.authorName}
+                authorMemberId={reply.authorMemberId}
+                badges={resolveAuthorBadges({
+                  memberId: reply.authorMemberId,
+                  authorName: reply.authorName,
+                })}
+                body={reply.body}
+                createdAt={reply.createdAt}
+                editedAt={reply.editedAt}
+                locked={thread.locked}
+              />
             ))}
 
             {!thread.locked ? (

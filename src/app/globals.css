@@ -1263,6 +1263,32 @@ a {
   gap: 0.85rem;
 }
 
+.forum-post-head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.forum-edited-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.forum-post-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.forum-edit-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
 .forum-post-head {
   display: flex;
   flex-wrap: wrap;
