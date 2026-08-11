@@ -1,6 +1,9 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import {
   ensureDurableHydrated,
+  isEphemeralHost,
   readJsonFile,
   saveUploadFile,
   writeJsonFile,
@@ -33,6 +36,69 @@ function emptyData(): LocalServicesData {
   return { listings: [], reviews: [], dailyLeaderboard: null, updatedAt: null };
 }
 
+/** Bundled git seed — used when durable Redis/Blob has an older empty copy. */
+function readBundledLocalServicesSeed(): LocalServicesData | null {
+  try {
+    const p = path.join(process.cwd(), "data", FILE);
+    if (!fs.existsSync(/*turbopackIgnore: true*/ p)) return null;
+    const raw = JSON.parse(
+      fs.readFileSync(/*turbopackIgnore: true*/ p, "utf8")
+    ) as LocalServicesData;
+    return {
+      listings: Array.isArray(raw.listings) ? raw.listings : [],
+      reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
+      dailyLeaderboard: raw.dailyLeaderboard || null,
+      updatedAt: raw.updatedAt || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function listingDedupeKey(l: LocalServiceListing): string {
+  return `${listingScope(l)}|${l.businessName}|${l.category}`.toLowerCase();
+}
+
+/**
+ * Merge any seed listings missing from durable storage (by id + name/category).
+ * Production often already has an empty local-services.json in Redis/Blob from
+ * before Local Pros seeds shipped — without this, the page stays empty forever.
+ */
+async function mergeMissingSeedListings(
+  data: LocalServicesData
+): Promise<LocalServicesData> {
+  const seed = readBundledLocalServicesSeed();
+  if (!seed?.listings.length) return data;
+
+  const byId = new Set(data.listings.map((l) => l.id));
+  const byKey = new Set(data.listings.map(listingDedupeKey));
+  const toAdd = seed.listings.filter((l) => {
+    if (!l?.id || !l.businessName) return false;
+    if (byId.has(l.id)) return false;
+    return !byKey.has(listingDedupeKey(l));
+  });
+  if (!toAdd.length) return data;
+
+  const merged: LocalServicesData = {
+    ...data,
+    listings: [...data.listings, ...toAdd],
+    // Keep durable reviews/leaderboard; only backfill missing seed listings
+    reviews: data.reviews,
+    dailyLeaderboard: data.dailyLeaderboard,
+  };
+
+  // Persist so every serverless instance sees seeds after first request
+  if (isEphemeralHost()) {
+    try {
+      await saveLocalServicesAsync(merged);
+    } catch (err) {
+      console.error("[localServices] seed merge save failed", err);
+      // Still serve merged data this request
+    }
+  }
+  return merged;
+}
+
 export function loadLocalServices(): LocalServicesData {
   const raw = readJsonFile<LocalServicesData>(FILE);
   if (!raw) return emptyData();
@@ -46,7 +112,8 @@ export function loadLocalServices(): LocalServicesData {
 
 export async function loadLocalServicesAsync(): Promise<LocalServicesData> {
   await ensureDurableHydrated();
-  return loadLocalServices();
+  const data = loadLocalServices();
+  return mergeMissingSeedListings(data);
 }
 
 export function saveLocalServices(data: LocalServicesData) {
