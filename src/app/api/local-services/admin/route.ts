@@ -46,7 +46,11 @@ export async function POST(req: Request) {
         listing,
         message:
           action === "approve"
-            ? `${listing.businessName} is now live on Support Local Villagers.`
+            ? `${listing.businessName} is now live on ${
+                listing.scope === "area"
+                  ? "Local Pros"
+                  : "Support Local Villagers"
+              }.`
             : `Listing marked ${action}.`,
       });
     }
@@ -58,6 +62,7 @@ export async function POST(req: Request) {
         category: body.category,
         description: body.description,
         village: body.village,
+        serviceArea: body.serviceArea,
         phone: body.phone,
         email: body.email,
         website: body.website,

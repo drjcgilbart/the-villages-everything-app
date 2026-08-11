@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AREA_SERVICE_CATEGORIES,
   LOCAL_SERVICE_CATEGORIES,
+  categoriesForScope,
   listingPhotos,
+  listingScope,
   type LocalServiceListing,
 } from "@/lib/localServicesTypes";
 
@@ -21,16 +24,21 @@ type EditFields = {
   category: LocalServiceListing["category"];
   description: string;
   village: string;
+  serviceArea: string;
   phone: string;
   email: string;
   website: string;
   photos: string[];
   adminNote: string;
+  scope: "villager" | "area";
 };
 
 export function AdminLocalServicesPanel() {
   const [data, setData] = useState<Payload | null>(null);
   const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
+  const [scopeFilter, setScopeFilter] = useState<"all" | "villager" | "area">(
+    "all"
+  );
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -93,11 +101,13 @@ export function AdminLocalServicesPanel() {
       category: l.category,
       description: l.description,
       village: l.village || "",
+      serviceArea: l.serviceArea || "",
       phone: l.phone || "",
       email: l.email || "",
       website: l.website || "",
       photos: listingPhotos(l),
       adminNote: l.adminNote || "",
+      scope: listingScope(l),
     });
   }
 
@@ -186,6 +196,7 @@ export function AdminLocalServicesPanel() {
       category: edit.category,
       description: edit.description,
       village: edit.village || "",
+      serviceArea: edit.serviceArea || "",
       phone: edit.phone || "",
       email: edit.email || "",
       website: edit.website || "",
@@ -198,24 +209,34 @@ export function AdminLocalServicesPanel() {
     return <div className="empty-state">Loading local service listings…</div>;
   }
 
-  const visible =
+  function byScope(list: LocalServiceListing[]) {
+    if (scopeFilter === "all") return list;
+    return list.filter((l) => listingScope(l) === scopeFilter);
+  }
+
+  const visible = byScope(
     tab === "pending"
       ? data.pending
       : tab === "approved"
         ? data.approved
-        : data.listings;
+        : data.listings
+  );
+
+  const pendingV = data.pending.filter((l) => listingScope(l) === "villager")
+    .length;
+  const pendingA = data.pending.filter((l) => listingScope(l) === "area").length;
 
   return (
     <div>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        Approve neighbor service listings for{" "}
-        <strong>Support Local Villagers</strong>. Edit anytime; updates from the
-        public form replace the live listing when you approve them. Each listing
+        Moderate listings for <strong>Support Local Villagers</strong> (neighbors)
+        and <strong>Local Pros</strong> (area trades). Edit anytime; public form
+        updates replace the live listing when you approve them. Each listing
         supports 1 main photo + up to 2 extras.
       </p>
       {msg ? <div className="msg msg-ok">{msg}</div> : null}
 
-      <div className="hero-actions" style={{ marginBottom: "1rem" }}>
+      <div className="hero-actions" style={{ marginBottom: "0.65rem" }}>
         <button
           type="button"
           className={`btn btn-sm ${tab === "pending" ? "btn-primary" : "btn-ghost"}`}
@@ -238,6 +259,29 @@ export function AdminLocalServicesPanel() {
           All ({data.listings.length})
         </button>
       </div>
+      <div className="hero-actions" style={{ marginBottom: "1rem" }}>
+        <button
+          type="button"
+          className={`btn btn-sm ${scopeFilter === "all" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setScopeFilter("all")}
+        >
+          Both directories
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${scopeFilter === "villager" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setScopeFilter("villager")}
+        >
+          Villagers ({pendingV} pending)
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${scopeFilter === "area" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setScopeFilter("area")}
+        >
+          Local Pros ({pendingA} pending)
+        </button>
+      </div>
 
       {visible.length === 0 ? (
         <div className="empty-state">No listings in this filter.</div>
@@ -245,10 +289,14 @@ export function AdminLocalServicesPanel() {
         <div className="admin-list">
           {visible.map((l) => {
             const gallery = listingPhotos(l);
+            const sc = listingScope(l);
             return (
               <article key={l.id} className="about-panel admin-list-item">
                 <div className="card-meta">
                   <span className="pill">{l.status}</span>
+                  <span className="pill">
+                    {sc === "area" ? "Local Pros" : "Villager"}
+                  </span>
                   <span className="pill">{l.category}</span>
                   {gallery.length > 0 ? (
                     <span className="pill">
@@ -317,7 +365,7 @@ export function AdminLocalServicesPanel() {
                           )
                         }
                       >
-                        {LOCAL_SERVICE_CATEGORIES.map((c) => (
+                        {categoriesForScope(edit.scope).map((c) => (
                           <option key={c} value={c}>
                             {c}
                           </option>
@@ -333,6 +381,18 @@ export function AdminLocalServicesPanel() {
                             p ? { ...p, village: e.target.value } : p
                           )
                         }
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Service area / cities</label>
+                      <input
+                        value={edit.serviceArea}
+                        onChange={(e) =>
+                          setEdit((p) =>
+                            p ? { ...p, serviceArea: e.target.value } : p
+                          )
+                        }
+                        placeholder="Lady Lake, Wildwood…"
                       />
                     </div>
                     <div className="field field-full">

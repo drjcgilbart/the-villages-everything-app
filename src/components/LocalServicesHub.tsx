@@ -1,12 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { StarPicker, StarRating } from "@/components/StarRating";
 import {
+  AREA_SERVICE_CATEGORIES,
   LOCAL_SERVICE_CATEGORIES,
+  categoriesForScope,
   listingMainPhoto,
   listingPhotos,
   type LocalServiceCategory,
   type LocalServiceListing,
+  type LocalServiceScope,
+  type LocalServiceStats,
 } from "@/lib/localServicesTypes";
 
 type Feed = {
@@ -22,7 +27,17 @@ function truncate(text: string, max = 140) {
   return `${t.slice(0, max - 1).trimEnd()}…`;
 }
 
-export function LocalServicesHub() {
+type HubProps = {
+  /**
+   * villager = Support Local Villagers (neighbors)
+   * area = Local Pros (businesses in & around The Villages)
+   */
+  scope?: LocalServiceScope;
+};
+
+export function LocalServicesHub({ scope = "villager" }: HubProps) {
+  const isArea = scope === "area";
+  const defaultCats = categoriesForScope(scope);
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<string>("all");
@@ -33,10 +48,13 @@ export function LocalServicesHub() {
   // Form
   const [businessName, setBusinessName] = useState("");
   const [contactName, setContactName] = useState("");
-  const [formCategory, setFormCategory] =
-    useState<LocalServiceCategory>("Home & Handyman");
+  const [formCategory, setFormCategory] = useState<LocalServiceCategory>(
+    defaultCats[0]
+  );
   const [description, setDescription] = useState("");
   const [village, setVillage] = useState("");
+  const [serviceArea, setServiceArea] = useState("");
+  const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
@@ -49,20 +67,31 @@ export function LocalServicesHub() {
   const [note, setNote] = useState<string | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
 
+  // Vote form (detail lightbox)
+  const [voteRating, setVoteRating] = useState(5);
+  const [voteName, setVoteName] = useState("");
+  const [voteBody, setVoteBody] = useState("");
+  const [voteBusy, setVoteBusy] = useState(false);
+  const [voteMsg, setVoteMsg] = useState<string | null>(null);
+  const [voteErr, setVoteErr] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/local-services", { cache: "no-store" });
+      const res = await fetch(
+        `/api/local-services?scope=${encodeURIComponent(scope)}`,
+        { cache: "no-store" }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not load");
       setFeed({
         listings: data.listings || [],
-        categories: data.categories || LOCAL_SERVICE_CATEGORIES,
+        categories: data.categories || defaultCats,
       });
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load");
     }
-  }, []);
+  }, [scope, defaultCats]);
 
   useEffect(() => {
     load();
@@ -101,6 +130,53 @@ export function LocalServicesHub() {
   function openDetail(l: LocalServiceListing) {
     setDetail(l);
     setDetailPhotoIdx(0);
+    setVoteRating(5);
+    setVoteMsg(null);
+    setVoteErr(null);
+  }
+
+  async function submitVote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!detail) return;
+    setVoteBusy(true);
+    setVoteErr(null);
+    setVoteMsg(null);
+    try {
+      const res = await fetch("/api/local-services/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: detail.id,
+          authorName: voteName || "Neighbor",
+          rating: voteRating,
+          body: voteBody || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not save rating");
+      setVoteMsg(data.message || "Thanks for your rating!");
+      setVoteBody("");
+      const stats = data.stats as LocalServiceStats | undefined;
+      if (stats) {
+        setDetail({ ...detail, stats });
+        setFeed((prev) =>
+          prev
+            ? {
+                ...prev,
+                listings: prev.listings.map((x) =>
+                  x.id === detail.id ? { ...x, stats } : x
+                ),
+              }
+            : prev
+        );
+      } else {
+        await load();
+      }
+    } catch (err) {
+      setVoteErr(err instanceof Error ? err.message : "Could not save rating");
+    } finally {
+      setVoteBusy(false);
+    }
   }
 
   function prefillUpdate(l: LocalServiceListing) {
@@ -111,6 +187,8 @@ export function LocalServicesHub() {
     setFormCategory(l.category);
     setDescription(l.description);
     setVillage(l.village || "");
+    setServiceArea(l.serviceArea || "");
+    setAddress(l.address || "");
     setPhone(l.phone || "");
     setEmail(l.email || "");
     setWebsite(l.website || "");
@@ -182,11 +260,14 @@ export function LocalServicesHub() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          scope,
           businessName,
           contactName,
           category: formCategory,
           description,
           village: village || undefined,
+          serviceArea: serviceArea || undefined,
+          address: address || undefined,
           phone: phone || undefined,
           email: email || undefined,
           website: website || undefined,
@@ -213,7 +294,11 @@ export function LocalServicesHub() {
     return <div className="empty-state">{error}</div>;
   }
   if (!feed) {
-    return <div className="empty-state">Loading local services…</div>;
+    return (
+      <div className="empty-state">
+        Loading {isArea ? "area pros" : "local services"}…
+      </div>
+    );
   }
 
   const cats = feed.categories;
@@ -230,7 +315,11 @@ export function LocalServicesHub() {
             className="rc-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Name, service, village…"
+            placeholder={
+              isArea
+                ? "Name, trade, city…"
+                : "Name, service, village…"
+            }
           />
         </label>
         <label className="rc-field">
@@ -251,9 +340,11 @@ export function LocalServicesHub() {
 
       {filtered.length === 0 ? (
         <div className="empty-state about-panel">
-          No approved service listings yet
-          {category !== "all" ? " in this category" : ""}. Villagers: use the
-          form below to submit your service for review.
+          No approved listings yet
+          {category !== "all" ? " in this category" : ""}.{" "}
+          {isArea
+            ? "Businesses that serve The Villages area: use the form below to submit for review."
+            : "Villagers: use the form below to submit your service for review."}
         </div>
       ) : (
         <div className="local-svc-grid">
@@ -296,17 +387,66 @@ export function LocalServicesHub() {
                     {l.village ? (
                       <span className="pill">{l.village}</span>
                     ) : null}
+                    {l.serviceArea ? (
+                      <span className="pill">{l.serviceArea}</span>
+                    ) : null}
                   </div>
                   <h3>{l.businessName}</h3>
                   <p className="local-svc-contact">
                     <strong>{l.contactName}</strong>
+                    {l.address ? (
+                      <>
+                        <br />
+                        <span className="local-svc-address">{l.address}</span>
+                      </>
+                    ) : null}
+                    {l.phone ? (
+                      <>
+                        <br />
+                        <a
+                          href={`tel:${l.phone.replace(/[^\d+]/g, "")}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {l.phone}
+                        </a>
+                      </>
+                    ) : null}
+                    {l.website ? (
+                      <>
+                        <br />
+                        <a
+                          href={l.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Website
+                        </a>
+                      </>
+                    ) : null}
                   </p>
+                  {l.stats && l.stats.reviewCount > 0 ? (
+                    <div className="local-svc-card-rating">
+                      <StarRating
+                        value={l.stats.averageRating}
+                        size="sm"
+                        showValue
+                      />
+                      <small>
+                        {l.stats.reviewCount} vote
+                        {l.stats.reviewCount === 1 ? "" : "s"}
+                      </small>
+                    </div>
+                  ) : (
+                    <p className="local-svc-card-hint" style={{ marginTop: 0 }}>
+                      No ratings yet — be the first
+                    </p>
+                  )}
                   <p className="local-svc-desc local-svc-desc-clip">
                     {truncate(l.description)}
                   </p>
                   <p className="local-svc-card-hint">
-                    Click for full details
-                    {count > 0 ? " & photos" : ""}
+                    Click for full details, photos &amp; to vote
                   </p>
                 </div>
               </article>
@@ -332,6 +472,9 @@ export function LocalServicesHub() {
                   <span className="pill">{detail.category}</span>
                   {detail.village ? (
                     <span className="pill">{detail.village}</span>
+                  ) : null}
+                  {detail.serviceArea ? (
+                    <span className="pill">{detail.serviceArea}</span>
                   ) : null}
                 </div>
                 <h3 id="local-svc-lightbox-title">{detail.businessName}</h3>
@@ -385,8 +528,45 @@ export function LocalServicesHub() {
             ) : null}
 
             <div className="local-svc-lightbox-body">
+              {detail.stats && detail.stats.reviewCount > 0 ? (
+                <div className="local-svc-detail-rating">
+                  <StarRating
+                    value={detail.stats.averageRating}
+                    size="md"
+                    showValue
+                  />
+                  <span>
+                    {detail.stats.reviewCount} neighbor vote
+                    {detail.stats.reviewCount === 1 ? "" : "s"}
+                  </span>
+                </div>
+              ) : (
+                <p className="local-svc-card-hint">No ratings yet</p>
+              )}
               <p className="local-svc-lightbox-desc">{detail.description}</p>
               <ul className="club-leader-meta">
+                {detail.address ? (
+                  <li>
+                    <strong>Address:</strong>{" "}
+                    {detail.mapsUrl ? (
+                      <a
+                        href={detail.mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {detail.address}
+                      </a>
+                    ) : (
+                      detail.address
+                    )}
+                  </li>
+                ) : null}
+                {detail.serviceArea ? (
+                  <li>
+                    <strong>Serves:</strong> {detail.serviceArea}
+                  </li>
+                ) : null}
                 {detail.phone ? (
                   <li>
                     <strong>Phone:</strong>{" "}
@@ -422,8 +602,60 @@ export function LocalServicesHub() {
                     </a>
                   </li>
                 ) : null}
+                {detail.mapsUrl && !detail.address ? (
+                  <li>
+                    <strong>Map / reviews:</strong>{" "}
+                    <a
+                      href={detail.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Open map
+                    </a>
+                  </li>
+                ) : null}
               </ul>
-              <div className="hero-actions">
+
+              <form className="local-svc-vote-form" onSubmit={submitVote}>
+                <span className="kicker">Rate this pro</span>
+                <p style={{ margin: "0.25rem 0 0.5rem", color: "var(--muted)" }}>
+                  1–5 stars — same idea as dining. Helps neighbors pick a crew.
+                </p>
+                {voteMsg ? <div className="msg msg-ok">{voteMsg}</div> : null}
+                {voteErr ? <div className="msg msg-err">{voteErr}</div> : null}
+                <StarPicker value={voteRating} onChange={setVoteRating} />
+                <div className="field" style={{ marginTop: "0.65rem" }}>
+                  <label htmlFor="svc-vote-name">Your name</label>
+                  <input
+                    id="svc-vote-name"
+                    value={voteName}
+                    onChange={(e) => setVoteName(e.target.value)}
+                    maxLength={80}
+                    placeholder="Neighbor"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="svc-vote-body">Note (optional)</label>
+                  <textarea
+                    id="svc-vote-body"
+                    value={voteBody}
+                    onChange={(e) => setVoteBody(e.target.value)}
+                    rows={2}
+                    maxLength={500}
+                    placeholder="Showed up on time, cleaned up after…"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={voteBusy}
+                >
+                  {voteBusy ? "Saving…" : "Submit rating"}
+                </button>
+              </form>
+
+              <div className="hero-actions" style={{ marginTop: "1rem" }}>
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
@@ -449,14 +681,18 @@ export function LocalServicesHub() {
         id="local-service-form"
         style={{ marginTop: "1.75rem" }}
       >
-        <span className="kicker">List your service</span>
+        <span className="kicker">
+          {isArea ? "List your business" : "List your service"}
+        </span>
         <h2 style={{ marginTop: "0.35rem" }}>
           {replacesId ? "Update a listing" : "Submit for admin approval"}
         </h2>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
-          Tell neighbors what you do. Listings go live only after admin
-          approval. Photos optional: 1 main photo for the card, plus up to 2
-          extras in the detail view (JPG/PNG/WebP, under 3&nbsp;MB each).
+          {isArea
+            ? "Electricians, plumbers, pool builders, screen enclosures, pavers, and more — businesses that serve Villagers even if they don’t live inside The Villages. Listings go live only after admin approval."
+            : "Tell neighbors what you do. Listings go live only after admin approval."}{" "}
+          Photos optional: 1 main photo for the card, plus up to 2 extras in the
+          detail view (JPG/PNG/WebP, under 3&nbsp;MB each).
         </p>
 
         {note ? <div className="msg msg-ok">{note}</div> : null}
@@ -471,7 +707,7 @@ export function LocalServicesHub() {
               onChange={(e) => setBusinessName(e.target.value)}
               required
               maxLength={100}
-              placeholder="Cart Path Handyman"
+              placeholder={isArea ? "ABC Electric of Lady Lake" : "Cart Path Handyman"}
             />
           </div>
           <div className="field">
@@ -494,7 +730,12 @@ export function LocalServicesHub() {
                 setFormCategory(e.target.value as LocalServiceCategory)
               }
             >
-              {LOCAL_SERVICE_CATEGORIES.map((c) => (
+              {(feed.categories.length
+                ? feed.categories
+                : isArea
+                  ? AREA_SERVICE_CATEGORIES
+                  : LOCAL_SERVICE_CATEGORIES
+              ).map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
@@ -502,7 +743,9 @@ export function LocalServicesHub() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="svc-village">Village / area (optional)</label>
+            <label htmlFor="svc-village">
+              {isArea ? "Base village / neighborhood (optional)" : "Village / area (optional)"}
+            </label>
             <input
               id="svc-village"
               value={village}
@@ -511,6 +754,30 @@ export function LocalServicesHub() {
               placeholder="Fenney, Colony, Sumter Landing…"
             />
           </div>
+          {isArea ? (
+            <>
+              <div className="field">
+                <label htmlFor="svc-area">City / towns you serve (optional)</label>
+                <input
+                  id="svc-area"
+                  value={serviceArea}
+                  onChange={(e) => setServiceArea(e.target.value)}
+                  maxLength={120}
+                  placeholder="Lady Lake, Wildwood, Fruitland Park…"
+                />
+              </div>
+              <div className="field field-full">
+                <label htmlFor="svc-address">Street address (optional)</label>
+                <input
+                  id="svc-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  maxLength={200}
+                  placeholder="123 Main St, Lady Lake, FL 32159"
+                />
+              </div>
+            </>
+          ) : null}
           <div className="field field-full">
             <label htmlFor="svc-desc">What you do *</label>
             <textarea

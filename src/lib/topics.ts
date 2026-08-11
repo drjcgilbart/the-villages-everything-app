@@ -700,6 +700,14 @@ export const MAIN_TOPICS: {
     image: "/graphics/theme-community-resources.jpg",
   },
   {
+    href: "/local-pros",
+    label: "Local Pros",
+    matchPrefixes: ["/local-pros"],
+    blurb:
+      "Area trades serving The Villages — electricians, plumbers, pools, screens, pavers, lightning protection, and more.",
+    image: "/graphics/theme-community-resources.jpg",
+  },
+  {
     href: "/official-map",
     label: "Official Map",
     matchPrefixes: ["/official-map"],

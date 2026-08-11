@@ -31,6 +31,9 @@ export default function SupportLocalVillagersPage() {
               <a href="#local-service-form" className="btn btn-ghost">
                 List your service
               </a>
+              <Link href="/local-pros" className="btn btn-ghost">
+                Local Pros (area businesses)
+              </Link>
               <Link href="/real-estate" className="btn btn-ghost">
                 Real Estate
               </Link>

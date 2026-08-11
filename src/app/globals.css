@@ -719,7 +719,7 @@ a {
   flex: 0 0 auto;
 }
 
-/* Hidden on desktop — must beat later .main-nav { display: flex } */
+/* Hidden on desktop " must beat later .main-nav { display: flex } */
 .main-nav.hub-mobile-nav {
   display: none;
 }
@@ -1366,7 +1366,7 @@ a {
   gap: 0.75rem;
 }
 
-/* —— Site-wide beta password gate —— */
+/* "" Site-wide beta password gate "" */
 .beta-gate-shell {
   max-width: 440px;
 }
@@ -2326,7 +2326,7 @@ h2.member-name .member-badge {
   }
 }
 
-/* Golf zone — feature cards, snapshots, badges */
+/* Golf zone " feature cards, snapshots, badges */
 .golf-feature-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2712,7 +2712,7 @@ a.artisan-medium-card:hover {
 }
 
 /* Town Squares */
-/* —— Town square entertainment (who / when / where) —— */
+/* "" Town square entertainment (who / when / where) "" */
 .ts-ent-board {
   display: flex;
   flex-direction: column;
@@ -3443,7 +3443,7 @@ a.ts-square-card:hover .ts-square-card-img {
   overflow: hidden;
   min-height: 0;
   background: #fbf8f0;
-  /* Same rounded-square frame on every center (Caroline, Clarendon, regionals, …) */
+  /* Same rounded-square frame on every center (Caroline, Clarendon, regionals, ...) */
   border-radius: 14px;
   border: 1px solid rgba(28, 36, 48, 0.08);
   box-shadow: 0 2px 8px rgba(28, 36, 48, 0.06);
@@ -5345,7 +5345,7 @@ a.ts-square-card:hover .ts-square-card-img {
   color: var(--muted);
 }
 
-/* Fixed Back + Home controls — all pages except home */
+/* Fixed Back + Home controls " all pages except home */
 .floating-nav-stack {
   position: fixed;
   left: 1rem;
@@ -5421,7 +5421,7 @@ a.floating-back-btn {
   }
 }
 
-/* —— Golf ball mascot quips (jokes / sarcasm / advice) —— */
+/* "" Golf ball mascot quips (jokes / sarcasm / advice) "" */
 .mascot-quip-toggle {
   position: fixed;
   right: 1rem;
@@ -6942,7 +6942,7 @@ a.floating-back-btn {
   border-top: 1px solid var(--line);
 }
 
-/* —— Best of the Month Club —— */
+/* "" Best of the Month Club "" */
 .bom-club {
   display: flex;
   flex-direction: column;
@@ -7408,7 +7408,7 @@ a.floating-back-btn {
     display: flex;
   }
 
-  /* Keep Site bar visible once at top — do not hide or re-list under the hub menu */
+  /* Keep Site bar visible once at top " do not hide or re-list under the hub menu */
   .utility-bar {
     display: block;
   }
@@ -7645,7 +7645,7 @@ a.floating-back-btn {
   color: var(--muted);
 }
 
-/* —— The Villages Golf Club hub —— */
+/* "" The Villages Golf Club hub "" */
 .golf-club {
   display: flex;
   flex-direction: column;
@@ -7930,7 +7930,7 @@ a.floating-back-btn {
   color: var(--ink);
 }
 
-/* —— Admin site access / beta gate toggle —— */
+/* "" Admin site access / beta gate toggle "" */
 .site-gate-status-card {
   border: 1px solid rgba(31, 107, 74, 0.18);
 }
@@ -9071,7 +9071,7 @@ a.floating-back-btn {
   line-height: 1.45;
 }
 
-/* —— Support Local Villagers —— */
+/* "" Support Local Villagers "" */
 .local-svc-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -9397,4 +9397,127 @@ a.floating-back-btn {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* -- Local Pros: champs strip, votes, trade boards -- */
+.local-pros-champ-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.local-pros-champ-card {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem !important;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.local-pros-champ-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(28, 36, 48, 0.1);
+}
+
+.local-pros-champ-art {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff8ee;
+}
+
+.local-pros-champ-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.local-pros-champ-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.local-pros-champ-body strong {
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.local-pros-champ-body em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.local-pros-champ-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.local-pros-champ-score small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.local-pros-boards {
+  margin-top: 0.5rem;
+}
+
+.local-pros-leader-static {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.35rem 0.25rem;
+}
+
+.local-svc-card-rating,
+.local-svc-detail-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.35rem;
+}
+
+.local-svc-card-rating small,
+.local-svc-detail-rating span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.local-svc-vote-form {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line, rgba(28, 36, 48, 0.1));
+}
+
+.local-svc-vote-form .star-picker {
+  margin: 0.35rem 0;
+}
+
+.local-svc-address {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.local-svc-contact a {
+  color: var(--palm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.local-svc-contact a:hover {
+  text-decoration: underline;
 }

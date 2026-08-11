@@ -7,10 +7,19 @@ import {
   writeJsonFileAsync,
 } from "./dataFs";
 import {
+  AREA_SERVICE_CATEGORIES,
   LOCAL_SERVICE_CATEGORIES,
+  categoriesForScope,
+  listingScope,
+  type AreaServiceCategory,
+  type LocalProsDailyChampion,
+  type LocalProsDailyLeaderboard,
   type LocalServiceCategory,
   type LocalServiceListing,
   type LocalServiceModStatus,
+  type LocalServiceReview,
+  type LocalServiceScope,
+  type LocalServiceStats,
   type LocalServicesData,
 } from "./localServicesTypes";
 
@@ -21,7 +30,7 @@ function uid(prefix = "svc") {
 }
 
 function emptyData(): LocalServicesData {
-  return { listings: [], updatedAt: null };
+  return { listings: [], reviews: [], dailyLeaderboard: null, updatedAt: null };
 }
 
 export function loadLocalServices(): LocalServicesData {
@@ -29,6 +38,8 @@ export function loadLocalServices(): LocalServicesData {
   if (!raw) return emptyData();
   return {
     listings: Array.isArray(raw.listings) ? raw.listings : [],
+    reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
+    dailyLeaderboard: raw.dailyLeaderboard || null,
     updatedAt: raw.updatedAt || null,
   };
 }
@@ -66,15 +77,34 @@ function optionalText(v: unknown, max: number) {
   return t;
 }
 
-function parseCategory(v: unknown): LocalServiceCategory {
+function parseScope(v: unknown): LocalServiceScope {
+  return String(v || "").toLowerCase() === "area" ? "area" : "villager";
+}
+
+function parseCategory(
+  v: unknown,
+  scope: LocalServiceScope
+): LocalServiceCategory {
   const s = String(v || "Other");
-  if ((LOCAL_SERVICE_CATEGORIES as readonly string[]).includes(s)) {
-    return s as LocalServiceCategory;
+  const allowed = categoriesForScope(scope) as readonly string[];
+  if (allowed.includes(s)) return s as LocalServiceCategory;
+  // Tolerate legacy villager categories on area submissions → Other
+  if (
+    scope === "area" &&
+    (LOCAL_SERVICE_CATEGORIES as readonly string[]).includes(s)
+  ) {
+    return "Other";
+  }
+  if (
+    scope === "villager" &&
+    (AREA_SERVICE_CATEGORIES as readonly string[]).includes(s)
+  ) {
+    return "Other";
   }
   return "Other";
 }
 
-function normalizeUrl(v?: string) {
+function normalizeUrl(v?: string, label = "Website") {
   if (!v) return undefined;
   let u = v.trim();
   if (!u) return undefined;
@@ -86,7 +116,7 @@ function normalizeUrl(v?: string) {
     }
     return parsed.toString();
   } catch {
-    throw new Error("Website must be a valid URL");
+    throw new Error(`${label} must be a valid URL`);
   }
 }
 
@@ -143,19 +173,23 @@ function parsePhotos(input: {
 }
 
 export function listApprovedServices(
-  data: LocalServicesData = loadLocalServices()
+  data: LocalServicesData = loadLocalServices(),
+  scope?: LocalServiceScope
 ): LocalServiceListing[] {
   return data.listings
     .filter((l) => l.status === "approved")
+    .filter((l) => (scope ? listingScope(l) === scope : true))
     .slice()
     .sort((a, b) => a.businessName.localeCompare(b.businessName));
 }
 
 export function listPendingServices(
-  data: LocalServicesData = loadLocalServices()
+  data: LocalServicesData = loadLocalServices(),
+  scope?: LocalServiceScope
 ): LocalServiceListing[] {
   return data.listings
     .filter((l) => l.status === "pending")
+    .filter((l) => (scope ? listingScope(l) === scope : true))
     .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
@@ -201,24 +235,32 @@ export async function submitLocalService(input: {
   category?: string;
   description: string;
   village?: string;
+  serviceArea?: string;
+  address?: string;
   phone?: string;
   email?: string;
   website?: string;
+  mapsUrl?: string;
   photoUrl?: string;
   extraPhotos?: string[];
   photos?: string[];
   submittedByName?: string;
   replacesId?: string;
+  scope?: string;
 }): Promise<LocalServiceListing> {
   const data = await loadLocalServicesAsync();
+  const scope = parseScope(input.scope);
   const businessName = cleanText(input.businessName, 100, "Business name", 2);
   const contactName = cleanText(input.contactName, 80, "Contact name", 2);
   const description = cleanText(input.description, 800, "Description", 10);
-  const category = parseCategory(input.category);
+  const category = parseCategory(input.category, scope);
   const village = optionalText(input.village, 80);
+  const serviceArea = optionalText(input.serviceArea, 120);
+  const address = optionalText(input.address, 200);
   const email = optionalText(input.email, 120);
   const phone = optionalText(input.phone, 40);
   const website = normalizeUrl(optionalText(input.website, 200));
+  const mapsUrl = normalizeUrl(optionalText(input.mapsUrl, 400), "Maps link");
   const { photoUrl, extraPhotos } = parsePhotos(input);
   const submittedByName = cleanText(
     input.submittedByName || contactName,
@@ -235,7 +277,10 @@ export async function submitLocalService(input: {
   const rid = String(input.replacesId || "").trim();
   if (rid) {
     const existing = data.listings.find(
-      (l) => l.id === rid && l.status === "approved"
+      (l) =>
+        l.id === rid &&
+        l.status === "approved" &&
+        listingScope(l) === scope
     );
     if (!existing) {
       throw new Error("That listing was not found (or is not live yet)");
@@ -245,6 +290,7 @@ export async function submitLocalService(input: {
     const match = data.listings.find(
       (l) =>
         l.status === "approved" &&
+        listingScope(l) === scope &&
         l.businessName.toLowerCase() === businessName.toLowerCase() &&
         l.contactName.toLowerCase() === contactName.toLowerCase()
     );
@@ -254,14 +300,18 @@ export async function submitLocalService(input: {
   const now = new Date().toISOString();
   const listing: LocalServiceListing = {
     id: uid("svc"),
+    scope,
     businessName,
     contactName,
     category,
     description,
     village,
+    serviceArea,
+    address,
     phone,
     email,
     website,
+    mapsUrl,
     photoUrl,
     extraPhotos,
     submittedByName,
@@ -300,10 +350,12 @@ export async function setLocalServiceStatus(
         };
       }
     } else {
+      const itemScope = listingScope(item);
       for (let i = 0; i < data.listings.length; i++) {
         if (
           i !== idx &&
           data.listings[i].status === "approved" &&
+          listingScope(data.listings[i]) === itemScope &&
           data.listings[i].businessName.toLowerCase() ===
             item.businessName.toLowerCase() &&
           data.listings[i].contactName.toLowerCase() ===
@@ -346,9 +398,12 @@ export async function updateLocalService(
     category?: string;
     description?: string;
     village?: string | null;
+    serviceArea?: string | null;
+    address?: string | null;
     phone?: string | null;
     email?: string | null;
     website?: string | null;
+    mapsUrl?: string | null;
     photoUrl?: string | null;
     extraPhotos?: string[] | null;
     photos?: string[] | null;
@@ -372,8 +427,11 @@ export async function updateLocalService(
     input.description !== undefined
       ? cleanText(input.description, 800, "Description", 10)
       : cur.description;
+  const scope = listingScope(cur);
   const category =
-    input.category !== undefined ? parseCategory(input.category) : cur.category;
+    input.category !== undefined
+      ? parseCategory(input.category, scope)
+      : cur.category;
 
   let village = cur.village;
   if (input.village !== undefined) {
@@ -381,6 +439,30 @@ export async function updateLocalService(
       input.village === null || input.village === ""
         ? undefined
         : optionalText(input.village, 80);
+  }
+
+  let serviceArea = cur.serviceArea;
+  if (input.serviceArea !== undefined) {
+    serviceArea =
+      input.serviceArea === null || input.serviceArea === ""
+        ? undefined
+        : optionalText(input.serviceArea, 120);
+  }
+
+  let address = cur.address;
+  if (input.address !== undefined) {
+    address =
+      input.address === null || input.address === ""
+        ? undefined
+        : optionalText(input.address, 200);
+  }
+
+  let mapsUrl = cur.mapsUrl;
+  if (input.mapsUrl !== undefined) {
+    mapsUrl =
+      input.mapsUrl === null || input.mapsUrl === ""
+        ? undefined
+        : normalizeUrl(optionalText(input.mapsUrl, 400), "Maps link");
   }
 
   let phone = cur.phone;
@@ -469,9 +551,12 @@ export async function updateLocalService(
     category,
     description,
     village,
+    serviceArea,
+    address,
     phone,
     email,
     website,
+    mapsUrl,
     photoUrl,
     extraPhotos,
     adminNote,
@@ -487,5 +572,193 @@ export async function deleteLocalService(id: string): Promise<void> {
   const before = data.listings.length;
   data.listings = data.listings.filter((l) => l.id !== id);
   if (data.listings.length === before) throw new Error("Listing not found");
+  // Drop orphaned reviews
+  data.reviews = (data.reviews || []).filter((r) => r.listingId !== id);
   await saveLocalServicesAsync(data);
+}
+
+// ─── Ratings / leaderboards (dining-style) ───────────────────────────
+
+export function getVisibleServiceReviews(
+  reviews: LocalServiceReview[] | undefined,
+  listingId?: string
+): LocalServiceReview[] {
+  const list = (reviews || []).filter((r) => !r.hidden);
+  if (!listingId) return list;
+  return list.filter((r) => r.listingId === listingId);
+}
+
+export function computeServiceStats(
+  listingId: string,
+  reviews: LocalServiceReview[] | undefined
+): LocalServiceStats {
+  const list = getVisibleServiceReviews(reviews, listingId);
+  const reviewCount = list.length;
+  if (!reviewCount) return { reviewCount: 0, averageRating: 0 };
+  const sum = list.reduce((s, r) => s + Math.min(5, Math.max(1, r.rating)), 0);
+  return {
+    reviewCount,
+    averageRating: Math.round((sum / reviewCount) * 10) / 10,
+  };
+}
+
+export type RankedLocalService = LocalServiceListing & {
+  stats: LocalServiceStats;
+  rank: number;
+};
+
+export function withServiceStats(
+  listings: LocalServiceListing[],
+  reviews: LocalServiceReview[] | undefined
+): (LocalServiceListing & { stats: LocalServiceStats })[] {
+  return listings.map((l) => ({
+    ...l,
+    stats: computeServiceStats(l.id, reviews),
+  }));
+}
+
+/** Top N approved listings in a category (area or villager). */
+export function topByServiceCategory(
+  category: string,
+  scope: LocalServiceScope,
+  limit = 5,
+  minReviews = 0,
+  data: LocalServicesData = loadLocalServices()
+): RankedLocalService[] {
+  const ranked = withServiceStats(
+    listApprovedServices(data, scope).filter((l) => l.category === category),
+    data.reviews
+  )
+    .filter((l) => l.stats.reviewCount >= minReviews)
+    .sort((a, b) => {
+      if (b.stats.averageRating !== a.stats.averageRating) {
+        return b.stats.averageRating - a.stats.averageRating;
+      }
+      if (b.stats.reviewCount !== a.stats.reviewCount) {
+        return b.stats.reviewCount - a.stats.reviewCount;
+      }
+      return a.businessName.localeCompare(b.businessName);
+    })
+    .slice(0, limit);
+
+  return ranked.map((l, i) => ({ ...l, rank: i + 1 }));
+}
+
+/** Boards for every category in the scope (area shows all trades with art). */
+export function allCategoryLeaders(
+  scope: LocalServiceScope,
+  limit = 5,
+  minReviews = 0,
+  data: LocalServicesData = loadLocalServices()
+): { category: string; leaders: RankedLocalService[] }[] {
+  return categoriesForScope(scope).map((category) => ({
+    category,
+    leaders: topByServiceCategory(category, scope, limit, minReviews, data),
+  }));
+}
+
+/** #1 in each category that has votes (for daily champion strip). */
+export function computeCategoryChampions(
+  scope: LocalServiceScope = "area",
+  data: LocalServicesData = loadLocalServices()
+): LocalProsDailyChampion[] {
+  const champions: LocalProsDailyChampion[] = [];
+  for (const category of categoriesForScope(scope)) {
+    const leaders = topByServiceCategory(category, scope, 1, 1, data);
+    if (leaders.length === 0) continue;
+    const top = leaders[0];
+    champions.push({
+      category: category as AreaServiceCategory,
+      listingId: top.id,
+      businessName: top.businessName,
+      contactName: top.contactName,
+      averageRating: top.stats.averageRating,
+      reviewCount: top.stats.reviewCount,
+    });
+  }
+  return champions;
+}
+
+function todayKeyEastern(): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+/**
+ * Ensure daily champion snapshot is for today; recompute + persist if stale.
+ * Safe to call from page renders / GET handlers.
+ */
+export async function ensureDailyLeaderboard(
+  scope: LocalServiceScope = "area"
+): Promise<LocalProsDailyLeaderboard> {
+  const data = await loadLocalServicesAsync();
+  const asOf = todayKeyEastern();
+  if (
+    data.dailyLeaderboard &&
+    data.dailyLeaderboard.asOf === asOf &&
+    Array.isArray(data.dailyLeaderboard.champions)
+  ) {
+    return data.dailyLeaderboard;
+  }
+  const board: LocalProsDailyLeaderboard = {
+    asOf,
+    updatedAt: new Date().toISOString(),
+    champions: computeCategoryChampions(scope, data),
+  };
+  data.dailyLeaderboard = board;
+  await saveLocalServicesAsync(data);
+  return board;
+}
+
+export async function addLocalServiceReview(input: {
+  listingId: string;
+  authorName: string;
+  rating: number;
+  body?: string;
+  authorMemberId?: string | null;
+}): Promise<LocalServiceReview> {
+  const data = await loadLocalServicesAsync();
+  const listingId = String(input.listingId || "").trim();
+  const listing = data.listings.find(
+    (l) => l.id === listingId && l.status === "approved"
+  );
+  if (!listing) throw new Error("That listing is not available for ratings");
+
+  const rating = Math.min(5, Math.max(1, Math.round(Number(input.rating) || 0)));
+  if (rating < 1) throw new Error("Rating must be 1–5 stars");
+
+  const authorName = cleanText(input.authorName, 80, "Your name", 2);
+  const body = optionalText(input.body, 500);
+
+  const review: LocalServiceReview = {
+    id: uid("rev"),
+    listingId,
+    authorName,
+    authorMemberId: input.authorMemberId || null,
+    rating,
+    body,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (!data.reviews) data.reviews = [];
+  data.reviews.unshift(review);
+  await saveLocalServicesAsync(data);
+  return review;
+}
+
+export function listReviewsForListing(
+  listingId: string,
+  data: LocalServicesData = loadLocalServices()
+): LocalServiceReview[] {
+  return getVisibleServiceReviews(data.reviews, listingId).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt)
+  );
 }
