@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PalmFloat, SunBurst, WaveDivider } from "@/components/Decor";
 import { DonateMascot } from "@/components/DonateMascot";
+import { LaunchPromo } from "@/components/LaunchPromo";
 import { VillagesWeatherWidget } from "@/components/VillagesWeatherWidget";
 import { SITE } from "@/lib/content";
 import { MAIN_TOPICS } from "@/lib/topics";
@@ -61,6 +62,8 @@ export default function HomePage() {
       </section>
 
       <WaveDivider />
+
+      <LaunchPromo />
 
       <section className="shell section themes-section">
         <div className="section-head">

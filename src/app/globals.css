@@ -5718,6 +5718,64 @@ a.floating-back-btn {
   padding-bottom: 0.25rem;
 }
 
+/* Homepage launch / share band */
+.launch-promo {
+  padding: 0.5rem 0 1.5rem;
+}
+
+.launch-promo-inner {
+  background:
+    linear-gradient(135deg, rgba(13, 115, 119, 0.08), rgba(224, 122, 95, 0.1)),
+    var(--card, #fffdf9);
+  border: 1px solid var(--line, #e4d8c4);
+  border-radius: 1.25rem;
+  padding: 1.25rem 1.35rem 1.35rem;
+  box-shadow: 0 12px 32px rgba(28, 43, 43, 0.06);
+}
+
+.launch-promo-copy h2 {
+  margin: 0.35rem 0 0.5rem;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+}
+
+.launch-promo-copy p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 52rem;
+}
+
+.launch-promo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 1rem 0 1.1rem;
+}
+
+.launch-promo-tips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.launch-promo-tip {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line, #e4d8c4);
+  border-radius: 0.9rem;
+  padding: 0.75rem 0.85rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.launch-promo-tip strong {
+  font-size: 0.95rem;
+}
+
+.launch-promo-tip span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .topic-donate {
   margin-top: 2rem;
 }
