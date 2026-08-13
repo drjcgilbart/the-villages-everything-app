@@ -118,6 +118,7 @@ function desktopSteps(env: ClientEnv): string[] {
     "Click the three dots ⋮ at the top right of this window.",
     "Click Cast, save, and share.",
     "Click Create shortcut…",
+    "If you see Open as window, click that box so it is unchecked.",
     "Click Create.",
     "Look on your Desktop for The Villages Everything App and double-click it.",
   ];
