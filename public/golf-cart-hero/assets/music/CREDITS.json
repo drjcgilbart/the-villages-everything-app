@@ -1,7 +1,7 @@
 ﻿[
   {
     "id": "spanish-springs",
-    "file": "spanish-springs.ogg",
+    "file": "spanish-springs.mp3",
     "title": "Flamenco Melody (JCzarnecki-Flamenco)",
     "artist": "JCZA",
     "source": "https://commons.wikimedia.org/wiki/File:JCZA_-_JCzarnecki-Flamenco.ogg",
@@ -28,7 +28,7 @@
   },
   {
     "id": "eastport",
-    "file": "eastport.ogg",
+    "file": "eastport.mp3",
     "title": "BugaBlue",
     "artist": "US Army Blues",
     "source": "https://commons.wikimedia.org/wiki/File:US_Army_Blues_-_10_-_BugaBlue.ogg",
@@ -37,7 +37,7 @@
   },
   {
     "id": "sawgrass-grove",
-    "file": "sawgrass-grove.ogg",
+    "file": "sawgrass-grove.mp3",
     "title": "Bossa Nova (tempo 80–160 play-along)",
     "artist": "Wikimedia Commons contributor",
     "source": "https://commons.wikimedia.org/wiki/File:Bossa_nova_-_tempo_80_%C3%A0_160.ogg",
