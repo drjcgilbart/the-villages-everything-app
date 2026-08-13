@@ -22,6 +22,7 @@ export const SITE = {
   subtitle: SITE_BRAND.subtitle,
   location: SITE_BRAND.location,
   youtube: { ...SITE_BRAND.youtube },
+  stores: SITE_BRAND.stores,
 };
 
 const SEED: SiteContent = {
