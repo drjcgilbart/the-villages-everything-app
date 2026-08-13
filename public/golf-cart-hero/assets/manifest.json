@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "name": "The Villages Golf Cart Hero — Art Pack v1",
+  "description": "Photoreal PBR albedo textures for terrain, buildings, foliage, and carts. Generated art pipeline.",
+  "textures": {
+    "terrain/asphalt": "textures/terrain/asphalt.jpg",
+    "terrain/grass": "textures/terrain/grass.jpg",
+    "terrain/fairway": "textures/terrain/fairway.jpg",
+    "terrain/sidewalk": "textures/terrain/sidewalk.jpg",
+    "terrain/water": "textures/terrain/water.jpg",
+    "terrain/curb": "textures/terrain/curb.jpg",
+    "buildings/stucco": "textures/buildings/stucco.jpg",
+    "buildings/roof_terracotta": "textures/buildings/roof_terracotta.jpg",
+    "buildings/wood_door": "textures/buildings/wood_door.jpg",
+    "buildings/glass": "textures/buildings/glass.jpg",
+    "foliage/palm_bark": "textures/foliage/palm_bark.jpg",
+    "foliage/palm_bark_alt": "textures/foliage/palm_bark_alt.jpg",
+    "foliage/palm_frond": "textures/foliage/palm_frond.jpg",
+    "carts/paint_yamaha": "textures/carts/paint_yamaha.jpg",
+    "carts/paint_evolution": "textures/carts/paint_evolution.jpg",
+    "carts/paint_hotrod": "textures/carts/paint_hotrod.jpg"
+  },
+  "packs": {
+    "carts": ["paint_yamaha", "paint_evolution", "paint_hotrod"],
+    "houses": ["stucco", "roof_terracotta", "wood_door", "glass"],
+    "palms": ["palm_bark", "palm_frond"]
+  }
+}

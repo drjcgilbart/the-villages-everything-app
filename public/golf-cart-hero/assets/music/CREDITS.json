@@ -1,0 +1,47 @@
+﻿[
+  {
+    "id": "spanish-springs",
+    "file": "spanish-springs.ogg",
+    "title": "Flamenco Melody (JCzarnecki-Flamenco)",
+    "artist": "JCZA",
+    "source": "https://commons.wikimedia.org/wiki/File:JCZA_-_JCzarnecki-Flamenco.ogg",
+    "license": "CC BY-SA 3.0",
+    "theme": "Spanish Springs — Spanish guitar / plaza nights"
+  },
+  {
+    "id": "lake-sumter",
+    "file": "lake-sumter.mp3",
+    "title": "Dimensions in Blue — Mr. Bo Hica",
+    "artist": "United States Air Force Band of the West · Dimensions in Blue",
+    "source": "https://commons.wikimedia.org/wiki/File:Mr._Bo_Hica_-_Dimensions_in_Blue_-_United_States_Air_Force_Band_of_the_West.mp3",
+    "license": "Public domain (US government work)",
+    "theme": "Sumter Landing — lakeside big-band jazz"
+  },
+  {
+    "id": "brownwood",
+    "file": "brownwood.mp3",
+    "title": "The Great One Step",
+    "artist": "Victor Dance Orchestra",
+    "source": "https://commons.wikimedia.org/wiki/File:Victor_Dance_Orchestra_-_The_Great_One_Step_-_PDMark.mp3",
+    "license": "Public domain",
+    "theme": "Brownwood — old-time dance / paddock energy"
+  },
+  {
+    "id": "eastport",
+    "file": "eastport.ogg",
+    "title": "BugaBlue",
+    "artist": "US Army Blues",
+    "source": "https://commons.wikimedia.org/wiki/File:US_Army_Blues_-_10_-_BugaBlue.ogg",
+    "license": "Public domain (US government work)",
+    "theme": "Eastport — mid-century blues / pavilion cool"
+  },
+  {
+    "id": "sawgrass-grove",
+    "file": "sawgrass-grove.ogg",
+    "title": "Bossa Nova (tempo 80–160 play-along)",
+    "artist": "Wikimedia Commons contributor",
+    "source": "https://commons.wikimedia.org/wiki/File:Bossa_nova_-_tempo_80_%C3%A0_160.ogg",
+    "license": "See Commons file page",
+    "theme": "Sawgrass Grove — citrus grove bossa"
+  }
+]

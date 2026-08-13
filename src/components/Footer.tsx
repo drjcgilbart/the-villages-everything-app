@@ -52,10 +52,43 @@ export function Footer() {
               <Link href="/photos">Photos</Link>
               <Link href="/videos">Videos</Link>
               <Link href="/donate">Buy me a cup of Joe</Link>
+              <a href="/golf-cart-hero/">Golf Cart Hero</a>
               <Link href="/admin">Studio</Link>
             </div>
           </div>
         </div>
+
+        {(SITE.stores.android.live ||
+          (SITE.stores.ios.live && SITE.stores.ios.url)) && (
+          <p className="footer-store-links">
+            Get the app:{" "}
+            {SITE.stores.android.live ? (
+              <a
+                href={SITE.stores.android.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-link"
+              >
+                Google Play
+              </a>
+            ) : null}
+            {SITE.stores.android.live &&
+            SITE.stores.ios.live &&
+            SITE.stores.ios.url
+              ? " · "
+              : null}
+            {SITE.stores.ios.live && SITE.stores.ios.url ? (
+              <a
+                href={SITE.stores.ios.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-link"
+              >
+                App Store
+              </a>
+            ) : null}
+          </p>
+        )}
 
         <p className="footer-note">
           Original site graphics created for this project (not stock photos). Not
