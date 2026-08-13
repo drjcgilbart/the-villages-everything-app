@@ -17,14 +17,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "100mb",
     },
   },
-  async rewrites() {
-    return [
-      {
-        source: "/golf-cart-hero",
-        destination: "/golf-cart-hero/index.html",
-      },
-    ];
-  },
 };
 
 export default nextConfig;
