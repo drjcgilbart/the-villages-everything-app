@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { FavoriteSiteButton } from "@/components/FavoriteSiteButton";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
 import { SITE_BRAND } from "@/lib/siteBrand";
 
@@ -65,7 +66,7 @@ export function Header() {
     <header className="site-header hub-header">
       <div className="utility-bar">
         <div className="shell utility-bar-inner">
-          <span className="utility-bar-label">Site</span>
+          <FavoriteSiteButton />
           <nav className="utility-nav" aria-label="Site links">
             {UTILITY_NAV.map((item) => (
               <Link

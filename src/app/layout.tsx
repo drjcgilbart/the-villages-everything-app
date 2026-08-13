@@ -8,6 +8,7 @@ import { DonateMascotFloat } from "@/components/DonateMascotFloat";
 import { FloatingBackButton } from "@/components/FloatingBackButton";
 import { MascotQuipPopup } from "@/components/MascotQuipPopup";
 import { ThemeMusicPlayer } from "@/components/ThemeMusicPlayer";
+import { PwaRegister } from "@/components/PwaRegister";
 import { ensureDurableHydrated } from "@/lib/dataFs";
 import "./globals.css";
 
@@ -33,6 +34,14 @@ export const metadata: Metadata = {
   },
   description:
     "The moderately ridiculous everything app for The Villages, Florida — villages, dining, golf, clubs, calendar, community resources, and a personal retirement reboot notebook.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/graphics/mascot-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/graphics/mascot-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/graphics/mascot-180.png", sizes: "180x180" }],
+  },
   openGraph: {
     title: "The Villages Everything App",
     description:
@@ -52,6 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
+        <PwaRegister />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
