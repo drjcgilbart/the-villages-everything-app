@@ -1,7 +1,7 @@
 ﻿[
   {
     "id": "spanish-springs",
-    "file": "spanish-springs.ogg",
+    "file": "spanish-springs-full.mp3",
     "title": "Flamenco Melody (JCzarnecki-Flamenco)",
     "artist": "JCZA",
     "source": "https://commons.wikimedia.org/wiki/File:JCZA_-_JCzarnecki-Flamenco.ogg",
@@ -10,7 +10,7 @@
   },
   {
     "id": "lake-sumter",
-    "file": "lake-sumter.mp3",
+    "file": "lake-sumter-full.mp3",
     "title": "Dimensions in Blue — Mr. Bo Hica",
     "artist": "United States Air Force Band of the West · Dimensions in Blue",
     "source": "https://commons.wikimedia.org/wiki/File:Mr._Bo_Hica_-_Dimensions_in_Blue_-_United_States_Air_Force_Band_of_the_West.mp3",
@@ -19,7 +19,7 @@
   },
   {
     "id": "brownwood",
-    "file": "brownwood.mp3",
+    "file": "brownwood-full.mp3",
     "title": "The Great One Step",
     "artist": "Victor Dance Orchestra",
     "source": "https://commons.wikimedia.org/wiki/File:Victor_Dance_Orchestra_-_The_Great_One_Step_-_PDMark.mp3",
@@ -28,7 +28,7 @@
   },
   {
     "id": "eastport",
-    "file": "eastport.ogg",
+    "file": "eastport-full.mp3",
     "title": "BugaBlue",
     "artist": "US Army Blues",
     "source": "https://commons.wikimedia.org/wiki/File:US_Army_Blues_-_10_-_BugaBlue.ogg",
@@ -37,7 +37,7 @@
   },
   {
     "id": "sawgrass-grove",
-    "file": "sawgrass-grove.ogg",
+    "file": "sawgrass-grove-full.mp3",
     "title": "Bossa Nova (tempo 80–160 play-along)",
     "artist": "Wikimedia Commons contributor",
     "source": "https://commons.wikimedia.org/wiki/File:Bossa_nova_-_tempo_80_%C3%A0_160.ogg",
