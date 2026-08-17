@@ -103,6 +103,8 @@ export async function middleware(req: NextRequest) {
   // Vercel Cron must reach refresh without a browser cookie
   if (
     (pathname.startsWith("/api/real-estate/refresh") ||
+      pathname.startsWith("/api/real-estate/youtube-refresh") ||
+      pathname.startsWith("/api/videos/youtube-refresh") ||
       pathname.startsWith("/api/entertainment/refresh") ||
       pathname.startsWith("/api/calendar/refresh") ||
       pathname.startsWith("/api/best-of-month/tabulate")) &&

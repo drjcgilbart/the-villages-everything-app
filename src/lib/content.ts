@@ -10,6 +10,7 @@ import {
 } from "./dataFs";
 import type { Photo, Post, SiteContent, Video } from "./types";
 import { SITE_BRAND } from "./siteBrand";
+import { getChannelSiteVideos } from "./channelYoutube";
 
 const CONTENT_FILE = "content.json";
 const CONTENT_PATH = path.join(BUNDLE_DATA_DIR, CONTENT_FILE);
@@ -169,14 +170,30 @@ export function getPostBySlug(slug: string) {
   return loadContent().posts.find((p) => p.slug === slug) || null;
 }
 
+function mergeStudioAndChannelVideos(studio: Video[]): Video[] {
+  const seen = new Set<string>();
+  const out: Video[] = [];
+  for (const v of studio) {
+    out.push(v);
+    if (v.youtubeId) seen.add(v.youtubeId);
+    seen.add(v.id);
+  }
+  for (const v of getChannelSiteVideos()) {
+    if (v.youtubeId && seen.has(v.youtubeId)) continue;
+    if (seen.has(v.id)) continue;
+    out.push(v);
+  }
+  return out.sort((a, b) =>
+    String(b.publishedAt).localeCompare(String(a.publishedAt))
+  );
+}
+
 export function getVideos() {
-  return loadContent()
-    .videos.slice()
-    .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+  return mergeStudioAndChannelVideos(loadContent().videos);
 }
 
 export function getVideoById(id: string) {
-  return loadContent().videos.find((v) => v.id === id) || null;
+  return getVideos().find((v) => v.id === id) || null;
 }
 
 export function upsertPost(input: Partial<Post> & { title: string; body: string; type: Post["type"] }) {

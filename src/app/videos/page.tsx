@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
+import { ensureChannelYoutubeFresh } from "@/lib/channelYoutube";
 import { getPosts, getVideos, SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,8 @@ type FeedItem =
   | { kind: "video"; date: string; id: string; video: ReturnType<typeof getVideos>[number] }
   | { kind: "vlog"; date: string; id: string; post: ReturnType<typeof getPosts>[number] };
 
-export default function VideosPage() {
+export default async function VideosPage() {
+  await ensureChannelYoutubeFresh();
   const videos = getVideos();
   const vlogs = getPosts("vlog");
 
@@ -43,7 +45,8 @@ export default function VideosPage() {
             <span className="kicker">Lights, camera, golf cart</span>
             <h1>Videos</h1>
             <p>
-              Episode-style updates and clips from the reboot. The main show
+              Episode-style updates and clips from the reboot. New videos you
+              publish on YouTube show up here automatically. The main show
               lives on YouTube as{" "}
               <a
                 href={SITE.youtube.url}

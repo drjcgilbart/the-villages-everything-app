@@ -103,6 +103,7 @@ export function AdminStudio() {
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [ytPulling, setYtPulling] = useState(false);
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -316,6 +317,28 @@ export function AdminStudio() {
       featured: !!p.featured,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function pullYouTube() {
+    setYtPulling(true);
+    try {
+      const res = await fetch("/api/videos/youtube-refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "YouTube pull failed");
+      const latest = data.latest?.title ? ` Latest: ${data.latest.title}.` : "";
+      flash(
+        "ok",
+        `YouTube synced (${data.count || 0} on the channel).${latest} They appear on My Retirement Reboot → Videos.`
+      );
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "YouTube pull failed");
+    } finally {
+      setYtPulling(false);
+    }
   }
 
   async function onUpload(file: File | null, kind: "video" | "thumb" | "photo") {
@@ -584,6 +607,27 @@ export function AdminStudio() {
 
         {tab === "videos" && (
           <>
+            <p className="panel-hint" style={{ marginTop: 0 }}>
+              Uploads on{" "}
+              <strong>@TheVillagesEverythingApp</strong> appear automatically on
+              My Retirement Reboot → Videos. Use this form only for extra clips
+              or a custom title.{" "}
+              <button
+                type="button"
+                className="text-link"
+                onClick={pullYouTube}
+                disabled={ytPulling}
+                style={{
+                  background: "none",
+                  border: 0,
+                  padding: 0,
+                  font: "inherit",
+                  cursor: ytPulling ? "wait" : "pointer",
+                }}
+              >
+                {ytPulling ? "Pulling from YouTube…" : "Pull latest from YouTube now"}
+              </button>
+            </p>
             <h2>{videoForm.id ? "Edit video" : "New video"}</h2>
             <form className="form-grid" onSubmit={saveVideo}>
               <div className="form-row">

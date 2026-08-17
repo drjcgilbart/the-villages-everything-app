@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VideoEmbed } from "@/components/VideoEmbed";
+import { ensureChannelYoutubeFresh } from "@/lib/channelYoutube";
 import { getVideoById } from "@/lib/content";
 import { formatDate } from "@/lib/format";
 
@@ -12,6 +13,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  await ensureChannelYoutubeFresh();
   const video = getVideoById(id);
   if (!video) return { title: "Video" };
   return {
@@ -26,6 +28,7 @@ export default async function VideoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  await ensureChannelYoutubeFresh();
   const video = getVideoById(id);
   if (!video) notFound();
 

@@ -37,6 +37,7 @@ const DURABLE_JSON = new Set([
   "calendar-events.json",
   "local-services.json",
   "real-estate-youtube.json",
+  "channel-youtube.json",
 ]);
 
 /**

@@ -4,6 +4,7 @@ import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
+import { ensureChannelYoutubeFresh } from "@/lib/channelYoutube";
 import { getPhotos, getPosts, getVideos, SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,8 @@ const REBOOT_MEDIA = [
   },
 ] as const;
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  await ensureChannelYoutubeFresh();
   const posts = getPosts("blog").slice(0, 3);
   const photos = getPhotos().slice(0, 3);
   const vlogPosts = getPosts("vlog");
@@ -104,9 +106,10 @@ export default function AboutPage() {
               <p className="reboot-youtube-handle">{SITE.youtube.handle}</p>
               <p>
                 The video home of this reboot — carts, chaos, Florida field
-                notes, and whatever happens next on camera. Watch on YouTube,
-                then come back here for the blog and photo journal that go with
-                the plot twist.
+                notes, and whatever happens next on camera. New YouTube uploads
+                land on the Videos page automatically. Watch on YouTube, then
+                come back here for the blog and photo journal that go with the
+                plot twist.
               </p>
               <div className="hero-actions" style={{ marginTop: "0.85rem" }}>
                 <a
