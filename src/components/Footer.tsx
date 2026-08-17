@@ -53,7 +53,6 @@ export function Footer() {
               <Link href="/videos">Videos</Link>
               <Link href="/donate">Buy me a cup of Joe</Link>
               <a href="/golf-cart-hero/">Golf Cart Hero</a>
-              <Link href="/admin">Studio</Link>
             </div>
           </div>
         </div>

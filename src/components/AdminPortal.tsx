@@ -128,15 +128,9 @@ export function AdminPortal() {
     return (
       <div className="admin-shell admin-portal-shell">
         <div className="admin-card admin-portal-login">
-          <span className="kicker">Site owner only</span>
-          <h1>Admin Portal</h1>
+          <h1>Sign in</h1>
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            Approve members, moderate yard sale listings, dining, and real
-            estate. Content publishing is in{" "}
-            <Link href="/studio" className="text-link">
-              Creator Studio
-            </Link>
-            .
+            Owner tools. Visitors do not need this page.
           </p>
           {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
           <form className="form-grid" onSubmit={login}>
@@ -153,13 +147,9 @@ export function AdminPortal() {
               />
             </div>
             <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? "Signing in…" : "Enter Admin Portal"}
+              {busy ? "Signing in…" : "Sign in"}
             </button>
           </form>
-          <p className="panel-hint" style={{ marginBottom: 0 }}>
-            Same password as Studio (<code>ADMIN_PASSWORD</code> in{" "}
-            <code>.env.local</code> / Vercel).
-          </p>
         </div>
       </div>
     );

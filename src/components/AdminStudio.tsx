@@ -406,10 +406,9 @@ export function AdminStudio() {
     return (
       <div className="admin-shell">
         <div className="admin-card" style={{ maxWidth: 440, margin: "0 auto" }}>
-          <h1>Studio login</h1>
+          <h1>Sign in</h1>
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            Publish blogs, video episodes, photos, YouTube links, and uploaded videos.
-            Default local password is in <code>.env.local</code>.
+            Owner tools. Visitors do not need this page.
           </p>
           {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
           <form className="form-grid" onSubmit={login}>
@@ -425,7 +424,7 @@ export function AdminStudio() {
               />
             </div>
             <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? "Signing in…" : "Enter Studio"}
+              {busy ? "Signing in…" : "Sign in"}
             </button>
           </form>
         </div>

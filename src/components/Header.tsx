@@ -77,9 +77,6 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            <Link href="/studio" className="utility-studio">
-              Studio
-            </Link>
           </nav>
         </div>
       </div>

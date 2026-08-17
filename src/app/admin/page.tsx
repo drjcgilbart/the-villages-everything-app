@@ -1,7 +1,7 @@
 import { AdminPortal } from "@/components/AdminPortal";
 
 export const metadata = {
-  title: "Admin Portal",
+  title: "Sign in",
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";

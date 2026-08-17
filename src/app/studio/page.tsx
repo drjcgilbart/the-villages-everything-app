@@ -1,7 +1,7 @@
 import { AdminStudio } from "@/components/AdminStudio";
 
 export const metadata = {
-  title: "Creator Studio",
+  title: "Sign in",
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";
