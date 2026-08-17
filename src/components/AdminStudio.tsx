@@ -108,8 +108,26 @@ export function AdminStudio() {
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
-    setTimeout(() => setMsg(null), 4000);
+    setTimeout(() => setMsg(null), 8000);
   };
+
+  useEffect(() => {
+    if (!msg) return;
+    document
+      .getElementById("studio-status-msg")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [msg]);
+
+  const statusBanner = msg ? (
+    <div
+      id="studio-status-msg"
+      className={`msg msg-${msg.kind} studio-status-msg`}
+      role="status"
+      aria-live="polite"
+    >
+      {msg.text}
+    </div>
+  ) : null;
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/content", { cache: "no-store" });
@@ -488,8 +506,6 @@ export function AdminStudio() {
           </div>
         </div>
 
-        {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
-
         <div className="admin-tabs">
           <button type="button" className={tab === "posts" ? "active" : ""} onClick={() => setTab("posts")}>
             Blog &amp; Video episodes
@@ -572,6 +588,7 @@ export function AdminStudio() {
                 />
                 Featured
               </label>
+              {statusBanner}
               <div className="admin-actions">
                 <button type="submit" className="btn btn-primary" disabled={busy}>
                   {busy ? "Saving…" : postForm.id ? "Update post" : "Publish post"}
@@ -719,6 +736,7 @@ export function AdminStudio() {
                 />
                 Featured
               </label>
+              {statusBanner}
               <div className="admin-actions">
                 <button type="submit" className="btn btn-primary" disabled={busy || uploading}>
                   {busy ? "Saving…" : videoForm.id ? "Update video" : "Publish video"}
@@ -866,6 +884,7 @@ export function AdminStudio() {
                 />
                 Feature this entry on the site
               </label>
+              {statusBanner}
               <div className="admin-actions">
                 <button type="submit" className="btn btn-primary" disabled={busy || uploading}>
                   {busy

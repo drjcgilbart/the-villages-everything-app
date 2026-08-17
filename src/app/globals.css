@@ -5460,6 +5460,20 @@ a.ts-square-card:hover .ts-square-card-img {
   font-size: 0.92rem;
 }
 
+.studio-status-msg {
+  margin: 0.85rem 0 0.45rem;
+  font-weight: 650;
+  border: 1px solid transparent;
+}
+
+.msg-ok.studio-status-msg {
+  border-color: #8fd4ae;
+}
+
+.msg-err.studio-status-msg {
+  border-color: #f0b4ae;
+}
+
 .msg-ok {
   background: #e8f8ef;
   color: #0f5c38;
