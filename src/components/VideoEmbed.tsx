@@ -1,15 +1,39 @@
 import type { Video } from "@/lib/types";
+import { youtubeWatchUrl } from "@/lib/youtubeLinks";
 
 export function VideoEmbed({ video }: { video: Video }) {
   if (video.source === "youtube" && video.youtubeId) {
+    const watchUrl = youtubeWatchUrl(video.youtubeId);
+    const thumb =
+      video.thumbnailUrl ||
+      `https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg`;
     return (
-      <div className="video-frame">
-        <iframe
-          src={`https://www.youtube.com/embed/${video.youtubeId}`}
-          title={video.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-        />
+      <div className="video-yt-teaser">
+        <a
+          href={watchUrl}
+          className="video-thumb-wrap video-yt-teaser-link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumb} alt="" className="video-thumb" />
+          <span className="play-badge" aria-hidden="true">
+            ▶
+          </span>
+          <span className="video-yt-chip">Watch on YouTube</span>
+        </a>
+        <p className="video-yt-teaser-copy">
+          Opens on YouTube so the view, ads, and subscribe button count for the
+          channel.
+        </p>
+        <a
+          href={watchUrl}
+          className="btn btn-primary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Watch on YouTube →
+        </a>
       </div>
     );
   }

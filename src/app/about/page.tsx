@@ -26,7 +26,7 @@ const REBOOT_MEDIA = [
   {
     href: "/videos",
     label: "Videos",
-    blurb: "Clips, embeds, and episodes — lights, camera, golf cart.",
+    blurb: "Thumbnails that send neighbors to YouTube — lights, camera, golf cart.",
     image: "/graphics/theme-videos.jpg",
   },
 ] as const;
@@ -283,7 +283,7 @@ export default async function AboutPage() {
           <div className="section-head">
             <div>
               <h2>On camera</h2>
-              <p>Episodes, embeds, and Studio uploads.</p>
+              <p>Thumbnails open on YouTube so views count for the channel.</p>
             </div>
             <Link href="/videos" className="text-link">
               All videos →

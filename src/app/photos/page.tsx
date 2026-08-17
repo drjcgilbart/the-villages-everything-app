@@ -24,6 +24,8 @@ export default async function PhotosPage() {
             <p>
               Pictures from The Villages life — carts, chaos, sunsets, and
               whatever else makes the highlight reel — each with a short note.
+              Double-click a photo (or tap See larger picture) to open the
+              full image.
             </p>
           </div>
           <div className="page-hero-art">

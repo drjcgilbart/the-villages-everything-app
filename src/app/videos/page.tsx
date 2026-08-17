@@ -47,8 +47,8 @@ export default async function VideosPage() {
             <h1>Videos</h1>
             <p>
               Episode-style updates and clips from the reboot. New videos you
-              publish on YouTube show up here automatically. The main show
-              lives on YouTube as{" "}
+              publish on YouTube show up here automatically. Thumbnails open
+              on YouTube so the view, ads, and subscribe button stay on{" "}
               <a
                 href={SITE.youtube.url}
                 target="_blank"
@@ -57,8 +57,7 @@ export default async function VideosPage() {
               >
                 {SITE.youtube.title}
               </a>{" "}
-              ({SITE.youtube.handle}) — subscribe there, then browse what&apos;s
-              embedded or uploaded here.
+              ({SITE.youtube.handle}). Direct uploads still play on this site.
             </p>
             <div className="hero-actions" style={{ marginTop: "0.85rem" }}>
               <a
