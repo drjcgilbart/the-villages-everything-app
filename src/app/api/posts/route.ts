@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { deletePost, loadContent, upsertPost } from "@/lib/content";
+import { deletePost, loadContentAsync, upsertPost } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ posts: loadContent().posts });
+  const content = await loadContentAsync();
+  return NextResponse.json({ posts: content.posts });
 }
 
 export async function POST(req: Request) {
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
       .split(",")
       .map((t: string) => t.trim())
       .filter(Boolean);
-    const content = upsertPost({
+    const content = await upsertPost({
       id: body.id || undefined,
       type: body.type === "vlog" ? "vlog" : "blog",
       title: body.title,
@@ -47,7 +48,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const content = deletePost(id);
+    const content = await deletePost(id);
     return NextResponse.json(content);
   } catch (err) {
     return NextResponse.json(

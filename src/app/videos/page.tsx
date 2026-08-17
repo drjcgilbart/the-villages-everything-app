@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
 import { ensureChannelYoutubeFresh } from "@/lib/channelYoutube";
-import { getPosts, getVideos, SITE } from "@/lib/content";
+import { getPostsAsync, getVideosAsync, SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Videos · My Retirement Reboot" };
@@ -14,8 +14,8 @@ type FeedItem =
 
 export default async function VideosPage() {
   await ensureChannelYoutubeFresh();
-  const videos = getVideos();
-  const vlogs = getPosts("vlog");
+  const videos = await getVideosAsync();
+  const vlogs = await getPostsAsync("vlog");
 
   const feed: FeedItem[] = [
     ...videos.map((video) => ({

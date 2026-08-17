@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { deletePhoto, getPhotos, upsertPhoto } from "@/lib/content";
+import { deletePhoto, getPhotosAsync, upsertPhoto } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ photos: getPhotos() });
+  return NextResponse.json({ photos: await getPhotosAsync() });
 }
 
 export async function POST(req: Request) {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       : body.imageUrl
         ? [{ id: "img-0", url: body.imageUrl, caption: "" }]
         : [];
-    const content = upsertPhoto({
+    const content = await upsertPhoto({
       id: body.id || undefined,
       title: body.title,
       caption: body.caption,
@@ -51,7 +51,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const content = deletePhoto(id);
+    const content = await deletePhoto(id);
     return NextResponse.json(content);
   } catch (err) {
     return NextResponse.json(

@@ -13,7 +13,7 @@ import {
   GOLF_SNAPSHOT,
   GOLF_TIPS,
 } from "@/lib/golfResources";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
@@ -23,9 +23,9 @@ export const metadata = {
     "Golf in The Villages — leaderboard, find a foursome, holes-in-one wall, executive trail, trail fees, and course maps from The Villages Everything App.",
 };
 
-export default function GolfZonePage() {
+export default async function GolfZonePage() {
   const topic = getTopic("golf-zone");
-  const { posts, videos, photos } = getTopicContent("golf-zone");
+  const { posts, videos, photos } = await getTopicContentAsync("golf-zone");
   const hasRelated = posts.length + videos.length + photos.length > 0;
 
   return (

@@ -1,4 +1,4 @@
-import { getPhotos, getPosts, getVideos } from "./content";
+import { getPhotos, getPhotosAsync, getPosts, getPostsAsync, getVideos, getVideosAsync } from "./content";
 import { getTopic, type TopicSlug } from "./topics";
 import type { Photo, Post, Video } from "./types";
 
@@ -32,6 +32,37 @@ export function getTopicContent(slug: TopicSlug): {
       matchesTags(v.tags, keywords) || (includeFeatured && Boolean(v.featured))
   );
   const photos = getPhotos().filter(
+    (p) =>
+      matchesTags(p.tags, keywords) || (includeFeatured && Boolean(p.featured))
+  );
+
+  return { posts, videos, photos };
+}
+
+export async function getTopicContentAsync(slug: TopicSlug): Promise<{
+  posts: Post[];
+  videos: Video[];
+  photos: Photo[];
+}> {
+  const topic = getTopic(slug);
+  const keywords = topic.tags;
+  const includeFeatured = slug === "best-of-the-month";
+
+  const [allPosts, allVideos, allPhotos] = await Promise.all([
+    getPostsAsync(),
+    getVideosAsync(),
+    getPhotosAsync(),
+  ]);
+
+  const posts = allPosts.filter(
+    (p) =>
+      matchesTags(p.tags, keywords) || (includeFeatured && Boolean(p.featured))
+  );
+  const videos = allVideos.filter(
+    (v) =>
+      matchesTags(v.tags, keywords) || (includeFeatured && Boolean(v.featured))
+  );
+  const photos = allPhotos.filter(
     (p) =>
       matchesTags(p.tags, keywords) || (includeFeatured && Boolean(p.featured))
   );

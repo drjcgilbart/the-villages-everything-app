@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PhotoCard } from "@/components/PhotoCard";
-import { getPhotos } from "@/lib/content";
+import { getPhotosAsync } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Photos · My Retirement Reboot" };
 
-export default function PhotosPage() {
-  const photos = getPhotos();
+export default async function PhotosPage() {
+  const photos = await getPhotosAsync();
 
   return (
     <>

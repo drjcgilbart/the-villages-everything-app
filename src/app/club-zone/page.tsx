@@ -6,7 +6,7 @@ import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
@@ -16,9 +16,9 @@ export const metadata = {
     "Popular clubs in The Villages, leader-updated open/closed listings with contacts, official directories, and Hub Member favorites.",
 };
 
-export default function ClubZonePage() {
+export default async function ClubZonePage() {
   const topic = getTopic("club-zone");
-  const { posts, videos, photos } = getTopicContent("club-zone");
+  const { posts, videos, photos } = await getTopicContentAsync("club-zone");
   const hasRelated = posts.length + videos.length + photos.length > 0;
 
   return (

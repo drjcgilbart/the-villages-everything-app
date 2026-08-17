@@ -34,7 +34,11 @@ export async function POST(req: Request) {
       );
     }
     const buffer = Buffer.from(await file.arrayBuffer());
-    const url = saveUpload(buffer, file.name || (isVideo ? "video.mp4" : "image.jpg"));
+    const url = await saveUpload(
+      buffer,
+      file.name || (isVideo ? "video.mp4" : "image.jpg"),
+      type || undefined
+    );
     return NextResponse.json({ url, type: isVideo ? "video" : "image", name: file.name });
   } catch (err) {
     return NextResponse.json(

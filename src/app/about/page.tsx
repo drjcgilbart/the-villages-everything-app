@@ -5,7 +5,7 @@ import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
 import { ensureChannelYoutubeFresh } from "@/lib/channelYoutube";
-import { getPhotos, getPosts, getVideos, SITE } from "@/lib/content";
+import { getPhotosAsync, getPostsAsync, getVideosAsync, SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "My Retirement Reboot" };
@@ -33,10 +33,10 @@ const REBOOT_MEDIA = [
 
 export default async function AboutPage() {
   await ensureChannelYoutubeFresh();
-  const posts = getPosts("blog").slice(0, 3);
-  const photos = getPhotos().slice(0, 3);
-  const vlogPosts = getPosts("vlog");
-  const allVideos = getVideos();
+  const posts = (await getPostsAsync("blog")).slice(0, 3);
+  const photos = (await getPhotosAsync()).slice(0, 3);
+  const vlogPosts = await getPostsAsync("vlog");
+  const allVideos = await getVideosAsync();
   const videoFeed = [
     ...allVideos.map((video) => ({
       kind: "video" as const,

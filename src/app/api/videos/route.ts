@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { deleteVideo, loadContent, upsertVideo } from "@/lib/content";
+import { deleteVideo, loadContentAsync, upsertVideo } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ videos: loadContent().videos });
+  const content = await loadContentAsync();
+  return NextResponse.json({ videos: content.videos });
 }
 
 export async function POST(req: Request) {
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const content = upsertVideo({
+    const content = await upsertVideo({
       id: body.id || undefined,
       title: body.title,
       description: body.description,
@@ -54,7 +55,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const content = deleteVideo(id);
+    const content = await deleteVideo(id);
     return NextResponse.json(content);
   } catch (err) {
     return NextResponse.json(

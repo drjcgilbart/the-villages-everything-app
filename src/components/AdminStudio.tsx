@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Photo, Post, PostType, SiteContent, Video, VideoSource } from "@/lib/types";
+import { prepareStudioImageFile } from "@/lib/browserImage";
 type Tab = "posts" | "videos" | "photos";
 
 type PostForm = {
@@ -345,8 +346,10 @@ export function AdminStudio() {
     if (!file) return;
     setUploading(true);
     try {
+      const ready =
+        kind === "video" ? file : await prepareStudioImageFile(file);
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", ready);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
@@ -384,8 +387,9 @@ export function AdminStudio() {
     try {
       const added: PhotoFormImage[] = [];
       for (const file of Array.from(fileList)) {
+        const ready = await prepareStudioImageFile(file);
         const fd = new FormData();
-        fd.append("file", file);
+        fd.append("file", ready);
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Upload failed: ${file.name}`);
@@ -758,8 +762,9 @@ export function AdminStudio() {
           <>
             <h2>{photoForm.id ? "Edit photo entry" : "New photo journal entry"}</h2>
             <p className="panel-hint" style={{ marginTop: 0 }}>
-              Add several photos to one entry. Mark one as <strong>Featured</strong> — visitors
-              see that first, then can scroll the rest as thumbnails.
+              Publish goes live immediately on My Retirement Reboot → Photos.
+              No Admin Portal approval. Add several photos to one entry and mark
+              one as <strong>Featured</strong> — visitors see that first.
             </p>
             <form className="form-grid" onSubmit={savePhoto}>
               <div className="field">

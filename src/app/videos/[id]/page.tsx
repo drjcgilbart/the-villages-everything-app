@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { ensureChannelYoutubeFresh } from "@/lib/channelYoutube";
-import { getVideoById } from "@/lib/content";
+import { getVideoByIdAsync } from "@/lib/content";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function generateMetadata({
 }) {
   const { id } = await params;
   await ensureChannelYoutubeFresh();
-  const video = getVideoById(id);
+  const video = await getVideoByIdAsync(id);
   if (!video) return { title: "Video" };
   return {
     title: video.title,
@@ -29,7 +29,7 @@ export default async function VideoPage({
 }) {
   const { id } = await params;
   await ensureChannelYoutubeFresh();
-  const video = getVideoById(id);
+  const video = await getVideoByIdAsync(id);
   if (!video) notFound();
 
   return (

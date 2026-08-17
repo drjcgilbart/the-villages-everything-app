@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostBySlug } from "@/lib/content";
+import { getPostBySlugAsync } from "@/lib/content";
 import { formatDate, paragraphs } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlugAsync(slug);
   if (!post) return { title: "Post" };
   return {
     title: post.title,
@@ -25,7 +25,7 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlugAsync(slug);
   if (!post) notFound();
 
   const paras = paragraphs(post.body);

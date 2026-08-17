@@ -1,12 +1,17 @@
-import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import {
   BUNDLE_DATA_DIR,
+  cacheDurableJson,
+  durableConfigured,
+  ensureDurableHydrated,
+  isEphemeralHost,
+  pullDurableJson,
   readJsonFile,
   resolveUploadFile,
+  saveUploadFile,
   tryWriteJsonFile,
-  writableUploadsDir,
+  writeJsonFileAsync,
 } from "./dataFs";
 import type { Photo, Post, SiteContent, Video } from "./types";
 import { SITE_BRAND } from "./siteBrand";
@@ -159,6 +164,44 @@ export function saveContent(content: SiteContent) {
   return content;
 }
 
+/** Re-read content.json from Redis/Blob so every Vercel instance sees Studio publishes. */
+export async function loadContentAsync(): Promise<SiteContent> {
+  if (isEphemeralHost() && durableConfigured()) {
+    try {
+      const text = await pullDurableJson(CONTENT_FILE);
+      if (text) cacheDurableJson(CONTENT_FILE, text);
+    } catch (err) {
+      console.error(
+        "[content] durable pull failed; falling back to bulk hydrate",
+        err
+      );
+      await ensureDurableHydrated().catch(() => undefined);
+    }
+  } else {
+    await ensureDurableHydrated().catch(() => undefined);
+  }
+  return loadContent();
+}
+
+/**
+ * Await Redis/Blob so a Studio publish is live on the public site,
+ * not only on the serverless instance that handled the click.
+ */
+export async function saveContentAsync(content: SiteContent) {
+  content.updatedAt = new Date().toISOString();
+  content.site = { ...SITE, ...(content.site || {}) };
+  try {
+    await writeJsonFileAsync(CONTENT_FILE, content);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not save content on this host"
+    );
+  }
+  return content;
+}
+
 export function getPosts(type?: "blog" | "vlog") {
   const posts = loadContent().posts.slice().sort((a, b) =>
     String(b.publishedAt).localeCompare(String(a.publishedAt))
@@ -166,8 +209,21 @@ export function getPosts(type?: "blog" | "vlog") {
   return type ? posts.filter((p) => p.type === type) : posts;
 }
 
+export async function getPostsAsync(type?: "blog" | "vlog") {
+  const content = await loadContentAsync();
+  const posts = content.posts
+    .slice()
+    .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+  return type ? posts.filter((p) => p.type === type) : posts;
+}
+
 export function getPostBySlug(slug: string) {
   return loadContent().posts.find((p) => p.slug === slug) || null;
+}
+
+export async function getPostBySlugAsync(slug: string) {
+  const content = await loadContentAsync();
+  return content.posts.find((p) => p.slug === slug) || null;
 }
 
 function mergeStudioAndChannelVideos(studio: Video[]): Video[] {
@@ -192,12 +248,22 @@ export function getVideos() {
   return mergeStudioAndChannelVideos(loadContent().videos);
 }
 
+export async function getVideosAsync() {
+  const content = await loadContentAsync();
+  return mergeStudioAndChannelVideos(content.videos);
+}
+
 export function getVideoById(id: string) {
   return getVideos().find((v) => v.id === id) || null;
 }
 
-export function upsertPost(input: Partial<Post> & { title: string; body: string; type: Post["type"] }) {
-  const content = loadContent();
+export async function getVideoByIdAsync(id: string) {
+  const videos = await getVideosAsync();
+  return videos.find((v) => v.id === id) || null;
+}
+
+export async function upsertPost(input: Partial<Post> & { title: string; body: string; type: Post["type"] }) {
+  const content = await loadContentAsync();
   const now = new Date().toISOString();
   if (input.id) {
     const idx = content.posts.findIndex((p) => p.id === input.id);
@@ -232,21 +298,19 @@ export function upsertPost(input: Partial<Post> & { title: string; body: string;
     };
     content.posts.unshift(post);
   }
-  saveContent(content);
-  return content;
+  return saveContentAsync(content);
 }
 
-export function deletePost(id: string) {
-  const content = loadContent();
+export async function deletePost(id: string) {
+  const content = await loadContentAsync();
   content.posts = content.posts.filter((p) => p.id !== id);
-  saveContent(content);
-  return content;
+  return saveContentAsync(content);
 }
 
-export function upsertVideo(
+export async function upsertVideo(
   input: Partial<Video> & { title: string; source: Video["source"] }
 ) {
-  const content = loadContent();
+  const content = await loadContentAsync();
   const now = new Date().toISOString();
 
   if (input.source === "youtube") {
@@ -280,15 +344,13 @@ export function upsertVideo(
     };
     content.videos.unshift(video);
   }
-  saveContent(content);
-  return content;
+  return saveContentAsync(content);
 }
 
-export function deleteVideo(id: string) {
-  const content = loadContent();
+export async function deleteVideo(id: string) {
+  const content = await loadContentAsync();
   content.videos = content.videos.filter((v) => v.id !== id);
-  saveContent(content);
-  return content;
+  return saveContentAsync(content);
 }
 
 function normalizePhotoImages(raw: Partial<Photo> | null | undefined): Photo["images"] {
@@ -354,15 +416,23 @@ export function getPhotos() {
     .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
 }
 
+export async function getPhotosAsync() {
+  const content = await loadContentAsync();
+  return content.photos
+    .map(normalizePhoto)
+    .filter((p) => p.images.length > 0)
+    .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+}
+
 export function getPhotoById(id: string) {
   const found = loadContent().photos.find((p) => p.id === id);
   return found ? normalizePhoto(found) : null;
 }
 
-export function upsertPhoto(
+export async function upsertPhoto(
   input: Partial<Photo> & { title: string; images?: Photo["images"]; imageUrl?: string }
 ) {
-  const content = loadContent();
+  const content = await loadContentAsync();
   if (!Array.isArray(content.photos)) content.photos = [];
   const now = new Date().toISOString();
 
@@ -407,25 +477,19 @@ export function upsertPhoto(
     };
     content.photos.unshift(photo);
   }
-  saveContent(content);
-  return content;
+  return saveContentAsync(content);
 }
 
-export function deletePhoto(id: string) {
-  const content = loadContent();
+export async function deletePhoto(id: string) {
+  const content = await loadContentAsync();
   if (!Array.isArray(content.photos)) content.photos = [];
   content.photos = content.photos.filter((p) => p.id !== id);
-  saveContent(content);
-  return content;
+  return saveContentAsync(content);
 }
 
-export function saveUpload(buffer: Buffer, filename: string) {
-  const dir = writableUploadsDir();
-  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
-  const name = `${Date.now().toString(36)}-${safe}`;
-  const full = path.join(dir, name);
-  fs.writeFileSync(full, buffer);
-  return `/api/media/${name}`;
+export async function saveUpload(buffer: Buffer, filename: string, contentType?: string) {
+  const saved = await saveUploadFile(buffer, filename, contentType);
+  return saved.url;
 }
 
 export function resolveUpload(name: string) {

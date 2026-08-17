@@ -13,6 +13,7 @@ import {
   getResultsForFeaturedMonth,
   isBomCategory,
   listApprovedForMonth,
+  setBomEntryStatusAsync,
   submitBomEntryAsync,
   voterChoicesThisMonth,
 } from "@/lib/bestOfMonth";
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
       if (!isBomCategory(category)) {
         return NextResponse.json({ error: "Invalid category" }, { status: 400 });
       }
-      const entry = await submitBomEntryAsync({
+      let entry = await submitBomEntryAsync({
         category,
         title: body.title,
         description: body.description,
@@ -122,11 +123,16 @@ export async function POST(req: Request) {
         imageUrl: body.imageUrl,
         fileType: (body.fileType === "pdf" ? "pdf" : "image") as BomFileType,
       });
+      const admin = await isAdminAuthenticated();
+      if (admin && entry.status === "pending") {
+        entry = await setBomEntryStatusAsync(entry.id, "approved");
+      }
       return NextResponse.json({
         ok: true,
         entry: { id: entry.id, status: entry.status, category: entry.category },
-        message:
-          "Thanks! Your entry is pending admin approval. Once approved, it appears for voting this month.",
+        message: admin
+          ? "Published. It's live on Best of the Month — no extra approval needed."
+          : "Thanks! Your entry is pending admin approval. Once approved, it appears for voting this month.",
       });
     }
 

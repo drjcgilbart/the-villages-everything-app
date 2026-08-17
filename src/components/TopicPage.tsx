@@ -4,12 +4,12 @@ import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic, type TopicSlug } from "@/lib/topics";
 
-export function TopicPage({ slug }: { slug: TopicSlug }) {
+export async function TopicPage({ slug }: { slug: TopicSlug }) {
   const topic = getTopic(slug);
-  const { posts, videos, photos } = getTopicContent(slug);
+  const { posts, videos, photos } = await getTopicContentAsync(slug);
   const hasRelated = posts.length + videos.length + photos.length > 0;
 
   return (

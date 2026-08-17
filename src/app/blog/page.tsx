@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { PostCard } from "@/components/PostCard";
-import { getPosts } from "@/lib/content";
+import { getPostsAsync } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Blog · My Retirement Reboot" };
 
-export default function BlogPage() {
-  const posts = getPosts("blog");
+export default async function BlogPage() {
+  const posts = await getPostsAsync("blog");
 
   return (
     <>

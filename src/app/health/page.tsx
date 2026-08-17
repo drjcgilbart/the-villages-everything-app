@@ -15,7 +15,7 @@ import {
   mapsUrl,
   telHref,
 } from "@/lib/healthResources";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +25,9 @@ export const metadata = {
     "Health hub for The Villages — local hospitals & ERs, emergency numbers, wellness check-ins, and neighbor-friendly care guidance.",
 };
 
-export default function HealthPage() {
+export default async function HealthPage() {
   const topic = getTopic("health");
-  const { posts, videos, photos } = getTopicContent("health");
+  const { posts, videos, photos } = await getTopicContentAsync("health");
   const hasRelated = posts.length + videos.length + photos.length > 0;
 
   const carePlaces = HEALTH_FACILITIES.filter(

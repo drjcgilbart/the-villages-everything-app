@@ -18,7 +18,7 @@ import {
   WEALTH_SCAM_TIPS,
   WEALTH_SNAPSHOT,
 } from "@/lib/wealthResources";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
@@ -92,9 +92,9 @@ function ResourceCard({
   );
 }
 
-export default function WealthPage() {
+export default async function WealthPage() {
   const topic = getTopic("wealth");
-  const { posts, videos, photos } = getTopicContent("wealth");
+  const { posts, videos, photos } = await getTopicContentAsync("wealth");
   const hasRelated = posts.length + videos.length + photos.length > 0;
 
   return (

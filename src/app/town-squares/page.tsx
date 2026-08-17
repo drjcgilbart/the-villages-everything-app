@@ -11,7 +11,7 @@ import {
   getEntertainmentUpdatedAt,
   loadActiveLineup,
 } from "@/lib/entertainmentFetch";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 import { OFFICIAL_LIVE_CAMS_URL } from "@/lib/townSquares";
 import {
@@ -31,7 +31,7 @@ export default async function TownSquaresPage() {
   await ensureEntertainmentFresh(20);
 
   const topic = getTopic("town-squares");
-  const { posts, videos, photos } = getTopicContent("town-squares");
+  const { posts, videos, photos } = await getTopicContentAsync("town-squares");
   const hasRelated = posts.length + videos.length + photos.length > 0;
   const dateKey = floridaDateKey();
   const lineup = loadActiveLineup();

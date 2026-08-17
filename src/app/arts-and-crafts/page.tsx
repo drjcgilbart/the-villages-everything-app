@@ -5,7 +5,7 @@ import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
 import { ARTISAN_GUILD } from "@/lib/artisanGuild";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +15,9 @@ export const metadata = {
     "Creative life in The Villages — featuring The Villages Artisan Guild marketplace for pottery, glass, and paintings, plus local art notes from the hub.",
 };
 
-export default function ArtsAndCraftsPage() {
+export default async function ArtsAndCraftsPage() {
   const topic = getTopic("arts-and-crafts");
-  const { posts, videos, photos } = getTopicContent("arts-and-crafts");
+  const { posts, videos, photos } = await getTopicContentAsync("arts-and-crafts");
   const hasRelated = posts.length + videos.length + photos.length > 0;
 
   return (

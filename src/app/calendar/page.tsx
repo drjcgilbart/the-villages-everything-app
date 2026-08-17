@@ -5,7 +5,7 @@ import { EventsCalendar } from "@/components/EventsCalendar";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
-import { getTopicContent } from "@/lib/topicContent";
+import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +15,9 @@ export const metadata = {
     "Local events calendar for The Villages — live entertainment and community listings updated daily, with upcoming and past events this month.",
 };
 
-export default function CalendarPage() {
+export default async function CalendarPage() {
   const topic = getTopic("calendar");
-  const { posts, videos, photos } = getTopicContent("calendar");
+  const { posts, videos, photos } = await getTopicContentAsync("calendar");
   const hasRelated = posts.length + videos.length + photos.length > 0;
 
   return (
