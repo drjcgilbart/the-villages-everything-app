@@ -4,13 +4,14 @@ import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
 import { ensureChannelYoutubeFresh } from "@/lib/channelYoutube";
 import { getPostsAsync, getVideosAsync, SITE } from "@/lib/content";
+import type { Post, Video } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Videos · My Retirement Reboot" };
 
 type FeedItem =
-  | { kind: "video"; date: string; id: string; video: ReturnType<typeof getVideos>[number] }
-  | { kind: "vlog"; date: string; id: string; post: ReturnType<typeof getPosts>[number] };
+  | { kind: "video"; date: string; id: string; video: Video }
+  | { kind: "vlog"; date: string; id: string; post: Post };
 
 export default async function VideosPage() {
   await ensureChannelYoutubeFresh();

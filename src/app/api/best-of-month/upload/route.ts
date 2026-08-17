@@ -9,7 +9,9 @@ const MAX_BYTES = 12 * 1024 * 1024; // 12 MB
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
-    const file = form.get("file");
+    const file = (
+      form as unknown as { get: (name: string) => File | string | null }
+    ).get("file");
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
