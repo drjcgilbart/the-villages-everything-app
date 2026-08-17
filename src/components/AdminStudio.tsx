@@ -762,9 +762,8 @@ export function AdminStudio() {
           <>
             <h2>{photoForm.id ? "Edit photo entry" : "New photo journal entry"}</h2>
             <p className="panel-hint" style={{ marginTop: 0 }}>
-              Publish goes live immediately on My Retirement Reboot → Photos.
-              No Admin Portal approval. Add several photos to one entry and mark
-              one as <strong>Featured</strong> — visitors see that first.
+              Publish / Update goes live immediately on My Retirement Reboot →
+              Photos. No Admin Portal approval.
             </p>
             <form className="form-grid" onSubmit={savePhoto}>
               <div className="field">

@@ -12,14 +12,21 @@ import {
   saveUploadFile,
   tryWriteJsonFile,
   writeJsonFileAsync,
+  ensureUploadDurable,
 } from "./dataFs";
 import type { Photo, Post, SiteContent, Video } from "./types";
 import { SITE_BRAND } from "./siteBrand";
 import { getChannelSiteVideos } from "./channelYoutube";
 
 const CONTENT_FILE = "content.json";
+const PHOTO_FILE = "photo-journal.json";
 const CONTENT_PATH = path.join(BUNDLE_DATA_DIR, CONTENT_FILE);
 const UPLOADS_DIR = path.join(BUNDLE_DATA_DIR, "uploads");
+
+type PhotoJournal = {
+  photos: Photo[];
+  updatedAt: string | null;
+};
 
 /** Site brand + YouTube — single source via siteBrand.ts */
 export const SITE = {
@@ -180,7 +187,51 @@ export async function loadContentAsync(): Promise<SiteContent> {
   } else {
     await ensureDurableHydrated().catch(() => undefined);
   }
-  return loadContent();
+  const content = loadContent();
+  const journal = await loadPhotoJournalAsync();
+  content.photos = journal.photos;
+  return content;
+}
+
+async function loadPhotoJournalAsync(): Promise<PhotoJournal> {
+  if (isEphemeralHost() && durableConfigured()) {
+    try {
+      const text = await pullDurableJson(PHOTO_FILE);
+      if (text) {
+        cacheDurableJson(PHOTO_FILE, text);
+        const raw = JSON.parse(text) as PhotoJournal;
+        if (raw && Array.isArray(raw.photos)) {
+          return { photos: raw.photos, updatedAt: raw.updatedAt || null };
+        }
+      }
+    } catch (err) {
+      console.error("[photos] durable pull failed", err);
+      await ensureDurableHydrated().catch(() => undefined);
+    }
+  }
+  const local = readJsonFile<PhotoJournal>(PHOTO_FILE);
+  if (local && Array.isArray(local.photos)) {
+    return { photos: local.photos, updatedAt: local.updatedAt || null };
+  }
+  return { photos: loadContent().photos || [], updatedAt: null };
+}
+
+async function savePhotoJournalAsync(journal: PhotoJournal) {
+  journal.updatedAt = new Date().toISOString();
+  await writeJsonFileAsync(PHOTO_FILE, journal);
+  return journal;
+}
+
+async function persistPhotoMedia(images: Photo["images"]) {
+  for (const img of images) {
+    const match = String(img.url || "").match(/\/api\/media\/([^/?#]+)/);
+    if (!match) continue;
+    try {
+      await ensureUploadDurable(match[1]);
+    } catch (err) {
+      console.error("[photos] persist media failed", match[1], err);
+    }
+  }
 }
 
 /**
@@ -410,15 +461,19 @@ export function normalizePhoto(raw: Photo): Photo {
 }
 
 export function getPhotos() {
-  return loadContent()
-    .photos.map(normalizePhoto)
+  const local = readJsonFile<PhotoJournal>(PHOTO_FILE);
+  const photos = Array.isArray(local?.photos)
+    ? local.photos
+    : loadContent().photos;
+  return photos
+    .map(normalizePhoto)
     .filter((p) => p.images.length > 0)
     .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
 }
 
 export async function getPhotosAsync() {
-  const content = await loadContentAsync();
-  return content.photos
+  const journal = await loadPhotoJournalAsync();
+  return journal.photos
     .map(normalizePhoto)
     .filter((p) => p.images.length > 0)
     .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
@@ -432,12 +487,11 @@ export function getPhotoById(id: string) {
 export async function upsertPhoto(
   input: Partial<Photo> & { title: string; images?: Photo["images"]; imageUrl?: string }
 ) {
-  const content = await loadContentAsync();
-  if (!Array.isArray(content.photos)) content.photos = [];
+  const journal = await loadPhotoJournalAsync();
+  if (!Array.isArray(journal.photos)) journal.photos = [];
   const now = new Date().toISOString();
 
   let images = normalizePhotoImages(input as Photo);
-  // Allow legacy imageUrl when creating/updating
   if (!images.length && input.imageUrl) {
     images = [{ id: uid("img"), url: String(input.imageUrl).trim(), caption: "" }];
   }
@@ -448,43 +502,53 @@ export async function upsertPhoto(
     featuredImageId = images[0].id;
   }
 
-  if (input.id) {
-    const idx = content.photos.findIndex((p) => p.id === input.id);
-    if (idx < 0) throw new Error("Photo not found");
-    const prev = normalizePhoto(content.photos[idx]);
-    content.photos[idx] = {
+  const next: Photo = {
+    id: input.id || uid("photo"),
+    title: String(input.title).trim().slice(0, 200),
+    caption: String(input.caption || "").slice(0, 600),
+    images,
+    featuredImageId,
+    imageUrl: images.find((i) => i.id === featuredImageId)?.url || images[0].url,
+    publishedAt: input.publishedAt || now,
+    tags: Array.isArray(input.tags) ? input.tags : [],
+    featured: !!input.featured,
+  };
+
+  const idx = input.id
+    ? journal.photos.findIndex((p) => p.id === input.id)
+    : -1;
+  if (idx >= 0) {
+    const prev = normalizePhoto(journal.photos[idx]);
+    journal.photos[idx] = {
       ...prev,
-      title: String(input.title).trim().slice(0, 200),
-      caption: String(input.caption ?? prev.caption ?? "").slice(0, 600),
-      images,
-      featuredImageId,
-      imageUrl: images.find((i) => i.id === featuredImageId)?.url || images[0].url,
+      ...next,
+      id: prev.id,
       tags: Array.isArray(input.tags) ? input.tags : prev.tags,
-      featured: input.featured !== undefined ? !!input.featured : !!prev.featured,
+      featured:
+        input.featured !== undefined ? !!input.featured : !!prev.featured,
       publishedAt: input.publishedAt || prev.publishedAt,
     };
   } else {
-    const photo: Photo = {
-      id: uid("photo"),
-      title: String(input.title).trim().slice(0, 200),
-      caption: String(input.caption || "").slice(0, 600),
-      images,
-      featuredImageId,
-      imageUrl: images.find((i) => i.id === featuredImageId)?.url || images[0].url,
-      publishedAt: input.publishedAt || now,
-      tags: Array.isArray(input.tags) ? input.tags : [],
-      featured: !!input.featured,
-    };
-    content.photos.unshift(photo);
+    // Missing id (or first publish never reached durable storage) → go live now.
+    journal.photos.unshift(next);
   }
-  return saveContentAsync(content);
+
+  await persistPhotoMedia(images);
+  await savePhotoJournalAsync(journal);
+
+  const content = loadContent();
+  content.photos = journal.photos;
+  content.updatedAt = journal.updatedAt;
+  return content;
 }
 
 export async function deletePhoto(id: string) {
-  const content = await loadContentAsync();
-  if (!Array.isArray(content.photos)) content.photos = [];
-  content.photos = content.photos.filter((p) => p.id !== id);
-  return saveContentAsync(content);
+  const journal = await loadPhotoJournalAsync();
+  journal.photos = (journal.photos || []).filter((p) => p.id !== id);
+  await savePhotoJournalAsync(journal);
+  const content = loadContent();
+  content.photos = journal.photos;
+  return content;
 }
 
 export async function saveUpload(buffer: Buffer, filename: string, contentType?: string) {

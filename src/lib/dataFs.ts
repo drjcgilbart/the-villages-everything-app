@@ -38,6 +38,7 @@ const DURABLE_JSON = new Set([
   "local-services.json",
   "real-estate-youtube.json",
   "channel-youtube.json",
+  "photo-journal.json",
 ]);
 
 /**
@@ -940,6 +941,50 @@ export async function saveUploadFile(
   }
 
   return { url: appUrl, name, via: "local-disk" };
+}
+
+/**
+ * If this instance still has the file on disk (/tmp), push it to Blob/Redis
+ * under the same name so other servers can serve /api/media/{name}.
+ */
+export async function ensureUploadDurable(name: string): Promise<boolean> {
+  const base = path.basename(decodeURIComponent(String(name || "")));
+  if (!base || base === "." || base === "..") return false;
+
+  const alreadyBlob = await fetchUploadBlobBytes(base);
+  if (alreadyBlob) return true;
+  const alreadyRedis = await fetchUploadRedisBytes(base);
+  if (alreadyRedis) return true;
+
+  const local = resolveUploadFile(base);
+  if (!local) return false;
+
+  let buffer: Buffer;
+  try {
+    buffer = fs.readFileSync(/*turbopackIgnore: true*/ local);
+  } catch {
+    return false;
+  }
+  const mime = guessUploadContentType(base);
+
+  if (blobConfigured()) {
+    try {
+      await putBlobWithAccess(blobUploadPathname(base), buffer, mime);
+      return true;
+    } catch (err) {
+      console.error("[dataFs] ensureUploadDurable blob failed", base, err);
+    }
+  }
+  if (redisConfigured()) {
+    try {
+      await pushUploadToRedis(base, buffer, mime);
+      return true;
+    } catch (err) {
+      console.error("[dataFs] ensureUploadDurable redis failed", base, err);
+      return false;
+    }
+  }
+  return !isEphemeralHost();
 }
 
 /** Look up Blob URL for a prior upload by basename. */
