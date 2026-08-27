@@ -9938,6 +9938,41 @@ a.floating-back-btn {
   padding: 0.35rem 0.25rem;
 }
 
+button.local-pros-leader-open {
+  display: grid;
+  appearance: none;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  grid-template-columns: auto auto 1fr auto;
+  padding: 0.5rem 0.35rem;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+button.local-pros-leader-open:not(:has(.local-pros-leader-thumb)) {
+  grid-template-columns: auto 1fr auto;
+}
+
+button.local-pros-leader-open:hover,
+button.local-pros-leader-open:focus-visible {
+  background: rgba(13, 115, 119, 0.1);
+  outline: none;
+}
+
+.local-pros-leader-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #1a1f1c;
+}
+
 .local-svc-card-rating,
 .local-svc-detail-rating {
   display: flex;

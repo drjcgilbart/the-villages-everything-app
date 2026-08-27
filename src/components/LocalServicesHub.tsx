@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { StarPicker, StarRating } from "@/components/StarRating";
+import {
+  LocalServiceDetailLightbox,
+  LOCAL_SVC_UPDATE_EVENT,
+} from "@/components/LocalServiceDetailLightbox";
+import { StarRating } from "@/components/StarRating";
 import {
   AREA_SERVICE_CATEGORIES,
   LOCAL_SERVICE_CATEGORIES,
@@ -11,7 +15,6 @@ import {
   type LocalServiceCategory,
   type LocalServiceListing,
   type LocalServiceScope,
-  type LocalServiceStats,
 } from "@/lib/localServicesTypes";
 
 type Feed = {
@@ -43,7 +46,6 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   const [category, setCategory] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [detail, setDetail] = useState<LocalServiceListing | null>(null);
-  const [detailPhotoIdx, setDetailPhotoIdx] = useState(0);
 
   // Form
   const [businessName, setBusinessName] = useState("");
@@ -67,14 +69,6 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   const [note, setNote] = useState<string | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
 
-  // Vote form (detail lightbox)
-  const [voteRating, setVoteRating] = useState(5);
-  const [voteName, setVoteName] = useState("");
-  const [voteBody, setVoteBody] = useState("");
-  const [voteBusy, setVoteBusy] = useState(false);
-  const [voteMsg, setVoteMsg] = useState<string | null>(null);
-  const [voteErr, setVoteErr] = useState<string | null>(null);
-
   const load = useCallback(async () => {
     try {
       const res = await fetch(
@@ -93,93 +87,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
     }
   }, [scope, defaultCats]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!detail) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setDetail(null);
-    }
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [detail]);
-
-  const filtered = useMemo(() => {
-    const list = feed?.listings || [];
-    const q = query.trim().toLowerCase();
-    return list.filter((l) => {
-      if (category !== "all" && l.category !== category) return false;
-      if (!q) return true;
-      return (
-        l.businessName.toLowerCase().includes(q) ||
-        l.contactName.toLowerCase().includes(q) ||
-        l.description.toLowerCase().includes(q) ||
-        l.category.toLowerCase().includes(q) ||
-        (l.village || "").toLowerCase().includes(q)
-      );
-    });
-  }, [feed, category, query]);
-
-  function openDetail(l: LocalServiceListing) {
-    setDetail(l);
-    setDetailPhotoIdx(0);
-    setVoteRating(5);
-    setVoteMsg(null);
-    setVoteErr(null);
-  }
-
-  async function submitVote(e: React.FormEvent) {
-    e.preventDefault();
-    if (!detail) return;
-    setVoteBusy(true);
-    setVoteErr(null);
-    setVoteMsg(null);
-    try {
-      const res = await fetch("/api/local-services/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId: detail.id,
-          authorName: voteName || "Neighbor",
-          rating: voteRating,
-          body: voteBody || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not save rating");
-      setVoteMsg(data.message || "Thanks for your rating!");
-      setVoteBody("");
-      const stats = data.stats as LocalServiceStats | undefined;
-      if (stats) {
-        setDetail({ ...detail, stats });
-        setFeed((prev) =>
-          prev
-            ? {
-                ...prev,
-                listings: prev.listings.map((x) =>
-                  x.id === detail.id ? { ...x, stats } : x
-                ),
-              }
-            : prev
-        );
-      } else {
-        await load();
-      }
-    } catch (err) {
-      setVoteErr(err instanceof Error ? err.message : "Could not save rating");
-    } finally {
-      setVoteBusy(false);
-    }
-  }
-
-  function prefillUpdate(l: LocalServiceListing) {
+  const prefillUpdate = useCallback((l: LocalServiceListing) => {
     setDetail(null);
     setReplacesId(l.id);
     setBusinessName(l.businessName);
@@ -199,6 +107,53 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
       behavior: "smooth",
       block: "start",
     });
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    function onUpdate(e: Event) {
+      const listing = (e as CustomEvent<LocalServiceListing>).detail;
+      if (listing) prefillUpdate(listing);
+    }
+    window.addEventListener(LOCAL_SVC_UPDATE_EVENT, onUpdate);
+    return () => window.removeEventListener(LOCAL_SVC_UPDATE_EVENT, onUpdate);
+  }, [prefillUpdate]);
+
+  const filtered = useMemo(() => {
+    const list = feed?.listings || [];
+    const q = query.trim().toLowerCase();
+    return list.filter((l) => {
+      if (category !== "all" && l.category !== category) return false;
+      if (!q) return true;
+      return (
+        l.businessName.toLowerCase().includes(q) ||
+        l.contactName.toLowerCase().includes(q) ||
+        l.description.toLowerCase().includes(q) ||
+        l.category.toLowerCase().includes(q) ||
+        (l.village || "").toLowerCase().includes(q)
+      );
+    });
+  }, [feed, category, query]);
+
+  function openDetail(l: LocalServiceListing) {
+    setDetail(l);
+  }
+
+  function applyListingUpdate(next: LocalServiceListing) {
+    setDetail(next);
+    setFeed((prev) =>
+      prev
+        ? {
+            ...prev,
+            listings: prev.listings.map((x) =>
+              x.id === next.id ? { ...x, ...next } : x
+            ),
+          }
+        : prev
+    );
   }
 
   async function uploadPhoto(file: File): Promise<string> {
@@ -302,9 +257,6 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   }
 
   const cats = feed.categories;
-  const detailGallery = detail ? listingPhotos(detail) : [];
-  const detailMain =
-    detailGallery[detailPhotoIdx] || detailGallery[0] || null;
 
   return (
     <div className="local-svc-hub">
@@ -456,224 +408,12 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
       )}
 
       {detail ? (
-        <div
-          className="local-svc-lightbox"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="local-svc-lightbox-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDetail(null);
-          }}
-        >
-          <div className="local-svc-lightbox-panel about-panel">
-            <div className="local-svc-lightbox-head">
-              <div>
-                <div className="local-svc-card-top">
-                  <span className="pill">{detail.category}</span>
-                  {detail.village ? (
-                    <span className="pill">{detail.village}</span>
-                  ) : null}
-                  {detail.serviceArea ? (
-                    <span className="pill">{detail.serviceArea}</span>
-                  ) : null}
-                </div>
-                <h3 id="local-svc-lightbox-title">{detail.businessName}</h3>
-                <p className="local-svc-contact" style={{ marginBottom: 0 }}>
-                  Contact: <strong>{detail.contactName}</strong>
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setDetail(null)}
-              >
-                Close
-              </button>
-            </div>
-
-            {detailMain ? (
-              <div className="local-svc-lightbox-media">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={detailMain}
-                  alt={`${detail.businessName} photo`}
-                  className="local-svc-lightbox-hero"
-                />
-                {detailGallery.length > 1 ? (
-                  <div className="local-svc-lightbox-thumbs">
-                    {detailGallery.map((url, i) => (
-                      <button
-                        key={`${url}-${i}`}
-                        type="button"
-                        className={`local-svc-thumb-btn${
-                          i === detailPhotoIdx ? " is-active" : ""
-                        }`}
-                        onClick={() => setDetailPhotoIdx(i)}
-                        aria-label={
-                          i === 0
-                            ? "Show main photo"
-                            : `Show photo ${i + 1}`
-                        }
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="" />
-                        {i === 0 ? (
-                          <span className="local-svc-thumb-label">Main</span>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="local-svc-lightbox-body">
-              {detail.stats && detail.stats.reviewCount > 0 ? (
-                <div className="local-svc-detail-rating">
-                  <StarRating
-                    value={detail.stats.averageRating}
-                    size="md"
-                    showValue
-                  />
-                  <span>
-                    {detail.stats.reviewCount} neighbor vote
-                    {detail.stats.reviewCount === 1 ? "" : "s"}
-                  </span>
-                </div>
-              ) : (
-                <p className="local-svc-card-hint">No ratings yet</p>
-              )}
-              <p className="local-svc-lightbox-desc">{detail.description}</p>
-              <ul className="club-leader-meta">
-                {detail.address ? (
-                  <li>
-                    <strong>Address:</strong>{" "}
-                    {detail.mapsUrl ? (
-                      <a
-                        href={detail.mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {detail.address}
-                      </a>
-                    ) : (
-                      detail.address
-                    )}
-                  </li>
-                ) : null}
-                {detail.serviceArea ? (
-                  <li>
-                    <strong>Serves:</strong> {detail.serviceArea}
-                  </li>
-                ) : null}
-                {detail.phone ? (
-                  <li>
-                    <strong>Phone:</strong>{" "}
-                    <a
-                      href={`tel:${detail.phone.replace(/[^\d+]/g, "")}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {detail.phone}
-                    </a>
-                  </li>
-                ) : null}
-                {detail.email ? (
-                  <li>
-                    <strong>Email:</strong>{" "}
-                    <a
-                      href={`mailto:${detail.email}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {detail.email}
-                    </a>
-                  </li>
-                ) : null}
-                {detail.website ? (
-                  <li>
-                    <strong>Website:</strong>{" "}
-                    <a
-                      href={detail.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Visit site
-                    </a>
-                  </li>
-                ) : null}
-                {detail.mapsUrl && !detail.address ? (
-                  <li>
-                    <strong>Map / reviews:</strong>{" "}
-                    <a
-                      href={detail.mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Open map
-                    </a>
-                  </li>
-                ) : null}
-              </ul>
-
-              <form className="local-svc-vote-form" onSubmit={submitVote}>
-                <span className="kicker">Rate this pro</span>
-                <p style={{ margin: "0.25rem 0 0.5rem", color: "var(--muted)" }}>
-                  1–5 stars — same idea as dining. Helps neighbors pick a crew.
-                </p>
-                {voteMsg ? <div className="msg msg-ok">{voteMsg}</div> : null}
-                {voteErr ? <div className="msg msg-err">{voteErr}</div> : null}
-                <StarPicker value={voteRating} onChange={setVoteRating} />
-                <div className="field" style={{ marginTop: "0.65rem" }}>
-                  <label htmlFor="svc-vote-name">Your name</label>
-                  <input
-                    id="svc-vote-name"
-                    value={voteName}
-                    onChange={(e) => setVoteName(e.target.value)}
-                    maxLength={80}
-                    placeholder="Neighbor"
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="svc-vote-body">Note (optional)</label>
-                  <textarea
-                    id="svc-vote-body"
-                    value={voteBody}
-                    onChange={(e) => setVoteBody(e.target.value)}
-                    rows={2}
-                    maxLength={500}
-                    placeholder="Showed up on time, cleaned up after…"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-sm"
-                  disabled={voteBusy}
-                >
-                  {voteBusy ? "Saving…" : "Submit rating"}
-                </button>
-              </form>
-
-              <div className="hero-actions" style={{ marginTop: "1rem" }}>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => prefillUpdate(detail)}
-                >
-                  Update this listing
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => setDetail(null)}
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <LocalServiceDetailLightbox
+          key={detail.id}
+          listing={detail}
+          onClose={() => setDetail(null)}
+          onListingUpdate={applyListingUpdate}
+        />
       ) : null}
 
       <div

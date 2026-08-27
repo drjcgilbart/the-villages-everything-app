@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { LocalProsTopBoards } from "@/components/LocalProsTopBoards";
 import { LocalServicesHub } from "@/components/LocalServicesHub";
 import { StarRating } from "@/components/StarRating";
 import {
@@ -169,84 +170,13 @@ export default async function LocalProsPage() {
               <p>
                 Same idea as dining&apos;s cuisine boards: cute Florida critters
                 for each trade, top five ranked by average star rating (then vote
-                count). Empty lists fill as neighbors rate listings.
+                count). Click any pro for photos, contact info, and to leave a
+                rating.
               </p>
             </div>
           </div>
 
-          <div className="cuisine-boards local-pros-boards">
-            {categoryBoards.map(({ category, leaders }) => (
-              <div
-                key={category}
-                id={`trade-${slugCategory(category)}`}
-                className="cuisine-board about-panel dining-anchor-target"
-              >
-                <div className="cuisine-board-art">
-                  <Image
-                    src={areaServiceArtPath(category)}
-                    alt=""
-                    width={640}
-                    height={640}
-                    className="cuisine-board-img"
-                  />
-                </div>
-                <div className="cuisine-board-head">
-                  <h3>{category}</h3>
-                  <span>
-                    {leaders.length} listed
-                    {leaders.some((l) => l.stats.reviewCount > 0)
-                      ? " · ranked"
-                      : ""}
-                  </span>
-                </div>
-                {leaders.length === 0 ? (
-                  <p className="empty-state" style={{ margin: "0.5rem 0 0" }}>
-                    No listings yet — submit one below.
-                  </p>
-                ) : (
-                  <ol className="cuisine-leader-list">
-                    {leaders.map((l) => (
-                      <li key={l.id} className="cuisine-leader-row">
-                        <div className="cuisine-leader-link local-pros-leader-static">
-                          <span className="leader-rank">{l.rank}</span>
-                          <span className="leader-main">
-                            <strong>{l.businessName}</strong>
-                            <em>
-                              {l.contactName}
-                              {l.address ? ` · ${l.address}` : ""}
-                              {!l.address && l.serviceArea
-                                ? ` · ${l.serviceArea}`
-                                : ""}
-                              {l.phone ? ` · ${l.phone}` : ""}
-                            </em>
-                          </span>
-                          <span className="leader-score">
-                            {l.stats.reviewCount > 0 ? (
-                              <>
-                                <StarRating
-                                  value={l.stats.averageRating}
-                                  size="sm"
-                                  showValue
-                                />
-                                <small>
-                                  {l.stats.reviewCount} vote
-                                  {l.stats.reviewCount === 1 ? "" : "s"}
-                                </small>
-                              </>
-                            ) : (
-                              <small className="leader-unrated">
-                                No ratings yet
-                              </small>
-                            )}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-            ))}
-          </div>
+          <LocalProsTopBoards boards={categoryBoards} />
         </div>
       </section>
 
