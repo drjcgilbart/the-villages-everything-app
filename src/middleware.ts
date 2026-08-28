@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  applySecurityHeaders,
+  isNativeAppUserAgent,
+  originAllowed,
+} from "@/lib/security";
 
 /** Keep in sync with SITE_GATE_COOKIE in src/lib/siteGate.ts */
 const SITE_GATE_COOKIE = "tvh_site_gate";
@@ -84,12 +89,41 @@ async function isGateActive(req: NextRequest, password: string): Promise<boolean
   }
 }
 
+function withSecurity(res: NextResponse): NextResponse {
+  return applySecurityHeaders(res);
+}
+
 export async function middleware(req: NextRequest) {
   const password = (process.env.SITE_PASSWORD || "").trim();
   const { pathname } = req.nextUrl;
+  const method = req.method.toUpperCase();
 
   if (isPublicAsset(pathname)) {
-    return NextResponse.next();
+    return withSecurity(NextResponse.next());
+  }
+
+  if (
+    ["POST", "PUT", "PATCH", "DELETE"].includes(method) &&
+    pathname.startsWith("/api/") &&
+    !originAllowed(req)
+  ) {
+    return withSecurity(
+      NextResponse.json({ error: "Forbidden origin" }, { status: 403 })
+    );
+  }
+
+  if (
+    method === "POST" &&
+    isNativeAppUserAgent(req) &&
+    (pathname === "/api/donate/checkout" ||
+      pathname === "/api/members/subscribe")
+  ) {
+    return withSecurity(
+      NextResponse.json(
+        { error: "Purchases aren’t available in the store app." },
+        { status: 403 }
+      )
+    );
   }
 
   // Unlock UI + gate status/API always reachable (also used by this middleware probe)
@@ -97,7 +131,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/beta-gate") ||
     pathname.startsWith("/api/site-gate")
   ) {
-    return NextResponse.next();
+    return withSecurity(NextResponse.next());
   }
 
   // Vercel Cron must reach refresh without a browser cookie
@@ -111,25 +145,27 @@ export async function middleware(req: NextRequest) {
     (req.headers.get("x-vercel-cron") === "1" ||
       req.headers.get("authorization")?.startsWith("Bearer "))
   ) {
-    return NextResponse.next();
+    return withSecurity(NextResponse.next());
   }
 
   // No password configured, or admin toggle / probe says gate is off → full public access
   if (!(await isGateActive(req, password))) {
-    return NextResponse.next();
+    return withSecurity(NextResponse.next());
   }
 
   const expected = await siteGateToken(password);
   const cookie = req.cookies.get(SITE_GATE_COOKIE)?.value;
 
   if (cookie && cookie === expected) {
-    return NextResponse.next();
+    return withSecurity(NextResponse.next());
   }
 
   if (pathname.startsWith("/api/")) {
-    return NextResponse.json(
-      { error: "Beta password required", code: "SITE_GATE" },
-      { status: 401 }
+    return withSecurity(
+      NextResponse.json(
+        { error: "Beta password required", code: "SITE_GATE" },
+        { status: 401 }
+      )
     );
   }
 
@@ -138,7 +174,7 @@ export async function middleware(req: NextRequest) {
   if (pathname !== "/" && pathname !== "/beta-gate") {
     url.searchParams.set("from", pathname);
   }
-  return NextResponse.redirect(url);
+  return withSecurity(NextResponse.redirect(url));
 }
 
 export const config = {

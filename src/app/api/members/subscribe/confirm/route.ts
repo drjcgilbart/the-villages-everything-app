@@ -17,7 +17,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Please sign in" }, { status: 401 });
   }
 
-  if (process.env.HUB_MEMBER_DEV_UNLOCK === "true" && !stripeConfigured()) {
+  if (
+    process.env.HUB_MEMBER_DEV_UNLOCK === "true" &&
+    !stripeConfigured() &&
+    process.env.VERCEL_ENV !== "production"
+  ) {
     updateMemberSpace(member.id, { plan: "cart_path_regular" });
     return NextResponse.json({
       ok: true,

@@ -49,6 +49,9 @@ export async function GET(req: Request) {
 
 /** Public: submit a new listing or an update for admin approval */
 export async function POST(req: Request) {
+  const { rateLimitResponse } = await import("@/lib/authRateLimit");
+  const limited = rateLimitResponse(req, "local-svc-submit", 8, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
     const scope: LocalServiceScope =

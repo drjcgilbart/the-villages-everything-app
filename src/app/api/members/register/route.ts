@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { registerMember } from "@/lib/yardSale";
+import { rateLimitResponse } from "@/lib/authRateLimit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(req, "member-register", 6);
+  if (limited) return limited;
   try {
     const body = await req.json();
     const member = registerMember({

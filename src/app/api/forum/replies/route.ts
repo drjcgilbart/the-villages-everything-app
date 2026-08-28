@@ -38,6 +38,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const { rateLimitResponse } = await import("@/lib/authRateLimit");
+  const limited = rateLimitResponse(req, "forum-reply", 30, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
     if (body.website || body.company) {

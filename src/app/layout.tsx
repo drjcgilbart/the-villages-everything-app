@@ -9,6 +9,7 @@ import { FloatingBackButton } from "@/components/FloatingBackButton";
 import { MascotQuipPopup } from "@/components/MascotQuipPopup";
 import { ThemeMusicPlayer } from "@/components/ThemeMusicPlayer";
 import { PwaRegister } from "@/components/PwaRegister";
+import { NativeAppBoot } from "@/components/NativeAppBoot";
 import { ensureDurableHydrated } from "@/lib/dataFs";
 import "./globals.css";
 
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
+        <NativeAppBoot />
         <PwaRegister />
         <Header />
         <main className="flex-1">{children}</main>

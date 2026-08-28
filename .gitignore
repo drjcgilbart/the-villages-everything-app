@@ -42,6 +42,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# mobile (Expo) — keep source, ignore install/native output
+/mobile/node_modules
+/mobile/.expo
+/mobile/dist
+/mobile/web-build
+/mobile/android
+/mobile/ios
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

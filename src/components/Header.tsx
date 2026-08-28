@@ -72,7 +72,9 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={isUtilityActive(item) ? "active" : ""}
+                className={`${isUtilityActive(item) ? "active" : ""}${
+                  item.href === "/donate" ? " hide-in-native-app" : ""
+                }`.trim()}
               >
                 {item.label}
               </Link>

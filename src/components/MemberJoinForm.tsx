@@ -61,11 +61,11 @@ export function MemberJoinForm() {
           />
         </div>
         <div className="field">
-          <label>Password (min 6 characters)</label>
+          <label>Password (min 8 characters)</label>
           <input
             required
             type="password"
-            minLength={6}
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"

@@ -178,7 +178,7 @@ export async function fetchVillagesWeather(): Promise<VillagesWeather> {
   return basic;
 }
 
-/** Full dashboard forecast (current + 24h hourly + 7-day) — from the desktop weather-app. */
+/** Full dashboard forecast (current + 24h hourly + 7-day) — from My Retirement Reboot. */
 export async function fetchVillagesForecast(): Promise<VillagesForecast> {
   const data = (await fetchOpenMeteoRaw(7)) as {
     current?: Record<string, number | string | undefined>;

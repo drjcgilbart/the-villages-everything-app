@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { cookieSecure, isInsecureAdminConfig, isProductionHost } from "./security";
 
 const COOKIE = "tvi_admin";
 
@@ -20,6 +21,7 @@ export function expectedToken() {
 }
 
 export async function isAdminAuthenticated() {
+  if (isProductionHost() && isInsecureAdminConfig()) return false;
   const jar = await cookies();
   const val = jar.get(COOKIE)?.value;
   if (!val) return false;
@@ -37,7 +39,7 @@ export function adminCookieOptions(maxAgeSec = 60 * 60 * 24 * 14) {
     value: expectedToken(),
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     maxAge: maxAgeSec,
   };
@@ -49,7 +51,7 @@ export function clearAdminCookieOptions() {
     value: "",
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     maxAge: 0,
   };

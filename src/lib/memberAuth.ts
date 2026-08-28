@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { getMemberById } from "./yardSale";
+import { cookieSecure } from "./security";
 
 const COOKIE = "tvi_member";
 
@@ -21,7 +22,7 @@ export function memberCookieOptions(memberId: string, maxAgeSec = 60 * 60 * 24 *
     value: `${memberId}.${memberToken(memberId)}`,
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     maxAge: maxAgeSec,
   };
@@ -33,7 +34,7 @@ export function clearMemberCookieOptions() {
     value: "",
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     maxAge: 0,
   };

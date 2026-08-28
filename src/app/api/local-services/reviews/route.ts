@@ -5,6 +5,8 @@ import {
   listReviewsForListing,
   loadLocalServicesAsync,
 } from "@/lib/localServices";
+import { getSessionMember } from "@/lib/memberAuth";
+import { rateLimitResponse } from "@/lib/authRateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -33,14 +35,17 @@ export async function GET(req: Request) {
 
 /** Public: submit a 1–5 star rating for an approved listing */
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(req, "local-svc-review", 12, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
+    const session = await getSessionMember();
     const review = await addLocalServiceReview({
       listingId: body.listingId,
-      authorName: body.authorName,
+      authorName: body.authorName || session?.name,
       rating: body.rating,
       body: body.body,
-      authorMemberId: body.authorMemberId || null,
+      authorMemberId: session?.id || null,
     });
     const data = await loadLocalServicesAsync();
     const stats = computeServiceStats(review.listingId, data.reviews);

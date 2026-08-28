@@ -17,7 +17,7 @@ export default function MySpacePage() {
           <h1>My Space</h1>
           <p>
             Your private Villages command center — the full daily dashboard from
-            our desktop weather-app, built into the site:{" "}
+            My Retirement Reboot, built into the site:{" "}
             <strong>weather</strong> (hourly + 7-day), <strong>health</strong>{" "}
             (weight, meds, meals, movement, journal), <strong>pets</strong>{" "}
             (walks, meals, alarms), <strong>investments</strong>, calendar notes,

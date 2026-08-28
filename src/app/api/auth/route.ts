@@ -6,6 +6,11 @@ import {
   isAdminAuthenticated,
 } from "@/lib/auth";
 import { authAttemptAllowed, clearAuthAttempts } from "@/lib/authRateLimit";
+import {
+  isInsecureAdminConfig,
+  isProductionHost,
+  secretsMatch,
+} from "@/lib/security";
 
 export async function GET() {
   const ok = await isAdminAuthenticated();
@@ -13,6 +18,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (isProductionHost() && isInsecureAdminConfig()) {
+    return NextResponse.json(
+      { error: "Admin login is disabled until a strong ADMIN_PASSWORD is set." },
+      { status: 503 }
+    );
+  }
+
   const gate = authAttemptAllowed(req);
   if (!gate.ok) {
     return NextResponse.json(
@@ -26,7 +38,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const password = String(body.password || "");
-  if (!password || password !== getAdminPassword()) {
+  if (!password || !secretsMatch(password, getAdminPassword())) {
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
   }
   clearAuthAttempts(req);

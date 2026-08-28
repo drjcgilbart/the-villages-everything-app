@@ -23,6 +23,7 @@ import {
   type HubPlanId,
   tierRequiredFor,
 } from "@/lib/membershipTiers";
+import { isNativeAppShell } from "@/lib/nativeAppShell";
 
 /** Explicit badge art for tier cards (client-safe; always present). */
 const TIER_CARD_BADGES: Record<
@@ -119,6 +120,7 @@ export function MySpaceDashboard() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [tab, setTab] = useState<DashTab>("home");
+  const [inNativeApp, setInNativeApp] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,6 +146,7 @@ export function MySpaceDashboard() {
   }, []);
 
   useEffect(() => {
+    setInNativeApp(isNativeAppShell());
     load();
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -284,7 +287,7 @@ export function MySpaceDashboard() {
           </p>
           <p className="panel-hint" style={{ marginBottom: 0 }}>
             Full daily dashboard (weather · health · pets · investments) —
-            powered by the same tools as the Villages desktop weather-app.
+            powered by the same tools as My Retirement Reboot.
           </p>
           {note && <p className="club-sync-note">{note}</p>}
         </div>
@@ -398,15 +401,20 @@ export function MySpaceDashboard() {
                 <h3>{t.label}</h3>
                 <p className="ms-tier-tagline">{t.tagline}</p>
                 <p className="ms-tier-blurb">{t.blurb}</p>
-                {t.rank > 0 && !unlocked && member.status === "approved" && (
+                {t.rank > 0 && !unlocked && member.status === "approved" && !inNativeApp && (
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-primary btn-sm hide-in-native-app"
                     disabled={busy}
                     onClick={() => startSubscribe(t.id)}
                   >
                     {busy ? "Starting…" : `Become ${t.label}`}
                   </button>
+                )}
+                {t.rank > 0 && !unlocked && member.status === "approved" && inNativeApp && (
+                  <p className="panel-hint" style={{ marginBottom: 0 }}>
+                    Membership upgrades are not sold in the store app.
+                  </p>
                 )}
                 {t.rank > 0 && !unlocked && member.status !== "approved" && (
                   <p className="pf-form-error" style={{ marginBottom: 0 }}>

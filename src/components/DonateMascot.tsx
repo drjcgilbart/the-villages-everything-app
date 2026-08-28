@@ -12,7 +12,7 @@ export function DonateMascot({
   return (
     <Link
       href="/donate"
-      className={`donate-mascot donate-mascot-${variant} ${className}`.trim()}
+      className={`donate-mascot donate-mascot-${variant} hide-in-native-app ${className}`.trim()}
       aria-label="Buy me a cup of Joe — donate to keep the lights on"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

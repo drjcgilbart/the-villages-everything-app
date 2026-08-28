@@ -145,12 +145,12 @@ export function AdminMembersPanel() {
 
   async function resetMemberPassword(id: string, name: string) {
     const password = window.prompt(
-      `New password for ${name} (min 6 characters):`,
+      `New password for ${name} (min 8 characters):`,
       ""
     );
     if (password == null) return;
-    if (password.trim().length < 6) {
-      flash("err", "Password must be at least 6 characters");
+    if (password.trim().length < 8) {
+      flash("err", "Password must be at least 8 characters");
       return;
     }
     setBusy(true);

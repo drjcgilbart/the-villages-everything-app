@@ -8,6 +8,10 @@ import { getSessionMember } from "@/lib/memberAuth";
 import { getStripe, siteBaseUrl } from "@/lib/stripe";
 
 export async function POST(req: Request) {
+  const { rateLimitResponse } = await import("@/lib/authRateLimit");
+  const limited = rateLimitResponse(req, "donate-checkout", 10, 15 * 60 * 1000);
+  if (limited) return limited;
+
   const stripe = getStripe();
   if (!stripe) {
     return NextResponse.json(
@@ -120,6 +124,9 @@ export async function POST(req: Request) {
     const message =
       err instanceof Error ? err.message : "Stripe checkout failed";
     console.error("donate checkout error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Could not start checkout. Please try again." },
+      { status: 500 }
+    );
   }
 }

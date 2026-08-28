@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         <span className="kicker">Legal-ish, still friendly</span>
         <h1>Privacy Policy</h1>
         <p style={{ color: "var(--muted)" }}>
-          Last updated: August 9, 2026 · Applies to the website{" "}
+          Last updated: August 28, 2026 · Applies to the website{" "}
           <strong>{SITE_BRAND.domain}</strong> and the iPhone / Android apps
           that open it.
         </p>

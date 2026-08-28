@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { tabulatePreviousMonthIfNeededAsync } from "@/lib/bestOfMonth";
+import { isAdminAuthenticated } from "@/lib/auth";
+import { isCronAuthorized, isProductionHost } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,19 +12,13 @@ export const runtime = "nodejs";
  * Must use async durable load — sync seed write was wiping live pendings.
  */
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  const auth = req.headers.get("authorization") || "";
-  const vercelCron = req.headers.get("x-vercel-cron") === "1";
-  const headerSecret = req.headers.get("x-cron-secret") || "";
-
-  if (cronSecret) {
-    const ok =
-      vercelCron ||
-      auth === `Bearer ${cronSecret}` ||
-      headerSecret === cronSecret;
-    if (!ok) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const cronOk = isCronAuthorized(req);
+  const admin = await isAdminAuthenticated();
+  if (isProductionHost() && !cronOk && !admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!cronOk && !admin && process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const data = await tabulatePreviousMonthIfNeededAsync();

@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   CUSTOM_STAR_LOOFAH,
   donationBadgeForCheckout,
@@ -24,6 +25,11 @@ export function DonateForm({
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inNativeApp, setInNativeApp] = useState(false);
+
+  useEffect(() => {
+    setInNativeApp(isNativeAppShell());
+  }, []);
 
   const isCustom = selected === "custom";
 
@@ -83,6 +89,17 @@ export function DonateForm({
       setError(e instanceof Error ? e.message : "Checkout failed");
       setBusy(false);
     }
+  }
+
+  if (inNativeApp) {
+    return (
+      <div className="donate-form about-panel">
+        <p style={{ marginBottom: 0 }}>
+          This store app is free to use. Tips and membership upgrades are not
+          sold inside the iPhone or Android apps.
+        </p>
+      </div>
+    );
   }
 
   return (

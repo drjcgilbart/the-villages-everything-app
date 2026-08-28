@@ -60,7 +60,7 @@ export function LaunchPromo() {
           <Link href="/dining" className="btn btn-ghost">
             Rate dining
           </Link>
-          <Link href="/donate" className="btn btn-ghost">
+          <Link href="/donate" className="btn btn-ghost hide-in-native-app">
             Buy me a cup of Joe
           </Link>
           <a href="/golf-cart-hero/" className="btn btn-ghost">

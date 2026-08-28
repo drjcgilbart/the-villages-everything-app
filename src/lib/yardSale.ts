@@ -116,7 +116,7 @@ export function registerMember(input: {
   const password = String(input.password || "");
   if (!name) throw new Error("Name is required");
   if (!email || !email.includes("@")) throw new Error("Valid email is required");
-  if (password.length < 6) throw new Error("Password must be at least 6 characters");
+  if (password.length < 8) throw new Error("Password must be at least 8 characters");
 
   const data = loadYardSale();
   const existing = data.members.find((m) => m.email === email);
@@ -180,7 +180,7 @@ export function authenticateMember(email: string, password: string) {
 /** Admin-only: set a known password for a member (beta / support). */
 export function setMemberPassword(id: string, password: string) {
   const next = String(password || "");
-  if (next.length < 6) throw new Error("Password must be at least 6 characters");
+  if (next.length < 8) throw new Error("Password must be at least 8 characters");
   const data = loadYardSale();
   const idx = data.members.findIndex((m) => m.id === id);
   if (idx < 0) throw new Error("Member not found");

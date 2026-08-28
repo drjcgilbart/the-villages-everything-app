@@ -44,7 +44,7 @@ async function handle(req: Request, force: boolean) {
 
   try {
     const cache =
-      force || isCron || isAdmin
+      isCron || isAdmin || (force && isAdmin)
         ? await refreshChannelYoutube({
             source: isCron ? "cron" : "manual",
           })
@@ -52,7 +52,7 @@ async function handle(req: Request, force: boolean) {
 
     return NextResponse.json({
       ok: true,
-      mode: isCron ? "cron" : isAdmin || force ? "manual" : "stale-check",
+      mode: isCron ? "cron" : isAdmin ? "manual" : "stale-check",
       updatedAt: cache.updatedAt,
       lastError: cache.lastError,
       count: cache.videos.length,

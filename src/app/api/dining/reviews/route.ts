@@ -27,6 +27,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const { rateLimitResponse } = await import("@/lib/authRateLimit");
+  const limited = rateLimitResponse(req, "dining-review", 12, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
     const session = await getSessionMember();

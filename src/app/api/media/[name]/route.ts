@@ -40,6 +40,8 @@ export async function GET(
     return new NextResponse(data, {
       headers: {
         "Content-Type": type,
+        "X-Content-Type-Options": "nosniff",
+        "Content-Disposition": `inline; filename="${safe.replace(/"/g, "")}"`,
         "Cache-Control": "public, max-age=3600",
       },
     });
@@ -56,6 +58,8 @@ export async function GET(
       return new NextResponse(data, {
         headers: {
           "Content-Type": type,
+          "X-Content-Type-Options": "nosniff",
+          "Content-Disposition": `inline; filename="${safe.replace(/"/g, "")}"`,
           "Cache-Control": "public, max-age=86400",
         },
       });
@@ -70,6 +74,7 @@ export async function GET(
     return new NextResponse(new Uint8Array(fromBlob.data), {
       headers: {
         "Content-Type": fromBlob.contentType,
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=3600",
       },
     });
@@ -81,6 +86,7 @@ export async function GET(
     return new NextResponse(new Uint8Array(fromRedis.data), {
       headers: {
         "Content-Type": fromRedis.contentType,
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=3600",
       },
     });

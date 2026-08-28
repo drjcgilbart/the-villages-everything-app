@@ -1,0 +1,45 @@
+# EAS uploads from the git repo root. Keep mobile builds small.
+# Leading "/" = only the website root, not mobile/
+
+# Parent Next.js website
+/node_modules/
+/.next/
+/src/
+/data/
+/public/
+/scripts/
+/youtube/
+/start.bat
+/vercel.json
+/next.config.ts
+/next-env.d.ts
+/postcss.config.mjs
+/eslint.config.mjs
+/tsconfig.json
+/tsconfig.tsbuildinfo
+/package.json
+/package-lock.json
+/.env
+/.env.local
+/.env.example
+/AGENTS.md
+/CLAUDE.md
+/README.md
+/DEPLOY-SIMPLE.md
+
+# Mobile install / native / secrets (rebuilt on the server)
+/mobile/node_modules/
+/mobile/.expo/
+/mobile/dist/
+/mobile/web-build/
+/mobile/android/
+/mobile/ios/
+/mobile/*.jks
+/mobile/*.keystore
+/mobile/play-service-account.json
+/mobile/google-services.json
+/mobile/AuthKey_*.p8
+
+# Misc
+**/.DS_Store
+**/npm-debug.*

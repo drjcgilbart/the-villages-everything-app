@@ -44,7 +44,7 @@ function fmtDay(iso: string, index: number): string {
 }
 
 /**
- * Full Villages weather dashboard ported from the desktop weather-app:
+ * Full Villages weather dashboard ported from My Retirement Reboot:
  * current conditions, metrics, next 24 hours, 7-day forecast.
  */
 export function MySpaceWeatherBoard() {

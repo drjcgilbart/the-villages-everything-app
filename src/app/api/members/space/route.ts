@@ -57,7 +57,11 @@ export async function PATCH(req: NextRequest) {
     plan?: string;
   };
 
-  if (body.devUnlock && process.env.HUB_MEMBER_DEV_UNLOCK === "true") {
+  if (
+    body.devUnlock &&
+    process.env.HUB_MEMBER_DEV_UNLOCK === "true" &&
+    process.env.VERCEL_ENV !== "production"
+  ) {
     const plan = normalizePlan(body.plan || "cart_path_regular") as HubPlanId;
     // Dev unlock never stays on free porch unless explicitly porch_waver
     updateMemberSpace(member.id, {

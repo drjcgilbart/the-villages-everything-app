@@ -872,6 +872,9 @@ export async function saveUploadFile(
   filename: string,
   contentType?: string
 ): Promise<{ url: string; name: string; blobUrl?: string; via?: string }> {
+  const { assertSafeUpload } = await import("./uploadGuard");
+  assertSafeUpload(buffer, filename, contentType);
+
   const safe = path
     .basename(String(filename || "upload.bin"))
     .replace(/[^a-zA-Z0-9._-]/g, "_")

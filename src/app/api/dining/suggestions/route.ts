@@ -32,6 +32,11 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const action = String(body.action || "submit").toLowerCase();
+    if (action === "submit") {
+      const { rateLimitResponse } = await import("@/lib/authRateLimit");
+      const limited = rateLimitResponse(req, "dining-suggest", 8, 15 * 60 * 1000);
+      if (limited) return limited;
+    }
 
     if (action === "submit") {
       const suggestion = submitRestaurantSuggestion({

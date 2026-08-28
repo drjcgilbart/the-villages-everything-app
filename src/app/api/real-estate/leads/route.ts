@@ -18,6 +18,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const { rateLimitResponse } = await import("@/lib/authRateLimit");
+  const limited = rateLimitResponse(req, "re-lead", 8, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
     const type = (["buyer", "seller", "general"].includes(body.type)

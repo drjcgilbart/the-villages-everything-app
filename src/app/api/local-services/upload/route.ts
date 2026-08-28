@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveLocalServiceUpload } from "@/lib/localServices";
+import { rateLimitResponse } from "@/lib/authRateLimit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -7,6 +8,8 @@ export const runtime = "nodejs";
 const MAX_BYTES = 3 * 1024 * 1024; // 3 MB
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(req, "local-svc-upload", 20, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const form = await req.formData();
     const file = (
@@ -30,7 +33,6 @@ export async function POST(req: Request) {
     return NextResponse.json({
       url,
       name: file.name,
-      storedVia: url.startsWith("/api/media/") ? "app-media-proxy" : "direct",
     });
   } catch (err) {
     console.error("[local-services/upload]", err);

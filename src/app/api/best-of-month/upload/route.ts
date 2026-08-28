@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveBomUpload } from "@/lib/bestOfMonth";
+import { rateLimitResponse } from "@/lib/authRateLimit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -7,6 +8,8 @@ export const runtime = "nodejs";
 const MAX_BYTES = 12 * 1024 * 1024; // 12 MB
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(req, "bom-upload", 20, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const form = await req.formData();
     const file = (
@@ -31,8 +34,6 @@ export async function POST(req: Request) {
       url: result.url,
       fileType: result.fileType,
       name: file.name,
-      // Help debug storage in the browser network tab
-      storedVia: result.via || "unknown",
     });
   } catch (err) {
     console.error("[bom/upload]", err);

@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+web-build/
+android/
+ios/
+*.jks
+*.keystore
+play-service-account.json
+google-services.json
+AuthKey_*.p8
+.DS_Store

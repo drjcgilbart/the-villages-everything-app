@@ -61,7 +61,7 @@ function defaults(): PetState {
 }
 
 /**
- * Pet parade — ported from weather-app Angelcake care tracker.
+ * Pet parade — ported from My Retirement Reboot Angelcake care tracker.
  * Walks, meals, completions, optional browser alarms.
  */
 export function MySpacePetBoard() {

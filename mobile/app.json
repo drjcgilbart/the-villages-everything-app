@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "The Villages Everything App",
+    "slug": "the-villages-everything-app",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "villageseverything",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c4a6e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.thevillageseverythingapp.app",
+      "buildNumber": "2",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow camera access so you can take photos for Best of the Month, Support Local, yard sale, and member uploads.",
+        "NSPhotoLibraryUsageDescription": "Allow photo library access so you can upload pictures for Best of the Month, Support Local, yard sale, and member content.",
+        "NSPhotoLibraryAddUsageDescription": "Allow saving photos you capture in the app.",
+        "NSMicrophoneUsageDescription": "Allow microphone access if you record short videos for community listings.",
+        "NSLocationWhenInUseUsageDescription": "Optional location can help with nearby village features if you enable them.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.thevillageseverythingapp.app",
+      "versionCode": 4,
+      "usesCleartextTraffic": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#0c4a6e",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "ACCESS_NETWORK_STATE",
+        "INTERNET"
+      ],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-splash-screen"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "adf75ad3-f911-44ca-acba-5dd843b23eb7"
+      },
+      "siteUrl": "https://www.thevillageseverythingapp.com"
+    },
+    "owner": "the-villages-everything-app"
+  }
+}

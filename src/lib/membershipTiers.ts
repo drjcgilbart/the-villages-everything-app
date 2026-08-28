@@ -124,7 +124,7 @@ export const FEATURE_META: Record<
   weather: {
     title: "Villages weather",
     teaser:
-      "Full dashboard: current conditions, metrics, 24-hour and 7-day forecast (desktop weather-app).",
+      "Full dashboard: current conditions, metrics, 24-hour and 7-day forecast (My Retirement Reboot).",
     anchor: "ms-weather",
   },
   favoriteClubs: {

@@ -5,6 +5,7 @@ import {
   writeJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
+import { cookieSecure } from "./security";
 
 /** HTTP-only cookie set after a successful beta unlock */
 export const SITE_GATE_COOKIE = "tvh_site_gate";
@@ -106,7 +107,7 @@ export function siteGateCookieOptions(maxAgeSec = 60 * 60 * 24 * 30) {
     value: expectedSiteGateToken(),
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     maxAge: maxAgeSec,
   };
@@ -118,7 +119,7 @@ export function clearSiteGateCookieOptions() {
     value: "",
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure(),
     path: "/",
     maxAge: 0,
   };

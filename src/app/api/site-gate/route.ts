@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { rateLimitResponse } from "@/lib/authRateLimit";
 import {
   clearSiteGateCookieOptions,
   expectedSiteGateToken,
@@ -25,6 +26,9 @@ function passwordsMatch(a: string, b: string): boolean {
 
 /** POST { password } — unlock site for this browser */
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(req, "site-gate", 8);
+  if (limited) return limited;
+
   if (!(await isSiteGateEnabledAsync())) {
     return NextResponse.json({ ok: true, gate: "off" });
   }

@@ -51,7 +51,9 @@ export function Footer() {
               <Link href="/blog">Blog</Link>
               <Link href="/photos">Photos</Link>
               <Link href="/videos">Videos</Link>
-              <Link href="/donate">Buy me a cup of Joe</Link>
+              <Link href="/donate" className="hide-in-native-app">
+                Buy me a cup of Joe
+              </Link>
               <a href="/golf-cart-hero/">Golf Cart Hero</a>
             </div>
           </div>

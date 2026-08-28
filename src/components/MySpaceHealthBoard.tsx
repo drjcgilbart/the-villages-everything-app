@@ -123,7 +123,7 @@ function bmi(weight: number | null, heightIn: number | null): number | null {
 }
 
 /**
- * Health lanai — ported from the desktop weather-app health tracker.
+ * Health lanai — ported from the My Retirement Reboot health tracker.
  * Private to this browser (localStorage).
  */
 export function MySpaceHealthBoard() {

@@ -22,6 +22,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const { rateLimitResponse } = await import("@/lib/authRateLimit");
+  const limited = rateLimitResponse(req, "village-neighbor", 8, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
     // Honeypot

@@ -106,6 +106,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const { rateLimitResponse } = await import("@/lib/authRateLimit");
+  const limited = rateLimitResponse(req, "bom-entries", 20, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
     const action = String(body.action || "submit").toLowerCase();

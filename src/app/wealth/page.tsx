@@ -302,7 +302,7 @@ export default async function WealthPage() {
               <Link href="/health" className="btn btn-ghost btn-sm">
                 Health
               </Link>
-              <Link href="/donate" className="btn btn-ghost btn-sm">
+              <Link href="/donate" className="btn btn-ghost btn-sm hide-in-native-app">
                 Support the hub
               </Link>
             </div>

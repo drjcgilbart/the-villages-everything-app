@@ -472,7 +472,10 @@ export default async function RealEstatePage() {
                   <Link href="/rec-centers">Rec Centers</Link> — amenities nearby
                 </li>
                 <li>
-                  <Link href="/donate">Buy me a cup of Joe</Link> — optional tips
+                  <Link href="/donate" className="hide-in-native-app">
+                    Buy me a cup of Joe
+                  </Link>{" "}
+                  <span className="hide-in-native-app">— optional tips</span>
                 </li>
               </ul>
             </div>

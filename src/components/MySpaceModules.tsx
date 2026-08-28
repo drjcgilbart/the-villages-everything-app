@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-/** Re-export full boards (ported from desktop weather-app). */
+/** Re-export full boards (ported from My Retirement Reboot). */
 export { MySpaceHealthBoard as MySpaceHealthLog } from "@/components/MySpaceHealthBoard";
 export { MySpacePetBoard as MySpacePetSchedule } from "@/components/MySpacePetBoard";
 
