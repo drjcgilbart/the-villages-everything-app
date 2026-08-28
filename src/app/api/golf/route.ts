@@ -7,12 +7,14 @@ import {
 } from "@/lib/golfClub";
 import { golfBadgesForName } from "@/lib/golfBadges";
 import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
+import { rateLimitResponse } from "@/lib/authRateLimit";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const feed = publicGolfFeed();
+    const feed = await publicGolfFeed();
     const names = new Set<string>();
     for (const r of feed.handicapLeaders) names.add(r.playerName);
     for (const r of feed.courseLeaders) names.add(r.playerName);
@@ -39,12 +41,14 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(req, "golf-submit", 12, 15 * 60 * 1000);
+  if (limited) return limited;
   try {
     const body = await req.json();
     const action = String(body.action || "").toLowerCase();
 
     if (action === "submit-round") {
-      const round = submitGolfRound({
+      const round = await submitGolfRound({
         playerName: String(body.playerName || ""),
         handicap:
           body.handicap === "" || body.handicap === undefined
@@ -66,7 +70,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "submit-foursome") {
-      const post = submitFoursome({
+      const post = await submitFoursome({
         organizerName: String(body.organizerName || ""),
         section: body.section,
         playersNeeded: body.playersNeeded,
@@ -83,13 +87,14 @@ export async function POST(req: Request) {
     }
 
     if (action === "submit-ace") {
-      const ace = submitAce({
+      const ace = await submitAce({
         playerName: String(body.playerName || ""),
         course: String(body.course || ""),
         hole: body.hole,
         playDate: String(body.playDate || ""),
         clubUsed: body.clubUsed ? String(body.clubUsed) : undefined,
         story: body.story ? String(body.story) : undefined,
+        photoUrl: body.photoUrl ? String(body.photoUrl) : undefined,
       });
       return NextResponse.json({
         ok: true,

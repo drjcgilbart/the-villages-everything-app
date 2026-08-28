@@ -1,5 +1,11 @@
 import crypto from "crypto";
-import { readJsonFile, writeJsonFile, writeJsonFileAsync } from "./dataFs";
+import {
+  ensureDurableHydrated,
+  readJsonFile,
+  saveUploadFile,
+  writeJsonFile,
+  writeJsonFileAsync,
+} from "./dataFs";
 import type {
   GolfAce,
   GolfClubData,
@@ -32,6 +38,11 @@ export function loadGolfClub(): GolfClubData {
     aces: Array.isArray(raw.aces) ? raw.aces : [],
     updatedAt: raw.updatedAt || null,
   };
+}
+
+export async function loadGolfClubAsync(): Promise<GolfClubData> {
+  await ensureDurableHydrated().catch(() => undefined);
+  return loadGolfClub();
 }
 
 export function saveGolfClub(data: GolfClubData) {
@@ -89,9 +100,44 @@ function isDate(s: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
+function cleanPhotoUrl(v: unknown): string | undefined {
+  const t = String(v || "").trim();
+  if (!t) return undefined;
+  if (!t.startsWith("/api/media/")) {
+    throw new Error("Photo must be uploaded through this site");
+  }
+  return t.slice(0, 240);
+}
+
+export async function saveGolfAceUpload(
+  buffer: Buffer,
+  filename: string,
+  mime: string
+): Promise<{ url: string }> {
+  const lower = filename.toLowerCase();
+  const mimeLower = (mime || "").toLowerCase();
+  const isImage =
+    mimeLower.startsWith("image/") ||
+    /\.(jpe?g|png|webp|heic|heif)$/i.test(lower) ||
+    (!mimeLower && /\.(jpe?g|png|webp)$/i.test(lower));
+  if (!isImage) {
+    throw new Error("Only one photo is allowed (JPG, PNG, or WebP)");
+  }
+  let contentType = mimeLower || "image/jpeg";
+  if (lower.endsWith(".png")) contentType = "image/png";
+  else if (lower.endsWith(".webp")) contentType = "image/webp";
+  else if (!contentType.startsWith("image/")) contentType = "image/jpeg";
+  const { url } = await saveUploadFile(
+    buffer,
+    `ace-${filename || "photo.jpg"}`,
+    contentType
+  );
+  return { url };
+}
+
 /* —— Rounds (best games) —— */
 
-export function submitGolfRound(input: {
+export async function submitGolfRound(input: {
   playerName: string;
   handicap?: number | null;
   course: string;
@@ -100,7 +146,7 @@ export function submitGolfRound(input: {
   holes: unknown;
   score: unknown;
   notes?: string;
-}): GolfRound {
+}): Promise<GolfRound> {
   const holes = parseHoles(input.holes);
   const score = Number(input.score);
   if (!Number.isFinite(score) || score < 18 || score > 200) {
@@ -130,24 +176,27 @@ export function submitGolfRound(input: {
     createdAt: new Date().toISOString(),
   };
 
-  const data = loadGolfClub();
+  const data = await loadGolfClubAsync();
   data.rounds.unshift(round);
-  saveGolfClub(data);
+  await saveGolfClubAsync(data);
   return round;
 }
 
-export function setRoundStatus(id: string, status: GolfModStatus): GolfRound {
-  const data = loadGolfClub();
+export async function setRoundStatus(
+  id: string,
+  status: GolfModStatus
+): Promise<GolfRound> {
+  const data = await loadGolfClubAsync();
   const r = data.rounds.find((x) => x.id === id);
   if (!r) throw new Error("Round not found");
   r.status = status;
-  saveGolfClub(data);
+  await saveGolfClubAsync(data);
   return r;
 }
 
 /* —— Foursomes —— */
 
-export function submitFoursome(input: {
+export async function submitFoursome(input: {
   organizerName: string;
   section: unknown;
   playersNeeded: unknown;
@@ -155,7 +204,7 @@ export function submitFoursome(input: {
   whenNote: string;
   message: string;
   contact: string;
-}): GolfFoursomePost {
+}): Promise<GolfFoursomePost> {
   const whenNote = String(input.whenNote || "").trim();
   const message = String(input.message || "").trim();
   const contact = String(input.contact || "").trim();
@@ -176,34 +225,35 @@ export function submitFoursome(input: {
     createdAt: new Date().toISOString(),
   };
 
-  const data = loadGolfClub();
+  const data = await loadGolfClubAsync();
   data.foursomes.unshift(post);
-  saveGolfClub(data);
+  await saveGolfClubAsync(data);
   return post;
 }
 
-export function setFoursomeStatus(
+export async function setFoursomeStatus(
   id: string,
   status: "open" | "filled" | "hidden"
-): GolfFoursomePost {
-  const data = loadGolfClub();
+): Promise<GolfFoursomePost> {
+  const data = await loadGolfClubAsync();
   const p = data.foursomes.find((x) => x.id === id);
   if (!p) throw new Error("Foursome post not found");
   p.status = status;
-  saveGolfClub(data);
+  await saveGolfClubAsync(data);
   return p;
 }
 
 /* —— Aces (holes-in-one) —— */
 
-export function submitAce(input: {
+export async function submitAce(input: {
   playerName: string;
   course: string;
   hole: unknown;
   playDate: string;
   clubUsed?: string;
   story?: string;
-}): GolfAce {
+  photoUrl?: string;
+}): Promise<GolfAce> {
   const hole = Number(input.hole);
   if (!Number.isFinite(hole) || hole < 1 || hole > 18) {
     throw new Error("Hole number must be 1–18");
@@ -220,23 +270,95 @@ export function submitAce(input: {
     playDate: String(input.playDate),
     clubUsed: input.clubUsed?.trim().slice(0, 40) || undefined,
     story: input.story?.trim().slice(0, 500) || undefined,
+    photoUrl: cleanPhotoUrl(input.photoUrl),
     status: "pending",
     createdAt: new Date().toISOString(),
   };
 
-  const data = loadGolfClub();
+  const data = await loadGolfClubAsync();
   data.aces.unshift(ace);
-  saveGolfClub(data);
+  await saveGolfClubAsync(data);
   return ace;
 }
 
-export function setAceStatus(id: string, status: GolfModStatus): GolfAce {
-  const data = loadGolfClub();
+export async function setAceStatus(
+  id: string,
+  status: GolfModStatus
+): Promise<GolfAce> {
+  const data = await loadGolfClubAsync();
   const a = data.aces.find((x) => x.id === id);
   if (!a) throw new Error("Hole-in-one not found");
   a.status = status;
-  saveGolfClub(data);
+  await saveGolfClubAsync(data);
   return a;
+}
+
+export async function updateAce(
+  id: string,
+  patch: {
+    playerName?: string;
+    course?: string;
+    hole?: unknown;
+    playDate?: string;
+    clubUsed?: string | null;
+    story?: string | null;
+    photoUrl?: string | null;
+    status?: GolfModStatus;
+  }
+): Promise<GolfAce> {
+  const data = await loadGolfClubAsync();
+  const a = data.aces.find((x) => x.id === id);
+  if (!a) throw new Error("Hole-in-one not found");
+
+  if (patch.playerName !== undefined) a.playerName = cleanName(patch.playerName);
+  if (patch.course !== undefined) a.course = cleanCourse(patch.course);
+  if (patch.hole !== undefined) {
+    const hole = Number(patch.hole);
+    if (!Number.isFinite(hole) || hole < 1 || hole > 18) {
+      throw new Error("Hole number must be 1–18");
+    }
+    a.hole = Math.round(hole);
+  }
+  if (patch.playDate !== undefined) {
+    if (!isDate(String(patch.playDate))) {
+      throw new Error("Date is required (YYYY-MM-DD)");
+    }
+    a.playDate = String(patch.playDate);
+  }
+  if (patch.clubUsed !== undefined) {
+    const club = String(patch.clubUsed || "").trim().slice(0, 40);
+    a.clubUsed = club || undefined;
+  }
+  if (patch.story !== undefined) {
+    const story = String(patch.story || "").trim().slice(0, 500);
+    a.story = story || undefined;
+  }
+  if (patch.photoUrl !== undefined) {
+    a.photoUrl =
+      patch.photoUrl === null || patch.photoUrl === ""
+        ? undefined
+        : cleanPhotoUrl(patch.photoUrl);
+  }
+  if (patch.status !== undefined) {
+    if (!["pending", "approved", "rejected"].includes(patch.status)) {
+      throw new Error("Invalid status");
+    }
+    a.status = patch.status;
+  }
+
+  await saveGolfClubAsync(data);
+  return a;
+}
+
+export async function deleteAce(id: string): Promise<{ ok: true }> {
+  const data = await loadGolfClubAsync();
+  const next = data.aces.filter((x) => x.id !== id);
+  if (next.length === data.aces.length) {
+    throw new Error("Hole-in-one not found");
+  }
+  data.aces = next;
+  await saveGolfClubAsync(data);
+  return { ok: true };
 }
 
 /* —— Leaderboards —— */
@@ -309,8 +431,8 @@ export function courseLeaders(
   );
 }
 
-export function publicGolfFeed() {
-  const data = loadGolfClub();
+export async function publicGolfFeed() {
+  const data = await loadGolfClubAsync();
   const approvedRounds = data.rounds
     .filter((r) => r.status === "approved")
     .slice(0, 40);

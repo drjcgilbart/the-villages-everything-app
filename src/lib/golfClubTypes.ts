@@ -142,6 +142,8 @@ export type GolfAce = {
   playDate: string;
   clubUsed?: string;
   story?: string;
+  /** One photo uploaded with the report (`/api/media/...`) */
+  photoUrl?: string;
   status: GolfModStatus;
   createdAt: string;
 };

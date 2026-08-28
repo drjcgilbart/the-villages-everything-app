@@ -78,6 +78,7 @@ export function GolfClubHub() {
   const [aceDate, setAceDate] = useState("");
   const [aceClub, setAceClub] = useState("");
   const [aceStory, setAceStory] = useState("");
+  const [acePhoto, setAcePhoto] = useState<File | null>(null);
 
   const courses = feed?.courses?.length ? feed.courses : [...GOLF_COURSES];
 
@@ -177,19 +178,47 @@ export function GolfClubHub() {
 
   async function onSubmitAce(e: React.FormEvent) {
     e.preventDefault();
-    const ok = await postAction({
-      action: "submit-ace",
-      playerName: aceName,
-      course: aceCourse,
-      hole: Number(aceHole),
-      playDate: aceDate,
-      clubUsed: aceClub || undefined,
-      story: aceStory || undefined,
-    });
-    if (ok) {
+    setBusy(true);
+    setNote(null);
+    try {
+      let photoUrl: string | undefined;
+      if (acePhoto) {
+        const form = new FormData();
+        form.append("file", acePhoto);
+        const up = await fetch("/api/golf/upload", {
+          method: "POST",
+          body: form,
+        });
+        const upJson = await up.json();
+        if (!up.ok) throw new Error(upJson.error || "Photo upload failed");
+        photoUrl = upJson.url;
+      }
+      const res = await fetch("/api/golf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "submit-ace",
+          playerName: aceName,
+          course: aceCourse,
+          hole: Number(aceHole),
+          playDate: aceDate,
+          clubUsed: aceClub || undefined,
+          story: aceStory || undefined,
+          photoUrl,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setNote(data.message || "Saved!");
       setAceStory("");
       setAceClub("");
       setAceHole("1");
+      setAcePhoto(null);
+      await load();
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -742,6 +771,14 @@ export function GolfClubHub() {
           <div className="golf-ace-grid">
             {feed.aces.map((a) => (
               <article key={a.id} className="about-panel golf-ace-card">
+                {a.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={a.photoUrl}
+                    alt={`${a.playerName} hole-in-one at ${a.course}`}
+                    className="golf-ace-photo"
+                  />
+                ) : null}
                 <span className="pill golf-ace-pill">Hole-in-one</span>
                 <h3>
                   <GolfPlayerName
@@ -844,6 +881,20 @@ export function GolfClubHub() {
               onChange={(e) => setAceStory(e.target.value)}
               placeholder="Witnesses, bounce, pure strike, cart dance…"
             />
+          </div>
+          <div className="field">
+            <label htmlFor="ace-photo">Photo (optional — one picture)</label>
+            <input
+              id="ace-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              onChange={(e) => setAcePhoto(e.target.files?.[0] || null)}
+            />
+            {acePhoto ? (
+              <p className="golf-muted" style={{ margin: "0.35rem 0 0" }}>
+                {acePhoto.name}
+              </p>
+            ) : null}
           </div>
           <button type="submit" className="btn btn-primary" disabled={busy}>
             {busy ? "Sending…" : "Submit hole-in-one"}
