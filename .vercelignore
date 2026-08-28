@@ -1,0 +1,8 @@
+# Store-app shell is not part of the Next.js website deploy.
+# Including screenshots/icons here made Vercel production deploys fail.
+/mobile
+
+# Expo / local tooling
+**/.expo
+**/node_modules
+**/.DS_Store
