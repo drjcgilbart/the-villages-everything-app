@@ -6,6 +6,7 @@ import type {
   GolfFoursomePost,
   GolfRound,
 } from "@/lib/golfClubTypes";
+import { prepareUploadImageFile } from "@/lib/browserImage";
 
 type AdminPayload = {
   rounds: GolfRound[];
@@ -96,8 +97,9 @@ export function AdminGolfPanel() {
   async function saveAceEdit(a: GolfAce) {
     let photoUrl: string | null | undefined = undefined;
     if (aceEditPhoto) {
+      const prepared = await prepareUploadImageFile(aceEditPhoto);
       const form = new FormData();
-      form.append("file", aceEditPhoto);
+      form.append("file", prepared.file);
       const up = await fetch("/api/golf/upload", { method: "POST", body: form });
       const upJson = await up.json();
       if (!up.ok) throw new Error(upJson.error || "Photo upload failed");
@@ -303,7 +305,7 @@ export function AdminGolfPanel() {
                       />
                     </div>
                     <div className="field">
-                      <label>Replace photo</label>
+                      <label>Replace photo (large files are auto-resized)</label>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,image/heic,image/heif"

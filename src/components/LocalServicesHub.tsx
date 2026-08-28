@@ -16,6 +16,7 @@ import {
   type LocalServiceListing,
   type LocalServiceScope,
 } from "@/lib/localServicesTypes";
+import { prepareUploadImageFile } from "@/lib/browserImage";
 
 type Feed = {
   listings: LocalServiceListing[];
@@ -157,8 +158,9 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   }
 
   async function uploadPhoto(file: File): Promise<string> {
+    const prepared = await prepareUploadImageFile(file);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", prepared.file);
     const res = await fetch("/api/local-services/upload", {
       method: "POST",
       body: fd,

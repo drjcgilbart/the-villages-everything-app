@@ -17,6 +17,7 @@ import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
 import { scoreRingForRound } from "@/lib/golfClubTypes";
 import { GOLF_ART } from "@/lib/golfResources";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
+import { prepareUploadImageFile } from "@/lib/browserImage";
 
 type Feed = {
   handicapLeaders: GolfHandicapLeader[];
@@ -182,9 +183,15 @@ export function GolfClubHub() {
     setNote(null);
     try {
       let photoUrl: string | undefined;
+      let compressedNote = "";
       if (acePhoto) {
+        setNote("Preparing photo… large pictures are resized automatically.");
+        const prepared = await prepareUploadImageFile(acePhoto);
+        if (prepared.compressed) {
+          compressedNote = ` Photo auto-resized ${Math.round(prepared.originalBytes / 1024)} KB → ${Math.round(prepared.file.size / 1024)} KB.`;
+        }
         const form = new FormData();
-        form.append("file", acePhoto);
+        form.append("file", prepared.file);
         const up = await fetch("/api/golf/upload", {
           method: "POST",
           body: form,
@@ -209,7 +216,7 @@ export function GolfClubHub() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      setNote(data.message || "Saved!");
+      setNote(`${data.message || "Saved!"}${compressedNote}`);
       setAceStory("");
       setAceClub("");
       setAceHole("1");
@@ -883,7 +890,9 @@ export function GolfClubHub() {
             />
           </div>
           <div className="field">
-            <label htmlFor="ace-photo">Photo (optional — one picture)</label>
+            <label htmlFor="ace-photo">
+              Photo (optional — one picture; large files are auto-resized)
+            </label>
             <input
               id="ace-photo"
               type="file"

@@ -15,6 +15,7 @@ import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import { formatPrice } from "@/components/YardListingCard";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import { formatDate } from "@/lib/format";
+import { prepareUploadImageFile } from "@/lib/browserImage";
 
 const emptyForm = {
   title: "",
@@ -67,8 +68,12 @@ export function MemberDashboard() {
   }
 
   async function uploadFile(file: File, kind: "image" | "video") {
+    const ready =
+      kind === "image"
+        ? (await prepareUploadImageFile(file, { maxBytes: 6.5 * 1024 * 1024 })).file
+        : file;
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", ready);
     const res = await fetch("/api/yard-sale/upload", { method: "POST", body: fd });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Upload failed");

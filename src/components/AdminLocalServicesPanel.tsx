@@ -9,6 +9,7 @@ import {
   listingScope,
   type LocalServiceListing,
 } from "@/lib/localServicesTypes";
+import { prepareUploadImageFile } from "@/lib/browserImage";
 
 const MAX_PHOTOS = 3;
 
@@ -112,8 +113,9 @@ export function AdminLocalServicesPanel() {
   }
 
   async function uploadPhoto(file: File): Promise<string> {
+    const prepared = await prepareUploadImageFile(file);
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", prepared.file);
     const res = await fetch("/api/local-services/upload", {
       method: "POST",
       body: fd,
