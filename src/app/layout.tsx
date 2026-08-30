@@ -10,6 +10,7 @@ import { MascotQuipPopup } from "@/components/MascotQuipPopup";
 import { ThemeMusicPlayer } from "@/components/ThemeMusicPlayer";
 import { PwaRegister } from "@/components/PwaRegister";
 import { NativeAppBoot } from "@/components/NativeAppBoot";
+import { PhoneViewHide } from "@/components/PhoneViewHide";
 import { ensureDurableHydrated } from "@/lib/dataFs";
 import "./globals.css";
 
@@ -63,14 +64,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
         <NativeAppBoot />
-        <PwaRegister />
-        <Header />
+        <PhoneViewHide>
+          <PwaRegister />
+          <Header />
+        </PhoneViewHide>
         <main className="flex-1">{children}</main>
-        <Footer />
-        <FloatingBackButton />
-        <DonateMascotFloat />
-        <MascotQuipPopup />
-        <ThemeMusicPlayer />
+        <PhoneViewHide>
+          <Footer />
+          <FloatingBackButton />
+          <DonateMascotFloat />
+          <MascotQuipPopup />
+          <ThemeMusicPlayer />
+        </PhoneViewHide>
         <Analytics />
         <SpeedInsights />
       </body>

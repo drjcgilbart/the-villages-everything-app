@@ -561,6 +561,10 @@ export function MySpaceDashboard() {
             <strong>Golf</strong>
             <span>Trail fees &amp; maps</span>
           </Link>
+          <Link href="/pickleball" className="about-panel my-space-link-card">
+            <strong>Pickleball</strong>
+            <span>DUPR · find a game · courts</span>
+          </Link>
           <Link href="/forums" className="about-panel my-space-link-card">
             <strong>Forums</strong>
             <span>Neighbor chat</span>

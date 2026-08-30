@@ -31,6 +31,7 @@ You maintain **one website**. Phone apps are a native wrapper with your icon/spl
 | **Wealth** | Money & markets topic hub |
 | **Meet Your Neighbors** | Community stories topic hub |
 | **Golf Zone** | Golf & cart culture topic hub |
+| **Pickleball** | DUPR leader board, find a game, rec-center courts, official links |
 | **Club Zone** | Clubs & groups topic hub |
 | **Arts & Crafts** | Creative projects & studios topic hub |
 | **Calendar of Events** | Local events & happenings topic hub |
@@ -40,6 +41,7 @@ You maintain **one website**. Phone apps are a native wrapper with your icon/spl
 | **My Village** | Searchable directory of 100+ individual villages (e.g. Edenfield) with area filters |
 | **Real Estate** | Featured homes, live market links, partner agents, buyer/seller lead form; hourly snapshot refresh |
 | **Support Local Villagers** | Neighbor service directory — submit listing + photo, admin approves before it goes live |
+| **Local Pros** | Area trades and shops — electricians, plumbers, salons, vets, dog walkers, house sitters, home watch, and more; 1–5★ ratings and top 5 boards |
 | **Best of the Month Club** | Monthly highlights (featured + tagged items) |
 | **Donate** | “Buy me a cup of Joe” tips via Stripe Checkout |
 | **About** | Mission + disclaimer (not affiliated with The Villages® operators) |

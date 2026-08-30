@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RecCenterFavoriteButton } from "@/components/RecCenterBrowser";
+import { RecCenterMapLinks } from "@/components/RecCenterMapLinks";
 import {
   OFFICIAL_REC_CENTERS_URL,
-  OFFICIAL_REC_MAP_URL,
   REC_CENTERS,
   getRecCenter,
   mapsUrl,
@@ -82,6 +82,7 @@ export default async function RecCenterDetailPage({
             <Link href="/rec-centers" className="btn btn-ghost btn-sm">
               ← All centers
             </Link>
+            <RecCenterMapLinks variant="buttons" />
           </div>
         </div>
       </div>
@@ -200,16 +201,7 @@ export default async function RecCenterDetailPage({
                   </a>
                   <span>{center.address}</span>
                 </li>
-                <li>
-                  <a
-                    href={OFFICIAL_REC_MAP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    District recreation map (PDF)
-                  </a>
-                  <span>All centers on one map</span>
-                </li>
+                <RecCenterMapLinks variant="list" />
                 <li>
                   <Link href="/official-map">Official Map page</Link>
                   <span>Map hub in this app</span>

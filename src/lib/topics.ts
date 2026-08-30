@@ -3,6 +3,7 @@ export type TopicSlug =
   | "wealth"
   | "neighbors"
   | "golf-zone"
+  | "pickleball"
   | "club-zone"
   | "arts-and-crafts"
   | "calendar"
@@ -209,6 +210,46 @@ export const TOPICS: TopicDef[] = [
     ],
     quote:
       "In The Villages, the golf cart isn’t transportation. It’s a personality type.",
+  },
+  {
+    slug: "pickleball",
+    href: "/pickleball",
+    navLabel: "Pickleball",
+    title: "Pickleball",
+    kicker: "Paddles · DUPR · open play",
+    description:
+      "The Villages is pickleball country — DUPR leader board, find a game, rec-center courts, and official links for open play, leagues, and the kitchen line.",
+    image: "/graphics/theme-pickleball.jpg",
+    tags: [
+      "pickleball",
+      "paddle",
+      "dupr",
+      "open-play",
+      "rec",
+      "kitchen",
+      "nvz",
+      "league",
+    ],
+    highlights: [
+      {
+        title: "DUPR leader board",
+        body: "Neighbor-reported doubles and singles ratings — admin-approved so the board stays honest.",
+      },
+      {
+        title: "Find a game",
+        body: "Need one more for doubles? Post when and where — like a foursome, but for paddles.",
+      },
+      {
+        title: "Courts all over town",
+        body: "Rohan, Ezell, Olympia, Everglades, and rec-center courts all over town — bring a resident or guest ID.",
+      },
+      {
+        title: "Stay out of the kitchen",
+        body: "Official Villages pickleball page, Pickleballers clubs, DUPR, and the court diagram.",
+      },
+    ],
+    quote:
+      "You don’t really understand The Villages until you’ve argued about court times and still made three new friends at the NVZ.",
   },
   {
     slug: "club-zone",
@@ -721,6 +762,14 @@ export const MAIN_TOPICS: {
     blurb:
       "Executive trail, trail fees, course maps, and cart-path optimism — just one more hole.",
     image: "/graphics/theme-golf.jpg",
+  },
+  {
+    href: "/pickleball",
+    label: "Pickleball",
+    matchPrefixes: ["/pickleball"],
+    blurb:
+      "DUPR board, find a game, rec-center courts, and the kitchen line — paddle diplomacy included.",
+    image: "/graphics/theme-pickleball.jpg",
   },
   {
     href: "/club-zone",

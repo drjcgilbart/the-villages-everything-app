@@ -1,9 +1,9 @@
 import Image from "next/image";
 import { RecCenterBrowser } from "@/components/RecCenterBrowser";
+import { RecCenterMapLinks } from "@/components/RecCenterMapLinks";
 import {
   OFFICIAL_REC_CENTERS_URL,
   OFFICIAL_REC_HUB_URL,
-  OFFICIAL_REC_MAP_URL,
   recCenterCounts,
 } from "@/lib/recCenters";
 import { getTopic } from "@/lib/topics";
@@ -49,14 +49,7 @@ export default function RecCentersPage() {
               <a href="#browse" className="btn btn-primary">
                 Browse centers
               </a>
-              <a
-                href={OFFICIAL_REC_MAP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-ghost"
-              >
-                Official map PDF
-              </a>
+              <RecCenterMapLinks variant="buttons" />
             </div>
           </div>
           <div className="page-hero-art">
@@ -124,7 +117,8 @@ export default function RecCentersPage() {
                 >
                   thevillages.com
                 </a>
-                .
+                .{" "}
+                <RecCenterMapLinks />
               </p>
               <p style={{ marginBottom: 0, color: "var(--muted)" }}>
                 Graphics are original whimsical illustrations (copyright-free

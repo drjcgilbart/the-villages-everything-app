@@ -101,6 +101,7 @@ const POPULAR_CLUBS_BASE: Omit<PopularClub, "image">[] = [
       "The Villages’ unofficial second religion — open play, leagues, and skill levels from “just got a paddle” to competitive.",
     areaHint: "Rec centers community-wide",
     whyPopular: "Easy to try, social, and everywhere on the map.",
+    href: "/pickleball",
   },
   {
     id: "line-dancing",

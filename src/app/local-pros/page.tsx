@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Local Pros — Area Businesses",
   description:
-    "Trades and service businesses in and around The Villages — rate electricians, plumbers, landscapers, pools, screens, pavers, lightning protection, and more. Top 5 leaderboards by category.",
+    "Trades and service businesses in and around The Villages — rate electricians, plumbers, salons, vets, dog walkers, house sitters, home watch, and more. Top 5 leaderboards by category.",
 };
 
 export default async function LocalProsPage() {
@@ -34,15 +34,16 @@ export default async function LocalProsPage() {
       <div className="page-hero page-hero-graphic">
         <div className="shell page-hero-grid">
           <div>
-            <span className="kicker">Trades · ratings · daily champs</span>
+            <span className="kicker">Trades · pets · home watch · ratings</span>
             <h1>Local Pros</h1>
             <p>
               Businesses that serve Villagers from Lady Lake, Wildwood,
               Fruitland Park, Leesburg, and nearby — electricians, plumbers,
-              pool builders, aluminum screens &amp; birdcages, driveway pavers
-              &amp; staining, lightning protection, and more. Rate them like
-              dining: 1–5 stars, top 5 per trade, and a running champion strip
-              that refreshes at least once a day.
+              hair &amp; nail salons, vets, dog walkers, pet sitters, house
+              sitters, and home watch (packages, sprinklers, and a walk-through
+              while you&apos;re out of town). Rate them like dining: 1–5 stars,
+              top 5 per trade, and a running champion strip that refreshes at
+              least once a day.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
               <a href="#daily-champs" className="btn btn-primary">
@@ -236,6 +237,16 @@ function shortTradeLabel(c: string) {
     "Golf Cart Service": "Golf carts",
     "Gutter Cleaning & Installation": "Gutters",
     "Fence & Gate": "Fencing",
+    "Hair Salons": "Hair",
+    "Nail Salons": "Nails",
+    Barbers: "Barbers",
+    "Spas & Massage": "Spa",
+    "Pet Grooming": "Grooming",
+    Veterinarians: "Vets",
+    "Dog Walkers": "Walkers",
+    "Pet Sitting": "Pet sit",
+    "House Sitting": "House sit",
+    "Home Watch": "Home watch",
     Other: "Other",
   };
   return map[c] || c;

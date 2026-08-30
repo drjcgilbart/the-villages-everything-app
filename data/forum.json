@@ -83,6 +83,28 @@
   ],
   "threads": [
     {
+      "id": "thread-msnnpd4o-c7aa3d",
+      "categoryId": "cat-welcome",
+      "title": "Edited conversation title",
+      "authorName": "EditorNeighbor",
+      "authorMemberId": null,
+      "editTokenHash": "d0723548fa23b6f598a1a9c2d7dfd38ffa039d75c97f4f6c2b0cee83a25c1f1f",
+      "body": "Updated opening message after author edit.",
+      "createdAt": "2026-08-10T20:00:52.152Z",
+      "updatedAt": "2026-08-10T20:00:52.249Z",
+      "editedAt": "2026-08-10T20:00:52.249Z"
+    },
+    {
+      "id": "thread-msnn4sce-5d01ad",
+      "categoryId": "cat-welcome",
+      "title": "Test conversation about roundabouts",
+      "authorName": "DebugNeighbor",
+      "authorMemberId": null,
+      "body": "This is a test post to verify forum create works end to end.",
+      "createdAt": "2026-08-10T19:44:52.094Z",
+      "updatedAt": "2026-08-10T19:45:00.266Z"
+    },
+    {
       "id": "thread-seed-1",
       "categoryId": "cat-welcome",
       "title": "Week one: what I wish someone told me",
@@ -115,7 +137,15 @@
       "authorName": "EarlyBirdEddie",
       "body": "If they have outdoor seating and a fish sandwich, I’m in. Check the Dining ratings on this hub too!",
       "createdAt": "2026-08-04T12:29:02.731Z"
+    },
+    {
+      "id": "reply-msnn4yne-29823c",
+      "threadId": "thread-msnn4sce-5d01ad",
+      "authorName": "ReplyGuy",
+      "authorMemberId": null,
+      "body": "Thanks for the tip, neighbor!",
+      "createdAt": "2026-08-10T19:45:00.266Z"
     }
   ],
-  "updatedAt": "2026-08-05T12:29:02.731Z"
+  "updatedAt": "2026-08-10T20:00:52.249Z"
 }

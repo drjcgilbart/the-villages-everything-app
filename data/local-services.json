@@ -1,6 +1,23 @@
 {
   "listings": [
     {
+      "id": "svc-msp1zpso-ec7c48",
+      "scope": "area",
+      "businessName": "Sunshine Air Conditioning, Inc.",
+      "contactName": "Jonathan",
+      "category": "HVAC & Air Conditioning",
+      "description": "They do all sorts of stuff. They installed my mini-split in the Villages and did a great job. They also have a branch that does electrical work and they did all sorts of stuff for me as well, including installing a Tesla charger in my garage, and installing 6 ceiling fans in my house. I recommend them highly.",
+      "address": "12550 US-441, Belleview, FL 34420",
+      "phone": "(352) 251-3321",
+      "website": "https://sunshineac.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp",
+      "photoUrl": "/api/media/msp1zo8z-local-svc-Screen_Shot_08-11-26_at_03.28_PM.JPG",
+      "submittedByName": "Jonathan",
+      "status": "approved",
+      "createdAt": "2026-08-11T19:28:35.928Z",
+      "updatedAt": "2026-08-11T19:29:13.664Z",
+      "approvedAt": "2026-08-11T19:29:13.664Z"
+    },
+    {
       "id": "svc-msk74tdw-5b5046",
       "businessName": "Spinnaker Solutions, LLC",
       "contactName": "Kirk R. Benson",
@@ -574,11 +591,38 @@
       "adminNote": "Seeded from public web business listings for Local Pros. Verify phone/hours/licensing before hiring. Not affiliated with The Villages brand. Maps links open a public Google Maps search — not private scraped data."
     }
   ],
-  "reviews": [],
+  "reviews": [
+    {
+      "id": "rev-msp229f2-a15251",
+      "listingId": "svc-msp1zpso-ec7c48",
+      "authorName": "Neighbor",
+      "authorMemberId": null,
+      "rating": 5,
+      "createdAt": "2026-08-11T19:30:34.671Z"
+    },
+    {
+      "id": "rev-msp226j3-85e207",
+      "listingId": "svc-msp1zpso-ec7c48",
+      "authorName": "Neighbor",
+      "authorMemberId": null,
+      "rating": 5,
+      "body": "They do all sorts of stuff. They installed my mini-split in the Villages and did a great job. They also have a branch that does electrical work and they did all sorts of stuff for me as well, including installing a Tesla charger in my garage, and installing 6 ceiling fans in my house. I recommend them highly.",
+      "createdAt": "2026-08-11T19:30:30.927Z"
+    }
+  ],
   "dailyLeaderboard": {
-    "asOf": "2026-08-11",
-    "updatedAt": "2026-08-11T19:00:46.748Z",
-    "champions": []
+    "asOf": "2026-08-30",
+    "updatedAt": "2026-08-30T12:44:48.977Z",
+    "champions": [
+      {
+        "category": "HVAC & Air Conditioning",
+        "listingId": "svc-msp1zpso-ec7c48",
+        "businessName": "Sunshine Air Conditioning, Inc.",
+        "contactName": "Jonathan",
+        "averageRating": 5,
+        "reviewCount": 2
+      }
+    ]
   },
-  "updatedAt": "2026-08-11T19:00:46.750Z"
+  "updatedAt": "2026-08-30T12:44:48.978Z"
 }

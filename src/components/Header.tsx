@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { FavoriteSiteButton } from "@/components/FavoriteSiteButton";
+import { PhoneViewToggle } from "@/components/PhoneViewToggle";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
 import { SITE_BRAND } from "@/lib/siteBrand";
 
@@ -67,6 +68,9 @@ export function Header() {
       <div className="utility-bar">
         <div className="shell utility-bar-inner">
           <FavoriteSiteButton />
+          <Suspense fallback={null}>
+            <PhoneViewToggle />
+          </Suspense>
           <nav className="utility-nav" aria-label="Site links">
             {UTILITY_NAV.map((item) => (
               <Link

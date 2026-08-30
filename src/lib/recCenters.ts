@@ -8,7 +8,10 @@
 export const OFFICIAL_REC_CENTERS_URL =
   "https://www.districtgov.org/recreation/centers/";
 export const OFFICIAL_REC_MAP_URL =
-  "https://www.districtgov.org/wp-content/uploads/2024/08/maps-recreation.pdf";
+  "https://www.districtgov.org/wp-content/uploads/2026/03/Recreation-Map-Update-0326.pdf";
+/** Flipbook of District rec / amenity maps — easier to flip through in a browser. */
+export const OFFICIAL_REC_FLIPBOOK_URL =
+  "https://online.flippingbook.com/view/10419946/";
 export const OFFICIAL_REC_HUB_URL =
   "https://www.thevillages.com/recreation-centers/";
 

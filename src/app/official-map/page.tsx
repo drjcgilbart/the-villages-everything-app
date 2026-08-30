@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { RecCenterMapLinks } from "@/components/RecCenterMapLinks";
 import {
   OFFICIAL_REC_CENTERS_URL,
+  OFFICIAL_REC_FLIPBOOK_URL,
   OFFICIAL_REC_HUB_URL,
   OFFICIAL_REC_MAP_URL,
 } from "@/lib/recCenters";
@@ -22,19 +24,26 @@ export default function OfficialMapPage() {
             <span className="kicker">District map · cart-path cheat sheet</span>
             <h1>Official Map</h1>
             <p>
-              The official Community Development District recreation map — every
-              rec center, pool complex, and outdoor facility the District
-              publishes in one PDF. Open it when you need the big picture
-              before you charge the cart.
+              Official District recreation maps — rec centers, pools, and
+              outdoor facilities. Use the Flipbook to page through, or the PDF
+              to print or save.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
               <a
-                href={OFFICIAL_REC_MAP_URL}
+                href={OFFICIAL_REC_FLIPBOOK_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary"
               >
-                Open official map PDF →
+                Open Flipbook rec map →
+              </a>
+              <a
+                href={OFFICIAL_REC_MAP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+              >
+                Rec map PDF
               </a>
             </div>
           </div>
@@ -93,16 +102,7 @@ export default function OfficialMapPage() {
             <div className="about-panel">
               <h2 style={{ marginTop: 0 }}>Related official links</h2>
               <ul className="ts-links-list">
-                <li>
-                  <a
-                    href={OFFICIAL_REC_MAP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    District recreation map (PDF)
-                  </a>
-                  <span>All centers on one map</span>
-                </li>
+                <RecCenterMapLinks variant="list" />
                 <li>
                   <a
                     href={OFFICIAL_REC_CENTERS_URL}

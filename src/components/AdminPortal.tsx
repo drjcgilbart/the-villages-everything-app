@@ -7,6 +7,7 @@ import { AdminClubsPanel } from "@/components/AdminClubsPanel";
 import { AdminDiningPanel } from "@/components/AdminDiningPanel";
 import { AdminForumPanel } from "@/components/AdminForumPanel";
 import { AdminGolfPanel } from "@/components/AdminGolfPanel";
+import { AdminPickleballPanel } from "@/components/AdminPickleballPanel";
 import { AdminLocalServicesPanel } from "@/components/AdminLocalServicesPanel";
 import { AdminMembersPanel } from "@/components/AdminMembersPanel";
 import { AdminRealEstatePanel } from "@/components/AdminRealEstatePanel";
@@ -20,6 +21,7 @@ type PortalTab =
   | "realestate"
   | "bestof"
   | "golf"
+  | "pickleball"
   | "clubs"
   | "localsvc"
   | "forums"
@@ -237,6 +239,13 @@ export function AdminPortal() {
           </button>
           <button
             type="button"
+            className={tab === "pickleball" ? "active" : ""}
+            onClick={() => setTab("pickleball")}
+          >
+            Pickleball
+          </button>
+          <button
+            type="button"
             className={tab === "clubs" ? "active" : ""}
             onClick={() => setTab("clubs")}
           >
@@ -271,6 +280,7 @@ export function AdminPortal() {
         {tab === "realestate" && <AdminRealEstatePanel />}
         {tab === "bestof" && <AdminBestOfMonthPanel />}
         {tab === "golf" && <AdminGolfPanel />}
+        {tab === "pickleball" && <AdminPickleballPanel />}
         {tab === "clubs" && <AdminClubsPanel />}
         {tab === "localsvc" && <AdminLocalServicesPanel />}
         {tab === "forums" && <AdminForumPanel />}
