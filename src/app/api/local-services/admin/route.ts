@@ -4,8 +4,10 @@ import {
   deleteLocalService,
   loadLocalServicesAsync,
   setLocalServiceStatus,
+  setLocalServiceVillagerOwned,
   updateLocalService,
 } from "@/lib/localServices";
+import { isVillagerOwned } from "@/lib/localServicesTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +48,7 @@ export async function POST(req: Request) {
         listing,
         message:
           action === "approve"
-            ? `${listing.businessName} is now live on ${
-                listing.scope === "area"
-                  ? "Local Pros"
-                  : "Support Local Villagers"
-              }.`
+            ? `${listing.businessName} is now live on Local Pros.`
             : `Listing marked ${action}.`,
       });
     }
@@ -70,11 +68,29 @@ export async function POST(req: Request) {
         extraPhotos: body.extraPhotos,
         photos: body.photos,
         adminNote: body.adminNote,
+        villagerOwned:
+          body.villagerOwned === undefined
+            ? undefined
+            : Boolean(body.villagerOwned),
       });
       return NextResponse.json({
         ok: true,
         listing,
         message: `Updated “${listing.businessName}”.`,
+      });
+    }
+
+    if (action === "set-villager-owned") {
+      const listing = await setLocalServiceVillagerOwned(
+        id,
+        Boolean(body.villagerOwned)
+      );
+      return NextResponse.json({
+        ok: true,
+        listing,
+        message: isVillagerOwned(listing)
+          ? `${listing.businessName} now shows the Villager badge.`
+          : `${listing.businessName} no longer shows the Villager badge.`,
       });
     }
 

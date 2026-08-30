@@ -72,7 +72,6 @@ export function ThemeMusicPlayer() {
   }, [open]);
 
   useEffect(() => {
-    engineRef.current?.setTrack(trackId);
     try {
       localStorage.setItem(STORAGE_TRACK, trackId);
     } catch {
@@ -80,35 +79,58 @@ export function ThemeMusicPlayer() {
     }
   }, [trackId]);
 
-  async function togglePlay() {
+  function stopAll() {
+    engineRef.current?.stopAll();
+    setPlaying(false);
     setError(null);
+  }
+
+  async function playTrack(id: TrackId) {
+    setError(null);
+    setTrackId(id);
     const eng = engineRef.current;
     if (!eng) return;
     try {
-      if (eng.isPlaying()) {
-        eng.stop();
-        setPlaying(false);
-      } else {
-        eng.setTrack(trackId);
-        eng.setVolume(volume);
-        await eng.start();
-        setPlaying(true);
-        setOpen(true);
-      }
+      eng.stopAll();
+      eng.setTrack(id);
+      eng.setVolume(volume);
+      await eng.start();
+      setPlaying(true);
+      setOpen(true);
     } catch {
-      setError("Could not start audio — try clicking Play again.");
+      setError("Could not start audio — try Play again.");
       setPlaying(false);
     }
   }
 
-  function selectTrack(id: TrackId) {
-    setTrackId(id);
+  function stopTrack(id: TrackId) {
+    const eng = engineRef.current;
+    if (!eng) return;
+    if (eng.getTrackId() === id) stopAll();
   }
 
-  function nextTrack(dir: 1 | -1) {
+  async function togglePlay() {
+    if (playing) {
+      stopAll();
+      return;
+    }
+    await playTrack(trackId);
+  }
+
+  async function selectTrack(id: TrackId) {
+    if (playing && id !== trackId) {
+      await playTrack(id);
+      return;
+    }
+    setTrackId(id);
+    engineRef.current?.setTrack(id);
+  }
+
+  async function nextTrack(dir: 1 | -1) {
     const idx = THEME_TRACKS.findIndex((t) => t.id === trackId);
-    const next = THEME_TRACKS[(idx + dir + THEME_TRACKS.length) % THEME_TRACKS.length];
-    selectTrack(next.id);
+    const next =
+      THEME_TRACKS[(idx + dir + THEME_TRACKS.length) % THEME_TRACKS.length];
+    await selectTrack(next.id);
   }
 
   // Phone app WebView: no floating music control (desktop/browser still has it)
@@ -119,9 +141,15 @@ export function ThemeMusicPlayer() {
       <button
         type="button"
         className="theme-music-fab"
-        onClick={() => (open ? togglePlay() : setOpen(true))}
-        aria-label={playing ? "Pause theme music" : "Open theme music"}
-        title="Theme music (optional)"
+        onClick={() => {
+          if (playing) stopAll();
+          else if (!open) setOpen(true);
+          else void togglePlay();
+        }}
+        aria-label={
+          playing ? "Stop all theme music" : open ? "Play theme music" : "Open theme music"
+        }
+        title={playing ? "Stop all music" : "Theme music (optional)"}
       >
         <span className="theme-music-icon" aria-hidden="true">
           {playing ? active.emoji : "🎵"}
@@ -143,8 +171,9 @@ export function ThemeMusicPlayer() {
             </button>
           </div>
           <p className="theme-music-note">
-            Real royalty-free instrumentals (not browser beeps). Optional — pick a
-            mood and hit Play. Loops while the page is open.
+            Optional royalty-free instrumentals. Only one mood plays at a time —
+            switching tracks stops the previous one. Use Stop on a mood, or Stop
+            all music.
           </p>
 
           <div className="theme-music-now">
@@ -191,24 +220,53 @@ export function ThemeMusicPlayer() {
             </button>
           </div>
 
-          <ul className="theme-music-list">
-            {THEME_TRACKS.map((t) => (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  className={`theme-music-chip ${t.id === trackId ? "active" : ""}`}
-                  onClick={() => selectTrack(t.id)}
+          <ul className="theme-music-tracks">
+            {THEME_TRACKS.map((t) => {
+              const on = playing && t.id === trackId;
+              return (
+                <li
+                  key={t.id}
+                  className={`theme-music-track ${on ? "playing" : ""} ${t.id === trackId ? "selected" : ""}`}
                 >
-                  <span aria-hidden="true">{t.emoji}</span>
-                  <span>{t.name}</span>
-                </button>
-              </li>
-            ))}
+                  <button
+                    type="button"
+                    className="theme-music-track-label"
+                    onClick={() => (on ? stopTrack(t.id) : playTrack(t.id))}
+                  >
+                    <span aria-hidden="true">{t.emoji}</span>
+                    <span>{t.name}</span>
+                    {on ? <span className="theme-music-live">Playing</span> : null}
+                  </button>
+                  {on ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => stopTrack(t.id)}
+                    >
+                      Stop
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => playTrack(t.id)}
+                    >
+                      Play
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
 
           <div className="theme-music-controls">
-            <button type="button" className="btn btn-primary btn-sm" onClick={togglePlay}>
-              {playing ? "Pause" : "Play"}
+            <button
+              type="button"
+              className="btn btn-sm theme-music-stop-all"
+              onClick={stopAll}
+              disabled={!playing}
+            >
+              Stop all music
             </button>
             <label className="theme-music-vol">
               <span>Volume</span>

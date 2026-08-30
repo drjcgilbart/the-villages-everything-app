@@ -11,10 +11,13 @@ import {
 } from "./dataFs";
 import {
   AREA_SERVICE_CATEGORIES,
+  LOCAL_PROS_CATEGORIES,
   LOCAL_SERVICE_CATEGORIES,
   categoriesForScope,
+  isVillagerOwned,
   listingScope,
-  type AreaServiceCategory,
+  listingTradeCategory,
+  localProsBoardCategories,
   type LocalProsDailyChampion,
   type LocalProsDailyLeaderboard,
   type LocalServiceCategory,
@@ -99,11 +102,18 @@ async function mergeMissingSeedListings(
   return merged;
 }
 
+function normalizeListing(l: LocalServiceListing): LocalServiceListing {
+  return {
+    ...l,
+    villagerOwned: isVillagerOwned(l),
+  };
+}
+
 export function loadLocalServices(): LocalServicesData {
   const raw = readJsonFile<LocalServicesData>(FILE);
   if (!raw) return emptyData();
   return {
-    listings: Array.isArray(raw.listings) ? raw.listings : [],
+    listings: Array.isArray(raw.listings) ? raw.listings.map(normalizeListing) : [],
     reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
     dailyLeaderboard: raw.dailyLeaderboard || null,
     updatedAt: raw.updatedAt || null,
@@ -144,29 +154,19 @@ function optionalText(v: unknown, max: number) {
   return t;
 }
 
-function parseScope(v: unknown): LocalServiceScope {
-  return String(v || "").toLowerCase() === "area" ? "area" : "villager";
-}
-
 function parseCategory(
   v: unknown,
-  scope: LocalServiceScope
+  _scope?: LocalServiceScope
 ): LocalServiceCategory {
   const s = String(v || "Other");
-  const allowed = categoriesForScope(scope) as readonly string[];
-  if (allowed.includes(s)) return s as LocalServiceCategory;
-  // Tolerate legacy villager categories on area submissions → Other
-  if (
-    scope === "area" &&
-    (LOCAL_SERVICE_CATEGORIES as readonly string[]).includes(s)
-  ) {
-    return "Other";
+  if ((LOCAL_PROS_CATEGORIES as readonly string[]).includes(s)) {
+    return s as LocalServiceCategory;
   }
-  if (
-    scope === "villager" &&
-    (AREA_SERVICE_CATEGORIES as readonly string[]).includes(s)
-  ) {
-    return "Other";
+  if ((AREA_SERVICE_CATEGORIES as readonly string[]).includes(s)) {
+    return s as LocalServiceCategory;
+  }
+  if ((LOCAL_SERVICE_CATEGORIES as readonly string[]).includes(s)) {
+    return s as LocalServiceCategory;
   }
   return "Other";
 }
@@ -314,9 +314,11 @@ export async function submitLocalService(input: {
   submittedByName?: string;
   replacesId?: string;
   scope?: string;
+  villagerOwned?: boolean;
 }): Promise<LocalServiceListing> {
   const data = await loadLocalServicesAsync();
-  const scope = parseScope(input.scope);
+  const scope: LocalServiceScope = "area";
+  const villagerOwned = Boolean(input.villagerOwned);
   const businessName = cleanText(input.businessName, 100, "Business name", 2);
   const contactName = cleanText(input.contactName, 80, "Contact name", 2);
   const description = cleanText(input.description, 800, "Description", 10);
@@ -344,10 +346,7 @@ export async function submitLocalService(input: {
   const rid = String(input.replacesId || "").trim();
   if (rid) {
     const existing = data.listings.find(
-      (l) =>
-        l.id === rid &&
-        l.status === "approved" &&
-        listingScope(l) === scope
+      (l) => l.id === rid && l.status === "approved"
     );
     if (!existing) {
       throw new Error("That listing was not found (or is not live yet)");
@@ -357,7 +356,6 @@ export async function submitLocalService(input: {
     const match = data.listings.find(
       (l) =>
         l.status === "approved" &&
-        listingScope(l) === scope &&
         l.businessName.toLowerCase() === businessName.toLowerCase() &&
         l.contactName.toLowerCase() === contactName.toLowerCase()
     );
@@ -382,6 +380,7 @@ export async function submitLocalService(input: {
     photoUrl,
     extraPhotos,
     submittedByName,
+    villagerOwned,
     status: "pending",
     createdAt: now,
     updatedAt: now,
@@ -475,6 +474,7 @@ export async function updateLocalService(
     extraPhotos?: string[] | null;
     photos?: string[] | null;
     adminNote?: string | null;
+    villagerOwned?: boolean;
   }
 ): Promise<LocalServiceListing> {
   const data = await loadLocalServicesAsync();
@@ -627,9 +627,29 @@ export async function updateLocalService(
     photoUrl,
     extraPhotos,
     adminNote,
+    villagerOwned:
+      input.villagerOwned !== undefined
+        ? Boolean(input.villagerOwned)
+        : isVillagerOwned(cur),
     updatedAt: new Date().toISOString(),
   };
 
+  await saveLocalServicesAsync(data);
+  return data.listings[idx];
+}
+
+export async function setLocalServiceVillagerOwned(
+  id: string,
+  villagerOwned: boolean
+): Promise<LocalServiceListing> {
+  const data = await loadLocalServicesAsync();
+  const idx = data.listings.findIndex((l) => l.id === id);
+  if (idx < 0) throw new Error("Listing not found");
+  data.listings[idx] = {
+    ...data.listings[idx],
+    villagerOwned: Boolean(villagerOwned),
+    updatedAt: new Date().toISOString(),
+  };
   await saveLocalServicesAsync(data);
   return data.listings[idx];
 }
@@ -684,18 +704,19 @@ export function withServiceStats(
   }));
 }
 
-/** Top N approved listings in a category (area or villager). */
+/** Top N approved listings in a category (whole Local Pros directory). */
 export function topByServiceCategory(
   category: string,
-  scope: LocalServiceScope,
+  scope: LocalServiceScope | "all" = "all",
   limit = 5,
   minReviews = 0,
   data: LocalServicesData = loadLocalServices()
 ): RankedLocalService[] {
-  const ranked = withServiceStats(
-    listApprovedServices(data, scope).filter((l) => l.category === category),
-    data.reviews
-  )
+  const listings = listApprovedServices(
+    data,
+    scope === "all" ? undefined : scope
+  ).filter((l) => l.category === category || listingTradeCategory(l) === category);
+  const ranked = withServiceStats(listings, data.reviews)
     .filter((l) => l.stats.reviewCount >= minReviews)
     .sort((a, b) => {
       if (b.stats.averageRating !== a.stats.averageRating) {
@@ -711,14 +732,16 @@ export function topByServiceCategory(
   return ranked.map((l, i) => ({ ...l, rank: i + 1 }));
 }
 
-/** Boards for every category in the scope (area shows all trades with art). */
+/** Boards for every Local Pros trade (includes former Support Local listings). */
 export function allCategoryLeaders(
-  scope: LocalServiceScope,
+  scope: LocalServiceScope | "all" = "all",
   limit = 5,
   minReviews = 0,
   data: LocalServicesData = loadLocalServices()
 ): { category: string; leaders: RankedLocalService[] }[] {
-  return categoriesForScope(scope).map((category) => ({
+  const cats =
+    scope === "all" ? localProsBoardCategories() : categoriesForScope(scope);
+  return cats.map((category) => ({
     category,
     leaders: topByServiceCategory(category, scope, limit, minReviews, data),
   }));
@@ -726,16 +749,18 @@ export function allCategoryLeaders(
 
 /** #1 in each category that has votes (for daily champion strip). */
 export function computeCategoryChampions(
-  scope: LocalServiceScope = "area",
+  scope: LocalServiceScope | "all" = "all",
   data: LocalServicesData = loadLocalServices()
 ): LocalProsDailyChampion[] {
   const champions: LocalProsDailyChampion[] = [];
-  for (const category of categoriesForScope(scope)) {
+  const cats =
+    scope === "all" ? localProsBoardCategories() : categoriesForScope(scope);
+  for (const category of cats) {
     const leaders = topByServiceCategory(category, scope, 1, 1, data);
     if (leaders.length === 0) continue;
     const top = leaders[0];
     champions.push({
-      category: category as AreaServiceCategory,
+      category,
       listingId: top.id,
       businessName: top.businessName,
       contactName: top.contactName,
@@ -764,7 +789,7 @@ function todayKeyEastern(): string {
  * Safe to call from page renders / GET handlers.
  */
 export async function ensureDailyLeaderboard(
-  scope: LocalServiceScope = "area"
+  scope: LocalServiceScope | "all" = "all"
 ): Promise<LocalProsDailyLeaderboard> {
   const data = await loadLocalServicesAsync();
   const asOf = todayKeyEastern();

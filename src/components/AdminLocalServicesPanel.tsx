@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { VillagerOwnedBadge } from "@/components/VillagerOwnedBadge";
 import {
-  AREA_SERVICE_CATEGORIES,
-  LOCAL_SERVICE_CATEGORIES,
-  categoriesForScope,
+  LOCAL_PROS_CATEGORIES,
+  isVillagerOwned,
   listingPhotos,
-  listingScope,
   type LocalServiceListing,
 } from "@/lib/localServicesTypes";
 import { prepareUploadImageFile } from "@/lib/browserImage";
@@ -31,13 +30,13 @@ type EditFields = {
   website: string;
   photos: string[];
   adminNote: string;
-  scope: "villager" | "area";
+  villagerOwned: boolean;
 };
 
 export function AdminLocalServicesPanel() {
   const [data, setData] = useState<Payload | null>(null);
   const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
-  const [scopeFilter, setScopeFilter] = useState<"all" | "villager" | "area">(
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "villager" | "other">(
     "all"
   );
   const [busy, setBusy] = useState(false);
@@ -108,7 +107,7 @@ export function AdminLocalServicesPanel() {
       website: l.website || "",
       photos: listingPhotos(l),
       adminNote: l.adminNote || "",
-      scope: listingScope(l),
+      villagerOwned: isVillagerOwned(l),
     });
   }
 
@@ -204,6 +203,7 @@ export function AdminLocalServicesPanel() {
       website: edit.website || "",
       photos: edit.photos,
       adminNote: edit.adminNote || "",
+      villagerOwned: edit.villagerOwned,
     });
   }
 
@@ -211,12 +211,13 @@ export function AdminLocalServicesPanel() {
     return <div className="empty-state">Loading local service listings…</div>;
   }
 
-  function byScope(list: LocalServiceListing[]) {
-    if (scopeFilter === "all") return list;
-    return list.filter((l) => listingScope(l) === scopeFilter);
+  function byOwner(list: LocalServiceListing[]) {
+    if (ownerFilter === "villager") return list.filter((l) => isVillagerOwned(l));
+    if (ownerFilter === "other") return list.filter((l) => !isVillagerOwned(l));
+    return list;
   }
 
-  const visible = byScope(
+  const visible = byOwner(
     tab === "pending"
       ? data.pending
       : tab === "approved"
@@ -224,17 +225,15 @@ export function AdminLocalServicesPanel() {
         : data.listings
   );
 
-  const pendingV = data.pending.filter((l) => listingScope(l) === "villager")
-    .length;
-  const pendingA = data.pending.filter((l) => listingScope(l) === "area").length;
+  const pendingV = data.pending.filter((l) => isVillagerOwned(l)).length;
 
   return (
     <div>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        Moderate listings for <strong>Support Local Villagers</strong> (neighbors)
-        and <strong>Local Pros</strong> (area trades). Edit anytime; public form
-        updates replace the live listing when you approve them. Each listing
-        supports 1 main photo + up to 2 extras.
+        Moderate the combined <strong>Local Pros</strong> directory. Use the
+        Villager badge toggle when an owner moves in or out of The Villages.
+        Public form updates replace the live listing when you approve them.
+        Each listing supports 1 main photo + up to 2 extras.
       </p>
       {msg ? <div className="msg msg-ok">{msg}</div> : null}
 
@@ -264,24 +263,24 @@ export function AdminLocalServicesPanel() {
       <div className="hero-actions" style={{ marginBottom: "1rem" }}>
         <button
           type="button"
-          className={`btn btn-sm ${scopeFilter === "all" ? "btn-primary" : "btn-ghost"}`}
-          onClick={() => setScopeFilter("all")}
+          className={`btn btn-sm ${ownerFilter === "all" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setOwnerFilter("all")}
         >
-          Both directories
+          All owners
         </button>
         <button
           type="button"
-          className={`btn btn-sm ${scopeFilter === "villager" ? "btn-primary" : "btn-ghost"}`}
-          onClick={() => setScopeFilter("villager")}
+          className={`btn btn-sm ${ownerFilter === "villager" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setOwnerFilter("villager")}
         >
-          Villagers ({pendingV} pending)
+          Villager-owned ({pendingV} pending)
         </button>
         <button
           type="button"
-          className={`btn btn-sm ${scopeFilter === "area" ? "btn-primary" : "btn-ghost"}`}
-          onClick={() => setScopeFilter("area")}
+          className={`btn btn-sm ${ownerFilter === "other" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setOwnerFilter("other")}
         >
-          Local Pros ({pendingA} pending)
+          Not Villager-owned
         </button>
       </div>
 
@@ -291,14 +290,12 @@ export function AdminLocalServicesPanel() {
         <div className="admin-list">
           {visible.map((l) => {
             const gallery = listingPhotos(l);
-            const sc = listingScope(l);
+            const villager = isVillagerOwned(l);
             return (
               <article key={l.id} className="about-panel admin-list-item">
                 <div className="card-meta">
                   <span className="pill">{l.status}</span>
-                  <span className="pill">
-                    {sc === "area" ? "Local Pros" : "Villager"}
-                  </span>
+                  {villager ? <VillagerOwnedBadge size="sm" /> : null}
                   <span className="pill">{l.category}</span>
                   {gallery.length > 0 ? (
                     <span className="pill">
@@ -367,7 +364,7 @@ export function AdminLocalServicesPanel() {
                           )
                         }
                       >
-                        {categoriesForScope(edit.scope).map((c) => (
+                        {LOCAL_PROS_CATEGORIES.map((c) => (
                           <option key={c} value={c}>
                             {c}
                           </option>
@@ -558,6 +555,22 @@ export function AdminLocalServicesPanel() {
                       />
                     </div>
                     <div className="field field-full">
+                      <label className="checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={edit.villagerOwned}
+                          onChange={(e) =>
+                            setEdit((p) =>
+                              p
+                                ? { ...p, villagerOwned: e.target.checked }
+                                : p
+                            )
+                          }
+                        />
+                        Villager badge — owner lives in The Villages
+                      </label>
+                    </div>
+                    <div className="field field-full">
                       <label>Admin note (internal)</label>
                       <input
                         value={edit.adminNote}
@@ -633,6 +646,18 @@ export function AdminLocalServicesPanel() {
                         onClick={() => act("approve", l.id)}
                       >
                         Approve
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${villager ? "btn-primary" : "btn-ghost"}`}
+                        disabled={busy}
+                        onClick={() =>
+                          act("set-villager-owned", l.id, {
+                            villagerOwned: !villager,
+                          })
+                        }
+                      >
+                        {villager ? "Turn Villager badge off" : "Turn Villager badge on"}
                       </button>
                       <button
                         type="button"

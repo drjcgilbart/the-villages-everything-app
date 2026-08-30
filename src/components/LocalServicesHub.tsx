@@ -6,15 +6,15 @@ import {
   LOCAL_SVC_UPDATE_EVENT,
 } from "@/components/LocalServiceDetailLightbox";
 import { StarRating } from "@/components/StarRating";
+import { VillagerOwnedBadge } from "@/components/VillagerOwnedBadge";
 import {
-  AREA_SERVICE_CATEGORIES,
-  LOCAL_SERVICE_CATEGORIES,
-  categoriesForScope,
+  LOCAL_PROS_CATEGORIES,
+  isVillagerOwned,
   listingMainPhoto,
   listingPhotos,
+  listingTradeCategory,
   type LocalServiceCategory,
   type LocalServiceListing,
-  type LocalServiceScope,
 } from "@/lib/localServicesTypes";
 import { prepareUploadImageFile } from "@/lib/browserImage";
 
@@ -38,21 +38,13 @@ function truncate(text: string, max = 140) {
   return `${t.slice(0, max - 1).trimEnd()}…`;
 }
 
-type HubProps = {
-  /**
-   * villager = Support Local Villagers (neighbors)
-   * area = Local Pros (businesses in & around The Villages)
-   */
-  scope?: LocalServiceScope;
-};
-
-export function LocalServicesHub({ scope = "villager" }: HubProps) {
-  const isArea = scope === "area";
-  const defaultCats = categoriesForScope(scope);
+export function LocalServicesHub() {
+  const defaultCats = LOCAL_PROS_CATEGORIES;
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [villagerOnly, setVillagerOnly] = useState(false);
   const [detail, setDetail] = useState<LocalServiceListing | null>(null);
 
   // Form
@@ -78,14 +70,12 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   const [formErr, setFormErr] = useState<string | null>(null);
   const [submitFlash, setSubmitFlash] = useState<SubmitFlash | null>(null);
   const [sentOk, setSentOk] = useState(false);
+  const [villagerOwned, setVillagerOwned] = useState(false);
   const submitPopupRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/local-services?scope=${encodeURIComponent(scope)}`,
-        { cache: "no-store" }
-      );
+      const res = await fetch("/api/local-services", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not load");
       setFeed({
@@ -96,7 +86,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load");
     }
-  }, [scope, defaultCats]);
+  }, [defaultCats]);
 
   const prefillUpdate = useCallback((l: LocalServiceListing) => {
     setDetail(null);
@@ -113,6 +103,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
     setWebsite(l.website || "");
     setPhotos(listingPhotos(l));
     setSubmittedByName(l.contactName);
+    setVillagerOwned(isVillagerOwned(l));
     setNote(`Updating “${l.businessName}” — submit for admin approval.`);
     setSubmitFlash(null);
     setSentOk(false);
@@ -147,7 +138,14 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
     const list = feed?.listings || [];
     const q = query.trim().toLowerCase();
     return list.filter((l) => {
-      if (category !== "all" && l.category !== category) return false;
+      if (villagerOnly && !isVillagerOwned(l)) return false;
+      if (
+        category !== "all" &&
+        l.category !== category &&
+        listingTradeCategory(l) !== category
+      ) {
+        return false;
+      }
       if (!q) return true;
       return (
         l.businessName.toLowerCase().includes(q) ||
@@ -157,7 +155,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
         (l.village || "").toLowerCase().includes(q)
       );
     });
-  }, [feed, category, query]);
+  }, [feed, category, query, villagerOnly]);
 
   function openDetail(l: LocalServiceListing) {
     setDetail(l);
@@ -239,7 +237,8 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scope,
+          scope: "area",
+          villagerOwned,
           businessName,
           contactName,
           category: formCategory,
@@ -257,15 +256,12 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submit failed");
-      const liveWhere = isArea
-        ? "Local Pros"
-        : "Support Local Villagers";
       setSubmitFlash({
         kind: "ok",
         title: "It worked — we got your listing!",
         text:
           data.message ||
-          `Thanks! Your listing is pending admin approval on ${liveWhere}.`,
+          "Thanks! Your listing is pending admin approval on Local Pros.",
         extra:
           "Please do not tap Submit again for this same listing. We already have it. An admin will review it before it goes live.",
       });
@@ -300,7 +296,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   if (!feed) {
     return (
       <div className="empty-state">
-        Loading {isArea ? "area pros" : "local services"}…
+        Loading local pros…
       </div>
     );
   }
@@ -316,11 +312,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
             className="rc-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={
-              isArea
-                ? "Name, trade, city…"
-                : "Name, service, village…"
-            }
+            placeholder="Name, trade, village, city…"
           />
         </label>
         <label className="rc-field">
@@ -337,15 +329,24 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
             ))}
           </select>
         </label>
+        <label className="rc-field" style={{ justifyContent: "flex-end" }}>
+          <span className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={villagerOnly}
+              onChange={(e) => setVillagerOnly(e.target.checked)}
+            />
+            Villager-owned only
+          </span>
+        </label>
       </div>
 
       {filtered.length === 0 ? (
         <div className="empty-state about-panel">
           No approved listings yet
           {category !== "all" ? " in this category" : ""}.{" "}
-          {isArea
-            ? "Businesses that serve The Villages area: use the form below to submit for review."
-            : "Villagers: use the form below to submit your service for review."}
+          Use the form below to submit a business for review. Villager-owned
+          listings get a mascot badge.
         </div>
       ) : (
         <div className="local-svc-grid">
@@ -381,9 +382,15 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
                       {count} photos
                     </span>
                   ) : null}
+                  {isVillagerOwned(l) ? (
+                    <span className="villager-owned-badge-wrap">
+                      <VillagerOwnedBadge size="sm" />
+                    </span>
+                  ) : null}
                 </div>
                 <div className="local-svc-card-body">
                   <div className="local-svc-card-top">
+                    {isVillagerOwned(l) ? <VillagerOwnedBadge size="sm" /> : null}
                     <span className="pill">{l.category}</span>
                     {l.village ? (
                       <span className="pill">{l.village}</span>
@@ -470,18 +477,16 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
         id="local-service-form"
         style={{ marginTop: "1.75rem" }}
       >
-        <span className="kicker">
-          {isArea ? "List your business" : "List your service"}
-        </span>
+        <span className="kicker">List your business</span>
         <h2 style={{ marginTop: "0.35rem" }}>
           {replacesId ? "Update a listing" : "Submit for admin approval"}
         </h2>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
-          {isArea
-            ? "Electricians, plumbers, pool builders, screen enclosures, pavers, and more — businesses that serve Villagers even if they don’t live inside The Villages. Listings go live only after admin approval."
-            : "Tell neighbors what you do. Listings go live only after admin approval."}{" "}
-          Photos optional: 1 main photo for the card, plus up to 2 extras in the
-          detail view (JPG/PNG/WebP, under 3&nbsp;MB each).
+          Trades, salons, vets, sitters, and neighbor-run services all live
+          here. If the owner lives in The Villages, check the Villager box so
+          the mascot badge shows on the listing. Listings go live only after
+          admin approval. Photos optional: 1 main photo for the card, plus up
+          to 2 extras (JPG/PNG/WebP, under 3&nbsp;MB each).
         </p>
 
         {note ? <div className="msg msg-ok">{note}</div> : null}
@@ -502,7 +507,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
               onChange={(e) => setBusinessName(e.target.value)}
               required
               maxLength={100}
-              placeholder={isArea ? "ABC Electric of Lady Lake" : "Cart Path Handyman"}
+              placeholder="ABC Electric of Lady Lake"
             />
           </div>
           <div className="field">
@@ -527,9 +532,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
             >
               {(feed.categories.length
                 ? feed.categories
-                : isArea
-                  ? AREA_SERVICE_CATEGORIES
-                  : LOCAL_SERVICE_CATEGORIES
+                : LOCAL_PROS_CATEGORIES
               ).map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -539,7 +542,7 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
           </div>
           <div className="field">
             <label htmlFor="svc-village">
-              {isArea ? "Base village / neighborhood (optional)" : "Village / area (optional)"}
+              Village / neighborhood (optional)
             </label>
             <input
               id="svc-village"
@@ -549,30 +552,26 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
               placeholder="Fenney, Colony, Sumter Landing…"
             />
           </div>
-          {isArea ? (
-            <>
-              <div className="field">
-                <label htmlFor="svc-area">City / towns you serve (optional)</label>
-                <input
-                  id="svc-area"
-                  value={serviceArea}
-                  onChange={(e) => setServiceArea(e.target.value)}
-                  maxLength={120}
-                  placeholder="Lady Lake, Wildwood, Fruitland Park…"
-                />
-              </div>
-              <div className="field field-full">
-                <label htmlFor="svc-address">Street address (optional)</label>
-                <input
-                  id="svc-address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  maxLength={200}
-                  placeholder="123 Main St, Lady Lake, FL 32159"
-                />
-              </div>
-            </>
-          ) : null}
+          <div className="field">
+            <label htmlFor="svc-area">City / towns you serve (optional)</label>
+            <input
+              id="svc-area"
+              value={serviceArea}
+              onChange={(e) => setServiceArea(e.target.value)}
+              maxLength={120}
+              placeholder="Lady Lake, Wildwood, Fruitland Park…"
+            />
+          </div>
+          <div className="field field-full">
+            <label htmlFor="svc-address">Street address (optional)</label>
+            <input
+              id="svc-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              maxLength={200}
+              placeholder="123 Main St, Lady Lake, FL 32159"
+            />
+          </div>
           <div className="field field-full">
             <label htmlFor="svc-desc">What you do *</label>
             <textarea
@@ -624,6 +623,17 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
               maxLength={80}
               placeholder="Defaults to contact name"
             />
+          </div>
+          <div className="field field-full">
+            <label htmlFor="svc-villager" className="checkbox-row">
+              <input
+                id="svc-villager"
+                type="checkbox"
+                checked={villagerOwned}
+                onChange={(e) => setVillagerOwned(e.target.checked)}
+              />
+              The owner lives in The Villages (shows the Villager mascot badge)
+            </label>
           </div>
           <div className="field field-full">
             <label htmlFor="svc-photos">

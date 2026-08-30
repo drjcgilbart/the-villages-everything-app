@@ -733,19 +733,11 @@ export const MAIN_TOPICS: {
     image: "/graphics/theme-real-estate.jpg",
   },
   {
-    href: "/support-local-villagers",
-    label: "Support Local",
-    matchPrefixes: ["/support-local-villagers"],
-    blurb:
-      "Neighbor services — handyman, lawn, lessons, pets, tech, and more. Submit your listing for approval.",
-    image: "/graphics/theme-community-resources.jpg",
-  },
-  {
     href: "/local-pros",
     label: "Local Pros",
-    matchPrefixes: ["/local-pros"],
+    matchPrefixes: ["/local-pros", "/support-local-villagers"],
     blurb:
-      "Area trades serving The Villages — electricians, plumbers, pools, screens, pavers, lightning protection, and more.",
+      "Area trades and neighbor-run services — electricians, plumbers, salons, vets, sitters, and more. Villager-owned listings wear a mascot badge.",
     image: "/graphics/theme-community-resources.jpg",
   },
   {

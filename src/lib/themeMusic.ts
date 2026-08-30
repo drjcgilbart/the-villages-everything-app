@@ -79,103 +79,119 @@ export function getTrack(id: TrackId | string): ThemeTrack {
 export type MusicEngine = {
   start: () => Promise<void>;
   stop: () => void;
+  stopAll: () => void;
   setVolume: (v: number) => void;
   setTrack: (id: TrackId | string) => void;
   getTrackId: () => TrackId;
   isPlaying: () => boolean;
+  isTrackPlaying: (id: TrackId | string) => boolean;
   dispose: () => void;
 };
 
+/** One shared element for the whole tab — never two overlapping players. */
+let sharedAudio: HTMLAudioElement | null = null;
+let sharedGeneration = 0;
+
+function getSharedAudio(): HTMLAudioElement {
+  if (!sharedAudio) {
+    sharedAudio = new Audio();
+    sharedAudio.loop = true;
+    sharedAudio.preload = "auto";
+  }
+  return sharedAudio;
+}
+
+function silenceAudio(a: HTMLAudioElement) {
+  try {
+    a.pause();
+  } catch {
+    /* ignore */
+  }
+  try {
+    a.currentTime = 0;
+  } catch {
+    /* ignore */
+  }
+}
+
+function srcMatches(a: HTMLAudioElement, path: string) {
+  const abs = a.src || "";
+  return abs.endsWith(path) || abs.includes(encodeURI(path));
+}
+
 /**
- * HTML5 Audio engine — plays real MP3 files with loop + seamless mood switching.
+ * HTML5 Audio engine — one MP3 at a time. Switching moods always silences
+ * the previous track before the next one starts.
  */
-export function createThemeMusicEngine(initialTrack: TrackId = "sunny-morning"): MusicEngine {
-  let audio: HTMLAudioElement | null = null;
+export function createThemeMusicEngine(
+  initialTrack: TrackId = "sunny-morning"
+): MusicEngine {
   let playing = false;
   let volume = 0.35;
   let track = getTrack(initialTrack);
-  let loadToken = 0;
 
-  function ensureAudio() {
-    if (!audio) {
-      audio = new Audio();
-      audio.loop = true;
-      audio.preload = "auto";
-      audio.volume = volume;
-      audio.addEventListener("error", () => {
-        console.error("Theme music failed to load:", track.src);
-      });
+  function stopAll() {
+    sharedGeneration += 1;
+    playing = false;
+    if (!sharedAudio) return;
+    silenceAudio(sharedAudio);
+    try {
+      sharedAudio.removeAttribute("src");
+      sharedAudio.load();
+    } catch {
+      /* ignore */
     }
-    return audio;
   }
 
-  function loadCurrentTrack() {
-    const a = ensureAudio();
-    const token = ++loadToken;
-    const nextSrc = track.src;
-    // Only reset src if it actually changed
-    if (!a.src.endsWith(nextSrc) && !a.src.includes(encodeURI(nextSrc))) {
-      a.src = nextSrc;
-      a.load();
+  async function playCurrent() {
+    const gen = (sharedGeneration += 1);
+    const a = getSharedAudio();
+    silenceAudio(a);
+    a.loop = true;
+    a.volume = volume;
+    if (!srcMatches(a, track.src)) {
+      a.src = track.src;
     }
-    return { a, token };
+    try {
+      await a.play();
+    } catch (err) {
+      if (gen !== sharedGeneration) return;
+      playing = false;
+      throw err;
+    }
+    if (gen !== sharedGeneration) {
+      silenceAudio(a);
+      return;
+    }
+    playing = !a.paused;
   }
 
   return {
     async start() {
-      const { a } = loadCurrentTrack();
-      a.volume = volume;
-      try {
-        await a.play();
-        playing = true;
-      } catch (err) {
-        playing = false;
-        throw err;
-      }
+      await playCurrent();
     },
     stop() {
-      playing = false;
-      if (audio) {
-        audio.pause();
-      }
+      stopAll();
     },
+    stopAll,
     setVolume(v: number) {
       volume = Math.min(1, Math.max(0, v));
-      if (audio) audio.volume = volume;
+      if (sharedAudio) sharedAudio.volume = volume;
     },
     setTrack(id: TrackId | string) {
-      const next = getTrack(id);
-      if (next.id === track.id) return;
-      const wasPlaying = playing;
-      const prevTime = audio?.currentTime || 0;
-      track = next;
-      const { a } = loadCurrentTrack();
-      a.volume = volume;
-      // Start new track from beginning (mood change)
-      a.currentTime = 0;
-      if (wasPlaying) {
-        a.play().then(() => {
-          playing = true;
-        }).catch(() => {
-          playing = false;
-        });
-      }
-      void prevTime;
+      track = getTrack(id);
     },
     getTrackId() {
       return track.id;
     },
     isPlaying() {
-      return playing && !!audio && !audio.paused;
+      return playing && !!sharedAudio && !sharedAudio.paused;
+    },
+    isTrackPlaying(id: TrackId | string) {
+      return playing && !!sharedAudio && !sharedAudio.paused && track.id === id;
     },
     dispose() {
-      playing = false;
-      if (audio) {
-        audio.pause();
-        audio.removeAttribute("src");
-        audio.load();
-        audio = null;
-      }
+      stopAll();
     },
   };
 }

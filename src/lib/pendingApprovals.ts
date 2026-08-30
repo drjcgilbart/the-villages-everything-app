@@ -6,7 +6,7 @@ import { ensureDurableHydrated } from "./dataFs";
 import { listRestaurantSuggestions } from "./dining";
 import { loadGolfClubAsync } from "./golfClub";
 import { loadLocalServicesAsync } from "./localServices";
-import { listingScope } from "./localServicesTypes";
+import { isVillagerOwned, listingScope } from "./localServicesTypes";
 import { loadMemberSpaces } from "./memberSpace";
 import { loadPickleballClubAsync } from "./pickleballClub";
 import { loadYardSale } from "./yardSale";
@@ -308,7 +308,7 @@ export async function listPendingApprovals(): Promise<PendingItem[]> {
       id: l.id,
       kind: isArea ? "local-pros" : "support-local",
       tab: "localsvc",
-      topic: isArea ? "Local Pros" : "Support Local Villagers",
+      topic: isVillagerOwned(l) ? "Local Pros · Villager" : "Local Pros",
       title: l.businessName,
       submittedBy: l.submittedByName || l.contactName,
       createdAt: l.createdAt,
@@ -325,6 +325,7 @@ export async function listPendingApprovals(): Promise<PendingItem[]> {
         d("Email", l.email),
         d("Website", l.website),
         d("Submitted by", l.submittedByName),
+        d("Villager-owned", isVillagerOwned(l) ? "Yes" : "No"),
         d("Replaces", l.replacesId),
       ]),
     });

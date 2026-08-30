@@ -114,6 +114,11 @@ export type LocalServiceListing = {
   extraPhotos?: string[];
   /** Who filled the form */
   submittedByName: string;
+  /**
+   * Owner lives in The Villages. Admin can toggle this.
+   * Legacy Support Local listings (scope !== "area") default to true.
+   */
+  villagerOwned?: boolean;
   status: LocalServiceModStatus;
   createdAt: string;
   updatedAt: string;
@@ -145,7 +150,7 @@ export type LocalServiceReview = {
 
 /** Snapshot of #1 in each area category — refreshed at most once per calendar day. */
 export type LocalProsDailyChampion = {
-  category: AreaServiceCategory;
+  category: string;
   listingId: string;
   businessName: string;
   contactName: string;
@@ -213,8 +218,18 @@ export const AREA_SERVICE_ART: Record<AreaServiceCategory, string> = {
 };
 
 export function areaServiceArtPath(category: string): string {
-  if ((AREA_SERVICE_CATEGORIES as readonly string[]).includes(category)) {
-    return AREA_SERVICE_ART[category as AreaServiceCategory];
+  const aliases: Record<string, string> = {
+    "Home & Handyman": "Handyman & Remodeling",
+    "Landscaping & Lawn": "Landscaping & Lawn Care",
+    "Golf Cart & Auto": "Golf Cart Service",
+    "Cleaning & Organizing": "Pressure Washing & Window Cleaning",
+    "Health & Wellness": "Spas & Massage",
+    Pets: "Pet Sitting",
+    "Tech & Computers": "Security Systems",
+  };
+  const resolved = aliases[category] || category;
+  if ((AREA_SERVICE_CATEGORIES as readonly string[]).includes(resolved)) {
+    return AREA_SERVICE_ART[resolved as AreaServiceCategory];
   }
   return AREA_SERVICE_ART.Other;
 }
@@ -267,12 +282,43 @@ export function listingScope(l: Pick<LocalServiceListing, "scope">): LocalServic
   return l.scope === "area" ? "area" : "villager";
 }
 
+/** True when the owner lives in The Villages (badge on Local Pros). */
+export function isVillagerOwned(
+  l: Pick<LocalServiceListing, "villagerOwned" | "scope">
+): boolean {
+  if (typeof l.villagerOwned === "boolean") return l.villagerOwned;
+  return listingScope(l) === "villager";
+}
+
+/** Combined Local Pros category list (area trades + former Support Local types). */
+export const LOCAL_PROS_CATEGORIES: readonly LocalServiceCategory[] = Array.from(
+  new Set<LocalServiceCategory>([
+    ...AREA_SERVICE_CATEGORIES,
+    ...LOCAL_SERVICE_CATEGORIES,
+  ])
+);
+
+/** Fold close Support Local names into Local Pros trade boards. */
+export const VILLAGER_CATEGORY_TO_TRADE: Record<string, AreaServiceCategory> = {
+  "Home & Handyman": "Handyman & Remodeling",
+  "Landscaping & Lawn": "Landscaping & Lawn Care",
+  "Golf Cart & Auto": "Golf Cart Service",
+};
+
+export function listingTradeCategory(l: Pick<LocalServiceListing, "category">): string {
+  return VILLAGER_CATEGORY_TO_TRADE[l.category] || l.category;
+}
+
+/** Trade boards + jump chips — skip aliases that already map onto an area trade. */
+export function localProsBoardCategories(): readonly LocalServiceCategory[] {
+  return LOCAL_PROS_CATEGORIES.filter((c) => !VILLAGER_CATEGORY_TO_TRADE[c]);
+}
+
 export function categoriesForScope(
-  scope: LocalServiceScope
+  scope: LocalServiceScope | "all" = "all"
 ): readonly LocalServiceCategory[] {
-  return scope === "area"
-    ? AREA_SERVICE_CATEGORIES
-    : LOCAL_SERVICE_CATEGORIES;
+  if (scope === "all") return LOCAL_PROS_CATEGORIES;
+  return scope === "area" ? AREA_SERVICE_CATEGORIES : LOCAL_SERVICE_CATEGORIES;
 }
 
 /** Main photo first, then extras — max 3 total. */

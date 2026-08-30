@@ -4,8 +4,10 @@ import Image from "next/image";
 import { useCallback, useState } from "react";
 import { LocalServiceDetailLightbox } from "@/components/LocalServiceDetailLightbox";
 import { StarRating } from "@/components/StarRating";
+import { VillagerOwnedBadge } from "@/components/VillagerOwnedBadge";
 import {
   areaServiceArtPath,
+  isVillagerOwned,
   listingMainPhoto,
   type LocalServiceListing,
 } from "@/lib/localServicesTypes";
@@ -89,7 +91,15 @@ export function LocalProsTopBoards({ boards }: { boards: LocalProsBoard[] }) {
                           />
                         ) : null}
                         <span className="leader-main">
-                          <strong>{l.businessName}</strong>
+                          <strong>
+                            {l.businessName}
+                            {isVillagerOwned(l) ? (
+                              <>
+                                {" "}
+                                <VillagerOwnedBadge size="sm" />
+                              </>
+                            ) : null}
+                          </strong>
                           <em>
                             {l.contactName}
                             {l.address ? ` · ${l.address}` : ""}

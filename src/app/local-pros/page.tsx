@@ -1,16 +1,18 @@
 import Image from "next/image";
-import Link from "next/link";
+import { LocalProsJumpIcon } from "@/components/LocalProsJumpIcon";
 import { LocalProsTopBoards } from "@/components/LocalProsTopBoards";
 import { LocalServicesHub } from "@/components/LocalServicesHub";
 import { StarRating } from "@/components/StarRating";
+import { VillagerOwnedBadge } from "@/components/VillagerOwnedBadge";
 import {
   allCategoryLeaders,
   ensureDailyLeaderboard,
   loadLocalServicesAsync,
 } from "@/lib/localServices";
 import {
-  AREA_SERVICE_CATEGORIES,
   areaServiceArtPath,
+  isVillagerOwned,
+  localProsBoardCategories,
 } from "@/lib/localServicesTypes";
 import { formatDate } from "@/lib/format";
 
@@ -19,14 +21,14 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Local Pros — Area Businesses",
   description:
-    "Trades and service businesses in and around The Villages — rate electricians, plumbers, salons, vets, dog walkers, house sitters, home watch, and more. Top 5 leaderboards by category.",
+    "Trades and neighbor-run services in and around The Villages — rate electricians, plumbers, salons, vets, sitters, handymen, and more. Villager-owned listings wear a mascot badge.",
 };
 
 export default async function LocalProsPage() {
   const data = await loadLocalServicesAsync();
-  const daily = await ensureDailyLeaderboard("area");
+  const daily = await ensureDailyLeaderboard("all");
   // Live top 5 (updates as votes land); minReviews=0 so boards show even without votes yet
-  const categoryBoards = allCategoryLeaders("area", 5, 0, data);
+  const categoryBoards = allCategoryLeaders("all", 5, 0, data);
   const championCount = daily.champions.length;
 
   return (
@@ -34,16 +36,15 @@ export default async function LocalProsPage() {
       <div className="page-hero page-hero-graphic">
         <div className="shell page-hero-grid">
           <div>
-            <span className="kicker">Trades · pets · home watch · ratings</span>
+            <span className="kicker">Trades · neighbors · ratings</span>
             <h1>Local Pros</h1>
             <p>
               Businesses that serve Villagers from Lady Lake, Wildwood,
-              Fruitland Park, Leesburg, and nearby — electricians, plumbers,
-              hair &amp; nail salons, vets, dog walkers, pet sitters, house
-              sitters, and home watch (packages, sprinklers, and a walk-through
-              while you&apos;re out of town). Rate them like dining: 1–5 stars,
-              top 5 per trade, and a running champion strip that refreshes at
-              least once a day.
+              Fruitland Park, Leesburg, and nearby — plus neighbor-run services
+              from people who live here. Look for the{" "}
+              <VillagerOwnedBadge size="sm" /> badge when the owner is a
+              Villager. Rate them like dining: 1–5 stars, top 5 per trade, and a
+              running champion strip that refreshes at least once a day.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
               <a href="#daily-champs" className="btn btn-primary">
@@ -55,9 +56,6 @@ export default async function LocalProsPage() {
               <a href="#directory" className="btn btn-ghost">
                 Full directory
               </a>
-              <Link href="/support-local-villagers" className="btn btn-ghost">
-                Support Local Villagers
-              </Link>
             </div>
           </div>
           <div className="page-hero-art">
@@ -118,7 +116,15 @@ export default async function LocalProsPage() {
                   </div>
                   <div className="local-pros-champ-body">
                     <span className="pill">{c.category}</span>
-                    <strong>{c.businessName}</strong>
+                    <strong>
+                      {c.businessName}
+                      {champIsVillager(c.listingId, data) ? (
+                        <>
+                          {" "}
+                          <VillagerOwnedBadge size="sm" />
+                        </>
+                      ) : null}
+                    </strong>
                     <em>{c.contactName}</em>
                     <span className="local-pros-champ-score">
                       <StarRating
@@ -143,19 +149,22 @@ export default async function LocalProsPage() {
         <div className="shell">
           <div className="dining-jump">
             <span className="dining-jump-label">Jump to trade</span>
-            {AREA_SERVICE_CATEGORIES.map((c) => (
+            {localProsBoardCategories().map((c) => (
               <a
                 key={c}
                 href={`#trade-${slugCategory(c)}`}
-                className="dining-chip"
+                className="dining-chip local-pros-jump-chip"
               >
+                <LocalProsJumpIcon category={c} />
                 {shortTradeLabel(c)}
               </a>
             ))}
-            <a href="#directory" className="dining-chip">
+            <a href="#directory" className="dining-chip local-pros-jump-chip">
+              <LocalProsJumpIcon category="directory" />
               Full directory
             </a>
-            <a href="#local-service-form" className="dining-chip">
+            <a href="#local-service-form" className="dining-chip local-pros-jump-chip">
+              <LocalProsJumpIcon category="list" />
               List a business
             </a>
           </div>
@@ -187,15 +196,15 @@ export default async function LocalProsPage() {
             <div>
               <h2>Full area directory</h2>
               <p>
-                Browse, search, and rate. Seeded listings use public business
-                info (name, address, phone, website) with a map search link —
-                always verify hours and licenses yourself. Independent directory
-                — not affiliated with The Villages® operators. Hire at your own
-                discretion.
+                Browse, search, and rate — including neighbor-run services
+                that used to live under Support Local. Listings with the
+                mascot badge are owned by someone who lives in The Villages.
+                Independent directory — not affiliated with The Villages®
+                operators. Hire at your own discretion.
               </p>
             </div>
           </div>
-          <LocalServicesHub scope="area" />
+          <LocalServicesHub />
         </div>
       </section>
     </>
@@ -248,6 +257,25 @@ function shortTradeLabel(c: string) {
     "House Sitting": "House sit",
     "Home Watch": "Home watch",
     Other: "Other",
+    "Home & Handyman": "Handyman",
+    "Landscaping & Lawn": "Lawn",
+    "Cleaning & Organizing": "Cleaning",
+    "Golf Cart & Auto": "Carts",
+    "Health & Wellness": "Wellness",
+    Pets: "Pets",
+    "Tech & Computers": "Tech",
+    "Music & Lessons": "Lessons",
+    "Arts, Crafts & Makers": "Makers",
+    "Professional Services": "Pros",
+    "Food & Catering": "Food",
   };
   return map[c] || c;
+}
+
+function champIsVillager(
+  listingId: string,
+  data: { listings: { id: string; villagerOwned?: boolean; scope?: "villager" | "area" }[] }
+) {
+  const listing = data.listings.find((l) => l.id === listingId);
+  return listing ? isVillagerOwned(listing) : false;
 }

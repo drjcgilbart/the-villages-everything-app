@@ -47,7 +47,7 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Content you upload</strong> — photos, short videos, listing
-              text, reviews, Best of the Month entries, Support Local
+              text, reviews, Best of the Month entries, Local Pros
               submissions, and similar community content.
             </li>
             <li>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
           <h2>How we use information</h2>
           <ul>
             <li>To run community features (directories, ratings, calendar, members).</li>
-            <li>To moderate uploads (Best of the Month, Support Local, yard sale).</li>
+            <li>To moderate uploads (Best of the Month, Local Pros, yard sale).</li>
             <li>To respond to leads or support requests you send.</li>
             <li>To improve reliability, fix bugs, and understand which pages work.</li>
             <li>To process voluntary donations through Stripe.</li>
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
           <h2>Photos and public content</h2>
           <p>
             Content you submit for public areas (for example Best of the Month or
-            Support Local) may be shown on the site after approval. Do not upload
+            Local Pros) may be shown on the site after approval. Do not upload
             photos of other people without their permission. You can request
             removal by emailing us.
           </p>

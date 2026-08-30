@@ -44,6 +44,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/support-local-villagers",
+        destination: "/local-pros",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

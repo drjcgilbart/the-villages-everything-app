@@ -7,34 +7,25 @@ import {
   submitLocalService,
 } from "@/lib/localServices";
 import {
-  categoriesForScope,
-  listingScope,
-  type LocalServiceScope,
+  LOCAL_PROS_CATEGORIES,
+  isVillagerOwned,
 } from "@/lib/localServicesTypes";
 
 export const dynamic = "force-dynamic";
 
-function parseScopeParam(v: string | null): LocalServiceScope {
-  return v === "area" ? "area" : "villager";
-}
-
-/** Public: approved service directory + form metadata (filtered by scope) */
-export async function GET(req: Request) {
+/** Public: approved Local Pros directory (includes former Support Local listings). */
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const scope = parseScopeParam(searchParams.get("scope"));
     const data = await loadLocalServicesAsync();
-    const approved = listApprovedServices(data, scope).map((l) => ({
+    const approved = listApprovedServices(data).map((l) => ({
       ...l,
+      villagerOwned: isVillagerOwned(l),
       stats: computeServiceStats(l.id, data.reviews),
     }));
     return NextResponse.json({
       listings: approved,
-      categories: categoriesForScope(scope),
-      scope,
-      pendingCount: data.listings.filter(
-        (l) => l.status === "pending" && listingScope(l) === scope
-      ).length,
+      categories: LOCAL_PROS_CATEGORIES,
+      pendingCount: data.listings.filter((l) => l.status === "pending").length,
       updatedAt: data.updatedAt,
     });
   } catch (err) {
@@ -55,8 +46,6 @@ export async function POST(req: Request) {
   if (limited) return limited;
   try {
     const body = await req.json();
-    const scope: LocalServiceScope =
-      body.scope === "area" ? "area" : "villager";
     const listing = await submitLocalService({
       businessName: body.businessName,
       contactName: body.contactName,
@@ -74,14 +63,11 @@ export async function POST(req: Request) {
       photos: body.photos,
       submittedByName: body.submittedByName,
       replacesId: body.replacesId,
-      scope,
+      scope: "area",
+      villagerOwned: Boolean(body.villagerOwned),
     });
-    const liveWhere =
-      scope === "area"
-        ? "Local Pros (area businesses)"
-        : "Support Local Villagers";
     await notifyAdminOfApprovalRequest({
-      topic: liveWhere,
+      topic: listing.villagerOwned ? "Local Pros · Villager" : "Local Pros",
       title: listing.businessName,
       submittedBy: listing.submittedByName || listing.contactName,
       createdAt: listing.createdAt,
@@ -97,6 +83,7 @@ export async function POST(req: Request) {
         email: listing.email,
         website: listing.website,
         submittedBy: listing.submittedByName,
+        villagerOwned: listing.villagerOwned ? "Yes — lives in The Villages" : "No",
         replacesId: listing.replacesId,
         listingId: listing.id,
       },
@@ -108,11 +95,11 @@ export async function POST(req: Request) {
         businessName: listing.businessName,
         status: listing.status,
         replacesId: listing.replacesId,
-        scope: listing.scope || "villager",
+        villagerOwned: listing.villagerOwned,
       },
       message: listing.replacesId
         ? "Update submitted! An admin will review it before the public page changes."
-        : `Thanks! Your listing is pending admin approval. Once approved, it appears on ${liveWhere}.`,
+        : "Thanks! Your listing is pending admin approval. Once approved, it appears on Local Pros.",
     });
   } catch (err) {
     return NextResponse.json(

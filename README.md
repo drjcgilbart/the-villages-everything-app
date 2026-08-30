@@ -40,8 +40,7 @@ You maintain **one website**. Phone apps are a native wrapper with your icon/spl
 | **Rec Centers** | Pools, pickleball, fitness, regional/village/neighborhood centers |
 | **My Village** | Searchable directory of 100+ individual villages (e.g. Edenfield) with area filters |
 | **Real Estate** | Featured homes, live market links, partner agents, buyer/seller lead form; hourly snapshot refresh |
-| **Support Local Villagers** | Neighbor service directory — submit listing + photo, admin approves before it goes live |
-| **Local Pros** | Area trades and shops — electricians, plumbers, salons, vets, dog walkers, house sitters, home watch, and more; 1–5★ ratings and top 5 boards |
+| **Local Pros** | Area trades and neighbor-run services — electricians, plumbers, salons, vets, sitters, and more; Villager-owned listings get a mascot badge; 1–5★ ratings and top 5 boards |
 | **Best of the Month Club** | Monthly highlights (featured + tagged items) |
 | **Donate** | “Buy me a cup of Joe” tips via Stripe Checkout |
 | **About** | Mission + disclaimer (not affiliated with The Villages® operators) |

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { StarPicker, StarRating } from "@/components/StarRating";
+import { VillagerOwnedBadge } from "@/components/VillagerOwnedBadge";
 import {
+  isVillagerOwned,
   listingPhotos,
   type LocalServiceListing,
   type LocalServiceStats,
@@ -111,6 +113,9 @@ export function LocalServiceDetailLightbox({
         <div className="local-svc-lightbox-head">
           <div>
             <div className="local-svc-card-top">
+              {isVillagerOwned(listing) ? (
+                <VillagerOwnedBadge size="md" />
+              ) : null}
               <span className="pill">{listing.category}</span>
               {listing.village ? (
                 <span className="pill">{listing.village}</span>
