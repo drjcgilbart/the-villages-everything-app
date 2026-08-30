@@ -10,11 +10,14 @@ import { AdminGolfPanel } from "@/components/AdminGolfPanel";
 import { AdminPickleballPanel } from "@/components/AdminPickleballPanel";
 import { AdminLocalServicesPanel } from "@/components/AdminLocalServicesPanel";
 import { AdminMembersPanel } from "@/components/AdminMembersPanel";
+import { AdminPendingPanel } from "@/components/AdminPendingPanel";
 import { AdminRealEstatePanel } from "@/components/AdminRealEstatePanel";
 import { AdminSiteGatePanel } from "@/components/AdminSiteGatePanel";
 import { AdminYardSalePanel } from "@/components/AdminYardSalePanel";
+import type { PendingTab } from "@/lib/pendingApprovals";
 
 type PortalTab =
+  | "pending"
   | "members"
   | "yard"
   | "dining"
@@ -34,9 +37,11 @@ type PortalTab =
 export function AdminPortal() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
-  const [tab, setTab] = useState<PortalTab>("members");
-  const [pendingCount, setPendingCount] = useState(0);
-  const [bomPendingCount, setBomPendingCount] = useState(0);
+  const [tab, setTab] = useState<PortalTab>("pending");
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [tabCounts, setTabCounts] = useState<Partial<Record<PendingTab, number>>>(
+    {}
+  );
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null
   );
@@ -59,35 +64,22 @@ export function AdminPortal() {
 
   useEffect(() => {
     if (!authed) return;
-    fetch("/api/members/admin", { cache: "no-store", credentials: "same-origin" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.members)) {
-          setPendingCount(
-            data.members.filter(
-              (m: { status?: string }) => m.status === "pending"
-            ).length
-          );
-        }
-      })
-      .catch(() => {});
-
-    // Public feed exposes pendingCount without listing content — badge the tab
-    const loadBomPending = () =>
-      fetch("/api/best-of-month/entries", {
+    const loadPending = () =>
+      fetch("/api/admin/pending", {
         cache: "no-store",
         credentials: "same-origin",
       })
         .then((r) => r.json())
         .then((data) => {
-          if (typeof data.pendingCount === "number") {
-            setBomPendingCount(data.pendingCount);
+          if (typeof data.total === "number") setPendingTotal(data.total);
+          if (data.counts && typeof data.counts === "object") {
+            setTabCounts(data.counts);
           }
         })
         .catch(() => {});
 
-    loadBomPending();
-    const t = setInterval(loadBomPending, 15_000);
+    loadPending();
+    const t = setInterval(loadPending, 15_000);
     return () => clearInterval(t);
   }, [authed, tab]);
 
@@ -170,6 +162,14 @@ export function AdminPortal() {
             </p>
           </div>
           <div className="admin-portal-header-actions">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setTab("pending")}
+            >
+              All pending
+              {pendingTotal > 0 ? ` (${pendingTotal})` : ""}
+            </button>
             <Link href="/studio" className="btn btn-ghost btn-sm">
               Creator Studio
             </Link>
@@ -191,12 +191,22 @@ export function AdminPortal() {
         <div className="admin-tabs admin-portal-tabs">
           <button
             type="button"
+            className={tab === "pending" ? "active" : ""}
+            onClick={() => setTab("pending")}
+          >
+            Pending
+            {pendingTotal > 0 ? (
+              <span className="admin-tab-badge">{pendingTotal}</span>
+            ) : null}
+          </button>
+          <button
+            type="button"
             className={tab === "members" ? "active" : ""}
             onClick={() => setTab("members")}
           >
             Members
-            {pendingCount > 0 ? (
-              <span className="admin-tab-badge">{pendingCount}</span>
+            {(tabCounts.members || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.members}</span>
             ) : null}
           </button>
           <button
@@ -205,6 +215,9 @@ export function AdminPortal() {
             onClick={() => setTab("yard")}
           >
             Yard Sale
+            {(tabCounts.yard || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.yard}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -212,6 +225,9 @@ export function AdminPortal() {
             onClick={() => setTab("dining")}
           >
             Dining
+            {(tabCounts.dining || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.dining}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -226,8 +242,8 @@ export function AdminPortal() {
             onClick={() => setTab("bestof")}
           >
             Best of Month
-            {bomPendingCount > 0 ? (
-              <span className="admin-tab-badge">{bomPendingCount}</span>
+            {(tabCounts.bestof || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.bestof}</span>
             ) : null}
           </button>
           <button
@@ -236,6 +252,9 @@ export function AdminPortal() {
             onClick={() => setTab("golf")}
           >
             Golf
+            {(tabCounts.golf || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.golf}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -243,6 +262,9 @@ export function AdminPortal() {
             onClick={() => setTab("pickleball")}
           >
             Pickleball
+            {(tabCounts.pickleball || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.pickleball}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -250,6 +272,9 @@ export function AdminPortal() {
             onClick={() => setTab("clubs")}
           >
             Clubs
+            {(tabCounts.clubs || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.clubs}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -257,6 +282,9 @@ export function AdminPortal() {
             onClick={() => setTab("localsvc")}
           >
             Local services
+            {(tabCounts.localsvc || 0) > 0 ? (
+              <span className="admin-tab-badge">{tabCounts.localsvc}</span>
+            ) : null}
           </button>
           <button
             type="button"
@@ -274,6 +302,9 @@ export function AdminPortal() {
           </button>
         </div>
 
+        {tab === "pending" && (
+          <AdminPendingPanel onOpenTab={(next) => setTab(next)} />
+        )}
         {tab === "members" && <AdminMembersPanel />}
         {tab === "yard" && <AdminYardSalePanel />}
         {tab === "dining" && <AdminDiningPanel />}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import {
   listApprovedClubs,
   loadClubListingsAsync,
@@ -51,6 +52,25 @@ export async function POST(req: Request) {
       membershipStatus: body.membershipStatus,
       submittedByName: body.submittedByName,
       replacesId: body.replacesId,
+    });
+    await notifyAdminOfApprovalRequest({
+      topic: "Clubs",
+      title: listing.name,
+      submittedBy: listing.submittedByName || listing.leaderName,
+      createdAt: listing.createdAt,
+      details: {
+        name: listing.name,
+        category: listing.category,
+        location: listing.location,
+        leaderName: listing.leaderName,
+        membershipStatus: listing.membershipStatus,
+        description: listing.description,
+        email: listing.email,
+        phone: listing.phone,
+        website: listing.website,
+        submittedBy: listing.submittedByName,
+        replacesId: listing.replacesId,
+      },
     });
     return NextResponse.json({
       ok: true,

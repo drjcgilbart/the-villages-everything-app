@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { getSessionMember, requireApprovedMember } from "@/lib/memberAuth";
 import {
   createListing,
   deleteListing,
+  getMemberById,
   setListingStatus,
   updateListing,
 } from "@/lib/yardSale";
@@ -29,6 +31,24 @@ export async function POST(req: Request) {
       images: body.images,
       videoUrl: body.videoUrl,
     });
+    if (listing.status === "pending") {
+      await notifyAdminOfApprovalRequest({
+        topic: "Yard Sale",
+        title: listing.title,
+        submittedBy: member.name,
+        createdAt: listing.createdAt,
+        details: {
+          title: listing.title,
+          category: listing.category,
+          price: listing.isFree ? "Free" : listing.price,
+          condition: listing.condition,
+          description: listing.description,
+          seller: member.name,
+          sellerEmail: member.email,
+          photos: listing.images?.length,
+        },
+      });
+    }
     return NextResponse.json({ listing });
   } catch (err) {
     const code = (err as { code?: number })?.code || 400;
@@ -76,6 +96,25 @@ export async function PUT(req: Request) {
       ...body,
       isAdmin: false,
     });
+    if (listing.status === "pending") {
+      const seller = getMemberById(listing.memberId);
+      await notifyAdminOfApprovalRequest({
+        topic: "Yard Sale",
+        title: listing.title,
+        submittedBy: seller?.name || member.name,
+        createdAt: listing.updatedAt || listing.createdAt,
+        details: {
+          title: listing.title,
+          category: listing.category,
+          price: listing.isFree ? "Free" : listing.price,
+          condition: listing.condition,
+          description: listing.description,
+          seller: seller?.name || member.name,
+          sellerEmail: seller?.email || member.email,
+          note: "Member edited this listing — it needs approval again.",
+        },
+      });
+    }
     return NextResponse.json({ listing });
   } catch (err) {
     return NextResponse.json(

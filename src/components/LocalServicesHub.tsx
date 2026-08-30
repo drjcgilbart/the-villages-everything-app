@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LocalServiceDetailLightbox,
   LOCAL_SVC_UPDATE_EVENT,
@@ -24,6 +24,13 @@ type Feed = {
 };
 
 const MAX_PHOTOS = 3;
+
+type SubmitFlash = {
+  kind: "ok" | "err";
+  title: string;
+  text: string;
+  extra: string;
+};
 
 function truncate(text: string, max = 140) {
   const t = text.trim();
@@ -69,6 +76,9 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   const [uploading, setUploading] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
+  const [submitFlash, setSubmitFlash] = useState<SubmitFlash | null>(null);
+  const [sentOk, setSentOk] = useState(false);
+  const submitPopupRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +114,8 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
     setPhotos(listingPhotos(l));
     setSubmittedByName(l.contactName);
     setNote(`Updating “${l.businessName}” — submit for admin approval.`);
+    setSubmitFlash(null);
+    setSentOk(false);
     document.getElementById("local-service-form")?.scrollIntoView({
       behavior: "smooth",
       block: "start",
@@ -113,6 +125,14 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!submitFlash) return;
+    const el = submitPopupRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus();
+  }, [submitFlash]);
 
   useEffect(() => {
     function onUpdate(e: Event) {
@@ -209,9 +229,11 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (sentOk) return;
     setBusy(true);
     setFormErr(null);
     setNote(null);
+    setSubmitFlash(null);
     try {
       const res = await fetch("/api/local-services", {
         method: "POST",
@@ -235,13 +257,38 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submit failed");
-      setNote(data.message || "Submitted for approval.");
+      const liveWhere = isArea
+        ? "Local Pros"
+        : "Support Local Villagers";
+      setSubmitFlash({
+        kind: "ok",
+        title: "It worked — we got your listing!",
+        text:
+          data.message ||
+          `Thanks! Your listing is pending admin approval on ${liveWhere}.`,
+        extra:
+          "Please do not tap Submit again for this same listing. We already have it. An admin will review it before it goes live.",
+      });
+      setSentOk(true);
       setDescription("");
       setReplacesId("");
       setPhotos([]);
-      await load();
+      try {
+        await load();
+      } catch {
+        /* listing already saved — don't hide the success popup */
+      }
     } catch (err) {
-      setFormErr(err instanceof Error ? err.message : "Submit failed");
+      const text = err instanceof Error ? err.message : "Submit failed";
+      setFormErr(text);
+      setSentOk(false);
+      setSubmitFlash({
+        kind: "err",
+        title: "It didn’t go through",
+        text,
+        extra:
+          "Nothing was saved. Fix the issue, then tap Submit for approval once.",
+      });
     } finally {
       setBusy(false);
     }
@@ -440,7 +487,13 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
         {note ? <div className="msg msg-ok">{note}</div> : null}
         {formErr ? <div className="msg msg-err">{formErr}</div> : null}
 
-        <form className="form-grid" onSubmit={onSubmit}>
+        <form
+          className="form-grid"
+          onSubmit={onSubmit}
+          onInput={() => {
+            if (sentOk) setSentOk(false);
+          }}
+        >
           <div className="field">
             <label htmlFor="svc-business">Business / display name *</label>
             <input
@@ -642,18 +695,41 @@ export function LocalServicesHub({ scope = "villager" }: HubProps) {
               </button>
             </p>
           ) : null}
-          <div className="field-full">
+          <div className="field-full local-svc-submit-wrap">
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={busy || uploading}
+              disabled={busy || uploading || sentOk}
             >
               {busy
-                ? "Submitting…"
-                : replacesId
-                  ? "Submit update for approval"
-                  : "Submit for approval"}
+                ? "Submitting… please wait"
+                : sentOk
+                  ? "Submitted — you’re done"
+                  : replacesId
+                    ? "Submit update for approval"
+                    : "Submit for approval"}
             </button>
+            {submitFlash ? (
+              <div
+                ref={submitPopupRef}
+                id="local-svc-submit-popup"
+                className={`local-svc-submit-popup local-svc-submit-popup-${submitFlash.kind}`}
+                role="alert"
+                aria-live="assertive"
+                tabIndex={-1}
+              >
+                <strong>{submitFlash.title}</strong>
+                <p>{submitFlash.text}</p>
+                <p className="local-svc-submit-popup-extra">{submitFlash.extra}</p>
+                <button
+                  type="button"
+                  className="btn btn-sm local-svc-submit-popup-ok-btn"
+                  onClick={() => setSubmitFlash(null)}
+                >
+                  OK, got it
+                </button>
+              </div>
+            ) : null}
           </div>
         </form>
         <p className="panel-hint" style={{ marginBottom: 0 }}>

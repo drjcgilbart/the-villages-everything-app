@@ -2400,6 +2400,72 @@ button.ms-home-card:hover {
   font-weight: 700;
 }
 
+.admin-pending-intro {
+  margin: 0.75rem 0 1rem;
+}
+
+.admin-pending-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.admin-pending-card h3 {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.admin-pending-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  align-items: baseline;
+}
+
+.admin-pending-when {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.admin-pending-summary {
+  margin: 0 0 0.7rem;
+  color: var(--muted);
+}
+
+.admin-pending-details {
+  margin: 0 0 0.85rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-pending-details > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) 1fr;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.92rem;
+}
+
+.admin-pending-details dt {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.admin-pending-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .admin-pending-details > div {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}
+
 .donate-preset-loofah,
 .donate-preset-custom {
   border-color: rgba(232, 184, 74, 0.55);
@@ -9678,6 +9744,103 @@ a.floating-back-btn {
 }
 .local-svc-form-panel {
   scroll-margin-top: 5rem;
+}
+
+.local-svc-submit-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.local-svc-submit-popup {
+  position: relative;
+  width: min(100%, 36rem);
+  margin: 0.15rem 0 0;
+  padding: 1.05rem 1.15rem 1.1rem;
+  border-radius: 16px;
+  border: 3px solid;
+  box-shadow: 0 14px 36px rgba(28, 36, 48, 0.22);
+  font-size: 1.05rem;
+  line-height: 1.45;
+  scroll-margin: 6rem;
+  outline: none;
+  animation: local-svc-popup-pop 0.22s ease-out;
+}
+
+.local-svc-submit-popup::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 1.5rem;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+}
+
+.local-svc-submit-popup strong {
+  display: block;
+  font-size: 1.28rem;
+  line-height: 1.25;
+  margin: 0 0 0.4rem;
+}
+
+.local-svc-submit-popup p {
+  margin: 0 0 0.55rem;
+}
+
+.local-svc-submit-popup-extra {
+  font-weight: 700;
+}
+
+.local-svc-submit-popup-ok {
+  background: #d9f6e6;
+  border-color: #1f6b4a;
+  color: #0f3d2c;
+}
+
+.local-svc-submit-popup-ok::before {
+  border-bottom: 12px solid #1f6b4a;
+}
+
+.local-svc-submit-popup-err {
+  background: #ffe6e3;
+  border-color: #c13b2e;
+  color: #7a1b14;
+}
+
+.local-svc-submit-popup-err::before {
+  border-bottom: 12px solid #c13b2e;
+}
+
+.local-svc-submit-popup-ok-btn {
+  margin-top: 0.15rem;
+  background: #fff;
+  border: 2px solid currentColor;
+  font-weight: 800;
+}
+
+@keyframes local-svc-popup-pop {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .local-svc-submit-popup {
+    width: 100%;
+    font-size: 1.02rem;
+  }
+  .local-svc-submit-popup strong {
+    font-size: 1.18rem;
+  }
 }
 .local-svc-form-preview {
   display: flex;

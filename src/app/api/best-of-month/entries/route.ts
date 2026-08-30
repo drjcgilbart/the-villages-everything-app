@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
   blobConfigured,
@@ -129,6 +130,23 @@ export async function POST(req: Request) {
       const admin = await isAdminAuthenticated();
       if (admin && entry.status === "pending") {
         entry = await setBomEntryStatusAsync(entry.id, "approved");
+      }
+      if (entry.status === "pending") {
+        await notifyAdminOfApprovalRequest({
+          topic: "Best of the Month",
+          title: entry.title,
+          submittedBy: entry.submitterName,
+          createdAt: entry.createdAt,
+          details: {
+            title: entry.title,
+            category: entry.category,
+            month: entry.monthKey,
+            description: entry.description,
+            fileType: entry.fileType,
+            imageUrl: entry.imageUrl,
+            submittedBy: entry.submitterName,
+          },
+        });
       }
       return NextResponse.json({
         ok: true,

@@ -5,6 +5,7 @@ import {
   isTopTierDonationBadge,
   parseDonationAmount,
 } from "@/lib/donations";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { getSessionMember } from "@/lib/memberAuth";
 import { ensureDurableHydrated } from "@/lib/dataFs";
 import {
@@ -112,6 +113,23 @@ export async function POST(req: NextRequest) {
         : space.topTierNomination?.status === "approved"
           ? " Your Square Royalty membership is already approved."
           : "";
+    const wasPending = before.topTierNomination?.status === "pending";
+    if (space.topTierNomination?.status === "pending" && !wasPending) {
+      await notifyAdminOfApprovalRequest({
+        topic: "Members · Square Royalty",
+        title: member?.name || memberId,
+        submittedBy: member?.name,
+        createdAt: space.topTierNomination.requestedAt,
+        details: {
+          member: member?.name || memberId,
+          email: member?.email,
+          source: space.topTierNomination.source,
+          proposedExpiresAt: space.topTierNomination.proposedExpiresAt,
+          badge: badge?.label,
+          amountUsd,
+        },
+      });
+    }
   }
 
   return NextResponse.json({

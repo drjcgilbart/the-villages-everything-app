@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { registerMember } from "@/lib/yardSale";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 
@@ -18,6 +19,21 @@ export async function POST(req: Request) {
       village: body.village,
     });
     const updatedPending = member.status === "pending";
+    if (updatedPending) {
+      await notifyAdminOfApprovalRequest({
+        topic: "Members",
+        title: member.name,
+        submittedBy: member.name,
+        createdAt: member.createdAt,
+        details: {
+          name: member.name,
+          email: member.email,
+          phone: member.phone,
+          village: member.village,
+          status: member.status,
+        },
+      });
+    }
     return NextResponse.json({
       ok: true,
       member,

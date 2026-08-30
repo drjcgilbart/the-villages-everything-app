@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
   approveRestaurantSuggestion,
@@ -53,6 +54,24 @@ export async function POST(req: Request) {
         suggestedBy: body.suggestedBy,
         suggestedByEmail: body.suggestedByEmail,
         note: body.note,
+      });
+      await notifyAdminOfApprovalRequest({
+        topic: "Dining",
+        title: suggestion.name,
+        submittedBy: suggestion.suggestedBy,
+        createdAt: suggestion.createdAt,
+        details: {
+          restaurant: suggestion.name,
+          cuisine: suggestion.cuisine,
+          area: suggestion.area,
+          address: suggestion.address,
+          phone: suggestion.phone,
+          website: suggestion.website,
+          description: suggestion.description,
+          suggestedBy: suggestion.suggestedBy,
+          suggestedByEmail: suggestion.suggestedByEmail,
+          note: suggestion.note,
+        },
       });
       return NextResponse.json({
         ok: true,

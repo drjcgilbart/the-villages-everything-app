@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import {
   publicPickleballFeed,
   submitPickleballLooking,
@@ -43,6 +44,20 @@ export async function POST(req: Request) {
         pcvg: body.pcvg ? String(body.pcvg) : undefined,
         courtName: body.courtName ? String(body.courtName) : undefined,
         notes: body.notes ? String(body.notes) : undefined,
+      });
+      await notifyAdminOfApprovalRequest({
+        topic: "Pickleball · DUPR",
+        title: rating.playerName,
+        submittedBy: rating.playerName,
+        createdAt: rating.createdAt,
+        details: {
+          player: rating.playerName,
+          duprDoubles: rating.duprDoubles === "" ? "" : rating.duprDoubles,
+          duprSingles: rating.duprSingles === "" ? "" : rating.duprSingles,
+          pcvg: rating.pcvg,
+          courtName: rating.courtName,
+          notes: rating.notes,
+        },
       });
       return NextResponse.json({
         ok: true,

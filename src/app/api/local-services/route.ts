@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import {
   computeServiceStats,
   listApprovedServices,
@@ -79,6 +80,27 @@ export async function POST(req: Request) {
       scope === "area"
         ? "Local Pros (area businesses)"
         : "Support Local Villagers";
+    await notifyAdminOfApprovalRequest({
+      topic: liveWhere,
+      title: listing.businessName,
+      submittedBy: listing.submittedByName || listing.contactName,
+      createdAt: listing.createdAt,
+      details: {
+        businessName: listing.businessName,
+        contactName: listing.contactName,
+        category: listing.category,
+        description: listing.description,
+        village: listing.village,
+        serviceArea: listing.serviceArea,
+        address: listing.address,
+        phone: listing.phone,
+        email: listing.email,
+        website: listing.website,
+        submittedBy: listing.submittedByName,
+        replacesId: listing.replacesId,
+        listingId: listing.id,
+      },
+    });
     return NextResponse.json({
       ok: true,
       listing: {

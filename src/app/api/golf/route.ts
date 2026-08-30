@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import {
   publicGolfFeed,
   submitAce,
@@ -61,6 +62,22 @@ export async function POST(req: Request) {
         score: body.score,
         notes: body.notes ? String(body.notes) : undefined,
       });
+      await notifyAdminOfApprovalRequest({
+        topic: "Golf · round",
+        title: `${round.playerName} · ${round.course}`,
+        submittedBy: round.playerName,
+        createdAt: round.createdAt,
+        details: {
+          player: round.playerName,
+          course: round.course,
+          playDate: round.playDate,
+          playTime: round.playTime,
+          holes: round.holes,
+          score: round.score,
+          handicap: round.handicap,
+          notes: round.notes,
+        },
+      });
       return NextResponse.json({
         ok: true,
         round,
@@ -95,6 +112,21 @@ export async function POST(req: Request) {
         clubUsed: body.clubUsed ? String(body.clubUsed) : undefined,
         story: body.story ? String(body.story) : undefined,
         photoUrl: body.photoUrl ? String(body.photoUrl) : undefined,
+      });
+      await notifyAdminOfApprovalRequest({
+        topic: "Golf · hole-in-one",
+        title: `${ace.playerName} · ${ace.course} hole ${ace.hole}`,
+        submittedBy: ace.playerName,
+        createdAt: ace.createdAt,
+        details: {
+          player: ace.playerName,
+          course: ace.course,
+          hole: ace.hole,
+          playDate: ace.playDate,
+          clubUsed: ace.clubUsed,
+          story: ace.story,
+          photoUrl: ace.photoUrl,
+        },
       });
       return NextResponse.json({
         ok: true,
