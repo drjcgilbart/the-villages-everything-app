@@ -104,9 +104,23 @@ const EQUIPMENT: Record<string, string[]> = {
     "Assisted pull-up",
     "Ab crunch machine",
     "Calf raise machine",
+    "Chest fly machine",
+    "Rear delt fly",
+    "Hack squat",
+    "Hip abduction",
+    "Hip adduction",
+    "Glute kickback",
+    "Seated calf raise",
+    "Assisted dip",
+    "Arm curl machine",
+    "Tricep machine",
+    "Back extension",
+    "Rotary torso",
   ],
   free: [
     "Barbell bench press",
+    "Incline bench press",
+    "Decline bench press",
     "Squat",
     "Deadlift",
     "Overhead press",
@@ -116,16 +130,64 @@ const EQUIPMENT: Record<string, string[]> = {
     "Goblet squat",
     "Romanian deadlift",
     "Lunges",
+    "Bulgarian split squat",
+    "Hip thrust",
     "Dumbbell curl",
+    "Hammer curl",
+    "Preacher curl",
     "Tricep extension",
+    "Skull crusher",
+    "Lateral raise",
+    "Front raise",
     "Farmer carry",
+    "Kettlebell swing",
+    "Step-ups",
+    "Shrug",
   ],
-  cable: ["Cable row", "Face pull", "Tricep pushdown", "Cable fly", "Woodchop"],
-  cardio: ["Treadmill", "Elliptical", "Recumbent bike", "Upright bike", "Rower", "Stair climber"],
-  bodyweight: ["Push-ups", "Sit-ups", "Plank", "Squats (bodyweight)", "Wall sit", "Bird dog"],
+  cable: [
+    "Cable row",
+    "Face pull",
+    "Tricep pushdown",
+    "Cable fly",
+    "Woodchop",
+    "Cable curl",
+    "Straight-arm pulldown",
+    "Cable crunch",
+    "Pallof press",
+  ],
+  cardio: [
+    "Treadmill",
+    "Elliptical",
+    "Recumbent bike",
+    "Upright bike",
+    "Rower",
+    "Stair climber",
+    "Arc trainer",
+    "Assault bike",
+    "Jump rope",
+    "Battle ropes",
+  ],
+  bodyweight: [
+    "Push-ups",
+    "Sit-ups",
+    "Plank",
+    "Squats (bodyweight)",
+    "Wall sit",
+    "Bird dog",
+    "Pull-ups",
+    "Chin-ups",
+    "Dips",
+    "Hip bridge",
+    "Russian twist",
+    "Burpees",
+    "Mountain climbers",
+  ],
 };
 
 const EXERCISE_NAMES = [...new Set(Object.values(EQUIPMENT).flat())];
+const EXERCISE_KIND = Object.fromEntries(
+  Object.entries(EQUIPMENT).flatMap(([kind, names]) => names.map((n) => [n, kind]))
+) as Record<string, string>;
 const KIND_LABEL: Record<string, string> = {
   machine: "Machine",
   free: "Free weights",
@@ -554,23 +616,39 @@ export function MySpaceGymBoard() {
             </div>
           </form>
 
-          <datalist id="ms-gym-ex-names">
-            {EXERCISE_NAMES.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
-
-          {lifts.map((lift, i) => (
+          {lifts.map((lift, i) => {
+            const listed = EXERCISE_NAMES.includes(lift.name);
+            return (
             <article key={i} className="ms-gym-lift">
               <div className="form-grid ms-module-form">
                 <div className="field">
                   <label>Exercise</label>
-                  <input
-                    list="ms-gym-ex-names"
-                    value={lift.name}
-                    onChange={(e) => patchLift(i, { name: e.target.value })}
-                    placeholder="Leg press"
-                  />
+                  <select
+                    value={listed ? lift.name : "__custom__"}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "__custom__") {
+                        patchLift(i, { name: "" });
+                        return;
+                      }
+                      patchLift(i, { name: v, kind: EXERCISE_KIND[v] || lift.kind });
+                    }}
+                  >
+                    {EXERCISE_NAMES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                    <option value="__custom__">Custom…</option>
+                  </select>
+                  {!listed ? (
+                    <input
+                      value={lift.name}
+                      onChange={(e) => patchLift(i, { name: e.target.value })}
+                      placeholder="Type a custom exercise"
+                      style={{ marginTop: "0.4rem" }}
+                    />
+                  ) : null}
                 </div>
                 <div className="field">
                   <label>Type</label>
@@ -662,7 +740,8 @@ export function MySpaceGymBoard() {
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
 
           <div className="hero-actions" style={{ margin: "0.75rem 0" }}>
             <button
