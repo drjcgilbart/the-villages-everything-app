@@ -64,7 +64,7 @@ export function playAlarmTone(
     return () => {};
   }
 
-  const stopAt = Date.now() + Math.min(30, Math.max(1, durationSec)) * 1000;
+  const stopAt = Date.now() + Math.min(300, Math.max(1, durationSec)) * 1000;
   let cancelled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 

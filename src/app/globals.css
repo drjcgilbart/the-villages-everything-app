@@ -2419,6 +2419,339 @@ button.ms-home-card:hover {
   white-space: pre-wrap;
 }
 
+.ms-h-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 0.45rem;
+  margin: 0.75rem 0;
+}
+
+.ms-h-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ms-h-tile span {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.ms-h-tile.active {
+  background: rgba(31, 107, 74, 0.14);
+  color: var(--ink);
+  border-color: rgba(31, 107, 74, 0.4);
+}
+
+.ms-h-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.ms-h-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 74, 0.12);
+  color: var(--palm-deep);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ms-h-pill::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #1f6b4a;
+}
+
+.ms-h-quote {
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(232, 184, 74, 0.12);
+  margin-bottom: 1rem;
+}
+
+.ms-h-quote p {
+  margin: 0.25rem 0 0;
+  font-style: italic;
+}
+
+.ms-h-quote span {
+  font-style: normal;
+  color: var(--muted);
+}
+
+.ms-stat em {
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.ms-h-progress {
+  margin: 1rem 0;
+}
+
+.ms-h-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.ms-h-bar,
+.ms-h-mini {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(31, 107, 74, 0.12);
+  overflow: hidden;
+}
+
+.ms-h-bar span,
+.ms-h-mini span {
+  display: block;
+  height: 100%;
+  background: #1f6b4a;
+}
+
+.ms-h-mini {
+  margin: 0.25rem 0 0.45rem;
+}
+
+.ms-h-mini-steps span {
+  background: #2b6cb0;
+}
+
+.ms-h-mini-protein span {
+  background: #c05621;
+}
+
+.ms-h-mini-sleep span {
+  background: #553c9a;
+}
+
+.ms-h-track {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 0.92rem;
+  margin-top: 0.65rem;
+}
+
+.ms-h-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.ms-h-habits {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.ms-h-chart {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.ms-h-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  height: 120px;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.ms-h-week-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.ms-h-week-bar {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(31, 107, 74, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ms-h-week-bar span {
+  display: block;
+  width: 100%;
+  background: #1f6b4a;
+  border-radius: 8px 8px 0 0;
+}
+
+.ms-h-week-bar span.complete {
+  background: #1f6b4a;
+}
+
+.ms-h-week-bar span.partial {
+  background: #d69e2e;
+}
+
+.ms-h-week-bar span.miss {
+  background: #c53030;
+}
+
+.ms-h-week-bar span.empty,
+.ms-h-week-bar span.q-empty {
+  background: rgba(91, 101, 115, 0.25);
+}
+
+.ms-h-week-bar span.q-great {
+  background: #2b6cb0;
+}
+
+.ms-h-week-bar span.q-good {
+  background: #1f6b4a;
+}
+
+.ms-h-week-bar span.q-average {
+  background: #d69e2e;
+}
+
+.ms-h-week-bar span.q-below-average {
+  background: #dd6b20;
+}
+
+.ms-h-week-bar span.q-terrible {
+  background: #c53030;
+}
+
+.ms-h-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.ms-h-range-btn {
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ms-h-range-btn.active {
+  background: rgba(31, 107, 74, 0.14);
+  color: var(--ink);
+  border-color: rgba(31, 107, 74, 0.4);
+}
+
+.ms-h-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.ms-h-times strong,
+.ms-h-times label {
+  display: block;
+  color: var(--ink);
+}
+
+.ms-h-late {
+  border-color: rgba(197, 48, 48, 0.45) !important;
+  background: rgba(197, 48, 48, 0.06) !important;
+}
+
+.ms-h-med {
+  margin: 0.85rem 0;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ms-h-dose {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.ms-h-q {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ms-h-q label {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ms-h-q label.active {
+  background: rgba(31, 107, 74, 0.14);
+  border-color: rgba(31, 107, 74, 0.4);
+}
+
+.ms-h-q input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ms-h-clear {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1.25rem;
+  padding: 0.85rem;
+  border: 1px dashed rgba(197, 48, 48, 0.35);
+  border-radius: 14px;
+}
+
+.ms-h-clear p {
+  margin: 0.2rem 0 0;
+}
+
 /* Weather board */
 .ms-wx-hero {
   display: flex;
