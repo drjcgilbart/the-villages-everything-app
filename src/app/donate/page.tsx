@@ -34,8 +34,8 @@ export default async function DonatePage({
             </p>
           </div>
           <PageHeroMascot
-            src="/graphics/mascot-logo.jpg"
-            alt="Golf-ball mascot ready for a cup of Joe"
+            src="/graphics/mascot-support.jpg"
+            alt="Golf-ball mascot looking hilariously broke — empty mug, empty wallet, hoping you’ll buy a membership"
           />
         </div>
       </div>
