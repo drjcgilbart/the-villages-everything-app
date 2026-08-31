@@ -73,13 +73,49 @@ export type NewsBoard = {
   saved: { id: string; title: string; url: string }[];
 };
 
+export type EntShow = {
+  id: string;
+  title: string;
+  when: string;
+  venue: string;
+  date: string;
+  time: string;
+  confirmation: string;
+  notes: string;
+};
+export type EntClub = {
+  id: string;
+  name: string;
+  when: string;
+  rec: string;
+  location: string;
+  kind: string;
+  days: string[];
+  interval: number;
+  time: string;
+  extraDates: { date: string; time: string }[];
+  notes: string;
+};
+export type EntWatch = {
+  id: string;
+  title: string;
+  type: string;
+  where: string;
+  date: string;
+  time: string;
+  days: string[];
+  notes: string;
+  done?: boolean;
+};
 export type EntertainmentBoard = {
   tonightSquare: string;
   tonightNotes: string;
   tonightDate: string;
-  watchLater: NoteItem[];
-  shows: { id: string; title: string; when: string; venue: string; notes: string }[];
-  clubs: { id: string; name: string; when: string; rec: string }[];
+  watchLater: EntWatch[];
+  shows: EntShow[];
+  clubs: EntClub[];
+  golfFavs: string[];
+  pickleFavs: string[];
 };
 
 export type FoodFavorite = {
@@ -289,6 +325,8 @@ export function emptyBoards(): MemberBoards {
       watchLater: [],
       shows: [],
       clubs: [],
+      golfFavs: [],
+      pickleFavs: [],
     },
     food: {
       favorites: [],
@@ -373,14 +411,17 @@ function showRows(raw: unknown): EntertainmentBoard["shows"] {
   for (const row of raw.slice(0, MAX_ITEMS)) {
     if (!row || typeof row !== "object") continue;
     const r = row as Record<string, unknown>;
-    const title = clip(r.title || r.text, 80);
+    const title = clip(r.title || r.text, 160);
     if (!title) continue;
     out.push({
       id: clip(r.id, 40) || uid("sh"),
       title,
       when: clip(r.when || r.extra, 60),
       venue: clip(r.venue, 80),
-      notes: clip(r.notes, 200),
+      date: clip(r.date, 12),
+      time: clip(r.time, 8),
+      confirmation: clip(r.confirmation, 80),
+      notes: clip(r.notes, 400),
     });
   }
   return out;
@@ -392,13 +433,51 @@ function clubRows(raw: unknown): EntertainmentBoard["clubs"] {
   for (const row of raw.slice(0, MAX_ITEMS)) {
     if (!row || typeof row !== "object") continue;
     const r = row as Record<string, unknown>;
-    const name = clip(r.name || r.text, 80);
+    const name = clip(r.name || r.text, 120);
     if (!name) continue;
+    const days = Array.isArray(r.days) ? r.days.map((d) => String(d)).slice(0, 7) : [];
+    const extraDates = Array.isArray(r.extraDates)
+      ? (r.extraDates as { date?: string; time?: string }[])
+          .map((d) => ({ date: clip(d.date, 12), time: clip(d.time, 8) }))
+          .filter((d) => d.date)
+          .slice(0, 20)
+      : [];
     out.push({
       id: clip(r.id, 40) || uid("cl"),
       name,
       when: clip(r.when || r.extra, 60),
-      rec: clip(r.rec, 80),
+      rec: clip(r.rec || r.location, 80),
+      location: clip(r.location || r.rec, 80),
+      kind: clip(r.kind, 20) || "weekly",
+      days,
+      interval: Number(r.interval) === 2 ? 2 : 1,
+      time: clip(r.time, 8),
+      extraDates,
+      notes: clip(r.notes, 400),
+    });
+  }
+  return out;
+}
+
+function watchRows(raw: unknown): EntertainmentBoard["watchLater"] {
+  if (!Array.isArray(raw)) return [];
+  const out: EntertainmentBoard["watchLater"] = [];
+  for (const row of raw.slice(0, MAX_ITEMS)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const title = clip(r.title || r.text, 120);
+    if (!title) continue;
+    const days = Array.isArray(r.days) ? r.days.map((d) => String(d)).slice(0, 7) : [];
+    out.push({
+      id: clip(r.id, 40) || uid("wl"),
+      title,
+      type: clip(r.type, 20) || "movie",
+      where: clip(r.where || r.extra, 80),
+      date: clip(r.date, 12),
+      time: clip(r.time, 8),
+      days,
+      notes: clip(r.notes, 400),
+      done: r.done === true,
     });
   }
   return out;
@@ -407,11 +486,17 @@ function clubRows(raw: unknown): EntertainmentBoard["clubs"] {
 function sanitizeEnt(raw: Partial<EntertainmentBoard> | undefined): EntertainmentBoard {
   return {
     tonightSquare: clip(raw?.tonightSquare, 60),
-    tonightNotes: clip(raw?.tonightNotes, 200),
+    tonightNotes: clip(raw?.tonightNotes, 400),
     tonightDate: clip(raw?.tonightDate, 12),
-    watchLater: notes(raw?.watchLater),
+    watchLater: watchRows(raw?.watchLater),
     shows: showRows(raw?.shows),
     clubs: clubRows(raw?.clubs),
+    golfFavs: Array.isArray(raw?.golfFavs)
+      ? raw!.golfFavs.map((s) => clip(s, 40)).filter(Boolean).slice(0, 40)
+      : [],
+    pickleFavs: Array.isArray(raw?.pickleFavs)
+      ? raw!.pickleFavs.map((s) => clip(s, 40)).filter(Boolean).slice(0, 40)
+      : [],
   };
 }
 

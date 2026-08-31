@@ -2319,6 +2319,31 @@ button.ms-home-card:hover {
   text-align: center;
 }
 
+.ms-score-pm {
+  display: flex;
+  align-items: center;
+  gap: 0.12rem;
+}
+
+.ms-score-pm input {
+  flex: 1;
+  min-width: 0;
+}
+
+.ms-score-pm button {
+  flex: 0 0 1.35rem;
+  width: 1.35rem;
+  height: 1.6rem;
+  padding: 0;
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  background: color-mix(in srgb, var(--navy) 70%, black);
+  color: var(--gold);
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .ms-subnav {
   display: flex;
   flex-wrap: wrap;

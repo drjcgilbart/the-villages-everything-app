@@ -10,8 +10,8 @@ import {
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
 
+export { MySpaceEntertainmentBoard } from "@/components/MySpaceEntertainmentBoard";
 export {
-  MySpaceEntertainmentBoard,
   MySpaceFoodBoard,
   MySpaceGolfLogBoard,
   MySpaceGymBoard,
