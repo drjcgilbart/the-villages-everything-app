@@ -2506,6 +2506,115 @@ button.ms-home-card:hover {
   background: #1f6b4a;
 }
 
+.ms-cal-week {
+  display: grid;
+  gap: 1px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 0.75rem 0 1.1rem;
+  font-size: 0.78rem;
+}
+
+.ms-cal-gutter,
+.ms-cal-head,
+.ms-cal-slot {
+  background: color-mix(in srgb, var(--panel, #0f2744) 92%, black);
+  padding: 0.28rem 0.3rem;
+}
+
+.ms-cal-gutter {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-align: right;
+}
+
+.ms-cal-head {
+  font-weight: 800;
+  text-align: center;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ms-cal-head.is-today,
+.ms-cal-mcell.is-today {
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.ms-cal-slot {
+  min-height: 2.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ms-cal-allday {
+  min-height: 2.4rem;
+}
+
+.ms-cal-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.15rem 0.3rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-cal-chip.kind-show { background: color-mix(in srgb, #c45c26 35%, transparent); }
+.ms-cal-chip.kind-club { background: color-mix(in srgb, #1f6b4a 40%, transparent); }
+.ms-cal-chip.kind-watch { background: color-mix(in srgb, #3d5a80 45%, transparent); }
+.ms-cal-chip.kind-golf { background: color-mix(in srgb, #2f6f3e 40%, transparent); }
+.ms-cal-chip.kind-pickle { background: color-mix(in srgb, #c9a227 35%, transparent); }
+.ms-cal-chip.kind-square { background: color-mix(in srgb, #8b3a62 40%, transparent); }
+.ms-cal-chip.is-done { opacity: 0.55; text-decoration: line-through; }
+
+.ms-cal-month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 0.75rem 0 1.1rem;
+}
+
+.ms-cal-dow {
+  padding: 0.35rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--panel, #0f2744) 92%, black);
+}
+
+.ms-cal-mcell {
+  min-height: 5.2rem;
+  padding: 0.3rem;
+  text-align: left;
+  border: 0;
+  background: color-mix(in srgb, var(--panel, #0f2744) 92%, black);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  cursor: pointer;
+}
+
+.ms-cal-mcell.out { opacity: 0.45; }
+.ms-cal-mcell em { font-style: normal; font-weight: 800; font-size: 0.78rem; }
+
 .ms-h-quote {
   padding: 0.85rem 1rem;
   border-radius: 14px;

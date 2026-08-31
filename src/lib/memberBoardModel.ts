@@ -288,6 +288,22 @@ export type PickleballLogBoard = {
   looking: NoteItem[];
 };
 
+export type CalTask = {
+  id: string;
+  title: string;
+  notes: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  timerMinutes: number | null;
+  timerEndsAt: number | null;
+  timerPausedMs: number | null;
+  alarmEnabled: boolean;
+  done: boolean;
+};
+export type CalendarBoard = { tasks: CalTask[] };
+
 export type MemberBoards = {
   news: NewsBoard;
   entertainment: EntertainmentBoard;
@@ -299,7 +315,7 @@ export type MemberBoards = {
   pickleballLog: PickleballLogBoard;
   health: Record<string, unknown>;
   pets: Record<string, unknown>;
-  calendar: { items: unknown[] };
+  calendar: CalendarBoard;
   portfolio: { holdings: unknown[] };
   weather: Record<string, unknown>;
 };
@@ -371,7 +387,7 @@ export function emptyBoards(): MemberBoards {
     },
     health: {},
     pets: {},
-    calendar: { items: [] },
+    calendar: { tasks: [] },
     portfolio: { holdings: [] },
     weather: {},
   };
@@ -984,10 +1000,36 @@ export function sanitizeBoard(
     case "pets":
       return jsonBlob(r, {});
     case "calendar": {
-      const blob = jsonBlob(r, { items: [] });
-      return {
-        items: Array.isArray(blob.items) ? blob.items.slice(0, 80) : [],
+      const blob = jsonBlob(r, { items: [], tasks: [] }) as {
+        items?: unknown;
+        tasks?: unknown;
       };
+      const fromTasks = Array.isArray(blob.tasks) ? blob.tasks : [];
+      const fromItems = Array.isArray(blob.items) ? blob.items : [];
+      const raw = fromTasks.length ? fromTasks : fromItems;
+      const tasks: CalTask[] = [];
+      for (const row of raw.slice(0, 80)) {
+        if (!row || typeof row !== "object") continue;
+        const t = row as Record<string, unknown>;
+        const title = clip(t.title || t.text, 200);
+        if (!title) continue;
+        const timerMin = Number(t.timerMinutes);
+        tasks.push({
+          id: clip(t.id, 40) || uid("cal"),
+          title,
+          notes: clip(t.notes || t.when || t.extra, 500),
+          startDate: clip(t.startDate || t.date, 12),
+          startTime: clip(t.startTime || t.time, 8),
+          endDate: clip(t.endDate, 12),
+          endTime: clip(t.endTime, 8),
+          timerMinutes: Number.isFinite(timerMin) && timerMin > 0 ? Math.min(1440, timerMin) : null,
+          timerEndsAt: typeof t.timerEndsAt === "number" ? t.timerEndsAt : null,
+          timerPausedMs: typeof t.timerPausedMs === "number" ? t.timerPausedMs : null,
+          alarmEnabled: t.alarmEnabled === true,
+          done: t.done === true,
+        });
+      }
+      return { tasks };
     }
     case "portfolio": {
       const blob = jsonBlob(r, { holdings: [] });
