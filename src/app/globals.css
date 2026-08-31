@@ -2752,6 +2752,86 @@ button.ms-home-card:hover {
   margin: 0.2rem 0 0;
 }
 
+.ms-gym-lift {
+  margin: 0.85rem 0;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ms-gym-set {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0.35rem 0;
+}
+
+.ms-gym-place-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.ms-gym-place {
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ms-gym-place h4 {
+  margin: 0 0 0.35rem;
+}
+
+.ms-gym-place p {
+  margin: 0.2rem 0;
+}
+
+.ms-gym-pr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.55rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.ms-gym-pr {
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(232, 184, 74, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ms-gym-pr span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.ms-gym-session {
+  margin: 0.65rem 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ms-gym-session-main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.ms-gym-session-main p {
+  margin: 0.15rem 0 0;
+}
+
 /* Weather board */
 .ms-wx-hero {
   display: flex;

@@ -92,10 +92,12 @@ export type FoodBoard = {
 };
 
 export type GymSet = { weight: number | ""; reps: number | ""; seconds: number | "" };
-export type GymLift = { name: string; kind: string; sets: GymSet[] };
+export type GymLift = { name: string; kind: string; equipment: string; sets: GymSet[] };
 export type GymWorkout = {
   id: string;
   date: string;
+  time: string;
+  gymId: string;
   gymName: string;
   durationMin: number | "";
   felt: string;
@@ -106,7 +108,12 @@ export type GymPlace = {
   id: string;
   name: string;
   kind: string;
+  chain: string;
+  location: string;
   address: string;
+  phone: string;
+  hours: string;
+  membership: string;
   notes: string;
 };
 export type GymSupplement = {
@@ -408,6 +415,8 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
       out.push({
         id: clip(r.id, 40) || uid("wo"),
         date: clip(r.date, 12),
+        time: clip(r.time, 8),
+        gymId: clip(r.gymId, 80),
         gymName: clip(r.extra, 80),
         durationMin: "",
         felt: "",
@@ -421,8 +430,9 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
           .map((l) => ({
             name: clip(l?.name, 80),
             kind: clip(l?.kind, 20) || "machine",
+            equipment: clip(l?.equipment, 80),
             sets: Array.isArray(l?.sets)
-              ? l.sets.slice(0, 12).map((s) => ({
+              ? l.sets.slice(0, 20).map((s) => ({
                   weight: s?.weight ?? "",
                   reps: s?.reps ?? "",
                   seconds: s?.seconds ?? "",
@@ -434,6 +444,8 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
     out.push({
       id: clip(r.id, 40) || uid("wo"),
       date: clip(r.date, 12),
+      time: clip(r.time, 8),
+      gymId: clip(r.gymId, 80),
       gymName: clip(r.gymName, 80),
       durationMin: typeof r.durationMin === "number" ? r.durationMin : "",
       felt: clip(r.felt, 20),
@@ -508,8 +520,13 @@ export function sanitizeBoard(
                 id: clip(p?.id, 40) || uid("gy"),
                 name: clip(p?.name, 80),
                 kind: clip(p?.kind, 20) || "independent",
+                chain: clip(p?.chain, 40),
+                location: clip(p?.location, 80),
                 address: clip(p?.address, 120),
-                notes: clip(p?.notes, 200),
+                phone: clip(p?.phone, 40),
+                hours: clip(p?.hours, 120),
+                membership: clip(p?.membership, 80),
+                notes: clip(p?.notes, 400),
               }))
               .filter((p) => p.name)
               .slice(0, 40)
