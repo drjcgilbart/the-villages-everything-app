@@ -2331,17 +2331,72 @@ button.ms-home-card:hover {
 }
 
 .ms-score-pm button {
-  flex: 0 0 1.35rem;
-  width: 1.35rem;
-  height: 1.6rem;
+  flex: 0 0 1.5rem;
+  width: 1.5rem;
+  height: 1.7rem;
   padding: 0;
-  border-radius: 0.35rem;
-  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
-  background: color-mix(in srgb, var(--navy) 70%, black);
-  color: var(--gold);
+  border-radius: 0.4rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
+}
+.ms-golf-scroll {
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.ms-golf-card {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+.ms-golf-card th,
+.ms-golf-card td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0.28rem;
+  text-align: center;
+  vertical-align: middle;
+}
+.ms-golf-card th:first-child,
+.ms-golf-card td:first-child {
+  text-align: left;
+  min-width: 7.5rem;
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 1;
+}
+.ms-golf-card input {
+  width: 100%;
+  font: inherit;
+  margin: 0.1rem 0;
+  padding: 0.2rem 0.35rem;
+}
+.ms-score-pm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+@media print {
+  .ms-dash-nav,
+  .ms-subnav,
+  .hero-actions,
+  .site-header,
+  .site-footer,
+  .ms-sample-hint {
+    display: none !important;
+  }
+  .ms-golf-print {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
 }
 
 .ms-subnav {

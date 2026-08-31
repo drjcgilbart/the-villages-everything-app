@@ -1382,10 +1382,12 @@ function GolfPlay({
                 id: uid("gr"),
                 date: date || todayKey(),
                 course: course || "Villages course",
+                courseId: "",
                 holes,
                 scores,
                 par,
                 notes: notes.slice(0, 400),
+                players: [{ name: "Me", hdcp: "", scores }],
               },
               ...golf.value.rounds,
             ].slice(0, 60),
@@ -1483,7 +1485,19 @@ function GolfPlay({
           if (!look.trim()) return;
           void golf.save({
             ...golf.value,
-            looking: [{ id: uid("gl"), text: look.trim(), extra: "" }, ...golf.value.looking].slice(0, 40),
+            looking: [
+              {
+                id: uid("gl"),
+                name: "",
+                phone: "",
+                date: "",
+                time: "",
+                need: "Looking for a group",
+                hdcp: "",
+                notes: look.trim(),
+              },
+              ...golf.value.looking,
+            ].slice(0, 40),
           });
           setLook("");
         }}
@@ -1497,8 +1511,10 @@ function GolfPlay({
         {golf.value.looking.map((item) => (
           <li key={item.id}>
             <div>
-              <strong>{item.text}</strong>
-              {item.extra ? <span>{item.extra}</span> : null}
+              <strong>{item.notes || item.need}</strong>
+              {item.date || item.time ? (
+                <span>{[item.date, item.time].filter(Boolean).join(" ")}</span>
+              ) : null}
             </div>
             <button
               type="button"
@@ -1676,11 +1692,18 @@ function PicklePlay({
               {
                 id: uid("pm"),
                 date: match.date,
+                time: match.time || "",
+                format: match.format || "doubles",
                 partner: match.partner,
                 opponent: match.opponent,
+                opp1: match.opponent,
+                opp2: "",
                 score: match.score,
                 court: match.court,
+                courtId: "",
                 win: match.win,
+                postedDupr: false,
+                notes: "",
               },
               ...pickle.value.matches,
             ].slice(0, 80),
@@ -1772,7 +1795,14 @@ function PicklePlay({
               void pickle.save({
                 ...pickle.value,
                 people: [
-                  { id: uid("pp"), name: person.trim().slice(0, 60), notes: "" },
+                  {
+                    id: uid("pp"),
+                    name: person.trim().slice(0, 60),
+                    notes: "",
+                    dupr: "",
+                    kind: "both",
+                    phone: "",
+                  },
                   ...pickle.value.people,
                 ].slice(0, 40),
               });
@@ -1825,7 +1855,21 @@ function PicklePlay({
           if (!look.trim()) return;
           void pickle.save({
             ...pickle.value,
-            looking: [{ id: uid("pl"), text: look.trim() }, ...pickle.value.looking].slice(0, 40),
+            looking: [
+              {
+                id: uid("pl"),
+                name: pickle.value.profile.name || "",
+                need: "1",
+                format: "doubles",
+                court: "",
+                courtName: "",
+                date: "",
+                time: "",
+                contact: "",
+                notes: look.trim(),
+              },
+              ...pickle.value.looking,
+            ].slice(0, 40),
           });
           setLook("");
         }}
@@ -1839,7 +1883,7 @@ function PicklePlay({
         {pickle.value.looking.map((item) => (
           <li key={item.id}>
             <div>
-              <strong>{item.text}</strong>
+              <strong>{item.notes || item.need}</strong>
             </div>
             <button
               type="button"

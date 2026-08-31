@@ -229,6 +229,11 @@ export const GOLF_HUB = {
   phone: "352-753-4653",
   questions: "352-750-4558",
   admin: "352-753-3396",
+  requestPdf: "https://www.golfthevillages.com/tee-times/Request%20Worksheet.pdf",
+  ivrPdf: "https://www.golfthevillages.com/tee-times/IVRTeeTimeSystem.pdf",
+  teesFlyer: "https://www.thevillages.com/wp-content/uploads/2023/07/Tee_Times_Flyer.pdf",
+  whatsNew: "https://www.golfthevillages.com/whatsnew/",
+  mensLadies: "https://www.golfthevillages.com/championship-golf/",
 };
 
 export const PICKLE_HUB = {

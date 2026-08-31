@@ -293,40 +293,94 @@ export type MemoriesBoard = {
   photos: MemoryItem[];
 };
 
+export type GolfPlayerCard = {
+  name: string;
+  hdcp: string;
+  scores: (number | "")[];
+};
 export type GolfRound = {
   id: string;
   date: string;
   course: string;
+  courseId: string;
   holes: 9 | 18;
   scores: (number | "")[];
   par: number[];
   notes: string;
+  players: GolfPlayerCard[];
 };
+export type GolfLookingNote = {
+  id: string;
+  name: string;
+  phone: string;
+  date: string;
+  time: string;
+  need: string;
+  hdcp: string;
+  notes: string;
+};
+export type GolfRegular = { id: string; name: string; hdcp: string; phone: string };
 export type GolfLogBoard = {
   rounds: GolfRound[];
   teeTimes: { id: string; date: string; time: string; course: string; notes: string }[];
-  looking: NoteItem[];
+  looking: GolfLookingNote[];
+  regulars: GolfRegular[];
+  favoriteCourseIds: string[];
+  myName: string;
+  myHdcp: string;
 };
 
 export type PickleMatch = {
   id: string;
   date: string;
+  time: string;
+  format: string;
   partner: string;
   opponent: string;
+  opp1: string;
+  opp2: string;
   score: string;
   court: string;
+  courtId: string;
   win: boolean;
+  postedDupr: boolean;
+  notes: string;
 };
+export type PicklePerson = {
+  id: string;
+  name: string;
+  notes: string;
+  dupr: string;
+  kind: string;
+  phone: string;
+};
+export type PickleLookingNote = {
+  id: string;
+  name: string;
+  need: string;
+  format: string;
+  court: string;
+  courtName: string;
+  date: string;
+  time: string;
+  contact: string;
+  notes: string;
+};
+export type PickleLeague = { id: string; name: string; when: string; notes: string };
 export type PickleballLogBoard = {
   profile: {
     name: string;
     duprSingles: string;
     duprDoubles: string;
     notes: string;
+    phone: string;
+    pcvg: string;
   };
   matches: PickleMatch[];
-  people: { id: string; name: string; notes: string }[];
-  looking: NoteItem[];
+  people: PicklePerson[];
+  looking: PickleLookingNote[];
+  favoriteCourtIds: string[];
+  leagues: PickleLeague[];
 };
 
 export type CalTask = {
@@ -1056,45 +1110,76 @@ export function sanitizeBoard(
     }
     case "golfLog": {
       const g = r as Partial<GolfLogBoard>;
+      const samples = sampleBoards().golfLog;
+      const padScores = (raw: unknown, holes: number): (number | "")[] => {
+        const scores = Array.isArray(raw) ? (raw as (number | "")[]).slice(0, holes) : [];
+        while (scores.length < holes) scores.push("");
+        return scores;
+      };
       const rounds: GolfRound[] = Array.isArray(g.rounds)
         ? g.rounds
             .map((row) => {
               const rec = row as unknown as Record<string, unknown>;
-              if (typeof rec.text === "string" && rec.text && !rec.course) {
-                return {
-                  id: clip(rec.id, 40) || uid("rd"),
-                  date: clip(rec.date, 12),
-                  course: clip(rec.text, 80),
-                  holes: 9 as const,
-                  scores: Array(9).fill("") as (number | "")[],
-                  par: Array(9).fill(3),
-                  notes: clip(rec.extra, 200),
-                };
-              }
               const holes = Number(rec.holes) === 18 ? 18 : 9;
-              const scores = Array.isArray(rec.scores)
-                ? (rec.scores as (number | "")[]).slice(0, holes)
-                : [];
-              while (scores.length < holes) scores.push("");
-              const par = Array.isArray(rec.par)
-                ? (rec.par as number[]).slice(0, holes)
-                : [];
+              const par = Array.isArray(rec.par) ? (rec.par as number[]).slice(0, holes) : [];
               while (par.length < holes) par.push(3);
-              const course = clip(rec.course, 80);
+              const course =
+                clip(rec.course, 80) ||
+                (typeof rec.text === "string" ? clip(rec.text, 80) : "");
               if (!course) return null;
+              let players: GolfPlayerCard[] = Array.isArray(rec.players)
+                ? (rec.players as GolfPlayerCard[])
+                    .map((pl) => ({
+                      name: clip(pl?.name, 40),
+                      hdcp: clip(pl?.hdcp, 8),
+                      scores: padScores(pl?.scores, holes),
+                    }))
+                    .filter((pl) => pl.name || pl.scores.some((s) => s !== ""))
+                    .slice(0, 4)
+                : [];
+              if (!players.length) {
+                players = [
+                  {
+                    name: "Me",
+                    hdcp: "",
+                    scores: padScores(rec.scores, holes),
+                  },
+                ];
+              }
               return {
                 id: clip(rec.id, 40) || uid("rd"),
                 date: clip(rec.date, 12),
                 course,
+                courseId: clip(rec.courseId, 40),
                 holes: holes as 9 | 18,
-                scores,
+                scores: players[0]?.scores || padScores(rec.scores, holes),
                 par,
-                notes: clip(rec.notes, 200),
+                notes: clip(rec.notes || rec.extra, 400),
+                players,
               };
             })
             .filter(Boolean)
             .slice(0, 80) as GolfRound[]
-        : sampleBoards().golfLog.rounds;
+        : samples.rounds;
+      const looking: GolfLookingNote[] = Array.isArray(g.looking)
+        ? g.looking
+            .map((row) => {
+              const rec = row as unknown as Record<string, unknown>;
+              const notesText = clip(rec.notes || rec.text || rec.extra, 400);
+              return {
+                id: clip(rec.id, 40) || uid("lk"),
+                name: clip(rec.name, 60),
+                phone: clip(rec.phone, 40),
+                date: clip(rec.date, 12),
+                time: clip(rec.time, 8),
+                need: clip(rec.need, 40) || "1 more",
+                hdcp: clip(rec.hdcp, 8),
+                notes: notesText,
+              };
+            })
+            .filter((x) => x.notes || x.name || x.date)
+            .slice(0, 40)
+        : samples.looking;
       return {
         rounds,
         teeTimes: Array.isArray(g.teeTimes)
@@ -1108,62 +1193,119 @@ export function sanitizeBoard(
               }))
               .filter((t) => t.course || t.date)
               .slice(0, 40)
-          : sampleBoards().golfLog.teeTimes,
-        looking: Array.isArray(g.looking) ? notes(g.looking) : sampleBoards().golfLog.looking,
+          : samples.teeTimes,
+        looking,
+        regulars: Array.isArray(g.regulars)
+          ? g.regulars
+              .map((x) => ({
+                id: clip(x?.id, 40) || uid("gr"),
+                name: clip(x?.name, 60),
+                hdcp: clip(x?.hdcp, 8),
+                phone: clip(x?.phone, 40),
+              }))
+              .filter((x) => x.name)
+              .slice(0, 40)
+          : samples.regulars,
+        favoriteCourseIds: Array.isArray(g.favoriteCourseIds)
+          ? g.favoriteCourseIds.map((id) => clip(id, 40)).filter(Boolean).slice(0, 80)
+          : samples.favoriteCourseIds,
+        myName: hasKey(g, "myName") ? clip(g.myName, 60) : samples.myName,
+        myHdcp: hasKey(g, "myHdcp") ? clip(g.myHdcp, 8) : samples.myHdcp,
       };
     }
     case "pickleballLog": {
       const p = r as Partial<PickleballLogBoard> & { matches?: unknown };
+      const samples = sampleBoards().pickleballLog;
       const matches: PickleMatch[] = Array.isArray(p.matches)
         ? (p.matches as unknown[])
             .map((row) => {
               const rec = row as Record<string, unknown>;
-              if (typeof rec.text === "string" && rec.text && rec.score == null && rec.opponent == null) {
-                return {
-                  id: clip(rec.id, 40) || uid("pm"),
-                  date: clip(rec.date, 12),
-                  partner: "",
-                  opponent: "",
-                  score: clip(rec.extra, 40),
-                  court: clip(rec.text, 80),
-                  win: false,
-                };
-              }
+              const opp1 = clip(rec.opp1 || rec.opponent, 60);
+              const opp2 = clip(rec.opp2, 60);
+              const score = clip(rec.score, 80);
               return {
                 id: clip(rec.id, 40) || uid("pm"),
                 date: clip(rec.date, 12),
+                time: clip(rec.time, 8),
+                format: clip(rec.format, 20) || "doubles",
                 partner: clip(rec.partner, 60),
-                opponent: clip(rec.opponent, 80),
-                score: clip(rec.score, 40),
+                opponent: opp1,
+                opp1,
+                opp2,
+                score,
                 court: clip(rec.court, 80),
+                courtId: clip(rec.courtId, 40),
                 win: rec.win === true,
+                postedDupr: rec.postedDupr === true,
+                notes: clip(rec.notes, 400),
               };
             })
             .slice(0, 80)
-        : sampleBoards().pickleballLog.matches;
-      const samples = sampleBoards().pickleballLog;
-      const prof = hasKey(p, "profile")
+        : samples.matches;
+      const profRaw = hasKey(p, "profile")
         ? p.profile || { name: "", duprSingles: "", duprDoubles: "", notes: "" }
         : samples.profile;
       return {
         profile: {
-          name: clip(prof.name, 60),
-          duprSingles: clip(prof.duprSingles, 8),
-          duprDoubles: clip(prof.duprDoubles, 8),
-          notes: clip(prof.notes, 400),
+          name: clip(profRaw.name, 60),
+          duprSingles: clip(profRaw.duprSingles, 8),
+          duprDoubles: clip(profRaw.duprDoubles, 8),
+          notes: clip(profRaw.notes, 400),
+          phone: clip((profRaw as { phone?: string }).phone, 40),
+          pcvg: clip((profRaw as { pcvg?: string }).pcvg, 20),
         },
         matches,
         people: Array.isArray(p.people)
           ? p.people
-              .map((pe) => ({
-                id: clip(pe?.id, 40) || uid("pp"),
-                name: clip(pe?.name, 60),
-                notes: clip(pe?.notes, 200),
-              }))
+              .map((pe) => {
+                const rec = pe as unknown as Record<string, unknown>;
+                return {
+                  id: clip(rec.id, 40) || uid("pp"),
+                  name: clip(rec.name, 60),
+                  notes: clip(rec.notes, 200),
+                  dupr: clip(rec.dupr, 8),
+                  kind: clip(rec.kind, 20) || "both",
+                  phone: clip(rec.phone, 40),
+                };
+              })
               .filter((pe) => pe.name)
               .slice(0, 40)
           : samples.people,
-        looking: Array.isArray(p.looking) ? notes(p.looking) : samples.looking,
+        looking: Array.isArray(p.looking)
+          ? p.looking
+              .map((row) => {
+                const rec = row as unknown as Record<string, unknown>;
+                const notesText = clip(rec.notes || rec.text || rec.extra, 400);
+                return {
+                  id: clip(rec.id, 40) || uid("pl"),
+                  name: clip(rec.name, 60),
+                  need: clip(rec.need, 8) || "1",
+                  format: clip(rec.format, 20) || "doubles",
+                  court: clip(rec.court, 40),
+                  courtName: clip(rec.courtName, 80),
+                  date: clip(rec.date, 12),
+                  time: clip(rec.time, 8),
+                  contact: clip(rec.contact || rec.phone, 80),
+                  notes: notesText,
+                };
+              })
+              .filter((x) => x.notes || x.name || x.date)
+              .slice(0, 40)
+          : samples.looking,
+        favoriteCourtIds: Array.isArray(p.favoriteCourtIds)
+          ? p.favoriteCourtIds.map((id) => clip(id, 40)).filter(Boolean).slice(0, 80)
+          : samples.favoriteCourtIds,
+        leagues: Array.isArray(p.leagues)
+          ? p.leagues
+              .map((l) => ({
+                id: clip(l?.id, 40) || uid("lg"),
+                name: clip(l?.name, 80),
+                when: clip(l?.when, 80),
+                notes: clip(l?.notes, 200),
+              }))
+              .filter((l) => l.name)
+              .slice(0, 20)
+          : samples.leagues,
       };
     }
     case "health":
