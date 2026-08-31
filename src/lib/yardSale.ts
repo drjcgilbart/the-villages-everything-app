@@ -196,6 +196,12 @@ export function getMemberById(id: string) {
   return loadYardSale().members.find((m) => m.id === id) || null;
 }
 
+export function getMemberByEmail(email: string) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return null;
+  return loadYardSale().members.find((m) => m.email === e) || null;
+}
+
 export function listMembers() {
   return loadYardSale().members.map(toPublicMember).sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)

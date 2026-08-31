@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { householdClientPayload } from "@/lib/household";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
 import { getSessionMember } from "@/lib/memberAuth";
 import { getMemberSpace, publicSpacePayload } from "@/lib/memberSpace";
@@ -15,7 +16,10 @@ export async function GET() {
   const space = getMemberSpace(member.id);
   return NextResponse.json({
     member: toPublicMember(member),
-    badges: badgesForMemberRecord(member, space.plan),
-    space: publicSpacePayload(space),
+    badges: badgesForMemberRecord(member),
+    space: {
+      ...publicSpacePayload(space),
+      household: householdClientPayload(member.id, space),
+    },
   });
 }

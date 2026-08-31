@@ -20,10 +20,12 @@ export default function MySpacePage() {
             <h1>{PRODUCT_NAMES.doorTitle}</h1>
             <p>
               {PRODUCT_NAMES.doorBlurb} Unlock more by tier:{" "}
-              <strong>Porch Waver</strong> → <strong>Cart Path Regular</strong> →{" "}
-              <strong>Lanai Legend</strong> → <strong>Square Royalty</strong>.
-              If you used the old standalone dashboard, this is the new home
-              for those boards — subscribe on this website, then sign in.
+              <strong>Porch Waver</strong> → <strong>Cart Path Regular</strong>{" "}
+              (1 login) → <strong>Lanai Legend</strong> (2 logins) →{" "}
+              <strong>Square Royalty</strong> (4 logins). Extra household
+              members get their own password and boards. If you used the old
+              standalone dashboard, this is the new home for those boards —
+              subscribe on this website, then sign in.
             </p>
             <p style={{ marginBottom: 0 }}>
               <Link href="/yard-sale/login?next=/my-space" className="text-link">

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { householdClientPayload } from "@/lib/household";
 import { getSessionMember } from "@/lib/memberAuth";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
 import {
@@ -19,13 +20,16 @@ export async function GET() {
     return NextResponse.json({ error: "Please sign in" }, { status: 401 });
   }
   const space = getMemberSpace(member.id);
-  const payload = publicSpacePayload(space);
+  const payload = {
+    ...publicSpacePayload(space),
+    household: householdClientPayload(member.id, space),
+  };
   const favoriteClubs = POPULAR_CLUBS.filter((c) =>
     space.favoriteClubIds.includes(c.id)
   );
   return NextResponse.json({
     member: toPublicMember(member),
-    badges: badgesForMemberRecord(member, space.plan),
+    badges: badgesForMemberRecord(member),
     space: payload,
     favoriteClubs,
     upgradeTiers: paidTiers().map((t) => ({
@@ -33,6 +37,7 @@ export async function GET() {
       label: t.label,
       tagline: t.tagline,
       blurb: t.blurb,
+      householdSeats: t.householdSeats,
     })),
   });
 }
@@ -87,6 +92,9 @@ export async function PATCH(req: NextRequest) {
 
   const next = getMemberSpace(member.id);
   return NextResponse.json({
-    space: publicSpacePayload(next),
+    space: {
+      ...publicSpacePayload(next),
+      household: householdClientPayload(member.id, next),
+    },
   });
 }

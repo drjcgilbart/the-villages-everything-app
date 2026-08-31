@@ -5,9 +5,9 @@ import {
   type FeatureKey,
   type HubPlanId,
   canAccess,
-  effectivePlan,
   featuresForPlan,
   getTier,
+  householdSeatsForPlan,
   isPaidPlan,
   normalizePlan,
 } from "./membershipTiers";
@@ -55,6 +55,11 @@ export type MemberSpaceRecord = {
   topTierNomination?: TopTierNomination | null;
   /** One-time Square Royalty free month. Standing `plan` is what they revert to. */
   trial?: RoyaltyTrial | null;
+  /** Household extras the owner invited (own logins, own boards). */
+  household?: HouseholdState;
+  /** Paying neighbor whose plan this login inherits, if linked. */
+  householdOwnerId?: string;
+  householdJoinedAt?: string | null;
 };
 
 export type RoyaltyTrial = {
@@ -64,6 +69,25 @@ export type RoyaltyTrial = {
 };
 
 export const ROYALTY_TRIAL_DAYS = 30;
+
+export type HouseholdInviteStatus = "pending" | "accepted" | "revoked";
+
+export type HouseholdInvite = {
+  id: string;
+  email: string;
+  name?: string;
+  token: string;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  status: HouseholdInviteStatus;
+};
+
+/** Extra household seats live on the paying neighbor’s space. */
+export type HouseholdState = {
+  memberIds: string[];
+  invites: HouseholdInvite[];
+};
 
 type SpaceFile = {
   spaces: MemberSpaceRecord[];
@@ -131,6 +155,11 @@ function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPla
     planExpiresAt,
     topTierNomination: normalizeTopTier(raw),
     trial: normalizeTrial(raw),
+    household: normalizeHousehold(raw),
+    householdOwnerId: raw.householdOwnerId
+      ? String(raw.householdOwnerId)
+      : undefined,
+    householdJoinedAt: raw.householdJoinedAt || null,
   };
 }
 
@@ -143,6 +172,45 @@ function normalizeTrial(raw: Partial<MemberSpaceRecord>): RoyaltyTrial | null {
     expiresAt: String(t.expiresAt),
     source: String(t.source || "request"),
   };
+}
+
+function normalizeInvite(raw: Partial<HouseholdInvite>): HouseholdInvite | null {
+  if (!raw || typeof raw !== "object") return null;
+  const email = String(raw.email || "").trim().toLowerCase();
+  const token = String(raw.token || "").trim();
+  const status = raw.status;
+  if (!email || !token) return null;
+  if (status !== "pending" && status !== "accepted" && status !== "revoked") {
+    return null;
+  }
+  const createdAt = raw.createdAt || new Date().toISOString();
+  return {
+    id: String(raw.id || token).slice(0, 80),
+    email,
+    name: raw.name ? String(raw.name).slice(0, 80) : undefined,
+    token,
+    createdAt,
+    expiresAt: raw.expiresAt || createdAt,
+    acceptedAt: raw.acceptedAt || null,
+    status,
+  };
+}
+
+function normalizeHousehold(
+  raw: Partial<MemberSpaceRecord>
+): HouseholdState | undefined {
+  const h = raw.household;
+  if (!h || typeof h !== "object") return undefined;
+  const memberIds = Array.isArray(h.memberIds)
+    ? [...new Set(h.memberIds.map(String).filter(Boolean))]
+    : [];
+  const invites = Array.isArray(h.invites)
+    ? h.invites
+        .map((inv) => normalizeInvite(inv))
+        .filter((inv): inv is HouseholdInvite => !!inv)
+    : [];
+  if (!memberIds.length && !invites.length) return undefined;
+  return { memberIds, invites };
 }
 
 export function isRoyaltyTrialActive(space: MemberSpaceRecord): boolean {
@@ -169,13 +237,37 @@ export function standingPlan(space: MemberSpaceRecord): HubPlanId {
   return plan;
 }
 
-/** Plan used for feature unlocks — trial Square Royalty overlays the standing plan. */
-export function accessPlan(space: MemberSpaceRecord): HubPlanId {
+/** Owner’s own unlocks — trial overlay, no household walk. */
+export function ownerAccessPlan(space: MemberSpaceRecord): HubPlanId {
   if (process.env.HUB_MEMBER_OPEN_ACCESS === "true") {
     return "square_royalty";
   }
   if (isRoyaltyTrialActive(space)) return "square_royalty";
   return standingPlan(space);
+}
+
+/**
+ * Plan used for feature unlocks — trial Square Royalty overlays the standing
+ * plan. Linked household members inherit the owner’s access when a seat is
+ * still available (downgrade / trial expiry can park extras on Porch Waver).
+ */
+export function accessPlan(space: MemberSpaceRecord): HubPlanId {
+  if (process.env.HUB_MEMBER_OPEN_ACCESS === "true") {
+    return "square_royalty";
+  }
+  const ownerId = space.householdOwnerId;
+  if (ownerId && ownerId !== space.memberId) {
+    const owner = findMemberSpace(ownerId);
+    if (owner && !owner.householdOwnerId) {
+      const inherited = ownerAccessPlan(owner);
+      const extraSeats = Math.max(0, householdSeatsForPlan(inherited) - 1);
+      const extras = owner.household?.memberIds || [];
+      const idx = extras.indexOf(space.memberId);
+      if (idx >= 0 && idx < extraSeats) return inherited;
+    }
+    return "porch_waver";
+  }
+  return ownerAccessPlan(space);
 }
 
 function plusDaysIso(days: number, from = new Date()) {
@@ -185,6 +277,7 @@ function plusDaysIso(days: number, from = new Date()) {
 }
 
 export function trialAvailable(space: MemberSpaceRecord): boolean {
+  if (space.householdOwnerId) return false;
   if (hasUsedRoyaltyTrial(space)) return false;
   if (isRoyaltyTrialActive(space)) return false;
   if (standingPlan(space) === "square_royalty") return false;
@@ -196,6 +289,11 @@ export function startRoyaltyTrial(
   source = "request"
 ): MemberSpaceRecord {
   const existing = getMemberSpace(memberId);
+  if (existing.householdOwnerId) {
+    throw new Error(
+      "You’re on a household plan. The paying neighbor starts the free month — your boards stay yours."
+    );
+  }
   if (isRoyaltyTrialActive(existing)) {
     throw new Error("Your free Square Royalty month is already running.");
   }
@@ -257,6 +355,13 @@ export async function saveMemberSpacesAsync(data: SpaceFile) {
   return data;
 }
 
+export function findMemberSpace(memberId: string): MemberSpaceRecord | null {
+  if (!memberId) return null;
+  const data = loadMemberSpaces();
+  const existing = data.spaces.find((s) => s.memberId === memberId);
+  return existing ? normalizeRecord(existing) : null;
+}
+
 export function getMemberSpace(memberId: string): MemberSpaceRecord {
   const data = loadMemberSpaces();
   const existing = data.spaces.find((s) => s.memberId === memberId);
@@ -288,6 +393,9 @@ export function updateMemberSpace(
       | "planExpiresAt"
       | "topTierNomination"
       | "trial"
+      | "household"
+      | "householdOwnerId"
+      | "householdJoinedAt"
     >
   >
 ): MemberSpaceRecord {
@@ -358,6 +466,15 @@ export function updateMemberSpace(
   }
   if (patch.trial !== undefined) {
     rec.trial = patch.trial;
+  }
+  if (patch.household !== undefined) {
+    rec.household = patch.household || undefined;
+  }
+  if (patch.householdOwnerId !== undefined) {
+    rec.householdOwnerId = patch.householdOwnerId || undefined;
+  }
+  if (patch.householdJoinedAt !== undefined) {
+    rec.householdJoinedAt = patch.householdJoinedAt || null;
   }
   rec.updatedAt = new Date().toISOString();
   saveMemberSpaces(data);
@@ -496,6 +613,7 @@ export function publicSpacePayload(space: MemberSpaceRecord) {
   const standingTier = getTier(standing);
   const features = featuresForPlan(plan);
   const trialOn = isRoyaltyTrialActive(space);
+  const ownerId = space.householdOwnerId || null;
   return {
     plan,
     planLabel: tier.label,
@@ -516,6 +634,8 @@ export function publicSpacePayload(space: MemberSpaceRecord) {
     trialAvailable: trialAvailable(space),
     standingPlan: standing,
     standingPlanLabel: standingTier.label,
+    householdOwnerId: ownerId,
+    householdSeats: householdSeatsForPlan(plan),
     features,
     tier: {
       id: tier.id,

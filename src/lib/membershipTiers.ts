@@ -47,6 +47,11 @@ export type TierDef = {
   badgeImage: string;
   /** Public list price in USD per month (0 = free). */
   priceUsdPerMonth: number;
+  /**
+   * Total Hub logins on this plan, including the paying neighbor.
+   * Each login keeps its own My Space boards — they are not shared.
+   */
+  householdSeats: number;
   /** Optional Stripe price env key suffix, e.g. HUB → STRIPE_PRICE_HUB */
   stripeEnvKey?: string;
 };
@@ -59,9 +64,10 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Porch",
     tagline: "I wave. You wave. That’s the whole social contract.",
     blurb:
-      "Free neighbor account. My Space door, favorites, shortcuts, and yard-sale posting when approved. You can see every Reboot board as a preview; personalized tools stay behind the glass until you upgrade.",
+      "Free neighbor account — 1 member login (you). My Space door, favorites, shortcuts, and yard-sale posting when approved. You can see every Reboot board as a preview; personalized tools stay behind the glass until you upgrade.",
     badgeImage: "/graphics/badges/porch-waver.jpg",
     priceUsdPerMonth: 0,
+    householdSeats: 1,
   },
   {
     id: "cart_path_regular",
@@ -70,9 +76,10 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Cart Path",
     tagline: "Knows which gate is which (most days).",
     blurb:
-      "Daily dashboard energy: full Villages weather, starred clubs, the investment board, news prefs, and entertainment picks.",
+      "1 member login with their own boards. Daily dashboard energy: full Villages weather, starred clubs, the investment board, news prefs, and entertainment picks.",
     badgeImage: "/graphics/badges/cart-path-regular.jpg",
     priceUsdPerMonth: 1,
+    householdSeats: 1,
     stripeEnvKey: "HUB",
   },
   {
@@ -82,9 +89,10 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Lanai",
     tagline: "Screened-in serenity with a side of spreadsheets.",
     blurb:
-      "The private Reboot: health, pets, food, gym, maintenance, personal calendar, photos & movies, plus golf and pickleball logs.",
+      "2 member logins — you plus one neighbor, each with their own password and My Space data. The private Reboot: health, pets, food, gym, maintenance, personal calendar, photos & movies, plus golf and pickleball logs.",
     badgeImage: "/graphics/badges/lanai-legend.jpg",
     priceUsdPerMonth: 2,
+    householdSeats: 2,
     stripeEnvKey: "PLUS",
   },
   {
@@ -94,9 +102,10 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Royalty",
     tagline: "Front row at the square. Metaphorically. Parking still chaos.",
     blurb:
-      "Everything on the lanai, plus the Royalty lounge, badge flair, and first look at new My Space boards.",
+      "4 member logins — a cart-full of neighbors, each with their own password and My Space data. Everything on the lanai, plus the Royalty lounge, badge flair, and first look at new My Space boards.",
     badgeImage: "/graphics/badges/square-royalty.jpg",
     priceUsdPerMonth: 3,
+    householdSeats: 4,
     stripeEnvKey: "PATRON",
   },
 ];
@@ -271,6 +280,24 @@ export function featuresForPlan(
 export function formatMembershipPrice(tier: TierDef): string {
   if (!tier.priceUsdPerMonth) return "Free";
   return `$${tier.priceUsdPerMonth}/month`;
+}
+
+/** Total Hub logins included with a plan (owner + extra household seats). */
+export function householdSeatsForPlan(
+  plan: AnyStoredPlan | null | undefined
+): number {
+  return getTier(plan).householdSeats;
+}
+
+export function formatHouseholdSeats(seats: number): string {
+  return seats === 1 ? "1 member login" : `${seats} member logins`;
+}
+
+export function householdSeatBlurb(seats: number): string {
+  if (seats <= 1) {
+    return "1 member login — your own boards, nobody else’s.";
+  }
+  return `${seats} member logins — each neighbor gets their own password and their own My Space data.`;
 }
 
 /** Paid tiers members can upgrade into (not free Porch Waver). */

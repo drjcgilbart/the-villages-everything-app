@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   HUB_TIERS,
+  formatHouseholdSeats,
   formatMembershipPrice,
   type HubPlanId,
 } from "@/lib/membershipTiers";
@@ -19,6 +20,7 @@ type SpaceBrief = {
   trialActive?: boolean;
   trialExpiresAt?: string | null;
   standingPlanLabel?: string;
+  householdRole?: "owner" | "member" | "none";
 };
 
 /**
@@ -55,6 +57,7 @@ export function MembershipPlans() {
           trialActive: !!json.space.trialActive,
           trialExpiresAt: json.space.trialExpiresAt || null,
           standingPlanLabel: json.space.standingPlanLabel || json.space.planLabel,
+          householdRole: json.space.household?.role || "owner",
         });
       })
       .catch(() => {
@@ -147,6 +150,7 @@ export function MembershipPlans() {
               </span>
               <h3>{t.label}</h3>
               <p className="ms-tier-price">{formatMembershipPrice(t)}</p>
+              <p className="ms-tier-seats">{formatHouseholdSeats(t.householdSeats)}</p>
               <p className="ms-tier-tagline">{t.tagline}</p>
               <p className="ms-tier-blurb">{TIER_SUMMARY[t.id].blurb}</p>
               <p className="panel-hint">{TIER_SUMMARY[t.id].includes}</p>
@@ -161,7 +165,12 @@ export function MembershipPlans() {
                   boards.
                 </p>
               ) : null}
-              {t.rank > 0 && !included && !native && signedIn && approved ? (
+              {t.rank > 0 &&
+              !included &&
+              !native &&
+              signedIn &&
+              approved &&
+              space?.householdRole !== "member" ? (
                 <button
                   type="button"
                   className="btn btn-primary btn-sm hide-in-native-app"
@@ -172,6 +181,16 @@ export function MembershipPlans() {
                     ? "Starting…"
                     : `Become ${t.label} · ${formatMembershipPrice(t)}`}
                 </button>
+              ) : null}
+              {t.rank > 0 &&
+              !included &&
+              signedIn &&
+              space?.householdRole === "member" ? (
+                <p className="panel-hint" style={{ marginBottom: 0 }}>
+                  Household members don’t buy a second plan. Leave the household
+                  in My Space → Tiers first, or ask the paying neighbor to
+                  upgrade.
+                </p>
               ) : null}
               {t.rank > 0 && !included && signedIn && !approved ? (
                 <p className="pf-form-error" style={{ marginBottom: 0 }}>

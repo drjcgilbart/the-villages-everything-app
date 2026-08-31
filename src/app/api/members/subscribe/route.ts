@@ -22,7 +22,7 @@ function subscriptionLineItem(tier: TierDef) {
       recurring: { interval: "month" as const },
       product_data: {
         name: `The Villages Everything App — ${tier.label}`,
-        description: `${tier.tagline} $${usd}/month. Unlocks My Space boards for this plan (and everything below it).`,
+        description: `${tier.tagline} $${usd}/month. ${tier.householdSeats === 1 ? "1 member login" : `${tier.householdSeats} member logins`} — each with their own My Space. Unlocks boards for this plan (and everything below it).`,
       },
     },
   };
@@ -48,6 +48,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "Your account must be approved before subscribing" },
       { status: 403 }
+    );
+  }
+  const existingSpace = getMemberSpace(member.id);
+  if (existingSpace.householdOwnerId) {
+    return NextResponse.json(
+      {
+        error:
+          "You’re on a household plan. Leave it in My Space → Tiers if you want to buy your own membership.",
+      },
+      { status: 400 }
     );
   }
 

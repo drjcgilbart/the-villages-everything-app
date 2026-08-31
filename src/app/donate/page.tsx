@@ -57,10 +57,11 @@ export default async function DonatePage({
                 Porch Waver is free. Approved neighbors can try{" "}
                 <strong>Square Royalty free for 30 days</strong> — then keep a
                 paid plan or go back to waving from the porch. Paid plans are
-                monthly: <strong>Cart Path Regular $1</strong>,{" "}
-                <strong>Lanai Legend $2</strong>,{" "}
-                <strong>Square Royalty $3</strong>. Each tier keeps everything
-                below it.
+                monthly: <strong>Cart Path Regular $1</strong> (1 member login),{" "}
+                <strong>Lanai Legend $2</strong> (2 member logins),{" "}
+                <strong>Square Royalty $3</strong> (4 member logins). Each extra
+                person gets their own password and their own My Space boards.
+                Each tier keeps everything below it.
               </p>
             </div>
           </div>

@@ -27,8 +27,11 @@ import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import type { PopularClub } from "@/lib/clubs";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import type { PublicMember } from "@/lib/yardSaleTypes";
+import { MySpaceHouseholdPanel } from "@/components/MySpaceHouseholdPanel";
+import type { HouseholdClient } from "@/lib/householdTypes";
 import {
   HUB_TIERS,
+  formatHouseholdSeats,
   formatMembershipPrice,
   type FeatureKey,
   type HubPlanId,
@@ -85,6 +88,9 @@ type SpacePayload = {
     trialAvailable?: boolean;
     standingPlan?: HubPlanId;
     standingPlanLabel?: string;
+    householdOwnerId?: string | null;
+    householdSeats?: number;
+    household?: HouseholdClient;
     tier: {
       id: HubPlanId;
       label: string;
@@ -173,6 +179,37 @@ export function MySpaceDashboard() {
     }
     if (params.get("trial") === "1") {
       setNote("Square Royalty is unlocked for one month. Poke every board. Subscribe if you want to keep it.");
+    }
+    if (params.get("joined") === "household") {
+      setNote("You’re on the household. Your boards stay on this login.");
+      setTab("membership");
+    }
+    const householdToken = params.get("household");
+    if (householdToken && householdToken.length >= 16) {
+      fetch("/api/members/household", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "accept", token: householdToken }),
+      })
+        .then(async (res) => {
+          const j = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(j.error || "Could not join household");
+          await load();
+          setNote("You’re on the household. Your boards stay on this login.");
+          setTab("membership");
+        })
+        .catch((e) => {
+          const msg = e instanceof Error ? e.message : "Could not join household";
+          if (/sign in/i.test(msg)) {
+            setNote(
+              "Sign in — or request a neighbor account with that invite link — then this household can attach to your login."
+            );
+          } else {
+            setNote(msg);
+          }
+          setTab("membership");
+        });
     }
   }, [load]);
 
@@ -370,6 +407,9 @@ export function MySpaceDashboard() {
                 </span>
                 {member?.village ? ` · ${member.village}` : ""} · Plan:{" "}
                 <strong>{planLabel}</strong>
+                {space?.household?.role === "member" && space.household.ownerName
+                  ? ` (on ${space.household.ownerName}’s household)`
+                  : ""}
                 {space?.planTagline ? (
                   <span className="ms-plan-tagline"> — {space.planTagline}</span>
                 ) : null}
@@ -460,7 +500,7 @@ export function MySpaceDashboard() {
                 <div className="ms-hub-group-head">
                   <h4 className="ms-hub-group-title">{tier.label}</h4>
                   <span className="ms-hub-group-price">
-                    {formatMembershipPrice(tier)}
+                    {formatMembershipPrice(tier)} · {formatHouseholdSeats(tier.householdSeats)}
                   </span>
                   <span className="pill">
                     {current ? "Your plan" : included ? "Included" : tier.shortLabel}
@@ -509,7 +549,9 @@ export function MySpaceDashboard() {
         <h3 className="my-space-block-title">Membership tiers</h3>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
           Climb the ladder from porch waves to square royalty. Each tier keeps
-          everything below it.
+          everything below it. Household seats: Cart Path Regular 1 member
+          login, Lanai Legend 2, Square Royalty 4 — each person gets their own
+          password and their own My Space boards.
         </p>
         <RoyaltyTrialOffer
           signedIn={!visitor}
@@ -564,6 +606,7 @@ export function MySpaceDashboard() {
                 </span>
                 <h3>{t.label}</h3>
                 <p className="ms-tier-price">{formatMembershipPrice(t)}</p>
+                <p className="ms-tier-seats">{formatHouseholdSeats(t.householdSeats)}</p>
                 <p className="ms-tier-tagline">{t.tagline}</p>
                 <p className="ms-tier-blurb">{TIER_SUMMARY[t.id].blurb}</p>
                 <p className="panel-hint">{TIER_SUMMARY[t.id].includes}</p>
@@ -572,7 +615,12 @@ export function MySpaceDashboard() {
                     Request membership
                   </Link>
                 ) : null}
-                {t.rank > 0 && !unlocked && !visitor && approved && !inNativeApp && (
+                {t.rank > 0 &&
+                  !unlocked &&
+                  !visitor &&
+                  approved &&
+                  !inNativeApp &&
+                  space?.household?.role !== "member" && (
                   <button
                     type="button"
                     className="btn btn-primary btn-sm hide-in-native-app"
@@ -583,6 +631,15 @@ export function MySpaceDashboard() {
                       ? "Starting…"
                       : `Unlock with ${t.label} · ${formatMembershipPrice(t)}`}
                   </button>
+                )}
+                {t.rank > 0 &&
+                  !unlocked &&
+                  !visitor &&
+                  space?.household?.role === "member" && (
+                  <p className="panel-hint" style={{ marginBottom: 0 }}>
+                    Ask {space.household.ownerName || "the paying neighbor"} to
+                    upgrade — or leave the household to buy your own plan.
+                  </p>
                 )}
                 {t.rank > 0 && !unlocked && !visitor && approved && inNativeApp && (
                   <p className="panel-hint" style={{ marginBottom: 0 }}>
@@ -617,6 +674,15 @@ export function MySpaceDashboard() {
             );
           })}
         </div>
+        {!visitor && space?.household ? (
+          <div style={{ marginTop: "1.1rem" }}>
+            <MySpaceHouseholdPanel
+              household={space.household}
+              onChanged={load}
+              onNote={setNote}
+            />
+          </div>
+        ) : null}
         {upgradeTiers?.length === 0 && (
           <p className="mkt-disclaimer">
             Paid checkout uses Stripe price env vars (
@@ -882,10 +948,11 @@ export function MySpaceDashboard() {
 
       <p className="mkt-disclaimer">
         Tiers:{" "}
-        {HUB_TIERS.map((t) => t.label).join(" → ")}. Locked boards show sample
-        chrome only — never another neighbor’s notes. Membership is sold on the
-        website, not in the iPhone/Android store apps. Not affiliated with The
-        Villages® operators.
+        {HUB_TIERS.map((t) => `${t.label} (${formatHouseholdSeats(t.householdSeats)})`).join(" → ")}.
+        Extra household members get their own login and boards. Locked boards
+        show sample chrome only — never another neighbor’s notes. Membership is
+        sold on the website, not in the iPhone/Android store apps. Not
+        affiliated with The Villages® operators.
       </p>
     </div>
   );

@@ -117,8 +117,10 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "🎟",
     minRank: 0,
     phase: "live",
-    teaser: "Porch Waver → Cart Path Regular → Lanai Legend → Square Royalty.",
-    previewLine: "Each paid tier keeps everything below it.",
+    teaser:
+      "Porch Waver → Cart Path Regular → Lanai Legend → Square Royalty. Household logins: 1 / 1 / 2 / 4.",
+    previewLine:
+      "Each paid tier keeps everything below it. Extra household members get their own login and boards.",
   },
   {
     id: "weather",
@@ -259,25 +261,28 @@ export const TIER_SUMMARY: Record<
   { includes: string; blurb: string }
 > = {
   porch_waver: {
-    includes: "My Space door, favorites, shortcuts, yard-sale posting (when approved)",
+    includes:
+      "1 member login (you). My Space door, favorites, shortcuts, yard-sale posting (when approved)",
     blurb:
-      "Free neighbor account. You can see every Reboot board as a preview. Personalized tools stay behind the glass until you upgrade.",
+      "Free neighbor account — just you. You can see every Reboot board as a preview. Personalized tools stay behind the glass until you upgrade.",
   },
   cart_path_regular: {
-    includes: "Full weather, investments, news prefs, entertainment picks",
+    includes:
+      "1 member login with their own boards. Full weather, investments, news prefs, entertainment picks",
     blurb:
-      "Daily dashboard energy — weather, money, headlines, and your night-out list.",
+      "One login, your own data. Daily dashboard energy — weather, money, headlines, and your night-out list.",
   },
   lanai_legend: {
     includes:
-      "Health, pets, food, gym, maintenance, personal calendar, private photos, golf/pickleball logs",
+      "2 member logins (each with their own password and boards). Health, pets, food, gym, maintenance, personal calendar, private photos, golf/pickleball logs",
     blurb:
-      "The private Reboot: health, pets, kitchen, gym, and the rest of the personal boards.",
+      "You plus one neighbor, each with a separate login and My Space. The private Reboot: health, pets, kitchen, gym, and the rest of the personal boards.",
   },
   square_royalty: {
-    includes: "Royalty lounge, badge flair, early access to new boards",
+    includes:
+      "4 member logins (each with their own password and boards). Royalty lounge, badge flair, early access to new boards",
     blurb:
-      "Everything on the lanai, plus the lounge and first look at new My Space boards.",
+      "A four-seat household — each neighbor keeps their own login and data. Everything on the lanai, plus the lounge and first look at new My Space boards.",
   },
 };
 

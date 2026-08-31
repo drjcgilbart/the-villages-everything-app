@@ -52,10 +52,12 @@ function membersWithPlans() {
       planExpiresAt: pub.planExpiresAt,
       trialActive: pub.trialActive,
       trialExpiresAt: pub.trialExpiresAt,
+      householdOwnerId: pub.householdOwnerId || null,
+      householdSeats: pub.householdSeats,
       goldenLoofah: pub.goldenLoofah,
       donationBadges: pub.donationBadges,
       topTierNomination: pub.topTierNomination,
-      badges: full ? badgesForMemberRecord(full, space.plan) : [],
+      badges: full ? badgesForMemberRecord(full) : [],
     };
   });
 }
@@ -82,6 +84,7 @@ export async function GET() {
       label: t.label,
       shortLabel: t.shortLabel,
       rank: t.rank,
+      householdSeats: t.householdSeats,
     })),
     durableStorage: durable,
     redisStorage: redis,

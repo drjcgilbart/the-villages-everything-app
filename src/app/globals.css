@@ -2023,6 +2023,13 @@ a.my-space-link-card:hover {
   color: var(--palm-deep);
 }
 
+.ms-tier-seats {
+  margin: -0.15rem 0 0.4rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--palm-deep);
+}
+
 .ms-tier-tagline {
   margin: 0 0 0.45rem;
   font-weight: 600;
@@ -2048,6 +2055,59 @@ a.my-space-link-card:hover {
 
 .ms-tier-card .pill {
   align-self: center;
+}
+
+.ms-household {
+  text-align: left;
+  margin-top: 0.25rem;
+}
+
+.ms-household h3 {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.ms-household-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.ms-household-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(28, 36, 48, 0.08);
+  font-size: 0.92rem;
+}
+
+.ms-household-invite {
+  display: grid;
+  gap: 0.55rem;
+}
+
+@media (min-width: 640px) {
+  .ms-household-invite {
+    grid-template-columns: 1.4fr 1fr auto;
+    align-items: end;
+  }
+}
+
+.ms-household-invite-actions,
+.ms-household-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.ms-household-incoming {
+  background: rgba(232, 184, 74, 0.12);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.85rem;
 }
 
 .ms-locked {
