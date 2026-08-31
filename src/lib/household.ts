@@ -1,7 +1,7 @@
 /**
  * Household seats on a Hub membership.
  *
- * Cart Path Regular = 1 login, Lanai Legend = 2, Square Royalty = 4.
+ * Porch Waver = 1 login, Cart Path Regular = 2, Lanai Legend = 3, Square Royalty = 4.
  * Extra people are real Hub members with their own password and My Space
  * boards. They inherit the paying neighbor’s access while a seat is open.
  */
@@ -223,7 +223,7 @@ export function householdClientPayload(
 
   const canInvite = extraSeats > 0 && openSeats > 0;
   let note = householdSeatsForPlan(inherited) <= 1
-    ? "This plan is one login — yours. Lanai Legend adds a second member; Square Royalty covers four, each with their own boards."
+    ? "This plan is one login — yours. Cart Path Regular adds a second member, Lanai Legend three, Square Royalty four — each with their own boards."
     : `This plan includes ${formatHouseholdSeats(seats)}. Invite a neighbor and they get their own password and My Space — not a copy of yours.`;
   if (incoming) {
     note = `${incoming.ownerName} invited you onto their ${incoming.planLabel} (${formatHouseholdSeats(incoming.seats)}). Accept below — your boards stay yours.`;
@@ -274,7 +274,7 @@ export function inviteHouseholdMember(
   const seats = householdSeatsForPlan(plan);
   if (seats <= 1) {
     throw new Error(
-      `${formatHouseholdSeats(seats)} on this plan — just you. Upgrade to Lanai Legend (2) or Square Royalty (4) to add household logins.`
+      `${formatHouseholdSeats(seats)} on this plan — just you. Upgrade to Cart Path Regular (2), Lanai Legend (3), or Square Royalty (4) to add household logins.`
     );
   }
 

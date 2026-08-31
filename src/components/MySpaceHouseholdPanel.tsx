@@ -211,7 +211,8 @@ export function MySpaceHouseholdPanel(props: {
             </form>
           ) : h.extraSeats === 0 ? (
             <p className="panel-hint" style={{ marginBottom: 0 }}>
-              Upgrade to <Link href="/donate">Lanai Legend</Link> for 2 logins or{" "}
+              Upgrade to <Link href="/donate">Cart Path Regular</Link> for 2
+              logins, <Link href="/donate">Lanai Legend</Link> for 3, or{" "}
               <Link href="/donate">Square Royalty</Link> for 4. Each person keeps
               their own My Space.
             </p>

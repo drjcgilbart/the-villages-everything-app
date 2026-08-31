@@ -549,9 +549,9 @@ export function MySpaceDashboard() {
         <h3 className="my-space-block-title">Membership tiers</h3>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
           Climb the ladder from porch waves to square royalty. Each tier keeps
-          everything below it. Household seats: Cart Path Regular 1 member
-          login, Lanai Legend 2, Square Royalty 4 — each person gets their own
-          password and their own My Space boards.
+          everything below it. Household seats: Porch Waver 1 member login,
+          Cart Path Regular 2, Lanai Legend 3, Square Royalty 4 — each person
+          gets their own password and their own My Space boards.
         </p>
         <RoyaltyTrialOffer
           signedIn={!visitor}

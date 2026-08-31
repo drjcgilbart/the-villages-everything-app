@@ -118,7 +118,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     minRank: 0,
     phase: "live",
     teaser:
-      "Porch Waver → Cart Path Regular → Lanai Legend → Square Royalty. Household logins: 1 / 1 / 2 / 4.",
+      "Porch Waver → Cart Path Regular → Lanai Legend → Square Royalty. Household logins: 1 / 2 / 3 / 4.",
     previewLine:
       "Each paid tier keeps everything below it. Extra household members get their own login and boards.",
   },
@@ -268,15 +268,15 @@ export const TIER_SUMMARY: Record<
   },
   cart_path_regular: {
     includes:
-      "1 member login with their own boards. Full weather, investments, news prefs, entertainment picks",
+      "2 member logins (each with their own password and boards). Full weather, investments, news prefs, entertainment picks",
     blurb:
-      "One login, your own data. Daily dashboard energy — weather, money, headlines, and your night-out list.",
+      "You plus one neighbor, each with a separate login and My Space. Daily dashboard energy — weather, money, headlines, and your night-out list.",
   },
   lanai_legend: {
     includes:
-      "2 member logins (each with their own password and boards). Health, pets, food, gym, maintenance, personal calendar, private photos, golf/pickleball logs",
+      "3 member logins (each with their own password and boards). Health, pets, food, gym, maintenance, personal calendar, private photos, golf/pickleball logs",
     blurb:
-      "You plus one neighbor, each with a separate login and My Space. The private Reboot: health, pets, kitchen, gym, and the rest of the personal boards.",
+      "You plus two neighbors, each with a separate login and My Space. The private Reboot: health, pets, kitchen, gym, and the rest of the personal boards.",
   },
   square_royalty: {
     includes:

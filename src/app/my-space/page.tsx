@@ -20,8 +20,9 @@ export default function MySpacePage() {
             <h1>{PRODUCT_NAMES.doorTitle}</h1>
             <p>
               {PRODUCT_NAMES.doorBlurb} Unlock more by tier:{" "}
-              <strong>Porch Waver</strong> → <strong>Cart Path Regular</strong>{" "}
-              (1 login) → <strong>Lanai Legend</strong> (2 logins) →{" "}
+              <strong>Porch Waver</strong> (1 login) →{" "}
+              <strong>Cart Path Regular</strong> (2 logins) →{" "}
+              <strong>Lanai Legend</strong> (3 logins) →{" "}
               <strong>Square Royalty</strong> (4 logins). Extra household
               members get their own password and boards. If you used the old
               standalone dashboard, this is the new home for those boards —
