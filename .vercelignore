@@ -2,6 +2,11 @@
 # Including screenshots/icons here made Vercel production deploys fail.
 /mobile
 
+# Nested Vite game source. The live Hub serves the published copy from
+# /public/golf-cart-hero. Shipping this folder made Vercel treat the repo
+# as a Vite app and fail the Next.js production build.
+/golf-cart-hero
+
 # Expo / local tooling
 **/.expo
 **/node_modules
