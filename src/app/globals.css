@@ -28,7 +28,10 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* Instant page-to-page jumps. Smooth scroll on html fights Next.js
+     scroll-to-top and can leave the home hero tucked under the sticky header. */
+  scroll-behavior: auto;
+  scroll-padding-top: 0;
 }
 
 /* Store apps: hide purchase CTAs (Apple/Google billing rules). */
@@ -65,6 +68,7 @@ a {
     rgba(232, 184, 74, 0.16) 100%
   );
   backdrop-filter: blur(10px);
+  overflow-anchor: none;
 }
 
 .wx-bar-inner {
@@ -649,6 +653,8 @@ a {
   min-height: 42px;
   padding: 0.28rem 0;
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
 }
 
 .utility-bar-label {
@@ -989,6 +995,8 @@ a {
   width: 100%;
   /* Keep each group as a single visual line */
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 

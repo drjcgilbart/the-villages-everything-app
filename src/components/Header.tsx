@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { FavoriteSiteButton } from "@/components/FavoriteSiteButton";
 import { PhoneViewToggle } from "@/components/PhoneViewToggle";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
@@ -41,6 +41,22 @@ const TOPICS_ROW_2 = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash) return;
+    const toTop = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    toTop();
+    const frame = window.requestAnimationFrame(() => {
+      toTop();
+      window.requestAnimationFrame(toTop);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
 
   function isUtilityActive(item: (typeof UTILITY_NAV)[number]) {
     const prefixes = item.matchPrefixes || [item.href];
@@ -93,7 +109,7 @@ export function Header() {
 
       <div className="shell header-inner hub-header-inner">
         <div className="hub-header-top">
-          <Link href="/" className="brand" onClick={() => setOpen(false)}>
+          <Link href="/" scroll className="brand" onClick={() => setOpen(false)}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/graphics/mascot-logo.jpg"
