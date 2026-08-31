@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { RecCenterMapLinks } from "@/components/RecCenterMapLinks";
 import {
   OFFICIAL_REC_CENTERS_URL,
@@ -47,16 +47,10 @@ export default function OfficialMapPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-rec-centers.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-map.jpg"
+            alt="Official Map mascot — golf ball with a folded map and compass"
+          />
         </div>
       </div>
 

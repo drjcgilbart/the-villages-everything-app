@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { MarketCharts } from "@/components/MarketCharts";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PortfolioTracker } from "@/components/PortfolioTracker";
@@ -125,16 +125,10 @@ export default async function WealthPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={topic.image}
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-wealth.jpg"
+            alt="Wealth mascot — golf ball with a piggy bank and a stock chart"
+          />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
@@ -50,16 +51,10 @@ export default async function ArtsAndCraftsPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={topic.image}
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-art.jpg"
+            alt="Art mascot — golf ball with a paintbrush and a palette"
+          />
         </div>
       </div>
 

@@ -62,8 +62,10 @@ export default async function AboutPage() {
             <p>
               The personal corner of {SITE.name} — blog, photos, and videos from
               one resident&apos;s moderately ridiculous life in The Villages.
-              The main app stays about The Villages; this page is about the plot
-              twist.
+              This page is the public story (free). The private daily boards —
+              weather, health, pets, and the rest — live in{" "}
+              <Link href="/my-space">My Space</Link> for members. If you used
+              the old standalone dashboard, this Hub is the new home.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
               <a
@@ -87,11 +89,12 @@ export default async function AboutPage() {
           </div>
           <div className="page-hero-art">
             <Image
-              src="/graphics/mascot-logo.jpg"
-              alt="Original golf-ball mascot illustration for The Villages Everything App"
+              src="/graphics/mascot-reboot.jpg"
+              alt="My Retirement Reboot mascot — golf ball with a pineapple drink"
               width={280}
               height={280}
-              className="about-mascot"
+              className="about-mascot about-mascot-round"
+              priority
             />
           </div>
         </div>

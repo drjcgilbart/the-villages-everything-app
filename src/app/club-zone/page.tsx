@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ClubBrowser } from "@/components/ClubBrowser";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { ClubLeaderDirectory } from "@/components/ClubLeaderDirectory";
 import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -44,16 +44,10 @@ export default async function ClubZonePage() {
               </Link>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={topic.image}
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-clubs.jpg"
+            alt="Clubs mascot — golf ball with a club pin and a mah-jongg tile"
+          />
         </div>
       </div>
 

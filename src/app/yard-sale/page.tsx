@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { YardListingCard } from "@/components/YardListingCard";
 import { withSellerBadges } from "@/lib/memberBadges";
 import { getApprovedListings, listingWithSeller } from "@/lib/yardSale";
@@ -13,25 +14,31 @@ export default function YardSalePage() {
 
   return (
     <>
-      <div className="page-hero">
-        <div className="shell">
-          <span className="kicker">Local Villagers only · moderated</span>
-          <h1>Community Yard Sale</h1>
-          <p>
-            Buy, sell, or give away items among neighbors in The Villages.
-            Listings are reviewed by the site admin before they go live.
-          </p>
-          <div className="hero-actions" style={{ marginTop: "1rem" }}>
-            <Link href="/yard-sale/dashboard" className="btn btn-primary">
-              Post an item
-            </Link>
-            <Link href="/yard-sale/join" className="btn btn-ghost">
-              Become a member
-            </Link>
-            <Link href="/yard-sale/login" className="btn btn-ghost">
-              Member login
-            </Link>
+      <div className="page-hero page-hero-graphic">
+        <div className="shell page-hero-grid">
+          <div>
+            <span className="kicker">Local Villagers only · moderated</span>
+            <h1>Community Yard Sale</h1>
+            <p>
+              Buy, sell, or give away items among neighbors in The Villages.
+              Listings are reviewed by the site admin before they go live.
+            </p>
+            <div className="hero-actions" style={{ marginTop: "1rem" }}>
+              <Link href="/yard-sale/dashboard" className="btn btn-primary">
+                Post an item
+              </Link>
+              <Link href="/yard-sale/join" className="btn btn-ghost">
+                Become a member
+              </Link>
+              <Link href="/yard-sale/login?next=/yard-sale/dashboard" className="btn btn-ghost">
+                Member login
+              </Link>
+            </div>
           </div>
+          <PageHeroMascot
+            src="/graphics/mascot-yard-sale.jpg"
+            alt="Yard Sale mascot — golf ball with a lamp, a picture frame, and a price tag"
+          />
         </div>
       </div>
 

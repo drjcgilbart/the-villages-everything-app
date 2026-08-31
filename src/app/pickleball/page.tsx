@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PickleballHub } from "@/components/PickleballHub";
 import { PostCard } from "@/components/PostCard";
@@ -52,16 +53,10 @@ export default async function PickleballPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={PICKLEBALL_ART.theme}
-              alt=""
-              width={280}
-              height={280}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-pickleball.jpg"
+            alt="Pickleball mascot — golf ball with a paddle and a pickleball"
+          />
         </div>
       </div>
 

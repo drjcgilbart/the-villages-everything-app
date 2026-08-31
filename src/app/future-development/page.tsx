@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import {
   DEVELOPMENT_AREAS,
   DRONE_CREATORS,
@@ -42,16 +42,10 @@ export default function FutureDevelopmentPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-future-development.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-future.jpg"
+            alt="Future Development mascot — golf ball with a hard hat and a construction cone"
+          />
         </div>
       </div>
 

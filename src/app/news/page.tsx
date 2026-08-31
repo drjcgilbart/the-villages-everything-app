@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import {
   NEWS_BEATS,
   NEWS_CREATORS,
@@ -42,16 +42,10 @@ export default function NewsPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-local-news.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-news.jpg"
+            alt="Local News mascot — golf ball with a newspaper and a camera"
+          />
         </div>
       </div>
 

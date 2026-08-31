@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { SquareEntertainmentBoard } from "@/components/SquareEntertainmentBoard";
@@ -71,16 +71,10 @@ export default async function TownSquaresPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={topic.image}
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-town-squares.jpg"
+            alt="Town Squares mascot — golf ball with a miniature bandstand and fountain"
+          />
         </div>
       </div>
 

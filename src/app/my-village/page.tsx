@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Suspense } from "react";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { VillageBrowser } from "@/components/VillageBrowser";
 import { villageCount } from "@/lib/villages";
 
@@ -43,16 +43,10 @@ export default function MyVillagePage() {
               </div>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-my-village.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-villages.jpg"
+            alt="The Villages mascot — golf ball with a cluster of village homes"
+          />
         </div>
       </div>
 

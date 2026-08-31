@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { MarketRefreshButton } from "@/components/MarketRefreshButton";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { RealEstateLeadForm } from "@/components/RealEstateLeadForm";
 import {
   agentCardImage,
@@ -80,16 +81,10 @@ export default async function RealEstatePage() {
               </div>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-real-estate.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-real-estate.jpg"
+            alt="Real Estate mascot — golf ball with a Florida ranch house and a For Sale sign"
+          />
         </div>
       </div>
 

@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { MemberName } from "@/components/MemberName";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import {
   categoryStats,
   forumSummary,
@@ -50,16 +50,10 @@ export default async function ForumsPage() {
               </div>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-chaos.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-forums.jpg"
+            alt="Community Forums mascot — golf ball with speech bubbles"
+          />
         </div>
       </div>
 

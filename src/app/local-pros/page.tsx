@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { LocalProsJumpIcon } from "@/components/LocalProsJumpIcon";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { LocalProsTopBoards } from "@/components/LocalProsTopBoards";
 import { LocalServicesHub } from "@/components/LocalServicesHub";
 import { StarRating } from "@/components/StarRating";
@@ -58,16 +59,10 @@ export default async function LocalProsPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-community-resources.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-local-pros.jpg"
+            alt="Local Pros mascot — golf ball with a toolbox and a wrench"
+          />
         </div>
       </div>
 

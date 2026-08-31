@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { RecCenterBrowser } from "@/components/RecCenterBrowser";
 import { RecCenterMapLinks } from "@/components/RecCenterMapLinks";
 import {
@@ -52,16 +52,10 @@ export default function RecCentersPage() {
               <RecCenterMapLinks variant="buttons" />
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={topic.image}
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-rec-centers.jpg"
+            alt="Rec Centers mascot — golf ball with a pool and a foam noodle"
+          />
         </div>
       </div>
 

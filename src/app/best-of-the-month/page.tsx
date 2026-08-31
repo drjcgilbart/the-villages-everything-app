@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { BestOfMonthClub } from "@/components/BestOfMonthClub";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -35,16 +35,10 @@ export default function BestOfTheMonthPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-best-of-month.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-best-of.jpg"
+            alt="Best of the Month mascot — golf ball with a trophy and a blue ribbon"
+          />
         </div>
       </div>
 

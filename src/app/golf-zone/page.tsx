@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { GolfClubHub } from "@/components/GolfClubHub";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
@@ -53,16 +54,10 @@ export default async function GolfZonePage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={GOLF_ART.theme}
-              alt=""
-              width={280}
-              height={280}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-golf.jpg"
+            alt="Golf mascot — golf ball with a club and a ball on a tee"
+          />
         </div>
       </div>
 

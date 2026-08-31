@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { HealthHub } from "@/components/HealthHub";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
@@ -62,16 +62,10 @@ export default async function HealthPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={topic.image}
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-health.jpg"
+            alt="Health mascot — golf ball with a stethoscope and a water bottle"
+          />
         </div>
       </div>
 

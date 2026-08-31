@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { EventsCalendar } from "@/components/EventsCalendar";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
@@ -52,16 +52,10 @@ export default async function CalendarPage() {
               </a>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src={topic.image}
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-calendar.jpg"
+            alt="Calendar mascot — golf ball holding a starred calendar"
+          />
         </div>
       </div>
 

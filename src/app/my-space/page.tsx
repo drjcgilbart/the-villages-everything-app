@@ -1,43 +1,54 @@
+import Image from "next/image";
 import Link from "next/link";
 import { MySpaceDashboard } from "@/components/MySpaceDashboard";
+import { PRODUCT_NAMES } from "@/lib/mySpaceProduct";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "My Space",
   description:
-    "Member daily dashboard — Villages weather, health, pets, investments, favorites, and yard-sale tools.",
+    "My Space — Your Private Lanai. Villages weather, health, pets, investments, and more, behind Hub membership.",
 };
 
 export default function MySpacePage() {
   return (
     <>
-      <div className="page-hero">
-        <div className="shell">
-          <span className="kicker">Member · daily dashboard</span>
-          <h1>My Space</h1>
-          <p>
-            Your private Villages command center — the full daily dashboard from
-            My Retirement Reboot, built into the site:{" "}
-            <strong>weather</strong> (hourly + 7-day), <strong>health</strong>{" "}
-            (weight, meds, meals, movement, journal), <strong>pets</strong>{" "}
-            (walks, meals, alarms), <strong>investments</strong>, calendar notes,
-            and every star you set on the site. Unlock more by tier:{" "}
-            <strong>Porch Waver</strong> → <strong>Cart Path Regular</strong> →{" "}
-            <strong>Lanai Legend</strong> → <strong>Square Royalty</strong>.
-          </p>
-          <p style={{ marginBottom: 0 }}>
-            <Link href="/yard-sale/login" className="text-link">
-              Member sign-in
-            </Link>
-            {" · "}
-            <Link href="/yard-sale/dashboard" className="text-link">
-              Yard sale dashboard
-            </Link>
-            {" · "}
-            <Link href="/club-zone" className="text-link">
-              Clubs
-            </Link>
-          </p>
+      <div className="page-hero page-hero-graphic">
+        <div className="shell page-hero-grid">
+          <div>
+            <span className="kicker">{PRODUCT_NAMES.doorKicker}</span>
+            <h1>{PRODUCT_NAMES.doorTitle}</h1>
+            <p>
+              {PRODUCT_NAMES.doorBlurb} Unlock more by tier:{" "}
+              <strong>Porch Waver</strong> → <strong>Cart Path Regular</strong> →{" "}
+              <strong>Lanai Legend</strong> → <strong>Square Royalty</strong>.
+              If you used the old standalone dashboard, this is the new home
+              for those boards — subscribe on this website, then sign in.
+            </p>
+            <p style={{ marginBottom: 0 }}>
+              <Link href="/yard-sale/login?next=/my-space" className="text-link">
+                Member sign-in
+              </Link>
+              {" · "}
+              <Link href="/yard-sale/dashboard" className="text-link">
+                Yard sale dashboard
+              </Link>
+              {" · "}
+              <Link href="/club-zone" className="text-link">
+                Clubs
+              </Link>
+            </p>
+          </div>
+          <div className="page-hero-art">
+            <Image
+              src="/graphics/mascot-myspace.jpg"
+              alt="My Space mascot — golf ball with a house key and a tiny screened lanai"
+              width={280}
+              height={280}
+              className="about-mascot about-mascot-round"
+              priority
+            />
+          </div>
         </div>
       </div>
       <section className="section">

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DiningFavoriteButton } from "@/components/DiningFavoriteButton";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { MemberName } from "@/components/MemberName";
 import { RestaurantCard } from "@/components/RestaurantCard";
 import { RestaurantSuggestForm } from "@/components/RestaurantSuggestForm";
@@ -76,15 +77,10 @@ export default function DiningPage() {
               </div>
             </div>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/theme-dining-v2.jpg"
-              alt=""
-              width={260}
-              height={260}
-              className="page-hero-img"
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-dining.jpg"
+            alt="Dining mascot — golf ball serving an early-bird steak and a cocktail"
+          />
         </div>
       </div>
 
