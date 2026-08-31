@@ -9,6 +9,7 @@ import {
   type AlarmTone,
 } from "@/lib/mySpaceStorage";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import { SAMPLE_HEALTH } from "@/lib/sampleBoards";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -434,6 +435,9 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
     habits[k] = { ...emptyHabit(), ...v };
   }
 
+  const pickList = <T,>(key: string, mapped: T[], sample: T[]): T[] =>
+    Array.isArray(r[key]) ? mapped : sample;
+
   let entries = asArray<WeightEntry>(r.entries).map((e) => ({
     date: String(e.date || ""),
     weight: num(e.weight),
@@ -562,14 +566,22 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
     medAlarmDurationSec: Number(r.medAlarmDurationSec) || 30,
     medAlarmEnabled: r.medAlarmEnabled !== false,
     habits,
-    entries,
-    meals,
-    exercises,
-    journals,
-    medications,
+    entries: pickList("entries", entries, SAMPLE_HEALTH.entries as WeightEntry[]),
+    meals: pickList("meals", meals, SAMPLE_HEALTH.meals as Meal[]),
+    exercises: pickList("exercises", exercises, SAMPLE_HEALTH.exercises as Exercise[]),
+    journals: pickList("journals", journals, SAMPLE_HEALTH.journals as Journal[]),
+    medications: pickList(
+      "medications",
+      medications,
+      SAMPLE_HEALTH.medications as Medication[]
+    ),
     medicationLogs,
-    sleeps,
-    progressPhotos,
+    sleeps: pickList("sleeps", sleeps, SAMPLE_HEALTH.sleeps as SleepLog[]),
+    progressPhotos: pickList(
+      "progressPhotos",
+      progressPhotos,
+      SAMPLE_HEALTH.progressPhotos as ProgressPhoto[]
+    ),
   };
 }
 

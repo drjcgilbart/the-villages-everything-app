@@ -41,6 +41,7 @@ import {
   getBoard,
   type BoardId,
 } from "@/lib/mySpaceProduct";
+import { SAMPLE_HINT } from "@/lib/sampleBoards";
 
 /** Explicit badge art for tier cards (client-safe; always present). */
 const TIER_CARD_BADGES: Record<
@@ -230,6 +231,10 @@ export function MySpaceDashboard() {
   function locked(boardId: BoardId): boolean {
     return boardIsLocked(boardId, { visitor, planRank });
   }
+
+  const sampleHint = (
+    <p className="panel-hint ms-sample-hint">{SAMPLE_HINT}</p>
+  );
 
   const glass = (boardId: BoardId) => (
     <GlassDoorPreview
@@ -582,7 +587,10 @@ export function MySpaceDashboard() {
       <section id="ms-weather" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("weather").label}</h3>
         {!locked("weather") && f?.weather ? (
-          <MySpaceWeatherBoard />
+          <>
+            {sampleHint}
+            <MySpaceWeatherBoard />
+          </>
         ) : (
           glass("weather")
         )}
@@ -593,7 +601,10 @@ export function MySpaceDashboard() {
       <section id="ms-markets" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("investments").label}</h3>
         {!locked("investments") && f?.portfolio ? (
-          <MySpaceInvestmentsBoard />
+          <>
+            {sampleHint}
+            <MySpaceInvestmentsBoard />
+          </>
         ) : (
           glass("investments")
         )}
@@ -603,7 +614,14 @@ export function MySpaceDashboard() {
       {tab === "news" && (
       <section id="ms-news" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("news").label}</h3>
-        {!locked("news") && f?.newsPrefs ? <MySpaceNewsBoard /> : glass("news")}
+        {!locked("news") && f?.newsPrefs ? (
+          <>
+            {sampleHint}
+            <MySpaceNewsBoard />
+          </>
+        ) : (
+          glass("news")
+        )}
       </section>
       )}
 
@@ -611,7 +629,10 @@ export function MySpaceDashboard() {
       <section id="ms-health" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("health").label}</h3>
         {!locked("health") && f?.healthLog ? (
-          <MySpaceHealthLog />
+          <>
+            {sampleHint}
+            <MySpaceHealthLog />
+          </>
         ) : (
           glass("health")
         )}
@@ -621,7 +642,14 @@ export function MySpaceDashboard() {
       {tab === "gym" && (
       <section id="ms-gym" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("gym").label}</h3>
-        {!locked("gym") && f?.gymLog ? <MySpaceGymBoard /> : glass("gym")}
+        {!locked("gym") && f?.gymLog ? (
+          <>
+            {sampleHint}
+            <MySpaceGymBoard />
+          </>
+        ) : (
+          glass("gym")
+        )}
       </section>
       )}
 
@@ -629,7 +657,10 @@ export function MySpaceDashboard() {
       <section id="ms-pets" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("pets").label}</h3>
         {!locked("pets") && f?.petSchedule ? (
-          <MySpacePetSchedule />
+          <>
+            {sampleHint}
+            <MySpacePetSchedule />
+          </>
         ) : (
           glass("pets")
         )}
@@ -639,7 +670,14 @@ export function MySpaceDashboard() {
       {tab === "food" && (
       <section id="ms-food" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("food").label}</h3>
-        {!locked("food") && f?.foodLog ? <MySpaceFoodBoard /> : glass("food")}
+        {!locked("food") && f?.foodLog ? (
+          <>
+            {sampleHint}
+            <MySpaceFoodBoard />
+          </>
+        ) : (
+          glass("food")
+        )}
       </section>
       )}
 
@@ -647,7 +685,10 @@ export function MySpaceDashboard() {
       <section id="ms-entertainment" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("entertainment").label}</h3>
         {!locked("entertainment") && f?.entertainmentLog ? (
-          <MySpaceEntertainmentBoard />
+          <>
+            {sampleHint}
+            <MySpaceEntertainmentBoard />
+          </>
         ) : (
           glass("entertainment")
         )}
@@ -658,7 +699,10 @@ export function MySpaceDashboard() {
       <section id="ms-maintenance" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("maintenance").label}</h3>
         {!locked("maintenance") && f?.maintenanceLog ? (
-          <MySpaceMaintenanceBoard />
+          <>
+            {sampleHint}
+            <MySpaceMaintenanceBoard />
+          </>
         ) : (
           glass("maintenance")
         )}
@@ -669,7 +713,10 @@ export function MySpaceDashboard() {
       <section id="ms-calendar" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("calendar").label}</h3>
         {!locked("calendar") && f?.calendarBoard ? (
-          <MySpaceCalendarBoard />
+          <>
+            {sampleHint}
+            <MySpaceCalendarBoard />
+          </>
         ) : (
           glass("calendar")
         )}
@@ -680,7 +727,10 @@ export function MySpaceDashboard() {
       <section id="ms-memories" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("memories").label}</h3>
         {!locked("memories") && f?.memoriesAlbum ? (
-          <MySpaceMemoriesBoard />
+          <>
+            {sampleHint}
+            <MySpaceMemoriesBoard />
+          </>
         ) : (
           glass("memories")
         )}
@@ -691,7 +741,10 @@ export function MySpaceDashboard() {
       <section id="ms-golf-log" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("golfLog").label}</h3>
         {!locked("golfLog") && f?.golfLog ? (
-          <MySpaceGolfLogBoard />
+          <>
+            {sampleHint}
+            <MySpaceGolfLogBoard />
+          </>
         ) : (
           glass("golfLog")
         )}
@@ -702,7 +755,10 @@ export function MySpaceDashboard() {
       <section id="ms-pb-log" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("pickleballLog").label}</h3>
         {!locked("pickleballLog") && f?.pickleballLog ? (
-          <MySpacePickleballLogBoard />
+          <>
+            {sampleHint}
+            <MySpacePickleballLogBoard />
+          </>
         ) : (
           glass("pickleballLog")
         )}

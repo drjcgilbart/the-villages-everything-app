@@ -7,6 +7,7 @@ import {
   type BoardId,
 } from "@/lib/mySpaceProduct";
 import { HUB_TIERS, type HubPlanId } from "@/lib/membershipTiers";
+import { SAMPLE_GLASS, SAMPLE_HINT } from "@/lib/sampleBoards";
 
 type Props = {
   boardId: BoardId;
@@ -46,10 +47,13 @@ export function GlassDoorPreview({
       <p className="ms-glass-teaser">{board.teaser}</p>
 
       <div className="ms-glass-chrome" aria-hidden="true">
-        <div className="ms-glass-row is-sample">{board.previewLine}</div>
-        <div className="ms-glass-row is-skel" />
-        <div className="ms-glass-row is-skel" />
+        {(SAMPLE_GLASS[boardId] || [board.previewLine]).map((line) => (
+          <div key={line} className="ms-glass-row is-sample">
+            {line}
+          </div>
+        ))}
       </div>
+      <p className="panel-hint">{SAMPLE_HINT}</p>
 
       {visitor ? (
         <p className="panel-hint">

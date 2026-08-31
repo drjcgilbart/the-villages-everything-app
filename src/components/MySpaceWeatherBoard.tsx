@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VillagesForecast } from "@/lib/weather";
 import { VILLAGES_LAT, VILLAGES_LON, VILLAGES_TZ, windDirLabel } from "@/lib/weather";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import { SAMPLE_WEATHER_EXTRA } from "@/lib/sampleBoards";
 import { uid } from "@/lib/mySpaceStorage";
 
 const POLL_MS = 5 * 60 * 1000;
@@ -56,12 +57,16 @@ const HOME: WeatherPlace = {
 };
 
 function defaultLocs(): WeatherLocState {
-  return { activeId: HOME.id, locations: [{ ...HOME }] };
+  return {
+    activeId: HOME.id,
+    locations: [{ ...HOME }, { ...SAMPLE_WEATHER_EXTRA }],
+  };
 }
 
 function hydrateLocs(raw: Record<string, unknown> | WeatherLocState): WeatherLocState {
   const r = (raw || {}) as Record<string, unknown>;
-  const list = Array.isArray(r.locations) ? (r.locations as WeatherPlace[]) : [];
+  if (!Array.isArray(r.locations)) return defaultLocs();
+  const list = r.locations as WeatherPlace[];
   const locations = list
     .map((l) => ({
       id: String(l.id || uid("loc")),
@@ -78,7 +83,9 @@ function hydrateLocs(raw: Record<string, unknown> | WeatherLocState): WeatherLoc
     }))
     .filter((l) => Number.isFinite(l.latitude) && Number.isFinite(l.longitude))
     .slice(0, 20);
-  if (!locations.length) return defaultLocs();
+  if (!locations.length) {
+    return { activeId: HOME.id, locations: [{ ...HOME }] };
+  }
   const activeId = String(r.activeId || "");
   const active = locations.find((l) => l.id === activeId) || locations[0];
   return { activeId: active.id, locations };

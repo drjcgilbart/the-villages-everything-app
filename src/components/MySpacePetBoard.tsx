@@ -9,6 +9,7 @@ import {
   type AlarmTone,
 } from "@/lib/mySpaceStorage";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import { SAMPLE_PET } from "@/lib/sampleBoards";
 
 const KEY = "tvea-ms-pet-v2";
 const MAX_PETS = 20;
@@ -149,7 +150,7 @@ function seedPet(partial: Partial<Pet> & { name: string }): Pet {
 }
 
 function defaults(): PetState {
-  const first = seedPet({ id: "pet-angelcake", name: "Angelcake", species: "dog" });
+  const first = seedPet({ ...SAMPLE_PET, name: SAMPLE_PET.name });
   return { activePetId: first.id, pets: [first], completions: {} };
 }
 
@@ -194,8 +195,10 @@ function migratePets(raw: PetState & { petName?: string; walks?: PetEvent[]; fee
         feedAlarmEnabled: globalFeed,
       }),
     ];
-  } else {
+  } else if (!Array.isArray(raw.pets)) {
     pets = base.pets;
+  } else {
+    pets = [];
   }
 
   return {

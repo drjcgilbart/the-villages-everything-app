@@ -1,5 +1,6 @@
 import type { FeatureKey } from "./membershipTiers";
 import { NEWS_PRESETS } from "./newsCatalog";
+import { sampleBoards } from "./sampleBoards";
 
 const MAX_ITEMS = 60;
 
@@ -418,57 +419,11 @@ function notes(raw: unknown, extraMax = 80): NoteItem[] {
 }
 
 export function emptyBoards(): MemberBoards {
-  return {
-    news: {
-      topics: ["villages"],
-      customTopics: [],
-      youtube: [],
-      saved: [],
-      people: [],
-      activePersonId: "",
-    },
-    entertainment: {
-      tonightSquare: "",
-      tonightNotes: "",
-      tonightDate: "",
-      watchLater: [],
-      shows: [],
-      clubs: [],
-      golfFavs: [],
-      pickleFavs: [],
-    },
-    food: {
-      favorites: [],
-      happyHours: [],
-      grocery: [],
-      groceryStores: [],
-      cellar: [],
-      meals: {},
-      recipes: [],
-      tipPct: 18,
-    },
-    gym: {
-      homeGymId: "",
-      gyms: [],
-      workouts: [],
-      supplements: [],
-      supplementLogs: [],
-    },
-    maintenance: { assets: [], tasks: [], activeAssetId: "" },
-    memories: { photos: [] },
-    golfLog: { rounds: [], teeTimes: [], looking: [] },
-    pickleballLog: {
-      profile: { name: "", duprSingles: "", duprDoubles: "", notes: "" },
-      matches: [],
-      people: [],
-      looking: [],
-    },
-    health: {},
-    pets: {},
-    calendar: { tasks: [] },
-    portfolio: { holdings: [], accounts: [], watchlist: [] },
-    weather: {},
-  };
+  return sampleBoards();
+}
+
+function hasKey(obj: object, key: string) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
 function jsonBlob(raw: unknown, fallback: Record<string, unknown>): Record<string, unknown> {
@@ -589,7 +544,7 @@ function sanitizeNews(raw: Partial<NewsBoard> | undefined): NewsBoard {
           };
         })
         .slice(0, 8)
-    : [];
+    : sampleBoards().news.people;
   if (!people.length) {
     people.push({
       id: "me",
@@ -693,19 +648,29 @@ function watchRows(raw: unknown): EntertainmentBoard["watchLater"] {
 }
 
 function sanitizeEnt(raw: Partial<EntertainmentBoard> | undefined): EntertainmentBoard {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const samples = sampleBoards().entertainment;
   return {
-    tonightSquare: clip(raw?.tonightSquare, 60),
-    tonightNotes: clip(raw?.tonightNotes, 400),
-    tonightDate: clip(raw?.tonightDate, 12),
-    watchLater: watchRows(raw?.watchLater),
-    shows: showRows(raw?.shows),
-    clubs: clubRows(raw?.clubs),
-    golfFavs: Array.isArray(raw?.golfFavs)
-      ? raw!.golfFavs.map((s) => clip(s, 40)).filter(Boolean).slice(0, 40)
-      : [],
-    pickleFavs: Array.isArray(raw?.pickleFavs)
-      ? raw!.pickleFavs.map((s) => clip(s, 40)).filter(Boolean).slice(0, 40)
-      : [],
+    tonightSquare: hasKey(src, "tonightSquare")
+      ? clip(src.tonightSquare, 60)
+      : samples.tonightSquare,
+    tonightNotes: hasKey(src, "tonightNotes")
+      ? clip(src.tonightNotes, 400)
+      : samples.tonightNotes,
+    tonightDate: hasKey(src, "tonightDate")
+      ? clip(src.tonightDate, 12)
+      : samples.tonightDate,
+    watchLater: Array.isArray(src.watchLater)
+      ? watchRows(src.watchLater)
+      : samples.watchLater,
+    shows: Array.isArray(src.shows) ? showRows(src.shows) : samples.shows,
+    clubs: Array.isArray(src.clubs) ? clubRows(src.clubs) : samples.clubs,
+    golfFavs: Array.isArray(src.golfFavs)
+      ? src.golfFavs.map((s) => clip(s, 40)).filter(Boolean).slice(0, 40)
+      : samples.golfFavs,
+    pickleFavs: Array.isArray(src.pickleFavs)
+      ? src.pickleFavs.map((s) => clip(s, 40)).filter(Boolean).slice(0, 40)
+      : samples.pickleFavs,
   };
 }
 
@@ -911,23 +876,29 @@ export function sanitizeBoard(
       return sanitizeEnt(r as Partial<EntertainmentBoard>);
     case "food": {
       const f = r as Partial<FoodBoard>;
+      const samples = sampleBoards().food;
       return {
-        favorites: foodFavorites(f.favorites),
-        happyHours: foodHappy(f.happyHours),
-        grocery: foodGrocery(f.grocery),
+        favorites: Array.isArray(f.favorites)
+          ? foodFavorites(f.favorites)
+          : samples.favorites,
+        happyHours: Array.isArray(f.happyHours)
+          ? foodHappy(f.happyHours)
+          : samples.happyHours,
+        grocery: Array.isArray(f.grocery) ? foodGrocery(f.grocery) : samples.grocery,
         groceryStores: Array.isArray(f.groceryStores)
           ? f.groceryStores.map((s) => clip(s, 60)).filter(Boolean).slice(0, 20)
-          : [],
-        cellar: foodCellar(f.cellar),
-        meals: mealMap(f.meals),
-        recipes: recipeRows(f.recipes),
+          : samples.groceryStores,
+        cellar: Array.isArray(f.cellar) ? foodCellar(f.cellar) : samples.cellar,
+        meals: hasKey(f, "meals") ? mealMap(f.meals) : samples.meals,
+        recipes: Array.isArray(f.recipes) ? recipeRows(f.recipes) : samples.recipes,
         tipPct: Math.min(40, Math.max(0, Number(f.tipPct) || 18)),
       };
     }
     case "gym": {
       const g = r as Partial<GymBoard>;
+      const samples = sampleBoards().gym;
       return {
-        homeGymId: clip(g.homeGymId, 80),
+        homeGymId: hasKey(g, "homeGymId") ? clip(g.homeGymId, 80) : samples.homeGymId,
         gyms: Array.isArray(g.gyms)
           ? g.gyms
               .map((p) => ({
@@ -944,9 +915,11 @@ export function sanitizeBoard(
               }))
               .filter((p) => p.name)
               .slice(0, 40)
-          : [],
-        workouts: gymWorkouts(g.workouts),
-        supplements: gymSupps(g.supplements),
+          : samples.gyms,
+        workouts: Array.isArray(g.workouts) ? gymWorkouts(g.workouts) : samples.workouts,
+        supplements: Array.isArray(g.supplements)
+          ? gymSupps(g.supplements)
+          : samples.supplements,
         supplementLogs: Array.isArray(g.supplementLogs)
           ? g.supplementLogs
               .map((l) => ({
@@ -957,7 +930,7 @@ export function sanitizeBoard(
               }))
               .filter((l) => l.name)
               .slice(0, 120)
-          : [],
+          : samples.supplementLogs,
       };
     }
     case "maintenance": {
@@ -970,6 +943,7 @@ export function sanitizeBoard(
         }
         return null;
       };
+      const samples = sampleBoards().maintenance;
       const assets: MaintAsset[] = Array.isArray(m.assets)
         ? m.assets
             .map((a) => ({
@@ -985,7 +959,7 @@ export function sanitizeBoard(
             }))
             .filter((a) => a.name)
             .slice(0, 40)
-        : [];
+        : samples.assets;
       let tasks: MaintTask[] = Array.isArray(m.tasks)
         ? m.tasks
             .map((t) => ({
@@ -1011,7 +985,7 @@ export function sanitizeBoard(
             .filter((t) => t.title)
             .slice(0, 80)
         : [];
-      if (!tasks.length) {
+      if (!Array.isArray(m.tasks) && Array.isArray(m.jobs) && !tasks.length) {
         tasks = notes(m.jobs).map((n) => ({
           id: n.id,
           assetId: "",
@@ -1033,6 +1007,9 @@ export function sanitizeBoard(
           doneNotes: "",
         }));
       }
+      if (!Array.isArray(m.tasks) && !Array.isArray(m.jobs)) {
+        tasks = samples.tasks;
+      }
       const activeAssetId = clip(m.activeAssetId, 40);
       return {
         assets,
@@ -1044,7 +1021,7 @@ export function sanitizeBoard(
     }
     case "memories": {
       const photosRaw = (r as MemoriesBoard).photos;
-      if (!Array.isArray(photosRaw)) return { photos: [] };
+      if (!Array.isArray(photosRaw)) return { photos: sampleBoards().memories.photos };
       return {
         photos: photosRaw
           .map((p) => {
@@ -1117,7 +1094,7 @@ export function sanitizeBoard(
             })
             .filter(Boolean)
             .slice(0, 80) as GolfRound[]
-        : [];
+        : sampleBoards().golfLog.rounds;
       return {
         rounds,
         teeTimes: Array.isArray(g.teeTimes)
@@ -1131,8 +1108,8 @@ export function sanitizeBoard(
               }))
               .filter((t) => t.course || t.date)
               .slice(0, 40)
-          : [],
-        looking: notes(g.looking),
+          : sampleBoards().golfLog.teeTimes,
+        looking: Array.isArray(g.looking) ? notes(g.looking) : sampleBoards().golfLog.looking,
       };
     }
     case "pickleballLog": {
@@ -1163,8 +1140,11 @@ export function sanitizeBoard(
               };
             })
             .slice(0, 80)
-        : [];
-      const prof = p.profile || { name: "", duprSingles: "", duprDoubles: "", notes: "" };
+        : sampleBoards().pickleballLog.matches;
+      const samples = sampleBoards().pickleballLog;
+      const prof = hasKey(p, "profile")
+        ? p.profile || { name: "", duprSingles: "", duprDoubles: "", notes: "" }
+        : samples.profile;
       return {
         profile: {
           name: clip(prof.name, 60),
@@ -1182,21 +1162,27 @@ export function sanitizeBoard(
               }))
               .filter((pe) => pe.name)
               .slice(0, 40)
-          : [],
-        looking: notes(p.looking),
+          : samples.people,
+        looking: Array.isArray(p.looking) ? notes(p.looking) : samples.looking,
       };
     }
     case "health":
+      if (!Object.keys(r).length) return sampleBoards().health;
       return jsonBlob(r, {});
     case "weather":
+      if (!Object.keys(r).length) return sampleBoards().weather;
       return jsonBlob(r, {});
     case "pets":
+      if (!Object.keys(r).length) return sampleBoards().pets;
       return jsonBlob(r, {});
     case "calendar": {
-      const blob = jsonBlob(r, { items: [], tasks: [] }) as {
+      const blob = jsonBlob(r, {}) as {
         items?: unknown;
         tasks?: unknown;
       };
+      if (!Array.isArray(blob.tasks) && !Array.isArray(blob.items)) {
+        return sampleBoards().calendar;
+      }
       const fromTasks = Array.isArray(blob.tasks) ? blob.tasks : [];
       const fromItems = Array.isArray(blob.items) ? blob.items : [];
       const raw = fromTasks.length ? fromTasks : fromItems;
@@ -1225,11 +1211,18 @@ export function sanitizeBoard(
       return { tasks };
     }
     case "portfolio": {
-      const blob = jsonBlob(r, { holdings: [], accounts: [], watchlist: [] }) as {
+      const blob = jsonBlob(r, {}) as {
         holdings?: unknown;
         accounts?: unknown;
         watchlist?: unknown;
       };
+      if (
+        !Array.isArray(blob.accounts) &&
+        !Array.isArray(blob.holdings) &&
+        !Array.isArray(blob.watchlist)
+      ) {
+        return sampleBoards().portfolio;
+      }
       const holdings = Array.isArray(blob.holdings) ? blob.holdings.slice(0, 80) : [];
       const num = (v: unknown) => {
         const n = Number(v);
@@ -1299,7 +1292,7 @@ export function sanitizeBoard(
             .map((s) => clip(s, 16).toUpperCase())
             .filter(Boolean)
             .slice(0, 40)
-        : [];
+        : sampleBoards().portfolio.watchlist;
       return { holdings, accounts, watchlist };
     }
   }
