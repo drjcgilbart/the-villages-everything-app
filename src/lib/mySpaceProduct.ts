@@ -313,7 +313,7 @@ export const VISITOR_OPEN_BOARDS: ReadonlySet<BoardId> = new Set([
 ]);
 
 /** Map existing My Space feature flags onto product boards. */
-export const FEATURE_TO_BOARD: Partial<Record<FeatureKey, BoardId>> = {
+export const FEATURE_TO_BOARD: Partial<Record<FeatureKey | string, BoardId>> = {
   weather: "weather",
   portfolio: "investments",
   newsPrefs: "news",
