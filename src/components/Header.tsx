@@ -51,14 +51,18 @@ export function Header() {
     );
   }
 
-  function topicLink(item: (typeof MAIN_TOPICS)[number]) {
+  function topicLink(item: (typeof MAIN_TOPICS)[number], opts?: { onClick?: () => void }) {
     return (
       <Link
         key={item.href}
         href={item.href}
-        className={isMainTopicActive(pathname, item) ? "active" : ""}
+        className={`hub-topic-btn${isMainTopicActive(pathname, item) ? " active" : ""}`}
+        onClick={opts?.onClick}
       >
-        {item.label}
+        <span className="hub-topic-icon" aria-hidden="true">
+          {item.icon}
+        </span>
+        <span className="hub-topic-label">{item.label}</span>
       </Link>
     );
   }
@@ -119,9 +123,13 @@ export function Header() {
 
         {/* Desktop only: exactly two lines; line 2 starts with Golf */}
         <nav className="hub-header-pages" aria-label="Villages pages">
-          <div className="hub-topics-row">{TOPICS_ROW_1.map(topicLink)}</div>
+          <div className="hub-topics-row">
+            {TOPICS_ROW_1.map((item) => topicLink(item))}
+          </div>
           {TOPICS_ROW_2.length > 0 && (
-            <div className="hub-topics-row">{TOPICS_ROW_2.map(topicLink)}</div>
+            <div className="hub-topics-row">
+              {TOPICS_ROW_2.map((item) => topicLink(item))}
+            </div>
           )}
         </nav>
 
@@ -131,16 +139,9 @@ export function Header() {
         >
           <p className="hub-mobile-intro">Where to first, cart pilot?</p>
           <div className="hub-mobile-links hub-mobile-main-topics">
-            {MAIN_TOPICS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={isMainTopicActive(pathname, item) ? "active" : ""}
-                onClick={() => setOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {MAIN_TOPICS.map((item) =>
+              topicLink(item, { onClick: () => setOpen(false) })
+            )}
           </div>
         </nav>
       </div>

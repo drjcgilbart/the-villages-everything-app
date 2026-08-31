@@ -192,7 +192,7 @@ export function MemberDashboard() {
           You need an approved membership to post yard sale items.
         </p>
         <div className="hero-actions">
-          <Link href="/yard-sale/login" className="btn btn-primary">
+          <Link href="/yard-sale/login?next=/yard-sale/dashboard" className="btn btn-primary">
             Sign in
           </Link>
           <Link href="/yard-sale/join" className="btn btn-ghost">

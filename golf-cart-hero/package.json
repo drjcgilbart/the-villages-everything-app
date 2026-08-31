@@ -1,0 +1,28 @@
+{
+  "name": "villages-golf-cart-hero",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Villages Golf Cart Hero — Mario Kart–style racing through a whimsical The Villages, Florida",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "export-carts": "node scripts/export-cart-glbs.mjs",
+    "publish:web": "node scripts/publish-web.mjs",
+    "build:hub": "tsc && vite build --base /golf-cart-hero/"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.4",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
+  "dependencies": {
+    "stripe": "^22.4.0",
+    "three": "^0.185.1"
+  }
+}

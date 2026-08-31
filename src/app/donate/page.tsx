@@ -1,12 +1,13 @@
-import Image from "next/image";
 import Link from "next/link";
 import { DonateForm } from "@/components/DonateForm";
+import { PageHeroMascot } from "@/components/PageHeroMascot";
+import { MembershipPlans } from "@/components/MembershipPlans";
 import { donationPaymentLink, stripeConfigured } from "@/lib/stripe";
 
 export const metadata = {
-  title: "Buy me a cup of Joe",
+  title: "Support",
   description:
-    "Tip The Villages Everything App — help keep the lights on with a cup of Joe.",
+    "Hub membership ($1–$3/month) unlocks My Space. Optional tips keep the lights on.",
 };
 
 export default async function DonatePage({
@@ -24,58 +25,68 @@ export default async function DonatePage({
       <div className="page-hero page-hero-graphic">
         <div className="shell page-hero-grid">
           <div>
-            <span className="kicker">Optional · always appreciated</span>
-            <h1>Buy me a cup of Joe!</h1>
+            <span className="kicker">Membership · optional tips</span>
+            <h1>Support the Hub</h1>
             <p>
-              If the reboot made you smile, learn something, or waste a pleasant
-              five minutes — you can toss a tip in the jar. It helps keep the
-              lights on: hosting, tools, coffee, and golf-cart operating budget.
+              Membership unlocks your private My Space lanai — weather, health,
+              pets, and the rest of the personal boards. Tips below are extra
+              thanks. They don’t replace a plan.
             </p>
           </div>
-          <div className="page-hero-art">
-            <Image
-              src="/graphics/mascot-logo.jpg"
-              alt="Golf-ball mascot ready for a cup of Joe"
-              width={260}
-              height={260}
-              className="page-hero-img donate-hero-mascot"
-              priority
-            />
-          </div>
+          <PageHeroMascot
+            src="/graphics/mascot-logo.jpg"
+            alt="Golf-ball mascot ready for a cup of Joe"
+          />
         </div>
       </div>
 
       <section className="section">
+        <div className="shell">
+          {canceled && (
+            <div className="msg msg-err" style={{ marginBottom: "1.25rem" }}>
+              Checkout was canceled — no charge. Pick a plan whenever you’re
+              ready.
+            </div>
+          )}
+
+          <div className="section-head">
+            <div>
+              <span className="kicker">The main event</span>
+              <h2>Membership levels</h2>
+              <p>
+                Porch Waver is free. Paid plans are monthly:{" "}
+                <strong>Cart Path Regular $1</strong>,{" "}
+                <strong>Lanai Legend $2</strong>,{" "}
+                <strong>Square Royalty $3</strong>. Each tier keeps everything
+                below it.
+              </p>
+            </div>
+          </div>
+          <MembershipPlans />
+          <p className="mkt-disclaimer" style={{ marginTop: "1rem" }}>
+            Public Hub pages (Dining, Calendar, Golf, Golf Cart Hero, and the
+            rest of the main banner) stay free. Membership is sold on the
+            website, not in the iPhone/Android store apps.
+          </p>
+        </div>
+      </section>
+
+      <section className="section" style={{ paddingTop: 0 }}>
         <div className="shell donate-layout">
           <div className="about-panel donate-panel">
-            <h2>Keep the lights on…</h2>
+            <h2>Optional · buy me a cup of Joe</h2>
             <p style={{ color: "var(--muted)", marginTop: 0 }}>
-              This site is an independent personal project — not a corporate
-              lifestyle brand. Tips are completely optional. Pick a preset or
-              enter your own amount, then you&apos;ll finish securely on Stripe.
+              Tips are one-time thanks — hosting, tools, and coffee. They do{" "}
+              <strong>not</strong> unlock My Space boards. For that, use a
+              membership plan above. Sign in first if you want a tip badge on
+              your name.
             </p>
-            <p style={{ color: "var(--muted)" }}>
-              Every tip tier has a funny badge — Cup of Joe, Fancy Latte,
-              Early-Bird Brunch, Golden Loofah, and the ultra{" "}
-              <strong>Custom Star Loofah</strong> (custom $25+ with extra
-              sparkles). Golden Loofah and Custom Star Loofah also nominate you
-              for <strong>Square Royalty</strong> (1 year) — the host approves
-              that in the Admin Portal. Sign in first so badges stick to your
-              name.
-            </p>
-
-            {canceled && (
-              <div className="msg msg-err" style={{ marginBottom: "1rem" }}>
-                Checkout was canceled — no charge. Whenever you&apos;re ready,
-                the coffee is still hypothetical.
-              </div>
-            )}
 
             {!ready && !paymentLink && (
               <div className="msg msg-err" style={{ marginBottom: "1rem" }}>
                 Stripe isn&apos;t configured on this server yet. Add{" "}
                 <code>STRIPE_SECRET_KEY</code> to <code>.env.local</code> (see
-                README) to enable live donations.
+                README) to enable live checkout.
               </div>
             )}
 
@@ -88,24 +99,14 @@ export default async function DonatePage({
               loudly, sunnily, and with better snacks.”
             </div>
             <div className="about-panel" style={{ marginTop: "1rem" }}>
-              <h2>What tips support</h2>
-              <ul>
-                <li>Site hosting &amp; bandwidth</li>
-                <li>Creator tools &amp; coffee rations</li>
-                <li>Keeping new posts, videos &amp; photos coming</li>
-              </ul>
-              <p
-                style={{
-                  marginBottom: 0,
-                  color: "var(--muted)",
-                  fontSize: "0.95rem",
-                }}
-              >
-                Prefer to browse first? No pressure —{" "}
-                <Link href="/" className="text-link">
-                  back to the reboot →
-                </Link>
+              <h2>Already a member?</h2>
+              <p style={{ color: "var(--muted)" }}>
+                Your boards live in My Space. Upgrade any time from this page
+                or from the Tiers tab there.
               </p>
+              <Link href="/my-space" className="btn btn-ghost btn-sm">
+                Open My Space
+              </Link>
             </div>
           </aside>
         </div>

@@ -25,6 +25,7 @@ function isPublicAsset(pathname: string): boolean {
   if (pathname === "/sitemap.xml") return true;
   if (
     pathname.startsWith("/graphics/") ||
+    pathname.startsWith("/golf-cart-hero/") ||
     pathname.startsWith("/music/") ||
     pathname.startsWith("/file.") ||
     pathname.startsWith("/globe.") ||
@@ -116,6 +117,7 @@ export async function middleware(req: NextRequest) {
     method === "POST" &&
     isNativeAppUserAgent(req) &&
     (pathname === "/api/donate/checkout" ||
+      pathname === "/api/golf-cart-hero/donate/checkout" ||
       pathname === "/api/members/subscribe")
   ) {
     return withSecurity(

@@ -1,43 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useMemberBoard } from "@/components/useMemberBoard";
 
 /** Re-export full boards (ported from My Retirement Reboot). */
 export { MySpaceHealthBoard as MySpaceHealthLog } from "@/components/MySpaceHealthBoard";
 export { MySpacePetBoard as MySpacePetSchedule } from "@/components/MySpacePetBoard";
 
-function useLocalJson<T>(key: string, initial: T) {
-  const [value, setValue] = useState<T>(initial);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) setValue(JSON.parse(raw) as T);
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, [key]);
-
-  function save(next: T) {
-    setValue(next);
-    try {
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
-  }
-
-  return { value, save, ready };
-}
-
 type CalItem = { id: string; text: string; when: string };
 
 export function MySpaceCalendarBoard() {
-  const { value, save, ready } = useLocalJson<{ items: CalItem[] }>(
-    "tvi-ms-calendar",
-    { items: [] }
+  const { value, save, ready } = useMemberBoard<{ items: CalItem[] }>(
+    "calendar",
+    { items: [] },
+    true,
+    { localKey: "tvi-ms-calendar", debounceMs: 400 }
   );
   const [text, setText] = useState("");
   const [when, setWhen] = useState("");

@@ -21,9 +21,17 @@ export type FeatureKey =
   | "weather"
   | "favoriteClubs"
   | "portfolio"
+  | "newsPrefs"
+  | "entertainmentLog"
   | "healthLog"
   | "petSchedule"
+  | "foodLog"
+  | "gymLog"
+  | "maintenanceLog"
   | "calendarBoard"
+  | "memoriesAlbum"
+  | "golfLog"
+  | "pickleballLog"
   | "exclusiveLounge"
   | "planBadge";
 
@@ -37,6 +45,8 @@ export type TierDef = {
   blurb: string;
   /** Badge graphic shown on My Space tier cards and next to names (paid tiers) */
   badgeImage: string;
+  /** Public list price in USD per month (0 = free). */
+  priceUsdPerMonth: number;
   /** Optional Stripe price env key suffix, e.g. HUB → STRIPE_PRICE_HUB */
   stripeEnvKey?: string;
 };
@@ -49,8 +59,9 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Porch",
     tagline: "I wave. You wave. That’s the whole social contract.",
     blurb:
-      "Free approved-neighbor energy. You’re in the club of people who live here — My Space shell, shortcuts, and yard-sale privileges when approved.",
+      "Free neighbor account. My Space door, favorites, shortcuts, and yard-sale posting when approved. You can see every Reboot board as a preview; personalized tools stay behind the glass until you upgrade.",
     badgeImage: "/graphics/badges/porch-waver.jpg",
+    priceUsdPerMonth: 0,
   },
   {
     id: "cart_path_regular",
@@ -59,8 +70,9 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Cart Path",
     tagline: "Knows which gate is which (most days).",
     blurb:
-      "Your daily dashboard: Villages weather, starred clubs, and the investment board — the cart-path commute of membership.",
+      "Daily dashboard energy: full Villages weather, starred clubs, the investment board, news prefs, and entertainment picks.",
     badgeImage: "/graphics/badges/cart-path-regular.jpg",
+    priceUsdPerMonth: 1,
     stripeEnvKey: "HUB",
   },
   {
@@ -70,8 +82,9 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Lanai",
     tagline: "Screened-in serenity with a side of spreadsheets.",
     blurb:
-      "Everything on the cart path, plus health check-ins, pet schedule, and a personal calendar board — lanai life, optimized.",
+      "The private Reboot: health, pets, food, gym, maintenance, personal calendar, private photos, plus golf and pickleball logs.",
     badgeImage: "/graphics/badges/lanai-legend.jpg",
+    priceUsdPerMonth: 2,
     stripeEnvKey: "PLUS",
   },
   {
@@ -81,8 +94,9 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Royalty",
     tagline: "Front row at the square. Metaphorically. Parking still chaos.",
     blurb:
-      "Top of the cart parade: every unlock, early-access lounge, and a badge that says you take this retirement reboot seriously (but not too seriously).",
+      "Everything on the lanai, plus the Royalty lounge, badge flair, and first look at new My Space boards.",
     badgeImage: "/graphics/badges/square-royalty.jpg",
+    priceUsdPerMonth: 3,
     stripeEnvKey: "PATRON",
   },
 ];
@@ -95,9 +109,17 @@ export const FEATURE_MIN_RANK: Record<FeatureKey, number> = {
   weather: 1,
   favoriteClubs: 1,
   portfolio: 1,
+  newsPrefs: 1,
+  entertainmentLog: 1,
   healthLog: 2,
   petSchedule: 2,
+  foodLog: 2,
+  gymLog: 2,
+  maintenanceLog: 2,
   calendarBoard: 2,
+  memoriesAlbum: 2,
+  golfLog: 2,
+  pickleballLog: 2,
   exclusiveLounge: 3,
   planBadge: 3,
 };
@@ -124,7 +146,7 @@ export const FEATURE_META: Record<
   weather: {
     title: "Villages weather",
     teaser:
-      "Full dashboard: current conditions, metrics, 24-hour and 7-day forecast (My Retirement Reboot).",
+      "Full dashboard: current conditions, metrics, 24-hour and 7-day forecast.",
     anchor: "ms-weather",
   },
   favoriteClubs: {
@@ -136,6 +158,16 @@ export const FEATURE_META: Record<
     title: "Investments",
     teaser: "Stock & ETF board with live quotes and portfolio totals.",
     anchor: "ms-markets",
+  },
+  newsPrefs: {
+    title: "News",
+    teaser: "Your topic mix and saved stories — not the public Local News page.",
+    anchor: "ms-news",
+  },
+  entertainmentLog: {
+    title: "Entertainment",
+    teaser: "Tonight at the square, tickets, and watch-later.",
+    anchor: "ms-entertainment",
   },
   healthLog: {
     title: "Health lanai",
@@ -149,10 +181,40 @@ export const FEATURE_META: Record<
       "Walk & meal schedules, daily checkboxes, and optional browser alarms (Angelcake-style).",
     anchor: "ms-pets",
   },
+  foodLog: {
+    title: "Food & beverages",
+    teaser: "Grocery, recipes, cellar, and this week’s meals.",
+    anchor: "ms-food",
+  },
+  gymLog: {
+    title: "Gym",
+    teaser: "Workouts and supplements — your personal training log.",
+    anchor: "ms-gym",
+  },
+  maintenanceLog: {
+    title: "Maintenance",
+    teaser: "House and golf-cart upkeep reminders on your account.",
+    anchor: "ms-maintenance",
+  },
   calendarBoard: {
     title: "My calendar board",
     teaser: "Personal sticky notes & events — not the whole district calendar.",
     anchor: "ms-calendar",
+  },
+  memoriesAlbum: {
+    title: "Photos",
+    teaser: "Private album captions on your account.",
+    anchor: "ms-memories",
+  },
+  golfLog: {
+    title: "Golf log",
+    teaser: "Personal scorecard and tee notes. Public Golf stays free.",
+    anchor: "ms-golf-log",
+  },
+  pickleballLog: {
+    title: "Pickleball log",
+    teaser: "Personal match notes. Public Pickleball stays free.",
+    anchor: "ms-pb-log",
   },
   exclusiveLounge: {
     title: "Royalty lounge",
@@ -204,6 +266,11 @@ export function featuresForPlan(
     out[key] = canAccess(plan, key);
   }
   return out;
+}
+
+export function formatMembershipPrice(tier: TierDef): string {
+  if (!tier.priceUsdPerMonth) return "Free";
+  return `$${tier.priceUsdPerMonth}/month`;
 }
 
 /** Paid tiers members can upgrade into (not free Porch Waver). */

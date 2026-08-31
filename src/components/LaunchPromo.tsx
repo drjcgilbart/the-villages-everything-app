@@ -63,9 +63,9 @@ export function LaunchPromo() {
           <Link href="/donate" className="btn btn-ghost hide-in-native-app">
             Buy me a cup of Joe
           </Link>
-          <a href="/golf-cart-hero/" className="btn btn-ghost">
+          <Link href="/golf-cart-hero" className="btn btn-ghost">
             Play Golf Cart Hero
-          </a>
+          </Link>
         </div>
         <div className="launch-promo-tips">
           <div className="launch-promo-tip">
@@ -107,9 +107,9 @@ export function LaunchPromo() {
             <strong>Sister game</strong>
             <span>
               Free to play:{" "}
-              <a href="/golf-cart-hero/" className="text-link">
+              <Link href="/golf-cart-hero" className="text-link">
                 The Villages Golf Cart Hero
-              </a>{" "}
+              </Link>{" "}
               — Mario Kart energy on the cart paths. Tips optional. Not
               affiliated with The Villages® brand.
             </span>

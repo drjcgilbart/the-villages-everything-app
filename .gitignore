@@ -42,6 +42,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Golf Cart Hero nested game (source lives in /golf-cart-hero)
+/golf-cart-hero/node_modules
+/golf-cart-hero/dist
+
 # mobile (Expo) — keep source, ignore install/native output
 /mobile/node_modules
 /mobile/.expo

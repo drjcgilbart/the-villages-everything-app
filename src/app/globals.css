@@ -996,22 +996,96 @@ a {
   display: none;
 }
 
-.hub-header-pages a {
+.hub-header-pages a,
+.hub-topic-btn {
   flex: 0 0 auto;
-  padding: 0.32rem 0.68rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.28rem 0.62rem 0.28rem 0.48rem;
   border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.82rem;
+  border: 1px solid rgba(28, 36, 48, 0.12);
+  background: rgba(255, 253, 249, 0.88);
+  font-weight: 700;
+  font-size: 0.78rem;
   color: var(--muted);
   transition: 0.15s ease;
   white-space: nowrap;
   line-height: 1.2;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) inset;
+}
+
+.hub-topic-icon {
+  font-size: 0.92rem;
+  line-height: 1;
 }
 
 .hub-header-pages a:hover,
-.hub-header-pages a.active {
+.hub-header-pages a.active,
+.hub-topic-btn:hover,
+.hub-topic-btn.active {
   color: var(--ink);
-  background: rgba(232, 184, 74, 0.28);
+  background: rgba(232, 184, 74, 0.32);
+  border-color: rgba(232, 184, 74, 0.55);
+}
+
+/* Golf Cart Hero: keep the hub banner, fill the rest of the viewport with the game. */
+html:has(.gch-embed),
+html:has(.gch-embed) body,
+html[data-gch-embed="1"],
+html[data-gch-embed="1"] body {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+html:has(.gch-embed) body,
+html[data-gch-embed="1"] body {
+  display: flex;
+  flex-direction: column;
+}
+
+html:has(.gch-embed) main.flex-1,
+html[data-gch-embed="1"] main.flex-1 {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+html:has(.gch-embed) .site-footer,
+html:has(.gch-embed) .donate-mascot-float,
+html:has(.gch-embed) .floating-back-btn,
+html:has(.gch-embed) .mascot-quip-toggle,
+html:has(.gch-embed) .mascot-quip-popup,
+html:has(.gch-embed) .theme-music {
+  display: none !important;
+}
+
+.gch-embed {
+  flex: 1 1 auto;
+  min-height: 60vh;
+  width: 100%;
+  background: #0b1f16;
+  position: relative;
+}
+
+.gch-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #0b1f16;
+}
+
+.gch-embed-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cream);
+  font-weight: 600;
 }
 
 .community-resource-card {
@@ -1933,11 +2007,23 @@ a.my-space-link-card:hover {
     0 8px 22px rgba(28, 36, 48, 0.12);
 }
 
+.ms-tier-price {
+  margin: 0.15rem 0 0.35rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--palm-deep);
+}
+
 .ms-tier-tagline {
   margin: 0 0 0.45rem;
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--palm-deep);
+}
+
+.support-plan-grid {
+  margin-top: 0.75rem;
 }
 
 .ms-tier-blurb {
@@ -1961,6 +2047,88 @@ a.my-space-link-card:hover {
     145deg,
     rgba(28, 36, 48, 0.03),
     rgba(232, 184, 74, 0.08)
+  );
+}
+
+.ms-glass {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 248, 238, 0.92),
+    rgba(232, 184, 74, 0.12)
+  );
+}
+
+.ms-glass-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.55rem 0 0.35rem;
+}
+
+.ms-glass-head h3 {
+  margin: 0;
+}
+
+.ms-glass-icon {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.ms-glass-teaser {
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+}
+
+.ms-glass-chrome {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  border: 1px dashed rgba(28, 36, 48, 0.14);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.ms-glass-row {
+  min-height: 0.95rem;
+  border-radius: 8px;
+}
+
+.ms-glass-row.is-sample {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  opacity: 0.72;
+}
+
+.ms-glass-row.is-skel {
+  background: linear-gradient(
+    90deg,
+    rgba(28, 36, 48, 0.06),
+    rgba(28, 36, 48, 0.12),
+    rgba(28, 36, 48, 0.06)
+  );
+  filter: blur(0.4px);
+}
+
+.ms-glass-actions {
+  margin-top: 0.25rem;
+}
+
+.ms-weather-strip {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+}
+
+.ms-home-card.is-locked {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7),
+    rgba(232, 184, 74, 0.1)
   );
 }
 
@@ -2062,6 +2230,33 @@ a.my-space-link-card:hover {
   font-size: 1.05rem;
 }
 
+.ms-hub-group {
+  margin-top: 1.35rem;
+}
+
+.ms-hub-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+}
+
+.ms-hub-group-title {
+  margin: 0;
+  font-size: 1.12rem;
+  color: var(--palm-deep);
+}
+
+.ms-hub-group-price {
+  font-weight: 700;
+  color: var(--palm);
+  font-size: 0.92rem;
+}
+
+.ms-hub-group-tagline {
+  margin: 0.2rem 0 0.7rem;
+}
+
 .ms-home-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -2095,6 +2290,11 @@ button.ms-home-card:hover {
   margin-bottom: 0.85rem;
 }
 
+.ms-note-done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
 .ms-subnav-btn {
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
@@ -2107,7 +2307,8 @@ button.ms-home-card:hover {
   cursor: pointer;
 }
 
-.ms-subnav-btn.active {
+.ms-subnav-btn.active,
+.ms-subnav-btn.is-on {
   background: rgba(31, 107, 74, 0.12);
   color: var(--ink);
   border-color: rgba(31, 107, 74, 0.35);
@@ -4502,6 +4703,10 @@ a.ts-square-card:hover .ts-square-card-img {
   box-shadow: var(--shadow);
   border: 3px solid white;
   object-fit: cover;
+}
+
+.about-mascot-round {
+  border-radius: 50%;
 }
 
 .page-hero-img-wide {
@@ -8068,22 +8273,30 @@ a.floating-back-btn {
     padding: 0;
   }
 
-  .hub-mobile-links a {
+  .hub-mobile-links a,
+  .hub-mobile-links .hub-topic-btn {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 0.12rem;
     text-align: center;
-    padding: 0.42rem 0.28rem;
-    border-radius: 10px;
+    padding: 0.38rem 0.22rem 0.32rem;
+    border-radius: 12px;
     border: 1px solid var(--line);
-    background: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.82);
     font-weight: 650;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     line-height: 1.15;
     color: var(--muted);
-    min-height: 2.4rem;
+    min-height: 3.05rem;
+    white-space: normal;
     hyphens: auto;
     overflow-wrap: anywhere;
+  }
+
+  .hub-mobile-links .hub-topic-icon {
+    font-size: 1.05rem;
   }
 
   .hub-mobile-links a.active,

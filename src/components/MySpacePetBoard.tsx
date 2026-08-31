@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   nowTimeEastern,
   playAlarmTone,
-  readJsonStorage,
   todayKeyEastern,
   uid,
-  writeJsonStorage,
   type AlarmTone,
 } from "@/lib/mySpaceStorage";
+import { useMemberBoard } from "@/components/useMemberBoard";
 
 const KEY = "tvea-ms-pet-v2";
 
@@ -62,27 +61,26 @@ function defaults(): PetState {
 
 /**
  * Pet parade — ported from My Retirement Reboot Angelcake care tracker.
- * Walks, meals, completions, optional browser alarms.
+ * Saved to the Hub member account so PC and phones stay in sync.
  */
 export function MySpacePetBoard() {
-  const [ready, setReady] = useState(false);
-  const [state, setState] = useState<PetState>(defaults);
+  const { value, save, ready } = useMemberBoard<PetState>(
+    "pets",
+    defaults(),
+    true,
+    { localKey: KEY, debounceMs: 700 }
+  );
+  const loaded = value;
+  const state: PetState = {
+    ...defaults(),
+    ...loaded,
+    walks: Array.isArray(loaded.walks) ? loaded.walks : defaults().walks,
+    feeds: Array.isArray(loaded.feeds) ? loaded.feeds : defaults().feeds,
+  };
   const today = todayKeyEastern();
 
-  useEffect(() => {
-    const loaded = readJsonStorage(KEY, defaults());
-    setState({
-      ...defaults(),
-      ...loaded,
-      walks: Array.isArray(loaded.walks) ? loaded.walks : defaults().walks,
-      feeds: Array.isArray(loaded.feeds) ? loaded.feeds : defaults().feeds,
-    });
-    setReady(true);
-  }, []);
-
   function persist(next: PetState) {
-    setState(next);
-    writeJsonStorage(KEY, next);
+    void save(next);
   }
 
   function toggleDone(eventId: string, done: boolean) {

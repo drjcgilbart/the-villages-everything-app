@@ -52,12 +52,12 @@ export const DONATION_PRESETS: DonationPreset[] = [
   {
     id: "loofah",
     label: "Golden Loofah",
-    amountUsd: 25,
+    amountUsd: 20,
     blurb: "Highest preset · badge",
     badgeId: "golden_loofah",
     badgeImage: "/graphics/badges/golden-loofah.jpg",
     badgeTitle:
-      "Golden Loofah — highly coveted sparkly shower pouf. Earned with the $25 Golden Loofah preset.",
+      "Golden Loofah — highly coveted sparkly shower pouf. Earned with the $20 Golden Loofah preset.",
   },
 ];
 
@@ -73,7 +73,8 @@ export const CUSTOM_STAR_LOOFAH: DonationPreset = {
     "Custom Star Loofah — even more impressive than Golden Loofah. Earned with a custom $25+ cup-of-Joe tip (stars and sparkles included).",
 };
 
-export const GOLDEN_LOOFAH_MIN_USD = 25;
+export const GOLDEN_LOOFAH_MIN_USD = 20;
+export const CUSTOM_STAR_LOOFAH_MIN_USD = 25;
 export const DONATION_MIN_USD = 1;
 export const DONATION_MAX_USD = 500;
 
@@ -114,7 +115,7 @@ export function donationBadgeForCheckout(opts: {
   const { amountUsd, isCustom } = opts;
   if (!Number.isFinite(amountUsd)) return null;
 
-  if (isCustom && amountUsd >= GOLDEN_LOOFAH_MIN_USD) {
+  if (isCustom && amountUsd >= CUSTOM_STAR_LOOFAH_MIN_USD) {
     return { badgeId: "custom_star_loofah", def: CUSTOM_STAR_LOOFAH };
   }
 

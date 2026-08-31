@@ -78,7 +78,7 @@ export default function GolfCartHeroPrivacyPage() {
         </div>
 
         <p style={{ marginTop: "1.25rem" }}>
-          <Link href="/golf-cart-hero/" className="text-link">
+          <Link href="/golf-cart-hero" className="text-link">
             Play Golf Cart Hero
           </Link>
           {" · "}

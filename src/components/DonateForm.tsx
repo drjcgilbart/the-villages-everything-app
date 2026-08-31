@@ -225,7 +225,7 @@ export function DonateForm({
 
       <p className="donate-secure-note">
         Secure checkout powered by Stripe. Tip badges: Cup of Joe ($3), Fancy
-        Latte ($5), Early-Bird Brunch ($10), Golden Loofah ($25 preset), and
+        Latte ($5), Early-Bird Brunch ($10), Golden Loofah ($20 preset), and
         Custom Star Loofah (custom $25+ with extra sparkles). Golden Loofah and
         Custom Star Loofah also request Square Royalty membership for 1 year —
         the site host approves that in the Admin Portal.

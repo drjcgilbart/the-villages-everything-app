@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   nowTimeEastern,
   playAlarmTone,
-  readJsonStorage,
   todayKeyEastern,
   uid,
-  writeJsonStorage,
   type AlarmTone,
 } from "@/lib/mySpaceStorage";
+import { useMemberBoard } from "@/components/useMemberBoard";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -124,11 +123,16 @@ function bmi(weight: number | null, heightIn: number | null): number | null {
 
 /**
  * Health lanai — ported from the My Retirement Reboot health tracker.
- * Private to this browser (localStorage).
+ * Saved to the Hub member account (PC, iPhone, and Android share it).
  */
 export function MySpaceHealthBoard() {
-  const [ready, setReady] = useState(false);
-  const [state, setState] = useState<HealthState>(defaultState);
+  const { value, save, ready } = useMemberBoard<HealthState>(
+    "health",
+    defaultState(),
+    true,
+    { localKey: KEY, debounceMs: 700 }
+  );
+  const state: HealthState = { ...defaultState(), ...value };
   const [tab, setTab] = useState<"today" | "weight" | "meds" | "meals" | "move" | "journal" | "goals">(
     "today"
   );
@@ -144,15 +148,8 @@ export function MySpaceHealthBoard() {
 
   const today = todayKeyEastern();
 
-  useEffect(() => {
-    const loaded = readJsonStorage(KEY, defaultState());
-    setState({ ...defaultState(), ...loaded });
-    setReady(true);
-  }, []);
-
   function persist(next: HealthState) {
-    setState(next);
-    writeJsonStorage(KEY, next);
+    void save(next);
   }
 
   const habit = state.habits[today] || emptyHabit();

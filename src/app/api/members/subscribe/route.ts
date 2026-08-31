@@ -7,7 +7,26 @@ import {
   normalizePlan,
   stripePriceForTier,
   type HubPlanId,
+  type TierDef,
 } from "@/lib/membershipTiers";
+
+function subscriptionLineItem(tier: TierDef) {
+  const priceId = stripePriceForTier(tier.id);
+  if (priceId) return { price: priceId, quantity: 1 as const };
+  const usd = tier.priceUsdPerMonth;
+  return {
+    quantity: 1 as const,
+    price_data: {
+      currency: "usd",
+      unit_amount: Math.round(usd * 100),
+      recurring: { interval: "month" as const },
+      product_data: {
+        name: `The Villages Everything App — ${tier.label}`,
+        description: `${tier.tagline} $${usd}/month. Unlocks My Space boards for this plan (and everything below it).`,
+      },
+    },
+  };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -45,16 +64,6 @@ export async function POST(req: NextRequest) {
 
   const tier = getTier(requested);
 
-  const staticLink = process.env.NEXT_PUBLIC_MEMBER_PAYMENT_LINK?.trim();
-  if (staticLink) {
-    return NextResponse.json({
-      url: staticLink,
-      mode: "payment_link",
-      plan: requested,
-      planLabel: tier.label,
-    });
-  }
-
   if (!stripeConfigured()) {
     if (process.env.HUB_MEMBER_DEV_UNLOCK === "true") {
       updateMemberSpace(member.id, { plan: requested });
@@ -68,34 +77,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Subscriptions are not configured yet. Set STRIPE_PRICE_HUB (or STRIPE_MEMBER_PRICE_ID), STRIPE_PRICE_PLUS, STRIPE_PRICE_PATRON — or enable HUB_MEMBER_DEV_UNLOCK for testing.",
+          "Subscriptions aren’t wired up yet. Add STRIPE_SECRET_KEY to enable $1 / $2 / $3 monthly checkout.",
       },
       { status: 503 }
     );
   }
 
-  const priceId = stripePriceForTier(requested);
-  if (!priceId) {
+  if (!tier.priceUsdPerMonth) {
     return NextResponse.json(
-      {
-        error: `No Stripe price configured for ${tier.label}. Set STRIPE_PRICE_${tier.stripeEnvKey || "HUB"} or STRIPE_MEMBER_PRICE_ID.`,
-      },
-      { status: 503 }
+      { error: "That plan is free — request membership instead." },
+      { status: 400 }
     );
   }
 
   const stripe = getStripe()!;
-  const space = getMemberSpace(member.id);
   const base = siteBaseUrl();
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer_email: member.email,
     client_reference_id: member.id,
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [subscriptionLineItem(tier)],
     success_url: `${base}/my-space?subscribed=1&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${base}/my-space?canceled=1`,
-    metadata: { memberId: member.id, plan: requested },
+    cancel_url: `${base}/donate?canceled=1`,
+    metadata: {
+      memberId: member.id,
+      plan: requested,
+      amount_usd_month: String(tier.priceUsdPerMonth),
+    },
     subscription_data: {
       metadata: { memberId: member.id, plan: requested },
     },
@@ -106,8 +115,6 @@ export async function POST(req: NextRequest) {
       stripeCustomerId: session.customer,
     });
   }
-
-  void space;
 
   return NextResponse.json({
     url: session.url,

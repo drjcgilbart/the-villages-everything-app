@@ -16,7 +16,7 @@ export function memberToken(memberId: string) {
     .digest("hex");
 }
 
-export function memberCookieOptions(memberId: string, maxAgeSec = 60 * 60 * 24 * 21) {
+export function memberCookieOptions(memberId: string, maxAgeSec = 60 * 60 * 24 * 90) {
   return {
     name: COOKIE,
     value: `${memberId}.${memberToken(memberId)}`,

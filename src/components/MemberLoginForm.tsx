@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { safeNextPath } from "@/lib/safeNextPath";
 
 export function MemberLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,11 +22,12 @@ export function MemberLoginForm() {
       const res = await fetch("/api/members/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      router.push("/yard-sale/dashboard");
+      router.push(nextPath);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

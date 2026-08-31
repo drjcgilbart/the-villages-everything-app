@@ -69,7 +69,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <Header />
         </PhoneViewHide>
         <main className="flex-1">{children}</main>
-        <PhoneViewHide>
+        <PhoneViewHide extra={["/golf-cart-hero"]}>
           <Footer />
           <FloatingBackButton />
           <DonateMascotFloat />

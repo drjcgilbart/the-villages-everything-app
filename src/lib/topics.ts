@@ -666,6 +666,8 @@ export function getTopic(slug: TopicSlug): TopicDef {
 export const MAIN_TOPICS: {
   href: string;
   label: string;
+  /** Small emoji on the top-menu pill, like My Retirement Reboot’s tab buttons */
+  icon: string;
   /** Paths that should highlight this nav item */
   matchPrefixes?: string[];
   blurb: string;
@@ -674,6 +676,7 @@ export const MAIN_TOPICS: {
   {
     href: "/town-squares",
     label: "Town Squares",
+    icon: "⛲",
     matchPrefixes: ["/town-squares"],
     blurb:
       "Spanish Springs, Lake Sumter, Brownwood — free bands, shopping, and dancing after dark.",
@@ -682,6 +685,7 @@ export const MAIN_TOPICS: {
   {
     href: "/rec-centers",
     label: "Rec Centers",
+    icon: "🏊",
     matchPrefixes: ["/rec-centers"],
     blurb:
       "Pools, pickleball diplomacy, billiards, and “see you at the rec center.”",
@@ -690,6 +694,7 @@ export const MAIN_TOPICS: {
   {
     href: "/my-village",
     label: "The Villages",
+    icon: "🏘️",
     matchPrefixes: ["/my-village"],
     blurb:
       "Edenfield, Fenney, and 100+ villages — search, browse by area, and open each village’s landing page.",
@@ -698,6 +703,7 @@ export const MAIN_TOPICS: {
   {
     href: "/dining",
     label: "Dining",
+    icon: "🍽️",
     blurb:
       "Rate the early-bird, crown the top 5 by cuisine, and argue about tacos like it’s a sport.",
     image: "/graphics/theme-dining-v2.jpg",
@@ -705,6 +711,7 @@ export const MAIN_TOPICS: {
   {
     href: "/health",
     label: "Health",
+    icon: "💚",
     blurb:
       "Hospitals & ERs, emergency numbers, and light wellness tools for real villagers.",
     image: "/graphics/theme-health.jpg",
@@ -712,6 +719,7 @@ export const MAIN_TOPICS: {
   {
     href: "/wealth",
     label: "Wealth",
+    icon: "📈",
     blurb:
       "Markets, local banks, Social Security links, scam watch, and light money tools.",
     image: "/graphics/theme-wealth.jpg",
@@ -719,6 +727,7 @@ export const MAIN_TOPICS: {
   {
     href: "/news",
     label: "Local News",
+    icon: "📰",
     matchPrefixes: ["/news"],
     blurb:
       "Local headlines, current events, and YouTube news desks like Skip Smith.",
@@ -727,6 +736,7 @@ export const MAIN_TOPICS: {
   {
     href: "/real-estate",
     label: "Real Estate",
+    icon: "🏡",
     matchPrefixes: ["/real-estate"],
     blurb:
       "Featured homes, live market rabbit holes, and agents who speak “village.”",
@@ -735,6 +745,7 @@ export const MAIN_TOPICS: {
   {
     href: "/local-pros",
     label: "Local Pros",
+    icon: "🔧",
     matchPrefixes: ["/local-pros", "/support-local-villagers"],
     blurb:
       "Area trades and neighbor-run services — electricians, plumbers, salons, vets, sitters, and more. Villager-owned listings wear a mascot badge.",
@@ -743,6 +754,7 @@ export const MAIN_TOPICS: {
   {
     href: "/official-map",
     label: "Official Map",
+    icon: "🗺️",
     matchPrefixes: ["/official-map"],
     blurb:
       "District recreation map PDF — all the centers on one official cart-path cheat sheet.",
@@ -751,6 +763,7 @@ export const MAIN_TOPICS: {
   {
     href: "/golf-zone",
     label: "Golf",
+    icon: "⛳",
     blurb:
       "Executive trail, trail fees, course maps, and cart-path optimism — just one more hole.",
     image: "/graphics/theme-golf.jpg",
@@ -758,6 +771,7 @@ export const MAIN_TOPICS: {
   {
     href: "/pickleball",
     label: "Pickleball",
+    icon: "🏓",
     matchPrefixes: ["/pickleball"],
     blurb:
       "DUPR board, find a game, rec-center courts, and the kitchen line — paddle diplomacy included.",
@@ -766,6 +780,7 @@ export const MAIN_TOPICS: {
   {
     href: "/club-zone",
     label: "Clubs",
+    icon: "🃏",
     blurb:
       "Popular clubs, official directories, and member favorites — pickleball to mah-jongg.",
     image: "/graphics/theme-club-zone.jpg",
@@ -773,13 +788,24 @@ export const MAIN_TOPICS: {
   {
     href: "/arts-and-crafts",
     label: "Art",
+    icon: "🎨",
     blurb:
       "Paint, pottery, glitter optional — plus The Villages Artisan Guild for local makers.",
     image: "/graphics/theme-arts-crafts-v2.jpg",
   },
   {
+    href: "/golf-cart-hero",
+    label: "Golf Cart Hero",
+    icon: "🏎️",
+    matchPrefixes: ["/golf-cart-hero"],
+    blurb:
+      "Mario Kart energy on the cart paths — pick a square, a cart, and a Florida critter, then race.",
+    image: "/graphics/theme-golf-cart-hero.png",
+  },
+  {
     href: "/calendar",
     label: "Calendar",
+    icon: "📅",
     blurb:
       "What’s on so you don’t double-book pickleball and a square-dance again.",
     image: "/graphics/theme-calendar.jpg",
@@ -787,6 +813,7 @@ export const MAIN_TOPICS: {
   {
     href: "/future-development",
     label: "Future Development",
+    icon: "🚧",
     matchPrefixes: ["/future-development"],
     blurb:
       "Drone flyovers, construction watch, and “wait, that wasn’t there last month” energy.",
@@ -795,6 +822,7 @@ export const MAIN_TOPICS: {
   {
     href: "/forums",
     label: "Community Forums",
+    icon: "💬",
     matchPrefixes: ["/forums"],
     blurb:
       "Public neighbor chat — pick a topic, start a conversation, talk back and forth.",
@@ -803,6 +831,7 @@ export const MAIN_TOPICS: {
   {
     href: "/yard-sale",
     label: "Yard Sale",
+    icon: "🏷️",
     matchPrefixes: ["/yard-sale"],
     blurb:
       "One neighbor’s “why do I own this?” is another’s treasure — with photos. Posting is under My Space.",
@@ -811,6 +840,7 @@ export const MAIN_TOPICS: {
   {
     href: "/best-of-the-month",
     label: "Best of the Month",
+    icon: "🏆",
     matchPrefixes: ["/best-of-the-month"],
     blurb:
       "The monthly highlight reel — no dues, maximum chaos, zero algorithm anxiety.",

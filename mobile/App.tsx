@@ -311,6 +311,7 @@ function Shell() {
         pullToRefreshEnabled
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
+        incognito={false}
         javaScriptEnabled
         domStorageEnabled
         setSupportMultipleWindows={false}

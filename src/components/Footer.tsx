@@ -40,7 +40,7 @@ export function Footer() {
             <strong>My Space</strong>
             <div className="footer-group-links">
               <Link href="/my-space">Dashboard</Link>
-              <Link href="/yard-sale/login">Member sign-in</Link>
+              <Link href="/yard-sale/login?next=/my-space">Member sign-in</Link>
               <Link href="/yard-sale/dashboard">Yard sale tools</Link>
             </div>
           </div>
@@ -54,7 +54,7 @@ export function Footer() {
               <Link href="/donate" className="hide-in-native-app">
                 Buy me a cup of Joe
               </Link>
-              <a href="/golf-cart-hero/">Golf Cart Hero</a>
+              <Link href="/golf-cart-hero">Golf Cart Hero</Link>
             </div>
           </div>
         </div>

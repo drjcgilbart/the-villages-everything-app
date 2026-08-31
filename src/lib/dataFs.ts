@@ -23,6 +23,7 @@ const memoryJson = new Map<string, string>();
 /** Files that must survive across serverless instances (admin + membership). */
 const DURABLE_JSON = new Set([
   "member-space.json",
+  "member-boards.json",
   "yard-sale.json",
   "dining.json",
   "forum.json",

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PortfolioTracker } from "@/components/PortfolioTracker";
@@ -10,20 +9,38 @@ import {
   MySpacePetSchedule,
   MySpaceRoyaltyLounge,
 } from "@/components/MySpaceModules";
+import {
+  MySpaceEntertainmentBoard,
+  MySpaceFoodBoard,
+  MySpaceGolfLogBoard,
+  MySpaceGymBoard,
+  MySpaceMaintenanceBoard,
+  MySpaceMemoriesBoard,
+  MySpaceNewsBoard,
+  MySpacePickleballLogBoard,
+} from "@/components/MySpaceNextBoards";
+import { GlassDoorPreview } from "@/components/GlassDoorPreview";
 import { MySpaceWeatherBoard } from "@/components/MySpaceWeatherBoard";
+import { MySpaceWeatherStrip } from "@/components/MySpaceWeatherStrip";
 import { MySpaceFavoritesHub } from "@/components/MySpaceFavoritesHub";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import type { PopularClub } from "@/lib/clubs";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import type { PublicMember } from "@/lib/yardSaleTypes";
 import {
-  FEATURE_META,
   HUB_TIERS,
+  formatMembershipPrice,
   type FeatureKey,
   type HubPlanId,
-  tierRequiredFor,
 } from "@/lib/membershipTiers";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
+import {
+  PRODUCT_NAMES,
+  TIER_SUMMARY,
+  boardIsLocked,
+  getBoard,
+  type BoardId,
+} from "@/lib/mySpaceProduct";
 
 /** Explicit badge art for tier cards (client-safe; always present). */
 const TIER_CARD_BADGES: Record<
@@ -78,36 +95,21 @@ type SpacePayload = {
   }[];
 };
 
-function LockedTeaser({
-  feature,
-  currentLabel,
-}: {
-  feature: FeatureKey;
-  currentLabel: string;
-}) {
-  const meta = FEATURE_META[feature];
-  const need = tierRequiredFor(feature);
-  return (
-    <div className="about-panel ms-locked">
-      <span className="pill">Locked · {need.label}+</span>
-      <h3 style={{ margin: "0.5rem 0 0.35rem" }}>{meta.title}</h3>
-      <p style={{ margin: 0, color: "var(--muted)" }}>{meta.teaser}</p>
-      <p className="panel-hint" style={{ marginBottom: 0 }}>
-        You’re on <strong>{currentLabel}</strong>. Upgrade to{" "}
-        <strong>{need.label}</strong> (or higher) to unlock — or ask Studio to
-        set your plan while testing.
-      </p>
-    </div>
-  );
-}
-
 type DashTab =
   | "home"
   | "weather"
   | "health"
+  | "gym"
   | "pets"
+  | "food"
+  | "entertainment"
+  | "maintenance"
   | "investments"
+  | "news"
   | "calendar"
+  | "memories"
+  | "golfLog"
+  | "pickleballLog"
   | "favorites"
   | "membership"
   | "lounge"
@@ -206,59 +208,91 @@ export function MySpaceDashboard() {
     return <div className="empty-state">Loading your space…</div>;
   }
 
-  if (error === "signed_out" || !data) {
+  if (error && error !== "signed_out") {
     return (
-      <div className="my-space" id="ms-top">
-        <div className="about-panel my-space-gate">
-          <h2 style={{ marginTop: 0 }}>Your customized My Space</h2>
-          <p>
-            Favorites you star across the site (home village, town squares, rec
-            centers, dining, clubs) already collect below — no sign-in required
-            for those. Sign in for membership tiers, weather, health lanai, yard
-            sale tools, and more.
-          </p>
-          <div className="hero-actions">
-            <Link href="/yard-sale/login" className="btn btn-primary">
-              Sign in
-            </Link>
-            <Link href="/yard-sale/join" className="btn btn-ghost">
-              Request membership
-            </Link>
-          </div>
-        </div>
-        <MySpaceFavoritesHub />
+      <div className="empty-state">
+        <p className="pf-form-error">{error}</p>
       </div>
     );
   }
 
-  const { member, space, upgradeTiers } = data;
-  const f = space.features;
-  const planLabel = space.planLabel;
+  const visitor = !data;
+  const member = data?.member;
+  const space = data?.space;
+  const f = space?.features;
+  const planLabel = space?.planLabel || "Visitor";
+  const planRank = visitor ? -1 : space?.planRank ?? 0;
+  const approved = member?.status === "approved";
   const showDev =
     process.env.NEXT_PUBLIC_HUB_MEMBER_DEV_UNLOCK === "true";
+  const upgradeTiers = data?.upgradeTiers;
 
-  const tabs: { id: DashTab; label: string; icon: string; locked?: boolean }[] =
+  function locked(boardId: BoardId): boolean {
+    return boardIsLocked(boardId, { visitor, planRank });
+  }
+
+  const glass = (boardId: BoardId) => (
+    <GlassDoorPreview
+      boardId={boardId}
+      visitor={visitor}
+      currentLabel={visitor ? undefined : planLabel}
+      approved={approved}
+      nativeApp={inNativeApp}
+      busy={busy}
+      onUnlock={startSubscribe}
+    />
+  );
+
+  const tabs: { id: DashTab; label: string; icon: string; boardId: BoardId }[] =
     [
-      { id: "home", label: "Home", icon: "🏠" },
-      { id: "weather", label: "Weather", icon: "🌤", locked: !f.weather },
-      { id: "health", label: "Health", icon: "💚", locked: !f.healthLog },
-      { id: "pets", label: "Pets", icon: "🐶", locked: !f.petSchedule },
+      { id: "home", label: "Home", icon: "🏠", boardId: "home" },
+      { id: "weather", label: getBoard("weather").label, icon: "🌤", boardId: "weather" },
+      { id: "health", label: getBoard("health").label, icon: "💚", boardId: "health" },
+      { id: "gym", label: getBoard("gym").label, icon: "🏋️", boardId: "gym" },
+      { id: "pets", label: getBoard("pets").label, icon: "🐾", boardId: "pets" },
+      { id: "food", label: getBoard("food").label, icon: "🍷", boardId: "food" },
+      {
+        id: "entertainment",
+        label: getBoard("entertainment").label,
+        icon: "🎭",
+        boardId: "entertainment",
+      },
+      {
+        id: "maintenance",
+        label: getBoard("maintenance").label,
+        icon: "🔧",
+        boardId: "maintenance",
+      },
       {
         id: "investments",
-        label: "Investments",
+        label: getBoard("investments").label,
         icon: "📈",
-        locked: !f.portfolio,
+        boardId: "investments",
       },
+      { id: "news", label: getBoard("news").label, icon: "📰", boardId: "news" },
       {
         id: "calendar",
-        label: "Calendar",
+        label: getBoard("calendar").label,
         icon: "📅",
-        locked: !f.calendarBoard,
+        boardId: "calendar",
       },
-      { id: "favorites", label: "Favorites", icon: "⭐" },
-      { id: "membership", label: "Tiers", icon: "🎟" },
-      { id: "lounge", label: "Royalty", icon: "👑", locked: !f.exclusiveLounge },
-      { id: "links", label: "Shortcuts", icon: "🔗" },
+      {
+        id: "memories",
+        label: getBoard("memories").label,
+        icon: "📷",
+        boardId: "memories",
+      },
+      { id: "golfLog", label: getBoard("golfLog").label, icon: "⛳", boardId: "golfLog" },
+      {
+        id: "pickleballLog",
+        label: getBoard("pickleballLog").label,
+        icon: "🏓",
+        boardId: "pickleballLog",
+      },
+      { id: "favorites", label: "Favorites", icon: "⭐", boardId: "favorites" },
+      { id: "membership", label: "Tiers", icon: "🎟", boardId: "membership" },
+      { id: "lounge", label: "Royalty", icon: "👑", boardId: "lounge" },
+      { id: "links", label: "Shortcuts", icon: "🔗", boardId: "shortcuts" },
     ];
 
   return (
@@ -266,41 +300,85 @@ export function MySpaceDashboard() {
       <div className="about-panel my-space-header">
         <div>
           <span className="kicker">
-            {f.planBadge ? "👑 Square Royalty" : "Members only · daily dashboard"}
+            {visitor
+              ? PRODUCT_NAMES.doorKicker
+              : f?.planBadge
+                ? "👑 Square Royalty"
+                : PRODUCT_NAMES.doorKicker}
           </span>
-          <h2 style={{ margin: "0.35rem 0" }} className="member-name">
-            <span className="member-name-text">
-              {space.spaceTitle || `${member.name.split(" ")[0]}’s Space`}
-            </span>
-            <MemberBadgesRow badges={data.badges || []} />
-          </h2>
-          <p style={{ margin: 0, color: "var(--muted)" }}>
-            <span className="member-name">
-              <span className="member-name-text">{member.name}</span>
-              <MemberBadgesRow badges={data.badges || []} />
-            </span>
-            {member.village ? ` · ${member.village}` : ""} · Plan:{" "}
-            <strong>{planLabel}</strong>
-            {space.planTagline ? (
-              <span className="ms-plan-tagline"> — {space.planTagline}</span>
-            ) : null}
-          </p>
+          {visitor ? (
+            <>
+              <h2 style={{ margin: "0.35rem 0" }}>
+                {PRODUCT_NAMES.doorTitle}
+              </h2>
+              <p style={{ margin: 0, color: "var(--muted)" }}>
+                {PRODUCT_NAMES.doorBlurb}
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 style={{ margin: "0.35rem 0" }} className="member-name">
+                <span className="member-name-text">
+                  {space?.spaceTitle ||
+                    `${member?.name.split(" ")[0] || "Neighbor"}’s Space`}
+                </span>
+                <MemberBadgesRow badges={data?.badges || []} />
+              </h2>
+              <p style={{ margin: 0, color: "var(--muted)" }}>
+                <span className="member-name">
+                  <span className="member-name-text">{member?.name}</span>
+                  <MemberBadgesRow badges={data?.badges || []} />
+                </span>
+                {member?.village ? ` · ${member.village}` : ""} · Plan:{" "}
+                <strong>{planLabel}</strong>
+                {space?.planTagline ? (
+                  <span className="ms-plan-tagline"> — {space.planTagline}</span>
+                ) : null}
+              </p>
+            </>
+          )}
           <p className="panel-hint" style={{ marginBottom: 0 }}>
-            Full daily dashboard (weather · health · pets · investments) —
-            powered by the same tools as My Retirement Reboot.
+            Personalized boards stay on your membership. Public Hub pages
+            (Dining, Golf, Calendar of Events, Golf Cart Hero) stay free.
           </p>
           {note && <p className="club-sync-note">{note}</p>}
         </div>
         <div className="hero-actions">
-          <Link href="/club-zone" className="btn btn-ghost btn-sm">
-            Clubs
-          </Link>
-          <Link href="/wealth#portfolio" className="btn btn-ghost btn-sm">
-            Wealth
-          </Link>
-          <Link href="/yard-sale/dashboard" className="btn btn-ghost btn-sm">
-            Yard sale
-          </Link>
+          {visitor ? (
+            <>
+              <Link
+                href="/yard-sale/login?next=/my-space"
+                className="btn btn-primary btn-sm"
+              >
+                Sign in
+              </Link>
+              <Link href="/yard-sale/join" className="btn btn-ghost btn-sm">
+                Request membership
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/club-zone" className="btn btn-ghost btn-sm">
+                Clubs
+              </Link>
+              <Link href="/wealth#portfolio" className="btn btn-ghost btn-sm">
+                Wealth
+              </Link>
+              <Link href="/yard-sale/dashboard" className="btn btn-ghost btn-sm">
+                Yard sale
+              </Link>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={async () => {
+                  await fetch("/api/members/logout", { method: "POST" });
+                  window.location.href = "/my-space";
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -309,7 +387,7 @@ export function MySpaceDashboard() {
           <button
             key={t.id}
             type="button"
-            className={`ms-dash-nav-btn ${tab === t.id ? "active" : ""} ${t.locked ? "is-locked" : ""}`}
+            className={`ms-dash-nav-btn ${tab === t.id ? "active" : ""} ${locked(t.boardId) ? "is-locked" : ""}`}
             onClick={() => setTab(t.id)}
             aria-selected={tab === t.id}
           >
@@ -325,33 +403,62 @@ export function MySpaceDashboard() {
         <section className="my-space-block">
           <h3 className="my-space-block-title">Your daily hub</h3>
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            Pick a tab above — same layout as the desktop Villages dashboard.
-            Paid tiers unlock weather, investments, health lanai, pet parade,
-            and more.
+            Boards are grouped by membership. Each paid tier keeps everything
+            below it. Locked ones show a sample — never another neighbor’s real
+            notes.
           </p>
-          <div className="ms-home-grid">
-            {tabs
-              .filter((t) => t.id !== "home")
-              .map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className="about-panel ms-home-card"
-                  onClick={() => setTab(t.id)}
-                >
-                  <span aria-hidden className="ms-home-card-icon">
-                    {t.icon}
+          {locked("weather") ? <MySpaceWeatherStrip /> : null}
+          {HUB_TIERS.map((tier) => {
+            const group = tabs.filter(
+              (t) =>
+                t.id !== "home" && getBoard(t.boardId).minRank === tier.rank
+            );
+            if (group.length === 0) return null;
+            const included = !visitor && planRank >= tier.rank;
+            const current = !visitor && space?.plan === tier.id;
+            return (
+              <div key={tier.id} className="ms-hub-group">
+                <div className="ms-hub-group-head">
+                  <h4 className="ms-hub-group-title">{tier.label}</h4>
+                  <span className="ms-hub-group-price">
+                    {formatMembershipPrice(tier)}
                   </span>
-                  <strong>
-                    {t.label}
-                    {t.locked ? " 🔒" : ""}
-                  </strong>
-                  <span className="panel-hint">
-                    {t.locked ? "Upgrade to unlock" : "Open"}
+                  <span className="pill">
+                    {current ? "Your plan" : included ? "Included" : tier.shortLabel}
                   </span>
-                </button>
-              ))}
-          </div>
+                </div>
+                <p className="panel-hint ms-hub-group-tagline">{tier.tagline}</p>
+                <div className="ms-home-grid">
+                  {group.map((t) => {
+                    const isLocked = locked(t.boardId);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`about-panel ms-home-card ${isLocked ? "is-locked" : ""}`}
+                        onClick={() => setTab(t.id)}
+                      >
+                        <span aria-hidden className="ms-home-card-icon">
+                          {t.icon}
+                        </span>
+                        <strong>
+                          {t.label}
+                          {isLocked ? " 🔒" : ""}
+                        </strong>
+                        <span className="panel-hint">
+                          {isLocked
+                            ? visitor && getBoard(t.boardId).minRank === 0
+                              ? "Sign in to use"
+                              : `Unlock with ${tier.label}`
+                            : "Open"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
           <div style={{ marginTop: "1.25rem" }}>
             <MySpaceFavoritesHub />
           </div>
@@ -367,8 +474,8 @@ export function MySpaceDashboard() {
         </p>
         <div className="ms-tier-grid">
           {HUB_TIERS.map((t) => {
-            const current = t.id === space.plan;
-            const unlocked = space.planRank >= t.rank;
+            const current = !visitor && t.id === space?.plan;
+            const unlocked = !visitor && planRank >= t.rank;
             const badge = TIER_CARD_BADGES[t.id];
             const badgeSrc = badge?.src || t.badgeImage;
             return (
@@ -399,29 +506,47 @@ export function MySpaceDashboard() {
                   {current ? "Your plan" : unlocked ? "Included" : t.shortLabel}
                 </span>
                 <h3>{t.label}</h3>
+                <p className="ms-tier-price">{formatMembershipPrice(t)}</p>
                 <p className="ms-tier-tagline">{t.tagline}</p>
-                <p className="ms-tier-blurb">{t.blurb}</p>
-                {t.rank > 0 && !unlocked && member.status === "approved" && !inNativeApp && (
+                <p className="ms-tier-blurb">{TIER_SUMMARY[t.id].blurb}</p>
+                <p className="panel-hint">{TIER_SUMMARY[t.id].includes}</p>
+                {visitor && t.rank === 0 ? (
+                  <Link href="/yard-sale/join" className="btn btn-primary btn-sm">
+                    Request membership
+                  </Link>
+                ) : null}
+                {t.rank > 0 && !unlocked && !visitor && approved && !inNativeApp && (
                   <button
                     type="button"
                     className="btn btn-primary btn-sm hide-in-native-app"
                     disabled={busy}
                     onClick={() => startSubscribe(t.id)}
                   >
-                    {busy ? "Starting…" : `Become ${t.label}`}
+                    {busy
+                      ? "Starting…"
+                      : `Unlock with ${t.label} · ${formatMembershipPrice(t)}`}
                   </button>
                 )}
-                {t.rank > 0 && !unlocked && member.status === "approved" && inNativeApp && (
+                {t.rank > 0 && !unlocked && !visitor && approved && inNativeApp && (
                   <p className="panel-hint" style={{ marginBottom: 0 }}>
-                    Membership upgrades are not sold in the store app.
+                    Membership isn’t sold in the store app. Subscribe at
+                    thevillageseverythingapp.com, then sign in here.
                   </p>
                 )}
-                {t.rank > 0 && !unlocked && member.status !== "approved" && (
+                {t.rank > 0 && !unlocked && !visitor && !approved && (
                   <p className="pf-form-error" style={{ marginBottom: 0 }}>
                     Account must be approved before upgrading.
                   </p>
                 )}
-                {showDev && t.rank > 0 && (
+                {t.rank > 0 && visitor ? (
+                  <Link
+                    href="/yard-sale/login?next=/my-space"
+                    className="btn btn-ghost btn-sm"
+                  >
+                    Sign in to unlock
+                  </Link>
+                ) : null}
+                {showDev && t.rank > 0 && !visitor && (
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
@@ -455,72 +580,147 @@ export function MySpaceDashboard() {
 
       {tab === "weather" && (
       <section id="ms-weather" className="my-space-block">
-        <h3 className="my-space-block-title">Villages weather</h3>
-        {f.weather ? (
+        <h3 className="my-space-block-title">{getBoard("weather").label}</h3>
+        {!locked("weather") && f?.weather ? (
           <MySpaceWeatherBoard />
         ) : (
-          <LockedTeaser feature="weather" currentLabel={planLabel} />
+          glass("weather")
         )}
       </section>
       )}
 
       {tab === "investments" && (
       <section id="ms-markets" className="my-space-block">
-        <h3 className="my-space-block-title">Investments</h3>
-        {f.portfolio ? (
+        <h3 className="my-space-block-title">{getBoard("investments").label}</h3>
+        {!locked("investments") && f?.portfolio ? (
           <>
             <p style={{ color: "var(--muted)", marginTop: 0 }}>
-              Stock &amp; ETF board (saved on this browser) — same idea as the
-              desktop investments tab and the Wealth page.
+              Stock &amp; ETF board — private to your membership.
             </p>
-            <PortfolioTracker />
+            <PortfolioTracker syncAccount />
           </>
         ) : (
-          <LockedTeaser feature="portfolio" currentLabel={planLabel} />
+          glass("investments")
         )}
+      </section>
+      )}
+
+      {tab === "news" && (
+      <section id="ms-news" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("news").label}</h3>
+        {!locked("news") && f?.newsPrefs ? <MySpaceNewsBoard /> : glass("news")}
       </section>
       )}
 
       {tab === "health" && (
       <section id="ms-health" className="my-space-block">
-        <h3 className="my-space-block-title">Health lanai</h3>
-        {f.healthLog ? (
+        <h3 className="my-space-block-title">{getBoard("health").label}</h3>
+        {!locked("health") && f?.healthLog ? (
           <MySpaceHealthLog />
         ) : (
-          <LockedTeaser feature="healthLog" currentLabel={planLabel} />
+          glass("health")
         )}
+      </section>
+      )}
+
+      {tab === "gym" && (
+      <section id="ms-gym" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("gym").label}</h3>
+        {!locked("gym") && f?.gymLog ? <MySpaceGymBoard /> : glass("gym")}
       </section>
       )}
 
       {tab === "pets" && (
       <section id="ms-pets" className="my-space-block">
-        <h3 className="my-space-block-title">Pet parade</h3>
-        {f.petSchedule ? (
+        <h3 className="my-space-block-title">{getBoard("pets").label}</h3>
+        {!locked("pets") && f?.petSchedule ? (
           <MySpacePetSchedule />
         ) : (
-          <LockedTeaser feature="petSchedule" currentLabel={planLabel} />
+          glass("pets")
+        )}
+      </section>
+      )}
+
+      {tab === "food" && (
+      <section id="ms-food" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("food").label}</h3>
+        {!locked("food") && f?.foodLog ? <MySpaceFoodBoard /> : glass("food")}
+      </section>
+      )}
+
+      {tab === "entertainment" && (
+      <section id="ms-entertainment" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("entertainment").label}</h3>
+        {!locked("entertainment") && f?.entertainmentLog ? (
+          <MySpaceEntertainmentBoard />
+        ) : (
+          glass("entertainment")
+        )}
+      </section>
+      )}
+
+      {tab === "maintenance" && (
+      <section id="ms-maintenance" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("maintenance").label}</h3>
+        {!locked("maintenance") && f?.maintenanceLog ? (
+          <MySpaceMaintenanceBoard />
+        ) : (
+          glass("maintenance")
         )}
       </section>
       )}
 
       {tab === "calendar" && (
       <section id="ms-calendar" className="my-space-block">
-        <h3 className="my-space-block-title">My calendar board</h3>
-        {f.calendarBoard ? (
+        <h3 className="my-space-block-title">{getBoard("calendar").label}</h3>
+        {!locked("calendar") && f?.calendarBoard ? (
           <MySpaceCalendarBoard />
         ) : (
-          <LockedTeaser feature="calendarBoard" currentLabel={planLabel} />
+          glass("calendar")
+        )}
+      </section>
+      )}
+
+      {tab === "memories" && (
+      <section id="ms-memories" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("memories").label}</h3>
+        {!locked("memories") && f?.memoriesAlbum ? (
+          <MySpaceMemoriesBoard />
+        ) : (
+          glass("memories")
+        )}
+      </section>
+      )}
+
+      {tab === "golfLog" && (
+      <section id="ms-golf-log" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("golfLog").label}</h3>
+        {!locked("golfLog") && f?.golfLog ? (
+          <MySpaceGolfLogBoard />
+        ) : (
+          glass("golfLog")
+        )}
+      </section>
+      )}
+
+      {tab === "pickleballLog" && (
+      <section id="ms-pb-log" className="my-space-block">
+        <h3 className="my-space-block-title">{getBoard("pickleballLog").label}</h3>
+        {!locked("pickleballLog") && f?.pickleballLog ? (
+          <MySpacePickleballLogBoard />
+        ) : (
+          glass("pickleballLog")
         )}
       </section>
       )}
 
       {tab === "lounge" && (
       <section id="ms-lounge" className="my-space-block">
-        <h3 className="my-space-block-title">Royalty lounge</h3>
-        {f.exclusiveLounge ? (
+        <h3 className="my-space-block-title">{getBoard("lounge").label}</h3>
+        {!locked("lounge") && f?.exclusiveLounge ? (
           <MySpaceRoyaltyLounge />
         ) : (
-          <LockedTeaser feature="exclusiveLounge" currentLabel={planLabel} />
+          glass("lounge")
         )}
       </section>
       )}
@@ -579,9 +779,9 @@ export function MySpaceDashboard() {
 
       <p className="mkt-disclaimer">
         Tiers:{" "}
-        {HUB_TIERS.map((t) => t.label).join(" → ")}. Paid upgrades need Stripe
-        price IDs; Studio can set plan for beta testing. Dashboard modules
-        store personal data in this browser only. Not affiliated with The
+        {HUB_TIERS.map((t) => t.label).join(" → ")}. Locked boards show sample
+        chrome only — never another neighbor’s notes. Membership is sold on the
+        website, not in the iPhone/Android store apps. Not affiliated with The
         Villages® operators.
       </p>
     </div>

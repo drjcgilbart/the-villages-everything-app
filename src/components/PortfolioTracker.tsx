@@ -19,8 +19,10 @@ import {
   newHoldingId,
   readPortfolio,
   writePortfolio,
+  PORTFOLIO_STORAGE_KEY,
   type PortfolioHolding,
 } from "@/lib/portfolioStorage";
+import { useMemberBoard } from "@/components/useMemberBoard";
 
 const POLL_MS = 30_000;
 
@@ -31,7 +33,17 @@ type QuotesResponse = {
   error?: string;
 };
 
-export function PortfolioTracker() {
+export function PortfolioTracker({
+  syncAccount = false,
+}: {
+  syncAccount?: boolean;
+}) {
+  const account = useMemberBoard<{ holdings: PortfolioHolding[] }>(
+    "portfolio",
+    { holdings: [] },
+    syncAccount,
+    { localKey: PORTFOLIO_STORAGE_KEY, debounceMs: 500 }
+  );
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [quotes, setQuotes] = useState<Record<string, TickerQuote>>({});
@@ -47,14 +59,27 @@ export function PortfolioTracker() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (syncAccount) {
+      if (!account.ready) return;
+      const fromAccount = Array.isArray(account.value.holdings)
+        ? account.value.holdings
+        : [];
+      setHoldings(fromAccount.length ? fromAccount : readPortfolio());
+      setHydrated(true);
+      return;
+    }
     setHoldings(readPortfolio());
     setHydrated(true);
-  }, []);
+  }, [syncAccount, account.ready, account.value.holdings]);
 
-  const persist = useCallback((next: PortfolioHolding[]) => {
-    setHoldings(next);
-    writePortfolio(next);
-  }, []);
+  const persist = useCallback(
+    (next: PortfolioHolding[]) => {
+      setHoldings(next);
+      writePortfolio(next);
+      if (syncAccount) void account.save({ holdings: next });
+    },
+    [syncAccount, account]
+  );
 
   const tickersKey = useMemo(
     () =>

@@ -20,7 +20,7 @@ import type { BadgeDef } from "./memberBadgeTypes";
 export type { BadgeDef } from "./memberBadgeTypes";
 
 /**
- * Golden Loofah — top “Buy me a cup of Joe” donation tier ($25+).
+ * Golden Loofah — top “Buy me a cup of Joe” donation tier ($20 preset).
  */
 export const GOLDEN_LOOFAH: BadgeDef = donationBadgeDef(
   DONATION_PRESETS.find((p) => p.badgeId === "golden_loofah")!
