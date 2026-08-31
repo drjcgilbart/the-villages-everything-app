@@ -14,7 +14,8 @@ export type StoredBoardId =
   | "health"
   | "pets"
   | "calendar"
-  | "portfolio";
+  | "portfolio"
+  | "weather";
 
 export const STORED_BOARD_FEATURE: Record<StoredBoardId, FeatureKey> = {
   news: "newsPrefs",
@@ -29,6 +30,7 @@ export const STORED_BOARD_FEATURE: Record<StoredBoardId, FeatureKey> = {
   pets: "petSchedule",
   calendar: "calendarBoard",
   portfolio: "portfolio",
+  weather: "weather",
 };
 
 export const NEWS_TOPICS = [
@@ -209,6 +211,7 @@ export type MemberBoards = {
   pets: Record<string, unknown>;
   calendar: { items: unknown[] };
   portfolio: { holdings: unknown[] };
+  weather: Record<string, unknown>;
 };
 
 function clip(s: unknown, n: number) {
@@ -278,6 +281,7 @@ export function emptyBoards(): MemberBoards {
     pets: {},
     calendar: { items: [] },
     portfolio: { holdings: [] },
+    weather: {},
   };
 }
 
@@ -725,6 +729,8 @@ export function sanitizeBoard(
       };
     }
     case "health":
+      return jsonBlob(r, {});
+    case "weather":
       return jsonBlob(r, {});
     case "pets":
       return jsonBlob(r, {});

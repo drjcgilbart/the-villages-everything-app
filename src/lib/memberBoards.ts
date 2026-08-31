@@ -51,6 +51,7 @@ export function getMemberBoards(memberId: string): MemberBoards {
       "portfolio",
       rec.portfolio
     ) as MemberBoards["portfolio"],
+    weather: sanitizeBoard("weather", rec.weather) as MemberBoards["weather"],
   };
 }
 

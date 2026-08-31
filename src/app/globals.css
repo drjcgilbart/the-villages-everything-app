@@ -2833,6 +2833,94 @@ button.ms-home-card:hover {
 }
 
 /* Weather board */
+.ms-wx-locbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+.ms-wx-loc-current {
+  flex: 1 1 12rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ms-wx-loc-current strong {
+  font-size: 1.05rem;
+}
+
+.ms-wx-loc-arrow {
+  min-width: 2.4rem;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.ms-wx-dots {
+  display: flex;
+  gap: 0.28rem;
+  margin-top: 0.35rem;
+}
+
+.ms-wx-dots i {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: rgba(31, 107, 74, 0.25);
+  font-style: normal;
+}
+
+.ms-wx-dots i.on {
+  background: #1f6b4a;
+}
+
+.ms-wx-manager {
+  margin-bottom: 0.85rem;
+}
+
+.ms-wx-hits,
+.ms-wx-saved {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ms-wx-hits li,
+.ms-wx-saved li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ms-wx-saved li.is-showing {
+  border-color: rgba(31, 107, 74, 0.45);
+  background: rgba(31, 107, 74, 0.08);
+}
+
+.ms-wx-hits li div,
+.ms-wx-saved li div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
 .ms-wx-hero {
   display: flex;
   flex-wrap: wrap;

@@ -84,6 +84,7 @@ export type ForecastDay = {
 
 export type VillagesForecast = VillagesWeather & {
   zip: string;
+  timezone: string;
   pressureInHg: number | null;
   cloudCover: number | null;
   windGustMph: number | null;
@@ -103,11 +104,41 @@ function windDirLabel(deg: number | null | undefined): string {
 
 export { windDirLabel };
 
-async function fetchOpenMeteoRaw(forecastDays: number) {
+export type ForecastPlace = {
+  latitude?: number;
+  longitude?: number;
+  timezone?: string;
+  locationName?: string;
+  zip?: string;
+};
+
+function safeTimeZone(tz: string | undefined): string {
+  const raw = String(tz || "").trim();
+  if (!raw || raw === "auto") return "auto";
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: raw }).format(new Date());
+    return raw;
+  } catch {
+    return "auto";
+  }
+}
+
+async function fetchOpenMeteoRaw(
+  forecastDays: number,
+  place?: ForecastPlace
+) {
+  const lat =
+    place?.latitude != null && Number.isFinite(place.latitude)
+      ? place.latitude
+      : VILLAGES_LAT;
+  const lon =
+    place?.longitude != null && Number.isFinite(place.longitude)
+      ? place.longitude
+      : VILLAGES_LON;
   const params = new URLSearchParams({
-    latitude: String(VILLAGES_LAT),
-    longitude: String(VILLAGES_LON),
-    timezone: VILLAGES_TZ,
+    latitude: String(lat),
+    longitude: String(lon),
+    timezone: place ? safeTimeZone(place.timezone) : VILLAGES_TZ,
     temperature_unit: "fahrenheit",
     wind_speed_unit: "mph",
     precipitation_unit: "inch",
@@ -166,6 +197,7 @@ export async function fetchVillagesWeather(): Promise<VillagesWeather> {
     hourly: _h,
     daily: _d,
     zip: _z,
+    timezone: _tz,
     pressureInHg: _p,
     cloudCover: _c,
     windGustMph: _g,
@@ -179,8 +211,10 @@ export async function fetchVillagesWeather(): Promise<VillagesWeather> {
 }
 
 /** Full dashboard forecast (current + 24h hourly + 7-day) — from My Retirement Reboot. */
-export async function fetchVillagesForecast(): Promise<VillagesForecast> {
-  const data = (await fetchOpenMeteoRaw(7)) as {
+export async function fetchVillagesForecast(
+  place?: ForecastPlace
+): Promise<VillagesForecast> {
+  const data = (await fetchOpenMeteoRaw(7, place)) as {
     current?: Record<string, number | string | undefined>;
     hourly?: {
       time?: string[];
@@ -292,9 +326,18 @@ export async function fetchVillagesForecast(): Promise<VillagesForecast> {
   const pressureHpa =
     current.pressure_msl != null ? Number(current.pressure_msl) : null;
 
+  const tz =
+    typeof (data as { timezone?: string }).timezone === "string" &&
+    (data as { timezone?: string }).timezone
+      ? String((data as { timezone?: string }).timezone)
+      : place?.timezone && place.timezone !== "auto"
+        ? place.timezone
+        : VILLAGES_TZ;
+
   return {
-    location: "The Villages, FL",
-    zip: "34762",
+    location: place?.locationName?.trim() || "The Villages, FL",
+    zip: place?.zip?.trim() || (place ? "" : "34762"),
+    timezone: tz,
     temperatureF: Math.round(Number(current.temperature_2m)),
     feelsLikeF: Math.round(
       Number(current.apparent_temperature ?? current.temperature_2m)
