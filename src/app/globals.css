@@ -2641,16 +2641,27 @@ button.ms-home-card:hover {
   border-radius: 18px;
   padding: 1.1rem 1.2rem 1.2rem;
   margin-bottom: 1rem;
-  background: linear-gradient(160deg, #163c32, #0f2744 70%);
-  border: 1px solid color-mix(in srgb, var(--palm) 35%, transparent);
+  background:
+    linear-gradient(160deg, rgba(31, 107, 74, 0.08), rgba(58, 166, 201, 0.07) 70%),
+    #fff;
+  border: 1px solid var(--line);
   text-align: center;
+  color: var(--ink);
+}
+.ms-fin-hero .panel-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0.2rem 0;
 }
 .ms-fin-hero h3 {
   font-size: clamp(1.8rem, 4vw, 2.6rem);
   margin: 0.15rem 0 0.85rem;
+  color: var(--ink);
 }
-.ms-fin-hero.gl-up h3 { color: #8ee0b5; }
-.ms-fin-hero.gl-down h3 { color: #f3b0a6; }
+.ms-fin-hero.gl-up h3 { color: var(--palm); }
+.ms-fin-hero.gl-down h3 { color: var(--sunset); }
 .ms-fin-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2658,10 +2669,18 @@ button.ms-home-card:hover {
   text-align: left;
   margin-bottom: 0.75rem;
 }
-.ms-fin-metrics span { display: block; font-size: 0.72rem; color: var(--muted); }
-.ms-fin-metrics strong { font-size: 0.95rem; }
-.ms-fin-metrics .up { color: #8ee0b5; }
-.ms-fin-metrics .down { color: #f3b0a6; }
+.ms-fin-metrics span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.ms-fin-metrics strong {
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.ms-fin-metrics .up { color: var(--palm); }
+.ms-fin-metrics .down { color: var(--sunset); }
 .ms-fin-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
