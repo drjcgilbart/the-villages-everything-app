@@ -276,8 +276,20 @@ export type MaintenanceBoard = {
   activeAssetId: string;
 };
 
+export type MemoryKind = "photo" | "video";
+export type MemoryItem = {
+  id: string;
+  kind: MemoryKind;
+  name: string;
+  url: string;
+  caption: string;
+  place: string;
+  date: string;
+  section: string;
+  addedAt: string;
+};
 export type MemoriesBoard = {
-  photos: { id: string; caption: string; extra?: string; date: string }[];
+  photos: MemoryItem[];
 };
 
 export type GolfRound = {
@@ -374,6 +386,13 @@ export type MemberBoards = {
 
 function clip(s: unknown, n: number) {
   return String(s || "").trim().slice(0, n);
+}
+
+function safeMemoryUrl(raw: unknown) {
+  const u = clip(raw, 220);
+  if (!u.startsWith("/api/media/")) return "";
+  if (/[\s"'<>\\]/.test(u)) return "";
+  return u;
 }
 
 function uid(prefix: string) {
@@ -1030,13 +1049,28 @@ export function sanitizeBoard(
         photos: photosRaw
           .map((p) => {
             const row = p as unknown as Record<string, unknown>;
-            const caption = clip(row.caption || row.text, 120);
-            if (!caption) return null;
+            const url = safeMemoryUrl(row.url);
+            const name = clip(row.name, 80);
+            const caption =
+              clip(row.caption || row.text, 120) ||
+              name ||
+              (url ? "Photo" : "");
+            if (!caption && !url) return null;
+            const kindRaw = clip(row.kind, 12).toLowerCase();
+            const kind: MemoryKind =
+              kindRaw === "video" || /\.(mp4|mov|webm)$/i.test(name)
+                ? "video"
+                : "photo";
             return {
               id: clip(row.id, 40) || uid("ph"),
+              kind,
+              name,
+              url,
               caption,
-              extra: clip(row.extra, 200) || undefined,
+              place: clip(row.place || row.extra, 200),
               date: clip(row.date, 12),
+              section: clip(row.section, 40) || "private",
+              addedAt: clip(row.addedAt, 24),
             };
           })
           .filter(Boolean)

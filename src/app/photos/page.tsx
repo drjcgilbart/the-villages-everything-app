@@ -27,6 +27,14 @@ export default async function PhotosPage() {
               Double-click a photo (or tap See larger picture) to open the
               full image.
             </p>
+            <p>
+              Want a private album that follows you on the website, iPhone, and
+              Android? Members add photos and short movies in{" "}
+              <Link href="/my-space" className="text-link">
+                My Space → Photos
+              </Link>
+              . This page stays free.
+            </p>
           </div>
           <div className="page-hero-art">
             <Image

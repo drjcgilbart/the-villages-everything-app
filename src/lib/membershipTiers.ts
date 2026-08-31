@@ -82,7 +82,7 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Lanai",
     tagline: "Screened-in serenity with a side of spreadsheets.",
     blurb:
-      "The private Reboot: health, pets, food, gym, maintenance, personal calendar, private photos, plus golf and pickleball logs.",
+      "The private Reboot: health, pets, food, gym, maintenance, personal calendar, photos & movies, plus golf and pickleball logs.",
     badgeImage: "/graphics/badges/lanai-legend.jpg",
     priceUsdPerMonth: 2,
     stripeEnvKey: "PLUS",
@@ -203,7 +203,7 @@ export const FEATURE_META: Record<
   },
   memoriesAlbum: {
     title: "Photos",
-    teaser: "Private album captions on your account.",
+    teaser: "Private photos and short movies on your account — PC, iPhone, or Android.",
     anchor: "ms-memories",
   },
   golfLog: {

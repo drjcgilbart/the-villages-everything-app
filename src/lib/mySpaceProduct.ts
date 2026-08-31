@@ -219,8 +219,9 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "📷",
     minRank: 2,
     phase: "live",
-    teaser: "Private album on your account. The public Photo Journal stays free.",
-    previewLine: "Lanai sunsets and the dog, stored privately.",
+    teaser:
+      "Private album on your account. Add photos and short movies from PC, iPhone, or Android. The public Photo Journal stays free.",
+    previewLine: "Lanai sunsets and the dog — tagged for Health, Yard Sale, or home.",
   },
   {
     id: "golfLog",

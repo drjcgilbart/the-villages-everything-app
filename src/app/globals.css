@@ -3185,6 +3185,71 @@ button.ms-home-card:hover {
   }
 }
 
+.ms-photo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.ms-photo-chip {
+  appearance: none;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  cursor: pointer;
+}
+.ms-photo-chip.is-on {
+  color: var(--palm-deep);
+  background: rgba(31, 107, 74, 0.12);
+  border-color: color-mix(in srgb, var(--palm) 40%, var(--line));
+}
+.ms-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 1.1rem;
+}
+.ms-photo-card {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.ms-photo-card img,
+.ms-photo-card video {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background: #efe8dc;
+  display: block;
+}
+.ms-photo-missing {
+  height: 160px;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  background: #f6f1e8;
+}
+.ms-photo-card figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.8rem 0.85rem;
+}
+.ms-photo-card figcaption strong {
+  font-size: 0.92rem;
+}
+
 .ms-food-guide {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
