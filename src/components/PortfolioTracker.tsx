@@ -55,6 +55,7 @@ export function PortfolioTracker({
   const [tickerInput, setTickerInput] = useState("");
   const [sharesInput, setSharesInput] = useState("1");
   const [nicknameInput, setNicknameInput] = useState("");
+  const [costInput, setCostInput] = useState("");
   const [includeDefault, setIncludeDefault] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -196,6 +197,7 @@ export function PortfolioTracker({
           shares,
           includeInTotal: includeDefault,
           nickname: nicknameInput.trim() || undefined,
+          costBasis: Number(costInput) > 0 ? Number(costInput) : undefined,
           addedAt: new Date().toISOString(),
         },
       ];
@@ -203,6 +205,7 @@ export function PortfolioTracker({
       setTickerInput("");
       setSharesInput("1");
       setNicknameInput("");
+      setCostInput("");
     } catch {
       setFormError("Network error while checking ticker.");
     } finally {
@@ -271,7 +274,8 @@ export function PortfolioTracker({
             <p>
               Add tickers you care about. Quotes refresh about every 30 seconds.
               Check the box to roll a holding into{" "}
-              <strong>Total Portfolio</strong>. Saved on this computer only.
+              <strong>Total Portfolio</strong>. Optional cost basis shows your
+              G/L. Saved to your member account in My Space.
             </p>
           </div>
           <div className="mkt-live-meta">
@@ -351,6 +355,18 @@ export function PortfolioTracker({
                 value={nicknameInput}
                 onChange={(e) => setNicknameInput(e.target.value)}
                 placeholder="Retirement core"
+              />
+            </label>
+            <label className="rc-field">
+              <span>Cost basis / share</span>
+              <input
+                className="rc-search"
+                type="number"
+                min="0"
+                step="any"
+                value={costInput}
+                onChange={(e) => setCostInput(e.target.value)}
+                placeholder="Optional"
               />
             </label>
             <label className="pf-check-label">

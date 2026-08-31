@@ -58,16 +58,33 @@ type DayHabit = {
   walked: boolean;
 };
 
+type Sleep = {
+  id: string;
+  date: string;
+  hours: number | null;
+  quality: string;
+  note: string;
+};
+
+type ProgressPhoto = {
+  id: string;
+  date: string;
+  note: string;
+};
+
 type HealthState = {
   unit: "lbs";
   startWeight: number | null;
   currentWeight: number | null;
   goalWeight: number | null;
   heightInches: number | null;
+  dailyCalorieTarget: number;
   dailyWaterGoalOz: number;
   dailyStepsGoal: number;
   dailyProteinGoalG: number;
+  sleepGoalHours: number;
   medAlarmSound: AlarmTone;
+  medAlarmDurationSec: number;
   medAlarmEnabled: boolean;
   habits: Record<string, DayHabit>;
   weightLog: { date: string; weight: number }[];
@@ -75,6 +92,8 @@ type HealthState = {
   exercises: Exercise[];
   journals: Journal[];
   medications: Medication[];
+  sleeps: Sleep[];
+  progressPhotos: ProgressPhoto[];
   /** medId:doseId:date → done */
   medDone: Record<string, boolean>;
 };
@@ -101,10 +120,13 @@ function defaultState(): HealthState {
     currentWeight: null,
     goalWeight: null,
     heightInches: null,
+    dailyCalorieTarget: 1800,
     dailyWaterGoalOz: 64,
     dailyStepsGoal: 8000,
     dailyProteinGoalG: 120,
+    sleepGoalHours: 8,
     medAlarmSound: "classic",
+    medAlarmDurationSec: 30,
     medAlarmEnabled: true,
     habits: {},
     weightLog: [],
@@ -112,6 +134,8 @@ function defaultState(): HealthState {
     exercises: [],
     journals: [],
     medications: [],
+    sleeps: [],
+    progressPhotos: [],
     medDone: {},
   };
 }
@@ -132,10 +156,19 @@ export function MySpaceHealthBoard() {
     true,
     { localKey: KEY, debounceMs: 700 }
   );
-  const state: HealthState = { ...defaultState(), ...value };
-  const [tab, setTab] = useState<"today" | "weight" | "meds" | "meals" | "move" | "journal" | "goals">(
-    "today"
-  );
+  const state: HealthState = {
+    ...defaultState(),
+    ...value,
+    sleeps: Array.isArray(value.sleeps) ? value.sleeps : [],
+    progressPhotos: Array.isArray(value.progressPhotos) ? value.progressPhotos : [],
+    medications: Array.isArray(value.medications) ? value.medications : [],
+  };
+  const [tab, setTab] = useState<
+    "today" | "weight" | "meds" | "meals" | "move" | "sleep" | "photos" | "journal" | "goals"
+  >("today");
+  const [sleepHours, setSleepHours] = useState("8");
+  const [sleepQuality, setSleepQuality] = useState("good");
+  const [photoNote, setPhotoNote] = useState("");
   const [mealName, setMealName] = useState("");
   const [mealCal, setMealCal] = useState("");
   const [exActivity, setExActivity] = useState("Walking");
@@ -195,7 +228,7 @@ export function MySpaceHealthBoard() {
           const key = `${med.id}:${dose.id}:${d}`;
           if (state.medDone[key] || fired.has(key)) continue;
           fired.add(key);
-          playAlarmTone(state.medAlarmSound, 8);
+          playAlarmTone(state.medAlarmSound, state.medAlarmDurationSec || 8);
         }
       }
     };
@@ -217,11 +250,13 @@ export function MySpaceHealthBoard() {
       <div className="ms-subnav" role="tablist">
         {(
           [
-            ["today", "Today"],
+            ["today", "Overview"],
             ["weight", "Weight"],
             ["meds", "Meds"],
             ["meals", "Meals"],
-            ["move", "Move"],
+            ["move", "Exercise"],
+            ["sleep", "Sleep"],
+            ["photos", "Photos"],
             ["journal", "Journal"],
             ["goals", "Goals"],
           ] as const
@@ -674,6 +709,108 @@ export function MySpaceHealthBoard() {
         </div>
       )}
 
+      {tab === "sleep" && (
+        <div className="about-panel ms-module">
+          <form
+            className="form-grid ms-module-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              persist({
+                ...state,
+                sleeps: [
+                  {
+                    id: uid("sl"),
+                    date: today,
+                    hours: Number(sleepHours) || null,
+                    quality: sleepQuality,
+                    note: "",
+                  },
+                  ...state.sleeps.filter((s) => s.date !== today),
+                ].slice(0, 90),
+              });
+            }}
+          >
+            <div className="field">
+              <label>Hours last night</label>
+              <input
+                type="number"
+                step="0.5"
+                value={sleepHours}
+                onChange={(e) => setSleepHours(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Quality</label>
+              <select value={sleepQuality} onChange={(e) => setSleepQuality(e.target.value)}>
+                <option value="great">Great</option>
+                <option value="good">Good</option>
+                <option value="average">Average</option>
+                <option value="below-average">Below average</option>
+                <option value="terrible">Terrible</option>
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary btn-sm">
+              Save sleep
+            </button>
+          </form>
+          <ul className="ms-simple-list">
+            {state.sleeps.slice(0, 14).map((s) => (
+              <li key={s.id}>
+                <strong>
+                  {s.hours ?? "—"} hrs · {s.quality}
+                </strong>
+                <span className="panel-hint">{s.date}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {tab === "photos" && (
+        <div className="about-panel ms-module">
+          <p className="panel-hint">
+            Progress notes (date + caption). Keep photos on your phone camera roll; this is the
+            private notebook of when you took them.
+          </p>
+          <form
+            className="form-grid ms-module-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!photoNote.trim()) return;
+              persist({
+                ...state,
+                progressPhotos: [
+                  { id: uid("pp"), date: today, note: photoNote.trim().slice(0, 200) },
+                  ...state.progressPhotos,
+                ].slice(0, 60),
+              });
+              setPhotoNote("");
+            }}
+          >
+            <div className="field">
+              <label>Progress note</label>
+              <input
+                value={photoNote}
+                onChange={(e) => setPhotoNote(e.target.value)}
+                placeholder="Week 4 · lanai light"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary btn-sm">
+              Add
+            </button>
+          </form>
+          <ul className="ms-simple-list">
+            {state.progressPhotos.map((p) => (
+              <li key={p.id}>
+                <strong>{p.note}</strong>
+                <span className="panel-hint">{p.date}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {tab === "journal" && (
         <div className="about-panel ms-module">
           <form
@@ -782,6 +919,33 @@ export function MySpaceHealthBoard() {
                   })
                 }
                 placeholder="e.g. 70"
+              />
+            </div>
+            <div className="field">
+              <label>Daily calorie target</label>
+              <input
+                type="number"
+                value={state.dailyCalorieTarget}
+                onChange={(e) =>
+                  persist({
+                    ...state,
+                    dailyCalorieTarget: Math.max(800, Number(e.target.value) || 1800),
+                  })
+                }
+              />
+            </div>
+            <div className="field">
+              <label>Sleep goal (hours)</label>
+              <input
+                type="number"
+                step="0.5"
+                value={state.sleepGoalHours}
+                onChange={(e) =>
+                  persist({
+                    ...state,
+                    sleepGoalHours: Math.max(4, Number(e.target.value) || 8),
+                  })
+                }
               />
             </div>
             <div className="field">

@@ -19,44 +19,83 @@ type PetEvent = {
   enabled: boolean;
 };
 
-type PetState = {
-  petName: string;
+type Pet = {
+  id: string;
+  name: string;
   species: string;
+  vetNotes: string;
+  walks: PetEvent[];
+  feeds: PetEvent[];
+};
+
+type PetState = {
   alarmSound: AlarmTone;
   alarmDurationSec: number;
   walkAlarmEnabled: boolean;
   feedAlarmEnabled: boolean;
-  walks: PetEvent[];
-  feeds: PetEvent[];
+  activePetId: string;
+  pets: Pet[];
   /** eventId:date → done */
   completions: Record<string, boolean>;
 };
 
-function defaults(): PetState {
+function dogSchedule(): { walks: PetEvent[]; feeds: PetEvent[] } {
   return {
-    petName: "Angelcake",
+    walks: [
+      { id: uid("walk"), time: "07:30", label: "Morning walk", enabled: true },
+      { id: uid("walk"), time: "12:30", label: "Midday walk", enabled: true },
+      { id: uid("walk"), time: "17:30", label: "Evening walk", enabled: true },
+      { id: uid("walk"), time: "21:00", label: "Night walk", enabled: true },
+    ],
+    feeds: [
+      { id: uid("feed"), time: "08:00", label: "Breakfast", enabled: true },
+      { id: uid("feed"), time: "18:00", label: "Dinner", enabled: true },
+    ],
+  };
+}
+
+function defaults(): PetState {
+  const first: Pet = {
+    id: "pet-angelcake",
+    name: "Angelcake",
     species: "dog",
+    vetNotes: "",
+    ...dogSchedule(),
+  };
+  return {
     alarmSound: "classic",
     alarmDurationSec: 20,
     walkAlarmEnabled: true,
     feedAlarmEnabled: true,
-    walks: [
-      { id: "walk-morning", time: "07:30", label: "Morning walk", enabled: true },
-      { id: "walk-midday", time: "12:30", label: "Midday walk", enabled: true },
-      { id: "walk-evening", time: "17:30", label: "Evening walk", enabled: true },
-      { id: "walk-night", time: "21:00", label: "Night walk", enabled: true },
-    ],
-    feeds: [
-      {
-        id: "feed-breakfast",
-        time: "08:00",
-        label: "Breakfast",
-        enabled: true,
-      },
-      { id: "feed-dinner", time: "18:00", label: "Dinner", enabled: true },
-    ],
+    activePetId: first.id,
+    pets: [first],
     completions: {},
   };
+}
+
+function migratePets(raw: PetState & { petName?: string; species?: string; walks?: PetEvent[]; feeds?: PetEvent[] }): PetState {
+  const base = defaults();
+  if (Array.isArray(raw.pets) && raw.pets.length) {
+    return {
+      ...base,
+      ...raw,
+      pets: raw.pets,
+      activePetId: raw.activePetId || raw.pets[0].id,
+      completions: raw.completions || {},
+    };
+  }
+  if (raw.petName || raw.walks) {
+    const one: Pet = {
+      id: "pet-legacy",
+      name: raw.petName || "My pet",
+      species: raw.species || "dog",
+      vetNotes: "",
+      walks: Array.isArray(raw.walks) ? raw.walks : dogSchedule().walks,
+      feeds: Array.isArray(raw.feeds) ? raw.feeds : dogSchedule().feeds,
+    };
+    return { ...base, ...raw, pets: [one], activePetId: one.id };
+  }
+  return { ...base, ...raw };
 }
 
 /**
@@ -70,13 +109,8 @@ export function MySpacePetBoard() {
     true,
     { localKey: KEY, debounceMs: 700 }
   );
-  const loaded = value;
-  const state: PetState = {
-    ...defaults(),
-    ...loaded,
-    walks: Array.isArray(loaded.walks) ? loaded.walks : defaults().walks,
-    feeds: Array.isArray(loaded.feeds) ? loaded.feeds : defaults().feeds,
-  };
+  const state = migratePets(value as PetState);
+  const pet = state.pets.find((p) => p.id === state.activePetId) || state.pets[0];
   const today = todayKeyEastern();
 
   function persist(next: PetState) {
@@ -112,16 +146,17 @@ export function MySpacePetBoard() {
           playAlarmTone(state.alarmSound, state.alarmDurationSec);
         }
       };
-      check(state.walks, state.walkAlarmEnabled);
-      check(state.feeds, state.feedAlarmEnabled);
+      for (const p of state.pets) {
+        check(p.walks, state.walkAlarmEnabled);
+        check(p.feeds, state.feedAlarmEnabled);
+      }
     };
     tick();
     const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
   }, [
     ready,
-    state.walks,
-    state.feeds,
+    state.pets,
     state.walkAlarmEnabled,
     state.feedAlarmEnabled,
     state.alarmSound,
@@ -131,37 +166,87 @@ export function MySpacePetBoard() {
 
   if (!ready) return <p className="panel-hint">Loading pet parade…</p>;
 
-  const walkDone = state.walks.filter((w) => w.enabled && isDone(w.id)).length;
-  const walkTotal = state.walks.filter((w) => w.enabled).length;
-  const feedDone = state.feeds.filter((f) => f.enabled && isDone(f.id)).length;
-  const feedTotal = state.feeds.filter((f) => f.enabled).length;
+  const walkDone = pet.walks.filter((w) => w.enabled && isDone(w.id)).length;
+  const walkTotal = pet.walks.filter((w) => w.enabled).length;
+  const feedDone = pet.feeds.filter((f) => f.enabled && isDone(f.id)).length;
+  const feedTotal = pet.feeds.filter((f) => f.enabled).length;
+
+  function patchPet(next: Pet) {
+    persist({
+      ...state,
+      pets: state.pets.map((p) => (p.id === next.id ? next : p)),
+    });
+  }
 
   return (
     <div className="ms-pet-board">
       <p className="ms-module-lead">
-        Walks, meals, and alarms for the real CEO of the household — ported
-        from the desktop Angelcake care panel. Data stays on this browser.
+        Multiple pets, walks, meals, vet notes, and alarms — the same household
+        pack as the old My Retirement Reboot app, saved to your member account.
       </p>
+
+      <div className="ms-subnav">
+        {state.pets.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`ms-subnav-btn ${p.id === pet.id ? "is-on" : ""}`}
+            onClick={() => persist({ ...state, activePetId: p.id })}
+          >
+            {p.name}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="ms-subnav-btn"
+          onClick={() => {
+            const extra: Pet = {
+              id: uid("pet"),
+              name: "New pet",
+              species: "dog",
+              vetNotes: "",
+              ...dogSchedule(),
+            };
+            persist({
+              ...state,
+              pets: [...state.pets, extra].slice(0, 20),
+              activePetId: extra.id,
+            });
+          }}
+        >
+          + Add pet
+        </button>
+      </div>
 
       <div className="about-panel ms-module">
         <div className="form-grid ms-module-form">
           <div className="field">
             <label>Pet name</label>
             <input
-              value={state.petName}
+              value={pet.name}
               onChange={(e) =>
-                persist({ ...state, petName: e.target.value.slice(0, 60) })
+                patchPet({ ...pet, name: e.target.value.slice(0, 60) })
               }
             />
           </div>
           <div className="field">
-            <label>Species / notes</label>
+            <label>Species</label>
             <input
-              value={state.species}
+              value={pet.species}
               onChange={(e) =>
-                persist({ ...state, species: e.target.value.slice(0, 40) })
+                patchPet({ ...pet, species: e.target.value.slice(0, 40) })
               }
               placeholder="dog, cat, bird…"
+            />
+          </div>
+          <div className="field">
+            <label>Vet notes</label>
+            <input
+              value={pet.vetNotes}
+              onChange={(e) =>
+                patchPet({ ...pet, vetNotes: e.target.value.slice(0, 200) })
+              }
+              placeholder="Vet, meds, allergies…"
             />
           </div>
         </div>
@@ -185,7 +270,7 @@ export function MySpacePetBoard() {
       <div className="about-panel ms-module">
         <h4 style={{ marginTop: 0 }}>Walks — {today}</h4>
         <ul className="ms-check-list">
-          {state.walks.map((w) => (
+          {pet.walks.map((w) => (
             <li key={w.id}>
               <label className="ms-check">
                 <input
@@ -203,9 +288,9 @@ export function MySpacePetBoard() {
                 value={w.time}
                 className="ms-inline-time"
                 onChange={(e) =>
-                  persist({
-                    ...state,
-                    walks: state.walks.map((x) =>
+                  patchPet({
+                    ...pet,
+                    walks: pet.walks.map((x) =>
                       x.id === w.id ? { ...x, time: e.target.value } : x
                     ),
                   })
@@ -218,10 +303,10 @@ export function MySpacePetBoard() {
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={() =>
-            persist({
-              ...state,
+            patchPet({
+              ...pet,
               walks: [
-                ...state.walks,
+                ...pet.walks,
                 {
                   id: uid("walk"),
                   time: "15:00",
@@ -239,7 +324,7 @@ export function MySpacePetBoard() {
       <div className="about-panel ms-module">
         <h4 style={{ marginTop: 0 }}>Meals — {today}</h4>
         <ul className="ms-check-list">
-          {state.feeds.map((f) => (
+          {pet.feeds.map((f) => (
             <li key={f.id}>
               <label className="ms-check">
                 <input
@@ -257,9 +342,9 @@ export function MySpacePetBoard() {
                 value={f.time}
                 className="ms-inline-time"
                 onChange={(e) =>
-                  persist({
-                    ...state,
-                    feeds: state.feeds.map((x) =>
+                  patchPet({
+                    ...pet,
+                    feeds: pet.feeds.map((x) =>
                       x.id === f.id ? { ...x, time: e.target.value } : x
                     ),
                   })
@@ -272,10 +357,10 @@ export function MySpacePetBoard() {
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={() =>
-            persist({
-              ...state,
+            patchPet({
+              ...pet,
               feeds: [
-                ...state.feeds,
+                ...pet.feeds,
                 {
                   id: uid("feed"),
                   time: "12:00",

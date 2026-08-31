@@ -10,6 +10,8 @@ export type PortfolioHolding = {
   /** Include in Total Portfolio rollup */
   includeInTotal: boolean;
   nickname?: string;
+  /** Optional cost basis per share */
+  costBasis?: number;
   addedAt: string;
 };
 

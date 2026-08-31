@@ -2291,6 +2291,34 @@ button.ms-home-card:hover {
   font-size: 1.6rem;
 }
 
+.ms-score-grid {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+}
+
+.ms-score-hole {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.ms-score-hole em {
+  font-style: normal;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.ms-score-hole input {
+  width: 100%;
+  padding: 0.3rem 0.2rem;
+  text-align: center;
+}
+
 .ms-subnav {
   display: flex;
   flex-wrap: wrap;

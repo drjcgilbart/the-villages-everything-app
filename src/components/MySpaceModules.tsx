@@ -7,7 +7,7 @@ import { useMemberBoard } from "@/components/useMemberBoard";
 export { MySpaceHealthBoard as MySpaceHealthLog } from "@/components/MySpaceHealthBoard";
 export { MySpacePetBoard as MySpacePetSchedule } from "@/components/MySpacePetBoard";
 
-type CalItem = { id: string; text: string; when: string };
+type CalItem = { id: string; text: string; when: string; date?: string; time?: string; done?: boolean };
 
 export function MySpaceCalendarBoard() {
   const { value, save, ready } = useMemberBoard<{ items: CalItem[] }>(
@@ -18,6 +18,8 @@ export function MySpaceCalendarBoard() {
   );
   const [text, setText] = useState("");
   const [when, setWhen] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
 
   if (!ready) return <p className="panel-hint">Loading calendar board…</p>;
 
@@ -28,11 +30,16 @@ export function MySpaceCalendarBoard() {
     const item: CalItem = {
       id: `c-${Date.now().toString(36)}`,
       text: t.slice(0, 120),
-      when: when.trim().slice(0, 40) || "Sometime soon",
+      when: when.trim().slice(0, 40) || [date, time].filter(Boolean).join(" ") || "Sometime soon",
+      date,
+      time,
+      done: false,
     };
-    save({ items: [item, ...value.items].slice(0, 40) });
+    save({ items: [item, ...value.items].slice(0, 80) });
     setText("");
     setWhen("");
+    setDate("");
+    setTime("");
   }
 
   function remove(id: string) {
@@ -42,8 +49,8 @@ export function MySpaceCalendarBoard() {
   return (
     <div className="about-panel ms-module">
       <p className="ms-module-lead">
-        Your personal sticky notes for square nights, doctor days, and “don’t
-        forget the pickleball bag.” Not the official district calendar.
+        Your personal dates and daily checklist — tee times, doctor days, and
+        “don’t forget the pickleball bag.” Not the official district calendar.
       </p>
       <form className="form-grid ms-module-form" onSubmit={addItem}>
         <div className="field">
@@ -56,11 +63,19 @@ export function MySpaceCalendarBoard() {
           />
         </div>
         <div className="field">
-          <label>When</label>
+          <label>Date</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Time</label>
+          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Note</label>
           <input
             value={when}
             onChange={(e) => setWhen(e.target.value)}
-            placeholder="Fri 7pm / next Tuesday"
+            placeholder="Bring chairs / rec ID"
           />
         </div>
         <button type="submit" className="btn btn-primary btn-sm">
@@ -76,8 +91,23 @@ export function MySpaceCalendarBoard() {
           {value.items.map((i) => (
             <li key={i.id}>
               <div>
-                <strong>{i.text}</strong>
-                <span>{i.when}</span>
+                <label className="ms-check">
+                  <input
+                    type="checkbox"
+                    checked={!!i.done}
+                    onChange={() =>
+                      save({
+                        items: value.items.map((x) =>
+                          x.id === i.id ? { ...x, done: !x.done } : x
+                        ),
+                      })
+                    }
+                  />
+                  <strong className={i.done ? "ms-note-done" : undefined}>{i.text}</strong>
+                </label>
+                <span>
+                  {[i.date, i.time, i.when].filter(Boolean).join(" · ")}
+                </span>
               </div>
               <button
                 type="button"
