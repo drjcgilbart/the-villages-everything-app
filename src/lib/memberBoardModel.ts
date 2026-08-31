@@ -1,4 +1,5 @@
 import type { FeatureKey } from "./membershipTiers";
+import { NEWS_PRESETS } from "./newsCatalog";
 
 const MAX_ITEMS = 60;
 
@@ -42,6 +43,14 @@ export const NEWS_TOPICS = [
   { id: "pickleball", label: "Pickleball", emoji: "🏓" },
   { id: "markets", label: "Markets", emoji: "📈" },
   { id: "travel", label: "Travel", emoji: "✈️" },
+  { id: "tesla", label: "Tesla", emoji: "⚡" },
+  { id: "space", label: "Space travel", emoji: "🚀" },
+  { id: "cooking", label: "Cooking", emoji: "🍲" },
+  { id: "garden", label: "Gardening", emoji: "🌿" },
+  { id: "cars", label: "Classic cars", emoji: "🚗" },
+  { id: "tech", label: "Technology", emoji: "💻" },
+  { id: "sports", label: "Sports", emoji: "🏈" },
+  { id: "grandkids", label: "Family & grandkids", emoji: "👨‍👩‍👧" },
 ] as const;
 
 export const MAINT_KINDS = [
@@ -67,11 +76,30 @@ export const RECIPE_CATEGORIES = [
 
 export type NoteItem = { id: string; text: string; extra?: string; done?: boolean };
 
+export type NewsTopicFollow = {
+  id: string;
+  presetId: string;
+  label: string;
+  query: string;
+  ticker: string;
+  emoji: string;
+};
+export type NewsPerson = {
+  id: string;
+  name: string;
+  topics: NewsTopicFollow[];
+  creators: { id: string; name: string; url: string }[];
+  muteWords: string[];
+  saved: { id: string; title: string; url: string }[];
+  hidden: string[];
+};
 export type NewsBoard = {
   topics: string[];
   customTopics: string[];
   youtube: { id: string; name: string; url: string }[];
   saved: { id: string; title: string; url: string }[];
+  people: NewsPerson[];
+  activePersonId: string;
 };
 
 export type EntShow = {
@@ -372,7 +400,14 @@ function notes(raw: unknown, extraMax = 80): NoteItem[] {
 
 export function emptyBoards(): MemberBoards {
   return {
-    news: { topics: ["villages"], customTopics: [], youtube: [], saved: [] },
+    news: {
+      topics: ["villages"],
+      customTopics: [],
+      youtube: [],
+      saved: [],
+      people: [],
+      activePersonId: "",
+    },
     entertainment: {
       tonightSquare: "",
       tonightNotes: "",
@@ -431,6 +466,9 @@ function jsonBlob(raw: unknown, fallback: Record<string, unknown>): Record<strin
 
 function sanitizeNews(raw: Partial<NewsBoard> | undefined): NewsBoard {
   const allowed = new Set<string>(NEWS_TOPICS.map((t) => t.id));
+  const presetMap = new Map<string, (typeof NEWS_PRESETS)[number]>(
+    NEWS_PRESETS.map((t) => [t.id, t])
+  );
   const topics = Array.isArray(raw?.topics)
     ? raw!.topics.map((t) => String(t)).filter((t) => allowed.has(t)).slice(0, 12)
     : ["villages"];
@@ -457,7 +495,104 @@ function sanitizeNews(raw: Partial<NewsBoard> | undefined): NewsBoard {
         .filter((y) => y.name)
         .slice(0, 20)
     : [];
-  return { topics: topics.length ? topics : ["villages"], customTopics, youtube, saved };
+  const followFromLegacy = (): NewsTopicFollow[] => {
+    const follows: NewsTopicFollow[] = [];
+    for (const id of topics.length ? topics : ["villages"]) {
+      const p = presetMap.get(id);
+      if (!p) continue;
+      follows.push({
+        id: uid("top"),
+        presetId: p.id,
+        label: p.label,
+        query: p.query,
+        ticker: p.ticker,
+        emoji: p.emoji,
+      });
+    }
+    for (const label of customTopics) {
+      follows.push({
+        id: uid("top"),
+        presetId: "",
+        label,
+        query: label,
+        ticker: "",
+        emoji: "📌",
+      });
+    }
+    return follows.slice(0, 12);
+  };
+  const people: NewsPerson[] = Array.isArray(raw?.people)
+    ? raw!.people
+        .map((p) => {
+          const topicsFollow: NewsTopicFollow[] = Array.isArray(p?.topics)
+            ? p.topics
+                .map((t) => ({
+                  id: clip(t?.id, 40) || uid("top"),
+                  presetId: clip(t?.presetId, 20),
+                  label: clip(t?.label, 60),
+                  query: clip(t?.query, 120) || clip(t?.label, 60),
+                  ticker: clip(t?.ticker, 8),
+                  emoji: clip(t?.emoji, 8),
+                }))
+                .filter((t) => t.label)
+                .slice(0, 12)
+            : [];
+          return {
+            id: clip(p?.id, 40) || uid("who"),
+            name: clip(p?.name, 40) || "Me",
+            topics: topicsFollow,
+            creators: Array.isArray(p?.creators)
+              ? p.creators
+                  .map((c) => ({
+                    id: clip(c?.id, 40) || uid("yt"),
+                    name: clip(c?.name, 80),
+                    url: clip(c?.url, 240),
+                  }))
+                  .filter((c) => c.name)
+                  .slice(0, 16)
+              : [],
+            muteWords: Array.isArray(p?.muteWords)
+              ? p.muteWords.map((w) => clip(w, 40)).filter(Boolean).slice(0, 20)
+              : [],
+            saved: Array.isArray(p?.saved)
+              ? p.saved
+                  .map((s) => ({
+                    id: clip(s?.id, 40) || uid("s"),
+                    title: clip(s?.title, 80),
+                    url: clip(s?.url, 240),
+                  }))
+                  .filter((s) => s.title)
+                  .slice(0, 40)
+              : [],
+            hidden: Array.isArray(p?.hidden)
+              ? p.hidden.map((u) => clip(u, 240)).filter(Boolean).slice(0, 80)
+              : [],
+          };
+        })
+        .slice(0, 8)
+    : [];
+  if (!people.length) {
+    people.push({
+      id: "me",
+      name: "Me",
+      topics: followFromLegacy(),
+      creators: youtube,
+      muteWords: [],
+      saved,
+      hidden: [],
+    });
+  }
+  const activePersonId = people.some((p) => p.id === clip(raw?.activePersonId, 40))
+    ? clip(raw?.activePersonId, 40)
+    : people[0].id;
+  return {
+    topics: topics.length ? topics : ["villages"],
+    customTopics,
+    youtube,
+    saved,
+    people,
+    activePersonId,
+  };
 }
 
 function showRows(raw: unknown): EntertainmentBoard["shows"] {
