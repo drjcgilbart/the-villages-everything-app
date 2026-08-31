@@ -51,6 +51,7 @@ export const MAINT_KINDS = [
   { id: "hvac", label: "A/C / HVAC", emoji: "❄️", meter: "" },
   { id: "appliance", label: "Appliance", emoji: "🔌", meter: "" },
   { id: "pool", label: "Pool / spa", emoji: "🏊", meter: "hours" },
+  { id: "generator", label: "Generator", emoji: "⚡", meter: "hours" },
   { id: "other", label: "Other", emoji: "🔧", meter: "miles" },
 ] as const;
 
@@ -214,9 +215,11 @@ export type MaintAsset = {
   id: string;
   name: string;
   kind: string;
+  year: string;
   make: string;
   model: string;
   meter: number | null;
+  vendor: string;
   notes: string;
 };
 export type MaintTask = {
@@ -228,10 +231,22 @@ export type MaintTask = {
   dueMeter: number | null;
   repeatEvery: number;
   repeatUnit: string;
-  done: boolean;
+  repeatEnabled: boolean;
+  autoRepeat: boolean;
   alarmEnabled: boolean;
+  alarmTime: string;
+  remindDays: number;
+  done: boolean;
+  doneDate: string;
+  doneMeter: number | null;
+  cost: string;
+  doneNotes: string;
 };
-export type MaintenanceBoard = { assets: MaintAsset[]; tasks: MaintTask[] };
+export type MaintenanceBoard = {
+  assets: MaintAsset[];
+  tasks: MaintTask[];
+  activeAssetId: string;
+};
 
 export type MemoriesBoard = {
   photos: { id: string; caption: string; extra?: string; date: string }[];
@@ -345,7 +360,7 @@ export function emptyBoards(): MemberBoards {
       supplements: [],
       supplementLogs: [],
     },
-    maintenance: { assets: [], tasks: [] },
+    maintenance: { assets: [], tasks: [], activeAssetId: "" },
     memories: { photos: [] },
     golfLog: { rounds: [], teeTimes: [], looking: [] },
     pickleballLog: {
@@ -753,15 +768,25 @@ export function sanitizeBoard(
     }
     case "maintenance": {
       const m = r as Partial<MaintenanceBoard> & { jobs?: unknown };
+      const numOrNull = (v: unknown) => {
+        if (typeof v === "number" && Number.isFinite(v)) return v;
+        if (typeof v === "string" && v.trim() !== "") {
+          const n = Number(v);
+          return Number.isFinite(n) ? n : null;
+        }
+        return null;
+      };
       const assets: MaintAsset[] = Array.isArray(m.assets)
         ? m.assets
             .map((a) => ({
               id: clip(a?.id, 40) || uid("asset"),
               name: clip(a?.name, 80),
               kind: clip(a?.kind, 20) || "other",
+              year: clip(a?.year, 8),
               make: clip(a?.make, 60),
               model: clip(a?.model, 60),
-              meter: typeof a?.meter === "number" ? a.meter : null,
+              meter: numOrNull(a?.meter),
+              vendor: clip(a?.vendor, 80),
               notes: clip(a?.notes, 400),
             }))
             .filter((a) => a.name)
@@ -773,13 +798,21 @@ export function sanitizeBoard(
               id: clip(t?.id, 40) || uid("job"),
               assetId: clip(t?.assetId, 40),
               title: clip(t?.title, 120),
-              notes: clip(t?.notes, 400),
+              notes: clip(t?.notes, 800),
               dueDate: clip(t?.dueDate, 12),
-              dueMeter: typeof t?.dueMeter === "number" ? t.dueMeter : null,
+              dueMeter: numOrNull(t?.dueMeter),
               repeatEvery: Math.max(1, Number(t?.repeatEvery) || 1),
               repeatUnit: clip(t?.repeatUnit, 12) || "months",
+              repeatEnabled: t?.repeatEnabled === true,
+              autoRepeat: t?.autoRepeat !== false,
+              alarmEnabled: t?.alarmEnabled !== false,
+              alarmTime: clip(t?.alarmTime, 8) || "08:00",
+              remindDays: Math.max(0, Math.min(90, Number(t?.remindDays) || 7)),
               done: t?.done === true,
-              alarmEnabled: t?.alarmEnabled === true,
+              doneDate: clip(t?.doneDate, 12),
+              doneMeter: numOrNull(t?.doneMeter),
+              cost: clip(t?.cost, 20),
+              doneNotes: clip(t?.doneNotes, 400),
             }))
             .filter((t) => t.title)
             .slice(0, 80)
@@ -794,11 +827,26 @@ export function sanitizeBoard(
           dueMeter: null,
           repeatEvery: 1,
           repeatUnit: "months",
-          done: !!n.done,
+          repeatEnabled: false,
+          autoRepeat: true,
           alarmEnabled: false,
+          alarmTime: "08:00",
+          remindDays: 7,
+          done: !!n.done,
+          doneDate: "",
+          doneMeter: null,
+          cost: "",
+          doneNotes: "",
         }));
       }
-      return { assets, tasks };
+      const activeAssetId = clip(m.activeAssetId, 40);
+      return {
+        assets,
+        tasks,
+        activeAssetId: assets.some((a) => a.id === activeAssetId)
+          ? activeAssetId
+          : assets[0]?.id || "",
+      };
     }
     case "memories": {
       const photosRaw = (r as MemoriesBoard).photos;

@@ -11,11 +11,11 @@ import {
 import { useMemberBoard } from "@/components/useMemberBoard";
 
 export { MySpaceEntertainmentBoard } from "@/components/MySpaceEntertainmentBoard";
+export { MySpaceMaintenanceBoard } from "@/components/MySpaceMaintenanceBoard";
 export {
   MySpaceFoodBoard,
   MySpaceGolfLogBoard,
   MySpaceGymBoard,
-  MySpaceMaintenanceBoard,
   MySpacePickleballLogBoard,
 } from "@/components/MySpaceLifeBoards";
 

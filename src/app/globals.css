@@ -2969,6 +2969,15 @@ button.ms-home-card:hover {
   background: #fff;
 }
 
+.ms-maint-card {
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+}
+
 .ms-food-card h4 {
   margin: 0.15rem 0 0.25rem;
 }
