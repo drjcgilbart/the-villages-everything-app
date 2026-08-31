@@ -82,14 +82,53 @@ export type EntertainmentBoard = {
   clubs: { id: string; name: string; when: string; rec: string }[];
 };
 
+export type FoodFavorite = {
+  id: string;
+  name: string;
+  square: string;
+  cuisine: string;
+  notes: string;
+};
+export type FoodHappyHour = {
+  id: string;
+  place: string;
+  square: string;
+  days: string[];
+  startTime: string;
+  endTime: string;
+  specials: string;
+};
+export type FoodGrocery = {
+  id: string;
+  name: string;
+  store: string;
+  aisle: string;
+  done: boolean;
+};
+export type FoodCellar = {
+  id: string;
+  name: string;
+  kind: string;
+  notes: string;
+};
+export type FoodRecipe = {
+  id: string;
+  name: string;
+  category: string;
+  source: string;
+  ingredients: string;
+  steps: string;
+  notes: string;
+  photoName: string;
+};
 export type FoodBoard = {
-  favorites: NoteItem[];
-  happyHours: NoteItem[];
-  grocery: NoteItem[];
+  favorites: FoodFavorite[];
+  happyHours: FoodHappyHour[];
+  grocery: FoodGrocery[];
   groceryStores: string[];
-  cellar: NoteItem[];
+  cellar: FoodCellar[];
   meals: Record<string, { breakfast: string; lunch: string; dinner: string }>;
-  recipes: { id: string; name: string; category: string; notes: string }[];
+  recipes: FoodRecipe[];
   tipPct: number;
 };
 
@@ -382,12 +421,98 @@ function recipeRows(raw: unknown): FoodBoard["recipes"] {
   for (const row of raw.slice(0, MAX_ITEMS)) {
     if (!row || typeof row !== "object") continue;
     const r = row as Record<string, unknown>;
-    const name = clip(r.name || r.text, 80);
+    const name = clip(r.name || r.text, 120);
     if (!name) continue;
     out.push({
       id: clip(r.id, 40) || uid("rc"),
       name,
       category: clip(r.category, 20) || "other",
+      source: clip(r.source, 120),
+      ingredients: clip(r.ingredients, 4000),
+      steps: clip(r.steps, 4000),
+      notes: clip(r.notes || r.extra, 2000),
+      photoName: clip(r.photoName, 120),
+    });
+  }
+  return out;
+}
+
+const FOOD_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function foodFavorites(raw: unknown): FoodFavorite[] {
+  if (!Array.isArray(raw)) return [];
+  const out: FoodFavorite[] = [];
+  for (const row of raw.slice(0, MAX_ITEMS)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const name = clip(r.name || r.text, 120);
+    if (!name) continue;
+    out.push({
+      id: clip(r.id, 40) || uid("fv"),
+      name,
+      square: clip(r.square, 40) || "other",
+      cuisine: clip(r.cuisine, 60),
+      notes: clip(r.notes || r.extra, 400),
+    });
+  }
+  return out;
+}
+
+function foodHappy(raw: unknown): FoodHappyHour[] {
+  if (!Array.isArray(raw)) return [];
+  const out: FoodHappyHour[] = [];
+  for (const row of raw.slice(0, MAX_ITEMS)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const place = clip(r.place || r.text, 120);
+    if (!place) continue;
+    const days = Array.isArray(r.days)
+      ? r.days.map((d) => String(d)).filter((d) => FOOD_DAYS.includes(d))
+      : [];
+    out.push({
+      id: clip(r.id, 40) || uid("hh"),
+      place,
+      square: clip(r.square, 40) || "other",
+      days,
+      startTime: /^\d{2}:\d{2}$/.test(String(r.startTime || "")) ? String(r.startTime) : "15:00",
+      endTime: /^\d{2}:\d{2}$/.test(String(r.endTime || "")) ? String(r.endTime) : "18:00",
+      specials: clip(r.specials || r.extra, 240),
+    });
+  }
+  return out;
+}
+
+function foodGrocery(raw: unknown): FoodGrocery[] {
+  if (!Array.isArray(raw)) return [];
+  const out: FoodGrocery[] = [];
+  for (const row of raw.slice(0, MAX_ITEMS)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const name = clip(r.name || r.text, 120);
+    if (!name) continue;
+    out.push({
+      id: clip(r.id, 40) || uid("gr"),
+      name,
+      store: clip(r.store, 60),
+      aisle: clip(r.aisle || r.extra, 40),
+      done: r.done === true,
+    });
+  }
+  return out;
+}
+
+function foodCellar(raw: unknown): FoodCellar[] {
+  if (!Array.isArray(raw)) return [];
+  const out: FoodCellar[] = [];
+  for (const row of raw.slice(0, MAX_ITEMS)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const name = clip(r.name || r.text, 120);
+    if (!name) continue;
+    out.push({
+      id: clip(r.id, 40) || uid("ce"),
+      name,
+      kind: clip(r.kind, 40) || "wine",
       notes: clip(r.notes || r.extra, 400),
     });
   }
@@ -491,26 +616,17 @@ export function sanitizeBoard(
     case "entertainment":
       return sanitizeEnt(r as Partial<EntertainmentBoard>);
     case "food": {
-      const f = r as Partial<FoodBoard> & { recipes?: unknown };
-      const recs = recipeRows(f.recipes);
-      const oldRecipes = !recs.length ? notes((f as { recipes?: unknown }).recipes, 240) : [];
+      const f = r as Partial<FoodBoard>;
       return {
-        favorites: notes(f.favorites),
-        happyHours: notes(f.happyHours),
-        grocery: notes(f.grocery),
+        favorites: foodFavorites(f.favorites),
+        happyHours: foodHappy(f.happyHours),
+        grocery: foodGrocery(f.grocery),
         groceryStores: Array.isArray(f.groceryStores)
           ? f.groceryStores.map((s) => clip(s, 60)).filter(Boolean).slice(0, 20)
           : [],
-        cellar: notes(f.cellar),
+        cellar: foodCellar(f.cellar),
         meals: mealMap(f.meals),
-        recipes: recs.length
-          ? recs
-          : oldRecipes.map((n) => ({
-              id: n.id,
-              name: n.text,
-              category: "other",
-              notes: n.extra || "",
-            })),
+        recipes: recipeRows(f.recipes),
         tipPct: Math.min(40, Math.max(0, Number(f.tipPct) || 18)),
       };
     }

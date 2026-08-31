@@ -2930,6 +2930,92 @@ button.ms-home-card:hover {
   }
 }
 
+.ms-food-guide {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.ms-food-card {
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ms-food-card h4 {
+  margin: 0.15rem 0 0.25rem;
+}
+
+.ms-food-card p {
+  margin: 0.2rem 0 0.55rem;
+}
+
+.ms-food-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ms-food-days label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 2.4rem;
+  padding: 0.35rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ms-food-days label.on {
+  background: rgba(31, 107, 74, 0.14);
+  border-color: rgba(31, 107, 74, 0.4);
+}
+
+.ms-food-days input {
+  accent-color: #1f6b4a;
+}
+
+.ms-food-store {
+  margin: 0.85rem 0;
+}
+
+.ms-food-week {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.ms-food-week-head,
+.ms-food-week-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 1fr 1fr;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.ms-food-week-head {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.ms-food-week-row strong {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .ms-food-week-head,
+  .ms-food-week-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Weather board */
 .ms-wx-locbar {
   display: flex;
