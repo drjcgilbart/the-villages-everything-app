@@ -53,7 +53,17 @@ export type MemberSpaceRecord = {
   planExpiresAt?: string | null;
   /** Top-tier membership nomination from big tip */
   topTierNomination?: TopTierNomination | null;
+  /** One-time Square Royalty free month. Standing `plan` is what they revert to. */
+  trial?: RoyaltyTrial | null;
 };
+
+export type RoyaltyTrial = {
+  startedAt: string;
+  expiresAt: string;
+  source: string;
+};
+
+export const ROYALTY_TRIAL_DAYS = 30;
 
 type SpaceFile = {
   spaces: MemberSpaceRecord[];
@@ -120,7 +130,91 @@ function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPla
     goldenLoofahAt: raw.goldenLoofahAt || null,
     planExpiresAt,
     topTierNomination: normalizeTopTier(raw),
+    trial: normalizeTrial(raw),
   };
+}
+
+function normalizeTrial(raw: Partial<MemberSpaceRecord>): RoyaltyTrial | null {
+  const t = raw.trial;
+  if (!t || typeof t !== "object") return null;
+  if (!t.startedAt || !t.expiresAt) return null;
+  return {
+    startedAt: String(t.startedAt),
+    expiresAt: String(t.expiresAt),
+    source: String(t.source || "request"),
+  };
+}
+
+export function isRoyaltyTrialActive(space: MemberSpaceRecord): boolean {
+  if (!space.trial?.expiresAt) return false;
+  const ends = new Date(space.trial.expiresAt).getTime();
+  return Number.isFinite(ends) && ends > Date.now();
+}
+
+export function hasUsedRoyaltyTrial(space: MemberSpaceRecord): boolean {
+  return Boolean(space.trial?.startedAt);
+}
+
+/** Paid or free plan they keep after a trial (or without one). */
+export function standingPlan(space: MemberSpaceRecord): HubPlanId {
+  let plan = normalizePlan(space.plan);
+  if (
+    space.planExpiresAt &&
+    new Date(space.planExpiresAt).getTime() < Date.now() &&
+    plan === "square_royalty" &&
+    !space.stripeSubscriptionId
+  ) {
+    plan = "porch_waver";
+  }
+  return plan;
+}
+
+/** Plan used for feature unlocks — trial Square Royalty overlays the standing plan. */
+export function accessPlan(space: MemberSpaceRecord): HubPlanId {
+  if (process.env.HUB_MEMBER_OPEN_ACCESS === "true") {
+    return "square_royalty";
+  }
+  if (isRoyaltyTrialActive(space)) return "square_royalty";
+  return standingPlan(space);
+}
+
+function plusDaysIso(days: number, from = new Date()) {
+  const d = new Date(from);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString();
+}
+
+export function trialAvailable(space: MemberSpaceRecord): boolean {
+  if (hasUsedRoyaltyTrial(space)) return false;
+  if (isRoyaltyTrialActive(space)) return false;
+  if (standingPlan(space) === "square_royalty") return false;
+  return true;
+}
+
+export function startRoyaltyTrial(
+  memberId: string,
+  source = "request"
+): MemberSpaceRecord {
+  const existing = getMemberSpace(memberId);
+  if (isRoyaltyTrialActive(existing)) {
+    throw new Error("Your free Square Royalty month is already running.");
+  }
+  if (hasUsedRoyaltyTrial(existing)) {
+    throw new Error(
+      "You already used the free month. Pick a paid plan to keep the boards, or stay a Porch Waver."
+    );
+  }
+  if (standingPlan(existing) === "square_royalty") {
+    throw new Error("You’re already Square Royalty — no trial needed.");
+  }
+  const now = new Date();
+  return updateMemberSpace(memberId, {
+    trial: {
+      startedAt: now.toISOString(),
+      expiresAt: plusDaysIso(ROYALTY_TRIAL_DAYS, now),
+      source,
+    },
+  });
 }
 
 export function loadMemberSpaces(): SpaceFile {
@@ -193,6 +287,7 @@ export function updateMemberSpace(
       | "goldenLoofahAt"
       | "planExpiresAt"
       | "topTierNomination"
+      | "trial"
     >
   >
 ): MemberSpaceRecord {
@@ -260,6 +355,9 @@ export function updateMemberSpace(
   }
   if (patch.topTierNomination !== undefined) {
     rec.topTierNomination = patch.topTierNomination;
+  }
+  if (patch.trial !== undefined) {
+    rec.trial = patch.trial;
   }
   rec.updatedAt = new Date().toISOString();
   saveMemberSpaces(data);
@@ -376,25 +474,28 @@ export function grantGoldenLoofah(memberId: string): MemberSpaceRecord {
 
 /** True if plan is Cart Path Regular or higher (legacy “subscriber”). */
 export function isSubscriber(space: MemberSpaceRecord): boolean {
-  return isPaidPlan(effectivePlan(space.plan));
+  return isPaidPlan(accessPlan(space));
 }
 
 /** Any paid My Space dashboard modules (not just the upgrade wall). */
 export function memberHasSpaceAccess(space: MemberSpaceRecord): boolean {
-  return isPaidPlan(effectivePlan(space.plan));
+  return isPaidPlan(accessPlan(space));
 }
 
 export function memberCanAccess(
   space: MemberSpaceRecord,
   feature: FeatureKey
 ): boolean {
-  return canAccess(effectivePlan(space.plan), feature);
+  return canAccess(accessPlan(space), feature);
 }
 
 export function publicSpacePayload(space: MemberSpaceRecord) {
-  const plan = effectivePlan(space.plan);
+  const plan = accessPlan(space);
+  const standing = standingPlan(space);
   const tier = getTier(plan);
+  const standingTier = getTier(standing);
   const features = featuresForPlan(plan);
+  const trialOn = isRoyaltyTrialActive(space);
   return {
     plan,
     planLabel: tier.label,
@@ -410,6 +511,11 @@ export function publicSpacePayload(space: MemberSpaceRecord) {
     donationBadges: space.donationBadges || [],
     planExpiresAt: space.planExpiresAt || null,
     topTierNomination: space.topTierNomination || null,
+    trialActive: trialOn,
+    trialExpiresAt: trialOn ? space.trial?.expiresAt || null : space.trial?.expiresAt || null,
+    trialAvailable: trialAvailable(space),
+    standingPlan: standing,
+    standingPlanLabel: standingTier.label,
     features,
     tier: {
       id: tier.id,

@@ -54,8 +54,10 @@ export default async function DonatePage({
               <span className="kicker">The main event</span>
               <h2>Membership levels</h2>
               <p>
-                Porch Waver is free. Paid plans are monthly:{" "}
-                <strong>Cart Path Regular $1</strong>,{" "}
+                Porch Waver is free. Approved neighbors can try{" "}
+                <strong>Square Royalty free for 30 days</strong> — then keep a
+                paid plan or go back to waving from the porch. Paid plans are
+                monthly: <strong>Cart Path Regular $1</strong>,{" "}
                 <strong>Lanai Legend $2</strong>,{" "}
                 <strong>Square Royalty $3</strong>. Each tier keeps everything
                 below it.

@@ -12,7 +12,7 @@ import {
   normalizePlan,
   type HubPlanId,
 } from "./membershipTiers";
-import { getMemberSpace } from "./memberSpace";
+import { accessPlan, getMemberSpace } from "./memberSpace";
 import { getMemberById, loadYardSale } from "./yardSale";
 import type { Member } from "./yardSaleTypes";
 import type { BadgeDef } from "./memberBadgeTypes";
@@ -58,7 +58,7 @@ export function badgesForMemberRecord(
     return [];
   }
   const space = getMemberSpace(member.id);
-  const spacePlan = plan ?? space.plan;
+  const spacePlan = plan ?? accessPlan(space);
   const planId = effectivePlan(spacePlan);
   const badges: BadgeDef[] = [];
 

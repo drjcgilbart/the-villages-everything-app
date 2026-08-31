@@ -17,8 +17,11 @@ type TopTierNom = {
 
 type AdminMember = PublicMember & {
   plan?: HubPlanId | string;
+  accessPlan?: HubPlanId | string;
   planLabel?: string;
   planExpiresAt?: string | null;
+  trialActive?: boolean;
+  trialExpiresAt?: string | null;
   goldenLoofah?: boolean;
   badges?: BadgeDef[];
   topTierNomination?: TopTierNom | null;
@@ -111,6 +114,26 @@ export function AdminMembersPanel() {
       if (Array.isArray(data.members)) setMembers(data.members);
       else await load();
       flash("ok", next ? "Golden Loofah granted" : "Golden Loofah removed");
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function trialAction(id: string, action: "grantTrial" | "endTrial") {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Trial update failed");
+      if (Array.isArray(data.members)) setMembers(data.members);
+      else await load();
+      flash("ok", action === "grantTrial" ? "Free month granted" : "Free month ended");
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Failed");
     } finally {
@@ -290,6 +313,7 @@ export function AdminMembersPanel() {
                 onLoofah={toggleGoldenLoofah}
                 onPassword={resetMemberPassword}
                 onTopTier={topTierAction}
+                onTrial={trialAction}
               />
             ))}
           </div>
@@ -320,6 +344,7 @@ export function AdminMembersPanel() {
             onLoofah={toggleGoldenLoofah}
             onPassword={resetMemberPassword}
             onTopTier={topTierAction}
+            onTrial={trialAction}
           />
         ))}
       </div>
@@ -337,6 +362,7 @@ function MemberAdminRow({
   onLoofah,
   onPassword,
   onTopTier,
+  onTrial,
 }: {
   m: AdminMember;
   tiers: TierOpt[];
@@ -347,6 +373,7 @@ function MemberAdminRow({
   onLoofah: (id: string, next: boolean) => void;
   onPassword: (id: string, name: string) => void;
   onTopTier: (id: string, action: "approveTopTier" | "rejectTopTier") => void;
+  onTrial: (id: string, action: "grantTrial" | "endTrial") => void;
 }) {
   const nom = m.topTierNomination;
   return (
@@ -374,6 +401,9 @@ function MemberAdminRow({
             </>
           ) : null}
           {m.planExpiresAt ? ` · plan until ${formatDate(m.planExpiresAt)}` : ""}
+          {m.trialActive && m.trialExpiresAt
+            ? ` · free month until ${formatDate(m.trialExpiresAt)}`
+            : ""}
           {nom?.status === "pending" ? " · Royalty nomination pending" : ""}
           {nom?.status === "approved" ? " · Royalty nomination approved" : ""}
         </span>
@@ -395,6 +425,25 @@ function MemberAdminRow({
               ))}
             </select>
           </label>
+        )}
+        {m.trialActive ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={busy}
+            onClick={() => onTrial(m.id, "endTrial")}
+          >
+            End free month
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={busy}
+            onClick={() => onTrial(m.id, "grantTrial")}
+          >
+            Grant free month
+          </button>
         )}
         {nom?.status === "pending" && (
           <button

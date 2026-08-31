@@ -42,6 +42,7 @@ import {
   type BoardId,
 } from "@/lib/mySpaceProduct";
 import { SAMPLE_HINT } from "@/lib/sampleBoards";
+import { RoyaltyTrialOffer } from "@/components/RoyaltyTrialOffer";
 
 /** Explicit badge art for tier cards (client-safe; always present). */
 const TIER_CARD_BADGES: Record<
@@ -79,6 +80,11 @@ type SpacePayload = {
     hasSpaceAccess: boolean;
     isSubscriber: boolean;
     features: Record<FeatureKey, boolean>;
+    trialActive?: boolean;
+    trialExpiresAt?: string | null;
+    trialAvailable?: boolean;
+    standingPlan?: HubPlanId;
+    standingPlanLabel?: string;
     tier: {
       id: HubPlanId;
       label: string;
@@ -165,7 +171,35 @@ export function MySpaceDashboard() {
     if (params.get("welcome") === "1") {
       setNote("Welcome — your My Space tier is ready.");
     }
+    if (params.get("trial") === "1") {
+      setNote("Square Royalty is unlocked for one month. Poke every board. Subscribe if you want to keep it.");
+    }
   }, [load]);
+
+  async function startTrial() {
+    setBusy(true);
+    setNote(null);
+    try {
+      const res = await fetch("/api/members/trial", {
+        method: "POST",
+        credentials: "include",
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not start the free month");
+      await load();
+      setNote(
+        `Square Royalty is on the house until ${
+          j.trialExpiresAt
+            ? new Date(j.trialExpiresAt).toLocaleDateString()
+            : "the end of the month"
+        }. Then you keep whatever you subscribe to.`
+      );
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : "Could not start the free month");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function startSubscribe(tierId: HubPlanId) {
     setBusy(true);
@@ -477,6 +511,18 @@ export function MySpaceDashboard() {
           Climb the ladder from porch waves to square royalty. Each tier keeps
           everything below it.
         </p>
+        <RoyaltyTrialOffer
+          signedIn={!visitor}
+          approved={approved}
+          trialAvailable={!!space?.trialAvailable}
+          trialActive={!!space?.trialActive}
+          trialExpiresAt={space?.trialExpiresAt || null}
+          standingPlanLabel={space?.standingPlanLabel || "Porch Waver"}
+          native={inNativeApp}
+          busy={busy}
+          error={null}
+          onStart={() => void startTrial()}
+        />
         <div className="ms-tier-grid">
           {HUB_TIERS.map((t) => {
             const current = !visitor && t.id === space?.plan;
@@ -508,7 +554,13 @@ export function MySpaceDashboard() {
                   />
                 </div>
                 <span className="pill">
-                  {current ? "Your plan" : unlocked ? "Included" : t.shortLabel}
+                  {current && space?.trialActive && t.id === "square_royalty"
+                    ? "Free month"
+                    : current
+                      ? "Your plan"
+                      : unlocked
+                        ? "Included"
+                        : t.shortLabel}
                 </span>
                 <h3>{t.label}</h3>
                 <p className="ms-tier-price">{formatMembershipPrice(t)}</p>

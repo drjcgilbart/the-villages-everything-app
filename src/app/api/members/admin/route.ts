@@ -17,6 +17,7 @@ import {
   publicSpacePayload,
   rejectTopTierMembership,
   saveMemberSpacesAsync,
+  startRoyaltyTrial,
   updateMemberSpace,
 } from "@/lib/memberSpace";
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
@@ -45,9 +46,12 @@ function membersWithPlans() {
     const pub = publicSpacePayload(space);
     return {
       ...m,
-      plan: pub.plan,
+      plan: pub.standingPlan,
+      accessPlan: pub.plan,
       planLabel: pub.planLabel,
       planExpiresAt: pub.planExpiresAt,
+      trialActive: pub.trialActive,
+      trialExpiresAt: pub.trialExpiresAt,
       goldenLoofah: pub.goldenLoofah,
       donationBadges: pub.donationBadges,
       topTierNomination: pub.topTierNomination,
@@ -154,6 +158,49 @@ export async function POST(req: Request) {
         setMemberStatus(id, "approved");
       }
       approveTopTierMembership(id);
+      await persistAll();
+      return NextResponse.json({
+        memberId: id,
+        members: membersWithPlans(),
+        durableStorage: durableConfigured(),
+      });
+    }
+
+    if (body.action === "grantTrial") {
+      const id = String(body.id || "");
+      try {
+        startRoyaltyTrial(id, "admin");
+      } catch {
+        const now = new Date();
+        const ends = new Date(now);
+        ends.setUTCDate(ends.getUTCDate() + 30);
+        updateMemberSpace(id, {
+          trial: {
+            startedAt: now.toISOString(),
+            expiresAt: ends.toISOString(),
+            source: "admin",
+          },
+        });
+      }
+      await persistAll();
+      return NextResponse.json({
+        memberId: id,
+        members: membersWithPlans(),
+        durableStorage: durableConfigured(),
+      });
+    }
+
+    if (body.action === "endTrial") {
+      const id = String(body.id || "");
+      const space = getMemberSpace(id);
+      if (space.trial) {
+        updateMemberSpace(id, {
+          trial: {
+            ...space.trial,
+            expiresAt: new Date().toISOString(),
+          },
+        });
+      }
       await persistAll();
       return NextResponse.json({
         memberId: id,

@@ -90,7 +90,8 @@ export function MemberJoinForm() {
       <p className="panel-hint" style={{ marginBottom: 0 }}>
         Already requested membership? You can submit again with the same email
         while still <strong>pending</strong> to set a new password, or{" "}
-        <Link href="/yard-sale/login?next=/my-space">sign in</Link>.
+        <Link href="/yard-sale/login?next=/my-space">sign in</Link>. After
+        you&apos;re approved, you can try Square Royalty free for one month.
       </p>
     </div>
   );

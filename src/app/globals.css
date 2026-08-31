@@ -3185,6 +3185,20 @@ button.ms-home-card:hover {
   }
 }
 
+.ms-trial-card {
+  margin: 0 0 1.25rem;
+  background:
+    linear-gradient(160deg, rgba(232, 184, 74, 0.18), rgba(31, 107, 74, 0.08)),
+    #fff;
+}
+.ms-trial-card h3 {
+  margin: 0.35rem 0 0.4rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+.ms-trial-card.is-on {
+  border-color: color-mix(in srgb, var(--palm) 45%, var(--line));
+}
+
 .ms-sample-hint {
   background: rgba(232, 184, 74, 0.16);
   border: 1px solid var(--line);

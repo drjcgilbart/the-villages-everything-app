@@ -9,11 +9,16 @@ import {
   type HubPlanId,
 } from "@/lib/membershipTiers";
 import { TIER_SUMMARY } from "@/lib/mySpaceProduct";
+import { RoyaltyTrialOffer } from "@/components/RoyaltyTrialOffer";
 
 type SpaceBrief = {
   plan: HubPlanId;
   planRank: number;
   planLabel: string;
+  trialAvailable?: boolean;
+  trialActive?: boolean;
+  trialExpiresAt?: string | null;
+  standingPlanLabel?: string;
 };
 
 /**
@@ -46,12 +51,34 @@ export function MembershipPlans() {
           plan: json.space.plan,
           planRank: json.space.planRank,
           planLabel: json.space.planLabel,
+          trialAvailable: !!json.space.trialAvailable,
+          trialActive: !!json.space.trialActive,
+          trialExpiresAt: json.space.trialExpiresAt || null,
+          standingPlanLabel: json.space.standingPlanLabel || json.space.planLabel,
         });
       })
       .catch(() => {
         /* visitor catalog still works */
       });
   }, []);
+
+  async function startTrial() {
+    setError(null);
+    setBusy("square_royalty");
+    try {
+      const res = await fetch("/api/members/trial", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not start the free month");
+      window.location.href = "/my-space?trial=1";
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not start the free month");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function startSubscribe(tierId: HubPlanId) {
     setError(null);
@@ -80,9 +107,21 @@ export function MembershipPlans() {
           {error}
         </p>
       ) : null}
+      <RoyaltyTrialOffer
+        signedIn={signedIn}
+        approved={approved}
+        trialAvailable={!!space?.trialAvailable}
+        trialActive={!!space?.trialActive}
+        trialExpiresAt={space?.trialExpiresAt || null}
+        standingPlanLabel={space?.standingPlanLabel || "Porch Waver"}
+        native={native}
+        busy={busy === "square_royalty"}
+        error={error}
+        onStart={() => void startTrial()}
+      />
       {native ? (
         <p className="panel-hint">
-          Membership isn’t sold in the store app. Subscribe at{" "}
+          Paid membership isn’t sold in the store app. Subscribe at{" "}
           <strong>thevillageseverythingapp.com</strong>, then sign in here.
         </p>
       ) : null}
