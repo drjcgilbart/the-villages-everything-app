@@ -8,7 +8,7 @@ import {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const MAX_SYMBOLS = 30;
+const MAX_SYMBOLS = 40;
 
 export async function GET(req: NextRequest) {
   try {

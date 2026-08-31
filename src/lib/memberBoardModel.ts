@@ -304,6 +304,30 @@ export type CalTask = {
 };
 export type CalendarBoard = { tasks: CalTask[] };
 
+export type FinHolding = {
+  id: string;
+  kind: string;
+  symbol: string;
+  shares: number;
+  avgCost: number;
+  divShare: number;
+  divFreq: string;
+  exDiv: string;
+  payDate: string;
+  divGot: number;
+};
+export type FinAccount = {
+  id: string;
+  name: string;
+  included: boolean;
+  holdings: FinHolding[];
+};
+export type PortfolioBoard = {
+  holdings: unknown[];
+  accounts: FinAccount[];
+  watchlist: string[];
+};
+
 export type MemberBoards = {
   news: NewsBoard;
   entertainment: EntertainmentBoard;
@@ -316,7 +340,7 @@ export type MemberBoards = {
   health: Record<string, unknown>;
   pets: Record<string, unknown>;
   calendar: CalendarBoard;
-  portfolio: { holdings: unknown[] };
+  portfolio: PortfolioBoard;
   weather: Record<string, unknown>;
 };
 
@@ -388,7 +412,7 @@ export function emptyBoards(): MemberBoards {
     health: {},
     pets: {},
     calendar: { tasks: [] },
-    portfolio: { holdings: [] },
+    portfolio: { holdings: [], accounts: [], watchlist: [] },
     weather: {},
   };
 }
@@ -1032,10 +1056,82 @@ export function sanitizeBoard(
       return { tasks };
     }
     case "portfolio": {
-      const blob = jsonBlob(r, { holdings: [] });
-      return {
-        holdings: Array.isArray(blob.holdings) ? blob.holdings.slice(0, 80) : [],
+      const blob = jsonBlob(r, { holdings: [], accounts: [], watchlist: [] }) as {
+        holdings?: unknown;
+        accounts?: unknown;
+        watchlist?: unknown;
       };
+      const holdings = Array.isArray(blob.holdings) ? blob.holdings.slice(0, 80) : [];
+      const num = (v: unknown) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+      let accounts: FinAccount[] = Array.isArray(blob.accounts)
+        ? blob.accounts
+            .map((a) => {
+              const row = a as Partial<FinAccount>;
+              const hs: FinHolding[] = Array.isArray(row.holdings)
+                ? row.holdings
+                    .map((h) => ({
+                      id: clip(h?.id, 40) || uid("fh"),
+                      kind: clip(h?.kind, 12) || "stock",
+                      symbol: clip(h?.symbol, 16).toUpperCase(),
+                      shares: num(h?.shares),
+                      avgCost: num(h?.avgCost),
+                      divShare: num(h?.divShare),
+                      divFreq: clip(h?.divFreq, 16) || "none",
+                      exDiv: clip(h?.exDiv, 12),
+                      payDate: clip(h?.payDate, 12),
+                      divGot: num(h?.divGot),
+                    }))
+                    .filter((h) => h.symbol || h.kind === "cash")
+                    .slice(0, 40)
+                : [];
+              return {
+                id: clip(row.id, 40) || uid("acct"),
+                name: clip(row.name, 80) || "Account",
+                included: row.included !== false,
+                holdings: hs,
+              };
+            })
+            .slice(0, 16)
+        : [];
+      if (!accounts.length && holdings.length) {
+        accounts = [
+          {
+            id: uid("acct"),
+            name: "My portfolio",
+            included: true,
+            holdings: holdings
+              .map((raw) => {
+                const h = raw as Record<string, unknown>;
+                const symbol = clip(h.ticker || h.symbol, 16).toUpperCase();
+                if (!symbol) return null;
+                return {
+                  id: clip(h.id, 40) || uid("fh"),
+                  kind: "stock",
+                  symbol,
+                  shares: num(h.shares),
+                  avgCost: num(h.costBasis ?? h.avgCost),
+                  divShare: 0,
+                  divFreq: "none",
+                  exDiv: "",
+                  payDate: "",
+                  divGot: 0,
+                } satisfies FinHolding;
+              })
+              .filter((h): h is FinHolding => h != null)
+              .slice(0, 40),
+          },
+        ];
+      }
+      const watchlist = Array.isArray(blob.watchlist)
+        ? blob.watchlist
+            .map((s) => clip(s, 16).toUpperCase())
+            .filter(Boolean)
+            .slice(0, 40)
+        : [];
+      return { holdings, accounts, watchlist };
     }
   }
 }

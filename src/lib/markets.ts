@@ -116,11 +116,13 @@ async function fetchYahooChart(
 }
 
 export async function fetchMarketIndex(
-  def: MarketIndexDef
+  def: MarketIndexDef,
+  yahooRange = "1d",
+  interval = "5m"
 ): Promise<MarketQuote | null> {
-  // Prefer intraday; fall back to multi-day if the session just opened / thin data
-  let chart = await fetchYahooChart(def.yahoo, "1d", "5m");
-  if (!chart || chart.points.length < 6) {
+  // Prefer requested range; fall back to a wider window if the session just opened
+  let chart = await fetchYahooChart(def.yahoo, yahooRange, interval);
+  if ((!chart || chart.points.length < 6) && yahooRange === "1d") {
     const wider = await fetchYahooChart(def.yahoo, "5d", "15m");
     if (wider && wider.points.length > (chart?.points.length ?? 0)) {
       chart = wider;
@@ -162,8 +164,13 @@ export async function fetchMarketIndex(
   };
 }
 
-export async function fetchAllMarketIndices(): Promise<MarketQuote[]> {
-  const results = await Promise.all(MARKET_INDICES.map(fetchMarketIndex));
+export async function fetchAllMarketIndices(
+  yahooRange = "1d",
+  interval = "5m"
+): Promise<MarketQuote[]> {
+  const results = await Promise.all(
+    MARKET_INDICES.map((def) => fetchMarketIndex(def, yahooRange, interval))
+  );
   return results.filter((q): q is MarketQuote => q != null);
 }
 
@@ -191,7 +198,7 @@ export function normalizeTicker(raw: string): string {
 
 export function isValidTickerShape(ticker: string): boolean {
   // Letters, numbers, dots, hyphens — e.g. AAPL, BRK.B, BRK-B, ^GSPC
-  return /^[\^]?[A-Z0-9][A-Z0-9.\-]{0,14}$/.test(ticker);
+  return /^[\^]?[A-Z0-9][A-Z0-9.\-=]{0,14}$/.test(ticker);
 }
 
 /** Quote any Yahoo-compatible stock/ETF/index symbol. */

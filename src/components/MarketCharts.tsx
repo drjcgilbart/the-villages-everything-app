@@ -7,6 +7,7 @@ import {
   formatPrice,
   type MarketQuote,
 } from "@/lib/markets";
+import { MARKET_RANGES } from "@/lib/financeCatalog";
 
 const POLL_MS = 30_000; // ~real-time refresh every 30s
 
@@ -131,16 +132,24 @@ function MarketCard({ quote }: { quote: MarketQuote }) {
   );
 }
 
-export function MarketCharts() {
+export function MarketCharts({
+  compact = false,
+  withRanges = false,
+}: {
+  compact?: boolean;
+  withRanges?: boolean;
+}) {
   const [quotes, setQuotes] = useState<MarketQuote[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState("1d");
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch("/api/markets", { cache: "no-store" });
+      const q = withRanges ? `?range=${encodeURIComponent(range)}` : "";
+      const res = await fetch(`/api/markets${q}`, { cache: "no-store" });
       const data = (await res.json()) as ApiResponse;
       if (!res.ok || !data.quotes?.length) {
         throw new Error(data.error || "Markets unavailable");
@@ -153,7 +162,7 @@ export function MarketCharts() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [range, withRanges]);
 
   useEffect(() => {
     load(false);
@@ -182,51 +191,69 @@ export function MarketCharts() {
     }
   }, [fetchedAt]);
 
+  const body = (
+    <>
+      <div className="section-head">
+        <div>
+          <h2 id="mkt-heading">{compact ? "Market today" : "Live market board"}</h2>
+          <p>
+            {compact
+              ? "Quotes delayed a few minutes. Educational only — not a brokerage."
+              : "S&P 500, Nasdaq 100, Russell 2000, and Dow Jones — price, day change, and intraday chart. Refreshes about every 30 seconds."}
+          </p>
+        </div>
+        <div className="mkt-live-meta">
+          <span className="mkt-live">
+            <span className="mkt-live-dot" aria-hidden />
+            Live
+          </span>
+          {updatedLabel && (
+            <span className="mkt-updated">As of {updatedLabel} ET</span>
+          )}
+        </div>
+      </div>
+      {withRanges ? (
+        <div className="ms-h-quick" style={{ marginBottom: "0.75rem" }}>
+          {MARKET_RANGES.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              className={`ms-h-range-btn ${range === r.id ? "active" : ""}`}
+              onClick={() => setRange(r.id)}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {loading && quotes.length === 0 ? (
+        <div className="empty-state">Loading market quotes…</div>
+      ) : error && quotes.length === 0 ? (
+        <div className="empty-state">
+          {error}{" "}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => load(false)}>
+            Retry
+          </button>
+        </div>
+      ) : (
+        <div className="mkt-grid">
+          {quotes.map((q) => (
+            <MarketCard key={q.id} quote={q} />
+          ))}
+        </div>
+      )}
+      <p className="mkt-disclaimer">
+        For orientation only. Quotes may be delayed and can fail when market data providers
+        rate-limit. Not investment advice — cart paths over hot tips.
+      </p>
+    </>
+  );
+
+  if (compact) return <div className="ms-mkt-compact">{body}</div>;
+
   return (
     <section className="section mkt-section" id="markets" aria-labelledby="mkt-heading">
-      <div className="shell">
-        <div className="section-head">
-          <div>
-            <h2 id="mkt-heading">Live market board</h2>
-            <p>
-              S&amp;P 500, Nasdaq 100, Russell 2000, and Dow Jones — price, day
-              change, and intraday chart. Refreshes about every 30 seconds.
-            </p>
-          </div>
-          <div className="mkt-live-meta">
-            <span className="mkt-live">
-              <span className="mkt-live-dot" aria-hidden />
-              Live
-            </span>
-            {updatedLabel && (
-              <span className="mkt-updated">As of {updatedLabel} ET</span>
-            )}
-          </div>
-        </div>
-
-        {loading && quotes.length === 0 ? (
-          <div className="empty-state">Loading market quotes…</div>
-        ) : error && quotes.length === 0 ? (
-          <div className="empty-state">
-            {error}{" "}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => load(false)}>
-              Retry
-            </button>
-          </div>
-        ) : (
-          <div className="mkt-grid">
-            {quotes.map((q) => (
-              <MarketCard key={q.id} quote={q} />
-            ))}
-          </div>
-        )}
-
-        <p className="mkt-disclaimer">
-          For orientation only. Quotes may be delayed and can fail when market
-          data providers rate-limit. Not investment advice — cart paths over
-          hot tips.
-        </p>
-      </div>
+      <div className="shell">{body}</div>
     </section>
   );
 }

@@ -1,12 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { fetchAllMarketIndices } from "@/lib/markets";
+import { MARKET_RANGES } from "@/lib/financeCatalog";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const quotes = await fetchAllMarketIndices();
+    const raw = req.nextUrl.searchParams.get("range") || "1d";
+    const spec = MARKET_RANGES.find((r) => r.id === raw) || MARKET_RANGES[0];
+    const quotes = await fetchAllMarketIndices(spec.yahooRange, spec.interval);
     if (quotes.length === 0) {
       return NextResponse.json(
         { error: "Market data temporarily unavailable" },
@@ -16,6 +19,7 @@ export async function GET() {
     return NextResponse.json(
       {
         quotes,
+        range: spec.id,
         fetchedAt: new Date().toISOString(),
         disclaimer:
           "Quotes are for orientation only, may be delayed, and are not investment advice.",

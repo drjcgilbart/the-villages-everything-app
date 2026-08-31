@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { PortfolioTracker } from "@/components/PortfolioTracker";
+import { MySpaceInvestmentsBoard } from "@/components/MySpaceInvestmentsBoard";
 import {
   MySpaceCalendarBoard,
   MySpaceHealthLog,
@@ -593,12 +593,7 @@ export function MySpaceDashboard() {
       <section id="ms-markets" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("investments").label}</h3>
         {!locked("investments") && f?.portfolio ? (
-          <>
-            <p style={{ color: "var(--muted)", marginTop: 0 }}>
-              Stock &amp; ETF board — private to your membership.
-            </p>
-            <PortfolioTracker syncAccount />
-          </>
+          <MySpaceInvestmentsBoard />
         ) : (
           glass("investments")
         )}
