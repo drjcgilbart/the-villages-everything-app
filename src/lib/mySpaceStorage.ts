@@ -52,6 +52,13 @@ export function writeJsonStorage(key: string, value: unknown): void {
 /** Simple Web Audio beeps for med/pet alarms (no audio files required). */
 export type AlarmTone = "classic" | "chime" | "urgent" | "digital";
 
+export const ALARM_TONE_OPTIONS: { id: AlarmTone; label: string; hint: string }[] = [
+  { id: "classic", label: "Classic beep", hint: "Windows-style two-beep" },
+  { id: "chime", label: "Soft chime", hint: "Gentle rising notes" },
+  { id: "urgent", label: "Urgent alert", hint: "Fast repeating beep" },
+  { id: "digital", label: "Digital pulse", hint: "Stepped rising tones" },
+];
+
 export function playAlarmTone(
   tone: AlarmTone = "classic",
   durationSec = 2

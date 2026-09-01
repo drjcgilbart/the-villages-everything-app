@@ -5,8 +5,10 @@ import { useMemo, useState } from "react";
 import {
   GOLF_COURSES,
   GOLF_HUB,
+  golfTrailPageUrl,
   type GolfCourse,
 } from "@/lib/entertainmentCatalog";
+import { GolfScorecardButton } from "@/components/GolfScorecardButton";
 import {
   emptyBoards,
   type GolfLogBoard,
@@ -14,6 +16,7 @@ import {
   type GolfPlayerCard,
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import { MySpaceGolfPractice } from "@/components/MySpaceGolfPractice";
 
 const KINDS = [
   { id: "all", label: "All" },
@@ -172,6 +175,7 @@ export function MySpaceGolfLogBoard() {
     { id: "tees", label: "Tee times" },
     { id: "pair", label: "Find a group" },
     { id: "history", label: "History" },
+    { id: "practice", label: "Practice" },
   ];
 
   return (
@@ -179,7 +183,7 @@ export function MySpaceGolfLogBoard() {
       <p className="ms-module-lead">Golf in The Villages</p>
       <p className="panel-hint">
         Keep a card for up to four players on 9 or 18 holes. Tap + / − per hole — no tiny
-        scorecard pencils required. Public{" "}
+        scorecard pencils required. Practice holds short tips and a few tools. Public{" "}
         <Link href="/golf-zone" className="text-link">
           Golf hub
         </Link>{" "}
@@ -464,25 +468,15 @@ export function MySpaceGolfLogBoard() {
                   >
                     Map
                   </a>
-                  {c.kind === "executive" ? (
-                    <a
-                      className="btn btn-ghost btn-sm"
-                      href={GOLF_HUB.execGtv}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Trail / info
-                    </a>
-                  ) : (
-                    <a
-                      className="btn btn-ghost btn-sm"
-                      href={GOLF_HUB.championship}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Trail / info
-                    </a>
-                  )}
+                  <GolfScorecardButton course={c} />
+                  <a
+                    className="btn btn-ghost btn-sm"
+                    href={golfTrailPageUrl(c)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Trail / info
+                  </a>
                   {c.phone ? (
                     <a className="btn btn-ghost btn-sm" href={telHref(c.phone)}>
                       Call starter
@@ -880,6 +874,8 @@ export function MySpaceGolfLogBoard() {
           )}
         </>
       )}
+
+      {tab === "practice" && <MySpaceGolfPractice />}
     </div>
   );
 }

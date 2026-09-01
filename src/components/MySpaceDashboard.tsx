@@ -13,7 +13,6 @@ import {
   MySpaceEntertainmentBoard,
   MySpaceFoodBoard,
   MySpaceGolfLogBoard,
-  MySpaceGymBoard,
   MySpaceMaintenanceBoard,
   MySpaceMemoriesBoard,
   MySpaceNewsBoard,
@@ -112,7 +111,6 @@ type DashTab =
   | "home"
   | "weather"
   | "health"
-  | "gym"
   | "pets"
   | "food"
   | "entertainment"
@@ -140,7 +138,10 @@ export function MySpaceDashboard() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/members/space", { cache: "no-store" });
+      const res = await fetch("/api/members/space", {
+        cache: "no-store",
+        credentials: "include",
+      });
       if (res.status === 401) {
         setData(null);
         setError("signed_out");
@@ -168,6 +169,7 @@ export function MySpaceDashboard() {
     if (params.get("subscribed") === "1" && sessionId) {
       fetch("/api/members/subscribe/confirm", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       })
@@ -244,6 +246,7 @@ export function MySpaceDashboard() {
     try {
       const res = await fetch("/api/members/subscribe", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier: tierId }),
       });
@@ -262,6 +265,7 @@ export function MySpaceDashboard() {
     try {
       const res = await fetch("/api/members/space", {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ devUnlock: true, plan: tierId }),
       });
@@ -324,7 +328,6 @@ export function MySpaceDashboard() {
       { id: "home", label: "Home", icon: "🏠", boardId: "home" },
       { id: "weather", label: getBoard("weather").label, icon: "🌤", boardId: "weather" },
       { id: "health", label: getBoard("health").label, icon: "💚", boardId: "health" },
-      { id: "gym", label: getBoard("gym").label, icon: "🏋️", boardId: "gym" },
       { id: "pets", label: getBoard("pets").label, icon: "🐾", boardId: "pets" },
       { id: "food", label: getBoard("food").label, icon: "🍷", boardId: "food" },
       {
@@ -450,7 +453,10 @@ export function MySpaceDashboard() {
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={async () => {
-                  await fetch("/api/members/logout", { method: "POST" });
+                  await fetch("/api/members/logout", {
+                    method: "POST",
+                    credentials: "include",
+                  });
                   window.location.href = "/my-space";
                 }}
               >
@@ -753,20 +759,6 @@ export function MySpaceDashboard() {
           </>
         ) : (
           glass("health")
-        )}
-      </section>
-      )}
-
-      {tab === "gym" && (
-      <section id="ms-gym" className="my-space-block">
-        <h3 className="my-space-block-title">{getBoard("gym").label}</h3>
-        {!locked("gym") && f?.gymLog ? (
-          <>
-            {sampleHint}
-            <MySpaceGymBoard />
-          </>
-        ) : (
-          glass("gym")
         )}
       </section>
       )}

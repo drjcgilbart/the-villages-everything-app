@@ -38,7 +38,7 @@ const TOPICS_ROW_1 =
   GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(0, GOLF_SPLIT) : MAIN_TOPICS;
 const TOPICS_ROW_2 = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
 
-export function Header() {
+export function Header({ localPc = false }: { localPc?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -87,10 +87,12 @@ export function Header() {
     <header className="site-header hub-header">
       <div className="utility-bar">
         <div className="shell utility-bar-inner">
+          {localPc ? (
+            <Suspense fallback={null}>
+              <PhoneViewToggle />
+            </Suspense>
+          ) : null}
           <FavoriteSiteButton />
-          <Suspense fallback={null}>
-            <PhoneViewToggle />
-          </Suspense>
           <nav className="utility-nav" aria-label="Site links">
             {UTILITY_NAV.map((item) => (
               <Link

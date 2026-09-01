@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ALARM_TONE_OPTIONS,
   nowTimeEastern,
   playAlarmTone,
   todayKeyEastern,
@@ -230,6 +231,23 @@ function formatPetTime(hhmm: string): string {
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
+function reorderEvents(events: PetEvent[], fromId: string, toId: string): PetEvent[] {
+  if (fromId === toId) return events;
+  const from = events.findIndex((e) => e.id === fromId);
+  const to = events.findIndex((e) => e.id === toId);
+  if (from < 0 || to < 0) return events;
+  const next = events.slice();
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+function eventIdFromPoint(x: number, y: number): string | null {
+  const node = document.elementFromPoint(x, y);
+  const row = node?.closest("[data-pet-event-id]") as HTMLElement | null;
+  return row?.dataset.petEventId || null;
+}
+
 /**
  * Pet parade — same household pack as My Retirement Reboot Pets,
  * saved to the Hub member account. Photos stay on your camera roll.
@@ -258,6 +276,9 @@ export function MySpacePetBoard() {
   const [walkLabel, setWalkLabel] = useState("");
   const [feedTime, setFeedTime] = useState("12:00");
   const [feedLabel, setFeedLabel] = useState("");
+  const [hearing, setHearing] = useState<AlarmTone | null>(null);
+  const stopPreviewRef = useRef<(() => void) | null>(null);
+  const previewTokenRef = useRef(0);
   const [edit, setEdit] = useState({
     name: "",
     species: "dog",
@@ -320,6 +341,35 @@ export function MySpacePetBoard() {
     const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
   }, [ready, state.pets, state.completions]);
+
+  useEffect(() => {
+    return () => {
+      stopPreviewRef.current?.();
+    };
+  }, []);
+
+  function stopHearing() {
+    previewTokenRef.current += 1;
+    stopPreviewRef.current?.();
+    stopPreviewRef.current = null;
+    setHearing(null);
+  }
+
+  function hearTone(tone: AlarmTone, durationSec = 2) {
+    stopPreviewRef.current?.();
+    const token = ++previewTokenRef.current;
+    const stop = playAlarmTone(tone, durationSec);
+    stopPreviewRef.current = stop;
+    setHearing(tone);
+    window.setTimeout(
+      () => {
+        if (previewTokenRef.current !== token) return;
+        stopPreviewRef.current = null;
+        setHearing((cur) => (cur === tone ? null : cur));
+      },
+      Math.min(300, Math.max(1, durationSec)) * 1000 + 120
+    );
+  }
 
   function openEdit() {
     setEdit({
@@ -393,9 +443,11 @@ export function MySpacePetBoard() {
         <button
           type="button"
           className="btn btn-ghost btn-sm"
-          onClick={() => playAlarmTone(pet.alarmSound, 2)}
+          onClick={() =>
+            hearing === pet.alarmSound ? stopHearing() : hearTone(pet.alarmSound, 2)
+          }
         >
-          Test alarm
+          {hearing === pet.alarmSound ? "Stop alarm" : "Test alarm"}
         </button>
       </div>
 
@@ -727,19 +779,43 @@ export function MySpacePetBoard() {
 
           <div className="about-panel ms-module">
             <h3 style={{ marginTop: 0 }}>⏰ Alarms for {pet.name}</h3>
+            <p className="panel-hint">
+              Hear each sound before you pick it. Choosing a sound saves it for this pet only.
+            </p>
+            <div className="ms-alarm-tones" role="radiogroup" aria-label="Alarm sound">
+              {ALARM_TONE_OPTIONS.map((tone) => {
+                const selected = pet.alarmSound === tone.id;
+                const playing = hearing === tone.id;
+                return (
+                  <div
+                    key={tone.id}
+                    className={`ms-alarm-tone ${selected ? "is-selected" : ""}`}
+                  >
+                    <label>
+                      <input
+                        type="radio"
+                        name={`pet-alarm-sound-${pet.id}`}
+                        checked={selected}
+                        onChange={() => patchPet({ ...pet, alarmSound: tone.id })}
+                      />
+                      <span>
+                        <strong>{tone.label}</strong>
+                        <small>{tone.hint}</small>
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      aria-pressed={playing}
+                      onClick={() => (playing ? stopHearing() : hearTone(tone.id, 2))}
+                    >
+                      {playing ? "Stop" : "Hear it"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
             <div className="form-grid ms-module-form">
-              <div className="field">
-                <label>Alarm sound</label>
-                <select
-                  value={pet.alarmSound}
-                  onChange={(e) => patchPet({ ...pet, alarmSound: e.target.value as AlarmTone })}
-                >
-                  <option value="classic">Classic beep (Windows-style)</option>
-                  <option value="chime">Soft chime</option>
-                  <option value="urgent">Urgent alert</option>
-                  <option value="digital">Digital pulse</option>
-                </select>
-              </div>
               <div className="field">
                 <label>Run alarm for (seconds)</label>
                 <input
@@ -769,6 +845,17 @@ export function MySpacePetBoard() {
                 />
                 Run feeding alarms
               </label>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() =>
+                  hearing === pet.alarmSound
+                    ? stopHearing()
+                    : hearTone(pet.alarmSound, clampDuration(pet.alarmDurationSec))
+                }
+              >
+                {hearing === pet.alarmSound ? "Stop test" : "Test full alarm"}
+              </button>
             </div>
             <p className="panel-hint">
               Alarms fire for this pet’s enabled times that aren’t marked done yet. Every pet can have
@@ -808,73 +895,143 @@ function EventColumn({
   onPatch: (next: PetEvent[]) => void;
   onCompletion: (id: string, patch: Partial<Completion>) => void;
 }) {
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const dragIdRef = useRef<string | null>(null);
+  const canReorder = events.length > 1;
+
+  function clearDrag() {
+    dragIdRef.current = null;
+    setDraggingId(null);
+    setOverId(null);
+  }
+
+  function moveBy(id: string, dir: -1 | 1) {
+    const i = events.findIndex((e) => e.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= events.length) return;
+    onPatch(reorderEvents(events, id, events[j].id));
+  }
+
   return (
     <div className="about-panel ms-module">
       <h3 style={{ marginTop: 0 }}>{title}</h3>
+      {events.length > 1 ? (
+        <p className="panel-hint">Drag the ⋮⋮ handle to reorder. Arrow keys work on the handle too.</p>
+      ) : null}
       {events.length === 0 ? <p className="panel-hint">No times scheduled yet.</p> : null}
-      {events.map((ev) => {
-        const c = completion(ev.id);
-        return (
-          <div key={ev.id} className={`ms-pet-event ${c.done ? "done" : ""} ${ev.enabled ? "" : "off"}`}>
-            <input
-              type="checkbox"
-              checked={c.done}
-              onChange={(e) =>
-                onCompletion(ev.id, {
-                  done: e.target.checked,
-                  doneAt: e.target.checked ? nowTimeEastern() : undefined,
-                })
-              }
-            />
-            <div>
-              <input
-                value={ev.label}
-                onChange={(e) =>
-                  onPatch(events.map((x) => (x.id === ev.id ? { ...x, label: e.target.value.slice(0, 80) } : x)))
-                }
-              />
-              <span className="panel-hint">
-                {c.done
-                  ? `Done · planned ${formatPetTime(ev.time)}`
-                  : ev.enabled
-                    ? "Included in schedule / alarms"
-                    : "Skipped (enable with On)"}
-              </span>
-            </div>
-            <input
-              type="time"
-              className="ms-inline-time"
-              value={ev.time}
-              onChange={(e) =>
-                onPatch(events.map((x) => (x.id === ev.id ? { ...x, time: e.target.value } : x)))
-              }
-            />
-            <label className="ms-check">
+      <div className={`ms-pet-event-list ${draggingId ? "is-reordering" : ""}`}>
+        {events.map((ev) => {
+          const c = completion(ev.id);
+          return (
+            <div
+              key={ev.id}
+              data-pet-event-id={ev.id}
+              className={`ms-pet-event ${c.done ? "done" : ""} ${ev.enabled ? "" : "off"} ${
+                draggingId === ev.id ? "is-dragging" : ""
+              } ${overId === ev.id && draggingId && overId !== draggingId ? "is-drop-target" : ""}`}
+            >
+              <button
+                type="button"
+                className="ms-pet-drag-handle"
+                aria-label={`Reorder ${ev.label || "task"}`}
+                title="Drag to reorder"
+                disabled={!canReorder}
+                onPointerDown={(e) => {
+                  if (!canReorder || e.button !== 0) return;
+                  e.preventDefault();
+                  dragIdRef.current = ev.id;
+                  setDraggingId(ev.id);
+                  setOverId(ev.id);
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                }}
+                onPointerMove={(e) => {
+                  const fromId = dragIdRef.current;
+                  if (!fromId) return;
+                  const id = eventIdFromPoint(e.clientX, e.clientY);
+                  if (!id) return;
+                  setOverId(id);
+                  if (id !== fromId) {
+                    onPatch(reorderEvents(events, fromId, id));
+                  }
+                }}
+                onPointerUp={clearDrag}
+                onPointerCancel={clearDrag}
+                onLostPointerCapture={clearDrag}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    moveBy(ev.id, -1);
+                  } else if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    moveBy(ev.id, 1);
+                  }
+                }}
+              >
+                ⋮⋮
+              </button>
               <input
                 type="checkbox"
-                checked={ev.enabled}
+                checked={c.done}
                 onChange={(e) =>
-                  onPatch(events.map((x) => (x.id === ev.id ? { ...x, enabled: e.target.checked } : x)))
+                  onCompletion(ev.id, {
+                    done: e.target.checked,
+                    doneAt: e.target.checked ? nowTimeEastern() : undefined,
+                  })
                 }
               />
-              On
-            </label>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => onPatch(events.filter((x) => x.id !== ev.id))}
-            >
-              ×
-            </button>
-            <textarea
-              rows={2}
-              value={c.note}
-              onChange={(e) => onCompletion(ev.id, { note: e.target.value.slice(0, 500) })}
-              placeholder={noteHint}
-            />
-          </div>
-        );
-      })}
+              <div>
+                <input
+                  value={ev.label}
+                  onChange={(e) =>
+                    onPatch(
+                      events.map((x) => (x.id === ev.id ? { ...x, label: e.target.value.slice(0, 80) } : x))
+                    )
+                  }
+                />
+                <span className="panel-hint">
+                  {c.done
+                    ? `Done · planned ${formatPetTime(ev.time)}`
+                    : ev.enabled
+                      ? "Included in schedule / alarms"
+                      : "Skipped (enable with On)"}
+                </span>
+              </div>
+              <input
+                type="time"
+                className="ms-inline-time"
+                value={ev.time}
+                onChange={(e) =>
+                  onPatch(events.map((x) => (x.id === ev.id ? { ...x, time: e.target.value } : x)))
+                }
+              />
+              <label className="ms-check">
+                <input
+                  type="checkbox"
+                  checked={ev.enabled}
+                  onChange={(e) =>
+                    onPatch(events.map((x) => (x.id === ev.id ? { ...x, enabled: e.target.checked } : x)))
+                  }
+                />
+                On
+              </label>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => onPatch(events.filter((x) => x.id !== ev.id))}
+              >
+                ×
+              </button>
+              <textarea
+                rows={2}
+                value={c.note}
+                onChange={(e) => onCompletion(ev.id, { note: e.target.value.slice(0, 500) })}
+                placeholder={noteHint}
+              />
+            </div>
+          );
+        })}
+      </div>
       <form
         className="form-grid ms-module-form"
         onSubmit={(e) => {

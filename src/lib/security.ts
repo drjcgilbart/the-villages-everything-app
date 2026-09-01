@@ -15,6 +15,8 @@ export function isProductionHost(): boolean {
 }
 
 export function cookieSecure(): boolean {
+  // Never mark cookies Secure on `next dev` — they would be dropped on http://localhost.
+  if (process.env.NODE_ENV === "development") return false;
   return isProductionHost() || process.env.VERCEL === "1";
 }
 

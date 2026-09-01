@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
+import { shouldShowLocalDevTools } from "@/lib/localDevHost";
 import { safeNextPath } from "@/lib/safeNextPath";
 
+function subscribe() {
+  return () => {};
+}
+
 export function MemberLoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = safeNextPath(searchParams.get("next"));
+  const localPc = useSyncExternalStore(
+    subscribe,
+    shouldShowLocalDevTools,
+    () => false
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,11 +36,10 @@ export function MemberLoginForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      router.push(nextPath);
-      router.refresh();
+      // Full navigation so the httpOnly session cookie is on the next document.
+      window.location.assign(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
       setBusy(false);
     }
   }
@@ -65,6 +73,14 @@ export function MemberLoginForm() {
           {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
+      {localPc ? (
+        <p className="panel-hint">
+          This PC has its own member list, separate from the live website. If
+          the live-site password fails here, sign in with your{" "}
+          <strong>Admin</strong> password, or open{" "}
+          <Link href="/admin">Admin</Link> → Members → Set password.
+        </p>
+      ) : null}
       <p className="panel-hint" style={{ marginBottom: 0 }}>
         Need an account? <Link href="/yard-sale/join">Request membership</Link>
         . Forgot your password while still pending? Submit the membership form

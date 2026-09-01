@@ -774,7 +774,7 @@ export function MySpaceGymBoard() {
           <h3>Today</h3>
           {todayWos.length === 0 ? (
             <p className="panel-hint">
-              No gym session logged today. Health → Exercise is still there for walks and swimming.
+              No gym session logged today. Health → Exercise (the previous submenu) is still there for walks and swimming.
             </p>
           ) : (
             todayWos.map((w) => (
@@ -996,7 +996,7 @@ export function MySpaceGymBoard() {
         <div className="about-panel ms-module">
           <p className="panel-hint">
             {stats.sessions} session{stats.sessions === 1 ? "" : "s"} saved on this account. Edit or
-            delete any row. Health → Exercise is still for walks and swimming.
+            delete any row. Health → Exercise (the previous submenu) is still for walks and swimming.
           </p>
           <h3>Best lifts</h3>
           {stats.prs.length === 0 ? (

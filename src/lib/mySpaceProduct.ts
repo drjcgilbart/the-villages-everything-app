@@ -165,8 +165,8 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "💚",
     minRank: 2,
     phase: "live",
-    teaser: "Weight, meds, meals, movement, sleep, journal, daily goals.",
-    previewLine: "Meds at 8:00 · water goal · weigh-in streak",
+    teaser: "Weight, meds, meals, movement, gym, sleep, journal, daily goals.",
+    previewLine: "Meds at 8:00 · water goal · gym log · weigh-in streak",
   },
   {
     id: "pets",
@@ -193,7 +193,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "🏋️",
     minRank: 2,
     phase: "live",
-    teaser: "Workouts, fit clubs, supplements — personal training log.",
+    teaser: "Workouts, Fit Clubs, supplements — now a Health submenu between Exercise and Sleep.",
     previewLine: "Today’s workout · home gym · supplements",
   },
   {
@@ -227,22 +227,22 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
   },
   {
     id: "golfLog",
-    label: "Golf log",
+    label: "Golf",
     icon: "⛳",
     minRank: 2,
     phase: "live",
     teaser:
-      "Personal scorecard, tee times, history. Public Golf on the Hub stays free.",
+      "Personal scorecard, tee times, history, and a curated Practice shelf. Public Golf on the Hub stays free.",
     previewLine: "Last round · upcoming tee time · find a foursome",
   },
   {
     id: "pickleballLog",
-    label: "Pickleball log",
+    label: "Pickleball",
     icon: "🏓",
     minRank: 2,
     phase: "live",
     teaser:
-      "Personal DUPR log and matches. Public Pickleball on the Hub stays free.",
+      "Personal DUPR log, matches, and a curated Practice shelf. Public Pickleball on the Hub stays free.",
     previewLine: "DUPR · last match · find a game",
   },
   {
@@ -274,7 +274,7 @@ export const TIER_SUMMARY: Record<
   },
   lanai_legend: {
     includes:
-      "3 member logins (each with their own password and boards). Health, pets, food, gym, maintenance, personal calendar, private photos, golf/pickleball logs",
+      "3 member logins (each with their own password and boards). Health, pets, food, gym, maintenance, personal calendar, private photos, golf/pickleball",
     blurb:
       "You plus two neighbors, each with a separate login and My Space. The private Reboot: health, pets, kitchen, gym, and the rest of the personal boards.",
   },

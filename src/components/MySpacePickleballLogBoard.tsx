@@ -9,6 +9,7 @@ import {
   type PickleballLogBoard,
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import { MySpacePickleballPractice } from "@/components/MySpacePickleballPractice";
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
@@ -126,6 +127,7 @@ export function MySpacePickleballLogBoard() {
     { id: "people", label: "People" },
     { id: "courts", label: "Courts" },
     { id: "play", label: "Find a game" },
+    { id: "practice", label: "Practice" },
   ];
 
   return (
@@ -133,7 +135,8 @@ export function MySpacePickleballLogBoard() {
       <p className="ms-module-lead">Pickleball country</p>
       <p className="panel-hint">
         DUPR is pickleball’s handicap — locals use it for leagues, ladders, and balanced games.
-        This screen does not replace DUPR; it keeps your Villages book. Public{" "}
+        This screen does not replace DUPR; it keeps your Villages book. Practice holds short tips
+        and a few tools. Public{" "}
         <Link href="/pickleball" className="text-link">
           Pickleball hub
         </Link>{" "}
@@ -788,6 +791,8 @@ export function MySpacePickleballLogBoard() {
           </ul>
         </>
       )}
+
+      {tab === "practice" && <MySpacePickleballPractice />}
     </div>
   );
 }

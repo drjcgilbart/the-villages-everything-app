@@ -89,7 +89,7 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Lanai",
     tagline: "Screened-in serenity with a side of spreadsheets.",
     blurb:
-      "3 member logins — you plus two neighbors, each with their own password and My Space data. The private Reboot: health, pets, food, gym, maintenance, personal calendar, photos & movies, plus golf and pickleball logs.",
+      "3 member logins — you plus two neighbors, each with their own password and My Space data. The private Reboot: health, pets, food, gym, maintenance, personal calendar, photos & movies, plus golf and pickleball.",
     badgeImage: "/graphics/badges/lanai-legend.jpg",
     priceUsdPerMonth: 2,
     householdSeats: 3,
@@ -181,7 +181,7 @@ export const FEATURE_META: Record<
   healthLog: {
     title: "Health lanai",
     teaser:
-      "Weight log, meds with dose times & alarms, meals, workouts, journal, and daily goals.",
+      "Weight log, meds with dose times & alarms, meals, gym, workouts, journal, and daily goals.",
     anchor: "ms-health",
   },
   petSchedule: {
@@ -197,8 +197,8 @@ export const FEATURE_META: Record<
   },
   gymLog: {
     title: "Gym",
-    teaser: "Workouts and supplements — your personal training log.",
-    anchor: "ms-gym",
+    teaser: "Workouts and supplements — inside Health, between Exercise and Sleep.",
+    anchor: "ms-health",
   },
   maintenanceLog: {
     title: "Maintenance",
@@ -216,13 +216,13 @@ export const FEATURE_META: Record<
     anchor: "ms-memories",
   },
   golfLog: {
-    title: "Golf log",
-    teaser: "Personal scorecard and tee notes. Public Golf stays free.",
+    title: "Golf",
+    teaser: "Scorecard, tee times, and a curated Practice shelf. Public Golf stays free.",
     anchor: "ms-golf-log",
   },
   pickleballLog: {
-    title: "Pickleball log",
-    teaser: "Personal match notes. Public Pickleball stays free.",
+    title: "Pickleball",
+    teaser: "DUPR, matches, and a curated Practice shelf. Public Pickleball stays free.",
     anchor: "ms-pb-log",
   },
   exclusiveLounge: {

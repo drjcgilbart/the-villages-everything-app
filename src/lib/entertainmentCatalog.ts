@@ -434,3 +434,50 @@ export function golfInfoUrl(c: GolfCourse) {
   if (c.kind === "executive" || c.kind === "pitch-putt") return GOLF_HUB.execGtv;
   return GOLF_HUB.golfTheVillages;
 }
+
+/** Official Golf The Villages course key (spaces, not hyphens). */
+export function golfOfficialKey(c: GolfCourse): string | null {
+  if (c.kind === "practice" || c.kind === "putting") return null;
+  if (c.id === "fenney-putt-play") return null;
+  if (c.id === "lopez-legacy") return "LOPEZ LEGACY";
+  if (c.id === "marsh-view") return "MARSH VIEW";
+  return c.name.replace(/ Pitch & Putt$/i, "").trim().toUpperCase();
+}
+
+/** Course-specific Trail / info page (not the generic list). */
+export function golfTrailPageUrl(c: GolfCourse): string {
+  const key = golfOfficialKey(c);
+  if (!key) return golfInfoUrl(c);
+  if (c.kind === "championship") {
+    return `https://www.golfthevillages.com/championship-golf/champDetail.asp?course=${encodeURIComponent(key)}`;
+  }
+  return `https://www.golfthevillages.com/executive-golf/execHome.asp?course=${key.replace(/ /g, "+")}`;
+}
+
+export type GolfScorecardAsset = {
+  type: "pdf" | "jpg";
+  url: string;
+  fileName: string;
+};
+
+/** Official printable scorecard hosted by Golf The Villages. */
+export function golfScorecardAsset(c: GolfCourse): GolfScorecardAsset | null {
+  const key = golfOfficialKey(c);
+  if (!key) return null;
+  const slug = encodeURIComponent(key);
+  if (c.kind === "championship") {
+    return {
+      type: "pdf",
+      url: `https://www.golfthevillages.com/championship-golf/images/scorecards/${slug}.pdf`,
+      fileName: `${key} scorecard.pdf`,
+    };
+  }
+  if (c.kind === "executive" || c.kind === "pitch-putt") {
+    return {
+      type: "jpg",
+      url: `https://www.golfthevillages.com/executive-golf/images/scorecards/sc-${slug}.jpg`,
+      fileName: `${key} scorecard.jpg`,
+    };
+  }
+  return null;
+}

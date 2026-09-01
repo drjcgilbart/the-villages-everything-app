@@ -10,6 +10,7 @@ import {
 } from "@/lib/mySpaceStorage";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_HEALTH } from "@/lib/sampleBoards";
+import { MySpaceGymBoard } from "@/components/MySpaceGymBoard";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -19,6 +20,7 @@ type HealthTab =
   | "meds"
   | "meals"
   | "exercise"
+  | "gym"
   | "sleep"
   | "photos"
   | "journal"
@@ -225,6 +227,7 @@ const TABS: { id: HealthTab; label: string; icon: string }[] = [
   { id: "meds", label: "Meds", icon: "💊" },
   { id: "meals", label: "Meals", icon: "🍽️" },
   { id: "exercise", label: "Exercise", icon: "🏃" },
+  { id: "gym", label: "Gym", icon: "🏋️" },
   { id: "sleep", label: "Sleep", icon: "😴" },
   { id: "photos", label: "Photos", icon: "📷" },
   { id: "journal", label: "Journal", icon: "📓" },
@@ -1008,7 +1011,7 @@ export function MySpaceHealthBoard() {
   return (
     <div className="ms-health-board">
       <p className="ms-module-lead">
-        Weight, meds, meals, movement, sleep, photos, and a journal — private on your Hub
+        Weight, meds, meals, movement, gym, sleep, photos, and a journal — private on your Hub
         account (same idea as the desktop Villages dashboard). Not medical advice.
       </p>
 
@@ -2110,8 +2113,12 @@ export function MySpaceHealthBoard() {
       {tab === "exercise" && (
         <div className="about-panel ms-module">
           <p className="panel-hint">
-            Walks, swimming, and minutes belong here. For gym machines, free weights, Fit Clubs, and
-            Planet Fitness, use the Gym board.
+            Walks, swimming, and minutes belong here. Gym machines, free weights, Fit Clubs, and
+            Planet Fitness live in{" "}
+            <button type="button" className="text-link" onClick={() => setTab("gym")}>
+              Gym
+            </button>{" "}
+            (the next submenu).
           </p>
           <h3>Log exercise</h3>
           <form
@@ -2273,6 +2280,12 @@ export function MySpaceHealthBoard() {
               Clear all exercise
             </button>
           </div>
+        </div>
+      )}
+
+      {tab === "gym" && (
+        <div className="ms-health-gym">
+          <MySpaceGymBoard />
         </div>
       )}
 

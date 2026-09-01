@@ -12,6 +12,7 @@ import {
   type PickleballLogBoard,
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import { GolfScorecardButton } from "@/components/GolfScorecardButton";
 import {
   BOX_OFFICES,
   ENT_FACEBOOK,
@@ -35,7 +36,7 @@ import {
   TICKETS_LOCATIONS,
   TICKET_WALLET,
   VENUES,
-  golfInfoUrl,
+  golfTrailPageUrl,
   mapsUrl,
   telHref,
   type GolfCourse,
@@ -1027,7 +1028,8 @@ export function MySpaceEntertainmentBoard() {
                           Map
                         </a>
                       )}
-                      <a className="btn btn-ghost btn-sm" href={golfInfoUrl(c)} target="_blank" rel="noopener noreferrer">
+                      <GolfScorecardButton course={c} />
+                      <a className="btn btn-ghost btn-sm" href={golfTrailPageUrl(c)} target="_blank" rel="noopener noreferrer">
                         Trail / info
                       </a>
                       {c.phone ? (
@@ -1279,7 +1281,7 @@ function GolfPlay({
     <>
       <p className="panel-hint">
         Keep a card for 9 or 18. Totals update as you go. Tee times and looking-for-a-group save to
-        the same Golf log as the rest of My Space. Championship tee times: 3 days ahead at
+        the same Golf board as the rest of My Space. Championship tee times: 3 days ahead at
         GolfTheVillages.com. Day-of, call the shop. Executive greens are in the amenity fee; a trail
         pass is required to use your own cart.
       </p>
