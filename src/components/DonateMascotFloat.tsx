@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { DonateMascot } from "@/components/DonateMascot";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
+import { pingPhoneChrome, usePhoneChromeIdle } from "@/lib/phoneChrome";
 
 function supporterFromSpace(space: {
   planRank?: number;
@@ -30,8 +31,10 @@ export function DonateMascotFloat() {
   const pathname = usePathname();
   const [broke, setBroke] = useState(true);
   const [native, setNative] = useState(false);
+  const chromeIdle = usePhoneChromeIdle();
 
   useEffect(() => {
+    pingPhoneChrome();
     setNative(isNativeAppShell());
     let cancelled = false;
     fetch("/api/members/me", { cache: "no-store", credentials: "include" })
@@ -55,6 +58,7 @@ export function DonateMascotFloat() {
       variant="float"
       broke={broke}
       href={native ? "/my-space?tab=plans" : "/donate"}
+      className={`phone-chrome${chromeIdle ? " is-idle" : ""}`}
     />
   );
 }

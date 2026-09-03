@@ -7555,6 +7555,19 @@ a.floating-back-btn {
   }
 }
 
+@media (max-width: 720px) {
+  .phone-chrome {
+    transition: opacity 0.32s ease, transform 0.32s ease, box-shadow 0.15s ease,
+      background 0.15s ease;
+  }
+
+  .phone-chrome.is-idle {
+    opacity: 0 !important;
+    transform: translateY(1.35rem);
+    pointer-events: none;
+  }
+}
+
 /* "" Golf ball mascot quips (jokes / sarcasm / advice) "" */
 .mascot-quip-toggle {
   position: fixed;

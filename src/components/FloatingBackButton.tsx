@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { pingPhoneChrome, usePhoneChromeIdle } from "@/lib/phoneChrome";
 
 /**
  * Fixed Back + Home controls on every page except home.
@@ -14,10 +15,12 @@ export function FloatingBackButton() {
   const router = useRouter();
   const [canShow, setCanShow] = useState(false);
   const [showTop, setShowTop] = useState(false);
+  const chromeIdle = usePhoneChromeIdle();
 
   useEffect(() => {
     // Avoid flash on first paint for home; client-only for history checks
     setCanShow(Boolean(pathname && pathname !== "/"));
+    pingPhoneChrome();
   }, [pathname]);
 
   useEffect(() => {
@@ -40,7 +43,11 @@ export function FloatingBackButton() {
   if (!canShow && !showTop) return null;
 
   return (
-    <div className="floating-nav-stack" role="navigation" aria-label="Page navigation">
+    <div
+      className={`floating-nav-stack phone-chrome${chromeIdle ? " is-idle" : ""}`}
+      role="navigation"
+      aria-label="Page navigation"
+    >
       {showTop ? (
         <button
           type="button"

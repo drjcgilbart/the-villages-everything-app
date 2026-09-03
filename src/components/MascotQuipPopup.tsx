@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
+import { usePhoneChromeIdle } from "@/lib/phoneChrome";
 import {
   pickVillagerQuip,
   quipKindLabel,
@@ -68,6 +69,7 @@ export function MascotQuipPopup() {
   const [hydrated, setHydrated] = useState(false);
   const [open, setOpen] = useState(false);
   const [quip, setQuip] = useState<VillagerQuip | null>(null);
+  const chromeIdle = usePhoneChromeIdle();
 
   useEffect(() => {
     setEnabled(readEnabled());
@@ -129,7 +131,7 @@ export function MascotQuipPopup() {
       {/* Always-available preference control */}
       <button
         type="button"
-        className={`mascot-quip-toggle${enabled ? " is-on" : ""}`}
+        className={`mascot-quip-toggle phone-chrome${enabled ? " is-on" : ""}${chromeIdle ? " is-idle" : ""}`}
         onClick={toggleEnabled}
         aria-pressed={enabled}
         title={
