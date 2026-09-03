@@ -12,8 +12,10 @@ import { ThemeMusicPlayer } from "@/components/ThemeMusicPlayer";
 import { PwaRegister } from "@/components/PwaRegister";
 import { NativeAppBoot } from "@/components/NativeAppBoot";
 import { PhoneViewHide } from "@/components/PhoneViewHide";
+import { isAdminAuthenticated } from "@/lib/auth";
 import { ensureDurableHydrated } from "@/lib/dataFs";
 import { isLocalPcHost } from "@/lib/localDevHost";
+import { getSessionMember } from "@/lib/memberAuth";
 import "./globals.css";
 
 const display = Fraunces({
@@ -62,6 +64,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // so Admin Portal grants show on every page, every serverless instance.
   await ensureDurableHydrated();
   const localPc = isLocalPcHost((await headers()).get("host"));
+  const isAdmin = await isAdminAuthenticated();
+  const signedIn = Boolean(await getSessionMember());
 
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
@@ -69,7 +73,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <NativeAppBoot />
         <PhoneViewHide>
           <PwaRegister />
-          <Header localPc={localPc} />
+          <Header localPc={localPc} isAdmin={isAdmin} signedIn={signedIn} />
         </PhoneViewHide>
         <main className="flex-1">{children}</main>
         <PhoneViewHide extra={["/golf-cart-hero"]}>

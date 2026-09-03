@@ -38,7 +38,15 @@ const TOPICS_ROW_1 =
   GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(0, GOLF_SPLIT) : MAIN_TOPICS;
 const TOPICS_ROW_2 = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
 
-export function Header({ localPc = false }: { localPc?: boolean }) {
+export function Header({
+  localPc = false,
+  isAdmin = false,
+  signedIn = false,
+}: {
+  localPc?: boolean;
+  isAdmin?: boolean;
+  signedIn?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -105,6 +113,22 @@ export function Header({ localPc = false }: { localPc?: boolean }) {
                 {item.label}
               </Link>
             ))}
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                className={`utility-studio${pathname === "/admin" || pathname.startsWith("/admin/") ? " active" : ""}`}
+              >
+                Admin
+              </Link>
+            ) : null}
+            {!signedIn ? (
+              <Link
+                href="/yard-sale/login"
+                className={pathname === "/yard-sale/login" ? "active" : ""}
+              >
+                Sign in
+              </Link>
+            ) : null}
           </nav>
         </div>
       </div>
@@ -187,6 +211,18 @@ export function Header({ localPc = false }: { localPc?: boolean }) {
               </span>
               <span className="hub-topic-label">Sign in</span>
             </Link>
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                className={`hub-topic-btn${pathname === "/admin" || pathname.startsWith("/admin/") ? " active" : ""}`}
+                onClick={() => setOpen(false)}
+              >
+                <span className="hub-topic-icon" aria-hidden="true">
+                  🛠️
+                </span>
+                <span className="hub-topic-label">Admin</span>
+              </Link>
+            ) : null}
           </div>
           <div className="hub-mobile-links hub-mobile-main-topics">
             {MAIN_TOPICS.map((item) =>

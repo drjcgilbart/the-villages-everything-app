@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { getSessionMember } from "./memberAuth";
 import { cookieSecure, isInsecureAdminConfig, isProductionHost } from "./security";
+import { isSiteOwnerEmail } from "./siteOwner";
 
 const COOKIE = "tvi_admin";
 
@@ -21,6 +23,15 @@ export function expectedToken() {
 }
 
 export async function isAdminAuthenticated() {
+  const member = await getSessionMember();
+  if (
+    member &&
+    isSiteOwnerEmail(member.email) &&
+    member.status !== "rejected" &&
+    member.status !== "suspended"
+  ) {
+    return true;
+  }
   if (isProductionHost() && isInsecureAdminConfig()) return false;
   const jar = await cookies();
   const val = jar.get(COOKIE)?.value;

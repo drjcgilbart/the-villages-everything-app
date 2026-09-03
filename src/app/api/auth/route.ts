@@ -11,8 +11,10 @@ import {
   isProductionHost,
   secretsMatch,
 } from "@/lib/security";
+import { hydrateYardSale } from "@/lib/yardSale";
 
 export async function GET() {
+  await hydrateYardSale();
   const ok = await isAdminAuthenticated();
   return NextResponse.json({ authenticated: ok });
 }

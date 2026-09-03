@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { householdClientPayload } from "@/lib/household";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
+import { isAdminAuthenticated } from "@/lib/auth";
 import { getSessionMember } from "@/lib/memberAuth";
 import { getMemberSpace, publicSpacePayload } from "@/lib/memberSpace";
 import { toPublicMember } from "@/lib/yardSale";
@@ -16,6 +17,7 @@ export async function GET() {
   const space = getMemberSpace(member.id);
   return NextResponse.json({
     member: toPublicMember(member),
+    isAdmin: await isAdminAuthenticated(),
     badges: badgesForMemberRecord(member),
     space: {
       ...publicSpacePayload(space),

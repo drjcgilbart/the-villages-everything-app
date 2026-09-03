@@ -6,6 +6,7 @@ import {
   toPublicMember,
 } from "@/lib/yardSale";
 import { memberCookieOptions } from "@/lib/memberAuth";
+import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import { clearAuthAttempts, rateLimitResponse } from "@/lib/authRateLimit";
 import { isLocalPcHost } from "@/lib/localDevHost";
 import { secretsMatch } from "@/lib/security";
@@ -55,11 +56,12 @@ export async function POST(req: Request) {
       member = local;
     }
     clearAuthAttempts(req);
+    const cookie = memberCookieOptions(member.id);
     const res = NextResponse.json({
       ok: true,
       member: toPublicMember(member),
+      isAdmin: isSiteOwnerEmail(member.email),
     });
-    const cookie = memberCookieOptions(member.id);
     res.cookies.set(cookie.name, cookie.value, cookie);
     return res;
   } catch (err) {

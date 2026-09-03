@@ -38,6 +38,7 @@ type PortalTab =
  */
 export function AdminPortal() {
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tab, setTab] = useState<PortalTab>("pending");
   const [pendingTotal, setPendingTotal] = useState(0);
@@ -90,6 +91,24 @@ export function AdminPortal() {
     setBusy(true);
     setMsg(null);
     try {
+      if (email.trim()) {
+        const memberRes = await fetch("/api/members/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }),
+        });
+        const memberData = await memberRes.json().catch(() => ({}));
+        if (memberRes.ok && memberData.isAdmin) {
+          window.location.assign("/admin");
+          return;
+        }
+        if (memberRes.ok && !memberData.isAdmin) {
+          throw new Error(
+            "That Hub login works, but it isn’t the owner account. Sign in with your administrator email."
+          );
+        }
+      }
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,12 +145,24 @@ export function AdminPortal() {
         <div className="admin-card admin-portal-login">
           <h1>Sign in</h1>
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            Owner tools. Visitors do not need this page.
+            Sign in with your Hub email and password. Neighbors never see this
+            page.
           </p>
           {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
           <form className="form-grid" onSubmit={login}>
             <div className="field">
-              <label htmlFor="portal-pass">Admin password</label>
+              <label htmlFor="portal-email">Email</label>
+              <input
+                id="portal-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
+                autoFocus
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="portal-pass">Password</label>
               <input
                 id="portal-pass"
                 type="password"
@@ -139,7 +170,6 @@ export function AdminPortal() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                autoFocus
               />
             </div>
             <button type="submit" className="btn btn-primary" disabled={busy}>
