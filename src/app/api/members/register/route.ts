@@ -5,6 +5,7 @@ import { memberCookieOptions } from "@/lib/memberAuth";
 import { loadMemberSpaces, saveMemberSpacesAsync } from "@/lib/memberSpace";
 import {
   getMemberById,
+  hydrateYardSale,
   loadYardSale,
   registerMember,
   saveYardSaleAsync,
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
   const limited = rateLimitResponse(req, "member-register", 6);
   if (limited) return limited;
   try {
+    await hydrateYardSale();
     const body = await req.json();
     const member = registerMember({
       name: body.name,
@@ -35,12 +37,12 @@ export async function POST(req: Request) {
         acceptHouseholdInvite(member.id, householdToken);
         householdJoined = true;
         await saveMemberSpacesAsync(loadMemberSpaces());
-        await saveYardSaleAsync(loadYardSale());
       } catch (err) {
         householdError =
           err instanceof Error ? err.message : "Could not join that household.";
       }
     }
+    await saveYardSaleAsync(loadYardSale());
     const updatedPending = member.status === "pending" && !householdJoined;
     if (updatedPending) {
       await notifyAdminOfApprovalRequest({

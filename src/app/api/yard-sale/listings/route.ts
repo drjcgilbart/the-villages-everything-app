@@ -6,6 +6,9 @@ import {
   createListing,
   deleteListing,
   getMemberById,
+  hydrateYardSale,
+  loadYardSale,
+  saveYardSaleAsync,
   setListingStatus,
   updateListing,
 } from "@/lib/yardSale";
@@ -16,6 +19,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    await hydrateYardSale();
     const member = await requireApprovedMember();
     const body = await req.json();
     const listing = createListing(member.id, {
@@ -49,6 +53,7 @@ export async function POST(req: Request) {
         },
       });
     }
+    await saveYardSaleAsync(loadYardSale());
     return NextResponse.json({ listing });
   } catch (err) {
     const code = (err as { code?: number })?.code || 400;
@@ -61,6 +66,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    await hydrateYardSale();
     const body = await req.json();
     const isAdmin = await isAdminAuthenticated();
     const member = await getSessionMember();
@@ -71,6 +77,7 @@ export async function PUT(req: Request) {
         body.adminStatus as ListingStatus,
         body.adminNote
       );
+      await saveYardSaleAsync(loadYardSale());
       return NextResponse.json({ listing });
     }
 
@@ -89,6 +96,7 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: "Not your listing" }, { status: 403 });
       }
       const listing = setListingStatus(body.id, "sold");
+      await saveYardSaleAsync(loadYardSale());
       return NextResponse.json({ listing });
     }
 
@@ -115,6 +123,7 @@ export async function PUT(req: Request) {
         },
       });
     }
+    await saveYardSaleAsync(loadYardSale());
     return NextResponse.json({ listing });
   } catch (err) {
     return NextResponse.json(
@@ -126,6 +135,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    await hydrateYardSale();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -133,6 +143,7 @@ export async function DELETE(req: Request) {
     const isAdmin = await isAdminAuthenticated();
     if (isAdmin) {
       deleteListing(id, undefined, true);
+      await saveYardSaleAsync(loadYardSale());
       return NextResponse.json({ ok: true });
     }
 
@@ -141,6 +152,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     }
     deleteListing(id, member.id, false);
+    await saveYardSaleAsync(loadYardSale());
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(

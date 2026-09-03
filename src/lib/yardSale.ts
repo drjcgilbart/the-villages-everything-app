@@ -3,6 +3,9 @@ import path from "path";
 import crypto from "crypto";
 import {
   BUNDLE_DATA_DIR,
+  cacheDurableJson,
+  ensureDurableHydrated,
+  pullDurableJson,
   readJsonFile,
   saveUploadFile,
   writeJsonFile,
@@ -72,6 +75,17 @@ export function loadYardSale(): YardSaleData {
     listings: Array.isArray(raw.listings) ? raw.listings : [],
     updatedAt: raw.updatedAt || null,
   };
+}
+
+/** Pull Redis/Blob into memory before a member write so we don't save a stale seed. */
+export async function hydrateYardSale() {
+  await ensureDurableHydrated();
+  try {
+    const text = await pullDurableJson(YARD_FILE);
+    if (text) cacheDurableJson(YARD_FILE, text);
+  } catch (err) {
+    console.error("[yard-sale] durable pull failed", err);
+  }
 }
 
 export function saveYardSale(data: YardSaleData) {

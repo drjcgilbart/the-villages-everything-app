@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   authenticateMember,
   getMemberByEmail,
+  hydrateYardSale,
   toPublicMember,
 } from "@/lib/yardSale";
 import { memberCookieOptions } from "@/lib/memberAuth";
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
   const limited = rateLimitResponse(req, "member-login", 8);
   if (limited) return limited;
   try {
+    await hydrateYardSale();
     const body = await req.json();
     const email = String(body.email || "");
     const password = String(body.password || "");
