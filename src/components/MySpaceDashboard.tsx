@@ -384,8 +384,74 @@ export function MySpaceDashboard() {
       { id: "links", label: "Shortcuts", icon: "🔗", boardId: "shortcuts" },
     ];
 
+  const onPlans = tab === "membership";
+
   return (
     <div className="my-space" id="ms-top">
+      {onPlans ? (
+        <div className="page-hero page-hero-graphic ms-plans-page-hero">
+          <div className="shell ms-plans-hero-stack">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/graphics/mascot-support.jpg"
+              alt="Golf-ball mascot looking broke — empty mug, empty wallet"
+              width={180}
+              height={180}
+            />
+            <span className="kicker">Membership</span>
+            <h1>Plans</h1>
+            <p>
+              Four rungs: Porch Waver (free, 1 login) → Cart Path Regular ($1,
+              2 logins) → Lanai Legend ($2, 3 logins) → Square Royalty ($3, 4
+              logins). Each plan keeps everything below it. Extra household
+              people get their own password and boards.
+              {inNativeApp
+                ? " Paid plans are bought on thevillageseverythingapp.com, then you sign in here."
+                : ""}
+            </p>
+            {visitor ? (
+              <p className="hero-actions" style={{ marginBottom: 0 }}>
+                <Link
+                  href={`/yard-sale/login?next=${encodeURIComponent("/my-space?tab=plans")}`}
+                  className="btn btn-primary btn-sm"
+                >
+                  Sign in
+                </Link>
+                <Link href="/yard-sale/join" className="btn btn-ghost btn-sm">
+                  Request membership
+                </Link>
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="page-hero page-hero-graphic">
+          <div className="shell page-hero-grid">
+            <div>
+              <span className="kicker">{PRODUCT_NAMES.doorKicker}</span>
+              <h1>{PRODUCT_NAMES.doorTitle}</h1>
+              <p>
+                {PRODUCT_NAMES.doorBlurb} Public Hub pages stay free. Private
+                boards unlock by plan.
+              </p>
+            </div>
+            <div className="page-hero-art">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/graphics/mascot-myspace.jpg"
+                alt="My Space mascot — golf ball with a house key and a tiny screened lanai"
+                width={280}
+                height={280}
+                className="about-mascot about-mascot-round"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <section className="section">
+        <div className="shell">
+      {onPlans ? null : (
       <div className="about-panel my-space-header">
         <div>
           <span className="kicker">
@@ -476,6 +542,7 @@ export function MySpaceDashboard() {
           )}
         </div>
       </div>
+      )}
 
       <nav className="ms-dash-nav" aria-label="My Space dashboard">
         {tabs.map((t) => (
@@ -562,25 +629,6 @@ export function MySpaceDashboard() {
 
       {tab === "membership" && (
       <section className="my-space-block" id="ms-tiers">
-        <h3 className="my-space-block-title">Membership plans</h3>
-        <div className="ms-plans-mascot">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/graphics/mascot-support.jpg"
-            alt="Golf-ball mascot looking broke — empty mug, empty wallet"
-            width={160}
-            height={160}
-          />
-          <p style={{ color: "var(--muted)", margin: 0 }}>
-            Climb the ladder from porch waves to square royalty. Each plan keeps
-            everything below it. Household seats: Porch Waver 1 member login,
-            Cart Path Regular 2, Lanai Legend 3, Square Royalty 4 — each person
-            gets their own password and their own My Space boards.
-            {inNativeApp
-              ? " Paid plans are bought on thevillageseverythingapp.com, then you sign in here."
-              : ""}
-          </p>
-        </div>
         <RoyaltyTrialOffer
           signedIn={!visitor}
           approved={approved}
@@ -973,6 +1021,8 @@ export function MySpaceDashboard() {
         sold on the website, not in the iPhone/Android store apps. Not
         affiliated with The Villages® operators.
       </p>
+        </div>
+      </section>
     </div>
   );
 }
