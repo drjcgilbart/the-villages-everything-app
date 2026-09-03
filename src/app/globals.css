@@ -9699,6 +9699,10 @@ a.floating-back-btn {
     font-family: var(--font-display), Georgia, serif;
   }
 
+  .hub-mobile-account {
+    margin-bottom: 0.45rem;
+  }
+
   /* Always 3 columns on phones so the full menu fits one screen */
   .hub-mobile-links {
     display: grid;
