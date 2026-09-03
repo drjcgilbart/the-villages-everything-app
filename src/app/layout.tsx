@@ -69,7 +69,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
-      <body className="min-h-full flex flex-col antialiased">
+      <body id="top" className="min-h-full flex flex-col antialiased">
         <NativeAppBoot />
         <PhoneViewHide>
           <PwaRegister />

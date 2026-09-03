@@ -13,11 +13,19 @@ export function FloatingBackButton() {
   const pathname = usePathname();
   const router = useRouter();
   const [canShow, setCanShow] = useState(false);
+  const [showTop, setShowTop] = useState(false);
 
   useEffect(() => {
     // Avoid flash on first paint for home; client-only for history checks
     setCanShow(Boolean(pathname && pathname !== "/"));
   }, [pathname]);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 400);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const goBack = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -29,10 +37,26 @@ export function FloatingBackButton() {
     }
   }, [router]);
 
-  if (!canShow) return null;
+  if (!canShow && !showTop) return null;
 
   return (
     <div className="floating-nav-stack" role="navigation" aria-label="Page navigation">
+      {showTop ? (
+        <button
+          type="button"
+          className="floating-back-btn"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Back to top of page"
+          title="Top"
+        >
+          <span className="floating-back-arrow" aria-hidden>
+            ↑
+          </span>
+          <span className="floating-back-label">Top</span>
+        </button>
+      ) : null}
+      {canShow ? (
+        <>
       <button
         type="button"
         className="floating-back-btn"
@@ -56,6 +80,8 @@ export function FloatingBackButton() {
         </span>
         <span className="floating-back-label">Home</span>
       </Link>
+        </>
+      ) : null}
     </div>
   );
 }

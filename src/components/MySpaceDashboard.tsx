@@ -565,62 +565,103 @@ export function MySpaceDashboard() {
         <section className="my-space-block">
           <h3 className="my-space-block-title">Your daily hub</h3>
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
-            Boards are grouped by membership. Each paid tier keeps everything
-            below it. Locked ones show a sample — never another neighbor’s real
-            notes.
+            {visitor
+              ? "Sign in to open your boards. Compare plans on the Plans tab — public Hub pages stay free."
+              : "Your boards for this login. Plan details live on Plans, so this page stays a dashboard."}
           </p>
           {locked("weather") ? <MySpaceWeatherStrip /> : null}
-          {HUB_TIERS.map((tier) => {
-            const group = tabs.filter(
-              (t) =>
-                t.id !== "home" && getBoard(t.boardId).minRank === tier.rank
-            );
-            if (group.length === 0) return null;
-            const included = !visitor && planRank >= tier.rank;
-            const current = !visitor && space?.plan === tier.id;
-            return (
-              <div key={tier.id} className="ms-hub-group">
-                <div className="ms-hub-group-head">
-                  <h4 className="ms-hub-group-title">{tier.label}</h4>
-                  <span className="ms-hub-group-price">
-                    {formatMembershipPrice(tier)} · {formatHouseholdSeats(tier.householdSeats)}
-                  </span>
-                  <span className="pill">
-                    {current ? "Your plan" : included ? "Included" : tier.shortLabel}
-                  </span>
-                </div>
-                <p className="panel-hint ms-hub-group-tagline">{tier.tagline}</p>
-                <div className="ms-home-grid">
-                  {group.map((t) => {
-                    const isLocked = locked(t.boardId);
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className={`about-panel ms-home-card ${isLocked ? "is-locked" : ""}`}
-                        onClick={() => setTab(t.id)}
-                      >
-                        <span aria-hidden className="ms-home-card-icon">
-                          {t.icon}
-                        </span>
-                        <strong>
-                          {t.label}
-                          {isLocked ? " 🔒" : ""}
-                        </strong>
-                        <span className="panel-hint">
-                          {isLocked
-                            ? visitor && getBoard(t.boardId).minRank === 0
+          {visitor
+            ? HUB_TIERS.map((tier) => {
+                const group = tabs.filter(
+                  (t) =>
+                    t.id !== "home" && getBoard(t.boardId).minRank === tier.rank
+                );
+                if (group.length === 0) return null;
+                return (
+                  <div key={tier.id} className="ms-hub-group">
+                    <div className="ms-hub-group-head">
+                      <h4 className="ms-hub-group-title">{tier.label}</h4>
+                      <span className="ms-hub-group-price">
+                        {formatMembershipPrice(tier)} · {formatHouseholdSeats(tier.householdSeats)}
+                      </span>
+                      <span className="pill">{tier.shortLabel}</span>
+                    </div>
+                    <p className="panel-hint ms-hub-group-tagline">{tier.tagline}</p>
+                    <div className="ms-home-grid">
+                      {group.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="about-panel ms-home-card is-locked"
+                          onClick={() => setTab(t.id)}
+                        >
+                          <span aria-hidden className="ms-home-card-icon">
+                            {t.icon}
+                          </span>
+                          <strong>
+                            {t.label} 🔒
+                          </strong>
+                          <span className="panel-hint">
+                            {getBoard(t.boardId).minRank === 0
                               ? "Sign in to use"
-                              : `Unlock with ${tier.label}`
-                            : "Open"}
-                        </span>
-                      </button>
-                    );
-                  })}
+                              : `Unlock with ${tier.label}`}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            : (
+              <>
+                <div className="ms-hub-group">
+                  <div className="ms-hub-group-head">
+                    <h4 className="ms-hub-group-title">Your boards</h4>
+                    <span className="pill">Your plan</span>
+                  </div>
+                  <div className="ms-home-grid">
+                    {tabs
+                      .filter(
+                        (t) => t.id !== "home" && !locked(t.boardId)
+                      )
+                      .map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="about-panel ms-home-card"
+                          onClick={() => setTab(t.id)}
+                        >
+                          <span aria-hidden className="ms-home-card-icon">
+                            {t.icon}
+                          </span>
+                          <strong>{t.label}</strong>
+                          <span className="panel-hint">Open</span>
+                        </button>
+                      ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+                {planRank < 3 ? (
+                  <p className="panel-hint">
+                    Higher plans unlock more boards.{" "}
+                    <button
+                      type="button"
+                      className="text-link"
+                      style={{
+                        background: "none",
+                        border: 0,
+                        padding: 0,
+                        font: "inherit",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setTab("membership")}
+                    >
+                      See Plans
+                    </button>
+                    .
+                  </p>
+                ) : null}
+              </>
+            )}
           <div style={{ marginTop: "1.25rem" }}>
             <MySpaceFavoritesHub />
           </div>

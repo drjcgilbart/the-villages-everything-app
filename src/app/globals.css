@@ -5626,6 +5626,23 @@ a.ts-square-card:hover .ts-square-card-img {
   color: var(--palm);
 }
 
+.footer-topics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.28rem 0.85rem;
+}
+
+@media (min-width: 720px) {
+  .footer-topics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.footer-back-top {
+  margin: 0.25rem 0 0;
+  font-weight: 700;
+}
+
 .brand {
   display: flex;
   align-items: center;

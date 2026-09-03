@@ -28,7 +28,7 @@ export function Footer() {
         <div className="footer-groups">
           <div className="footer-group">
             <strong>Main topics</strong>
-            <div className="footer-group-links">
+            <div className="footer-group-links footer-topics-grid">
               {MAIN_TOPICS.map((t) => (
                 <Link key={t.href} href={t.href}>
                   {t.label}
@@ -90,6 +90,12 @@ export function Footer() {
             ) : null}
           </p>
         )}
+
+        <p className="footer-back-top">
+          <a href="#top" className="text-link">
+            ↑ Back to top
+          </a>
+        </p>
 
         <p className="footer-note">
           Original site graphics created for this project (not stock photos). Not
