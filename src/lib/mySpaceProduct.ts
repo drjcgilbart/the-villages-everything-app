@@ -113,7 +113,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
   },
   {
     id: "membership",
-    label: "Tiers",
+    label: "Plans",
     icon: "🎟",
     minRank: 0,
     phase: "live",

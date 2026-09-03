@@ -192,6 +192,16 @@ export function Header({
               <span className="hub-topic-label">My Space</span>
             </Link>
             <Link
+              href="/my-space?tab=plans"
+              className="hub-topic-btn"
+              onClick={() => setOpen(false)}
+            >
+              <span className="hub-topic-icon" aria-hidden="true">
+                🎟
+              </span>
+              <span className="hub-topic-label">Plans</span>
+            </Link>
+            <Link
               href="/yard-sale/join"
               className={`hub-topic-btn${pathname === "/yard-sale/join" ? " active" : ""}`}
               onClick={() => setOpen(false)}

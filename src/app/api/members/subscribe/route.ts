@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "You’re on a household plan. Leave it in My Space → Tiers if you want to buy your own membership.",
+          "You’re on a household plan. Leave it in My Space → Plans if you want to buy your own membership.",
       },
       { status: 400 }
     );

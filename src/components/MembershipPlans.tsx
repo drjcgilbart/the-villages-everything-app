@@ -188,7 +188,7 @@ export function MembershipPlans() {
               space?.householdRole === "member" ? (
                 <p className="panel-hint" style={{ marginBottom: 0 }}>
                   Household members don’t buy a second plan. Leave the household
-                  in My Space → Tiers first, or ask the paying neighbor to
+                  in My Space → Plans first, or ask the paying neighbor to
                   upgrade.
                 </p>
               ) : null}

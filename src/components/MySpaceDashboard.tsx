@@ -183,6 +183,15 @@ export function MySpaceDashboard() {
     if (params.get("trial") === "1") {
       setNote("Square Royalty is unlocked for one month. Poke every board. Subscribe if you want to keep it.");
     }
+    const tabParam = (params.get("tab") || "").toLowerCase();
+    if (
+      tabParam === "plans" ||
+      tabParam === "membership" ||
+      tabParam === "tiers" ||
+      window.location.hash === "#ms-tiers"
+    ) {
+      setTab("membership");
+    }
     if (params.get("joined") === "household") {
       setNote("You’re on the household. Your boards stay on this login.");
       setTab("membership");
@@ -370,7 +379,7 @@ export function MySpaceDashboard() {
         boardId: "pickleballLog",
       },
       { id: "favorites", label: "Favorites", icon: "⭐", boardId: "favorites" },
-      { id: "membership", label: "Tiers", icon: "🎟", boardId: "membership" },
+      { id: "membership", label: "Plans", icon: "🎟", boardId: "membership" },
       { id: "lounge", label: "Royalty", icon: "👑", boardId: "lounge" },
       { id: "links", label: "Shortcuts", icon: "🔗", boardId: "shortcuts" },
     ];
@@ -553,7 +562,7 @@ export function MySpaceDashboard() {
 
       {tab === "membership" && (
       <section className="my-space-block" id="ms-tiers">
-        <h3 className="my-space-block-title">Membership tiers</h3>
+        <h3 className="my-space-block-title">Membership plans</h3>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
           Climb the ladder from porch waves to square royalty. Each tier keeps
           everything below it. Household seats: Porch Waver 1 member login,
@@ -945,7 +954,7 @@ export function MySpaceDashboard() {
       )}
 
       <p className="mkt-disclaimer">
-        Tiers:{" "}
+        Plans:{" "}
         {HUB_TIERS.map((t) => `${t.label} (${formatHouseholdSeats(t.householdSeats)})`).join(" → ")}.
         Extra household members get their own login and boards. Locked boards
         show sample chrome only — never another neighbor’s notes. Membership is

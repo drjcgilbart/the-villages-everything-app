@@ -106,9 +106,9 @@ export default async function DonatePage({
               <h2>Already a member?</h2>
               <p style={{ color: "var(--muted)" }}>
                 Your boards live in My Space. Upgrade any time from this page
-                or from the Tiers tab there.
+                or from the Plans tab there.
               </p>
-              <Link href="/my-space" className="btn btn-ghost btn-sm">
+              <Link href="/my-space?tab=plans" className="btn btn-ghost btn-sm">
                 Open My Space
               </Link>
             </div>
