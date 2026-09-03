@@ -563,12 +563,24 @@ export function MySpaceDashboard() {
       {tab === "membership" && (
       <section className="my-space-block" id="ms-tiers">
         <h3 className="my-space-block-title">Membership plans</h3>
-        <p style={{ color: "var(--muted)", marginTop: 0 }}>
-          Climb the ladder from porch waves to square royalty. Each tier keeps
-          everything below it. Household seats: Porch Waver 1 member login,
-          Cart Path Regular 2, Lanai Legend 3, Square Royalty 4 — each person
-          gets their own password and their own My Space boards.
-        </p>
+        <div className="ms-plans-mascot">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/graphics/mascot-support.jpg"
+            alt="Golf-ball mascot looking broke — empty mug, empty wallet"
+            width={160}
+            height={160}
+          />
+          <p style={{ color: "var(--muted)", margin: 0 }}>
+            Climb the ladder from porch waves to square royalty. Each plan keeps
+            everything below it. Household seats: Porch Waver 1 member login,
+            Cart Path Regular 2, Lanai Legend 3, Square Royalty 4 — each person
+            gets their own password and their own My Space boards.
+            {inNativeApp
+              ? " Paid plans are bought on thevillageseverythingapp.com, then you sign in here."
+              : ""}
+          </p>
+        </div>
         <RoyaltyTrialOffer
           signedIn={!visitor}
           approved={approved}

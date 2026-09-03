@@ -1975,6 +1975,22 @@ a.my-space-link-card:hover {
   font-weight: 400;
 }
 
+.ms-plans-mascot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 1.1rem;
+}
+
+.ms-plans-mascot img {
+  width: 7.5rem;
+  height: 7.5rem;
+  object-fit: cover;
+  border-radius: 18px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+}
+
 .ms-tier-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -9697,10 +9713,6 @@ a.floating-back-btn {
     font-weight: 700;
     font-size: 0.92rem;
     font-family: var(--font-display), Georgia, serif;
-  }
-
-  .hub-mobile-account {
-    margin-bottom: 0.45rem;
   }
 
   /* Always 3 columns on phones so the full menu fits one screen */

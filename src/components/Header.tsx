@@ -29,6 +29,7 @@ const UTILITY_NAV = [
       "/yard-sale/dashboard",
     ],
   },
+  { href: "/my-space?tab=plans", label: "Plans" },
   { href: "/donate", label: "Support" },
 ];
 
@@ -180,60 +181,6 @@ export function Header({
           aria-label="Main"
         >
           <p className="hub-mobile-intro">Where to first, cart pilot?</p>
-          <div className="hub-mobile-links hub-mobile-account">
-            <Link
-              href="/my-space"
-              className={`hub-topic-btn${pathname === "/my-space" || pathname.startsWith("/my-space/") ? " active" : ""}`}
-              onClick={() => setOpen(false)}
-            >
-              <span className="hub-topic-icon" aria-hidden="true">
-                🏡
-              </span>
-              <span className="hub-topic-label">My Space</span>
-            </Link>
-            <Link
-              href="/my-space?tab=plans"
-              className="hub-topic-btn"
-              onClick={() => setOpen(false)}
-            >
-              <span className="hub-topic-icon" aria-hidden="true">
-                🎟
-              </span>
-              <span className="hub-topic-label">Plans</span>
-            </Link>
-            <Link
-              href="/yard-sale/join"
-              className={`hub-topic-btn${pathname === "/yard-sale/join" ? " active" : ""}`}
-              onClick={() => setOpen(false)}
-            >
-              <span className="hub-topic-icon" aria-hidden="true">
-                ✍️
-              </span>
-              <span className="hub-topic-label">Request membership</span>
-            </Link>
-            <Link
-              href="/yard-sale/login"
-              className={`hub-topic-btn${pathname === "/yard-sale/login" ? " active" : ""}`}
-              onClick={() => setOpen(false)}
-            >
-              <span className="hub-topic-icon" aria-hidden="true">
-                🔑
-              </span>
-              <span className="hub-topic-label">Sign in</span>
-            </Link>
-            {isAdmin ? (
-              <Link
-                href="/admin"
-                className={`hub-topic-btn${pathname === "/admin" || pathname.startsWith("/admin/") ? " active" : ""}`}
-                onClick={() => setOpen(false)}
-              >
-                <span className="hub-topic-icon" aria-hidden="true">
-                  🛠️
-                </span>
-                <span className="hub-topic-label">Admin</span>
-              </Link>
-            ) : null}
-          </div>
           <div className="hub-mobile-links hub-mobile-main-topics">
             {MAIN_TOPICS.map((item) =>
               topicLink(item, { onClick: () => setOpen(false) })
