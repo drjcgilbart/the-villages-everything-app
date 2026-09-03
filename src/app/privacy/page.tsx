@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         <span className="kicker">Legal-ish, still friendly</span>
         <h1>Privacy Policy</h1>
         <p style={{ color: "var(--muted)" }}>
-          Last updated: August 28, 2026 · Applies to the website{" "}
+          Last updated: September 3, 2026 · Applies to the website{" "}
           <strong>{SITE_BRAND.domain}</strong> and the iPhone / Android apps
           that open it.
         </p>
@@ -102,8 +102,11 @@ export default function PrivacyPage() {
           <p>
             Content you submit for public areas (for example Best of the Month or
             Local Pros) may be shown on the site after approval. Do not upload
-            photos of other people without their permission. You can request
-            removal by emailing us.
+            photos of other people without their permission. Neighbors can tap{" "}
+            <strong>Report</strong> on forums, yard-sale listings, and dining
+            reviews, and signed-in members can <strong>Block</strong> another
+            member so their posts stay hidden. We review reports and hide or
+            remove content that breaks the house rules, usually within 24 hours.
           </p>
         </div>
 
@@ -135,7 +138,19 @@ export default function PrivacyPage() {
           <h2>Your choices</h2>
           <ul>
             <li>Use many areas of the site without creating an account.</li>
-            <li>Request account or content deletion by emailing us.</li>
+            <li>
+              Delete your account in the app: sign in → My Space → Membership
+              tiers → Delete my account. That removes your membership, private
+              My Space boards, and sign-in. Public posts stay as “Deleted
+              neighbor.”
+            </li>
+            <li>
+              Email{" "}
+              <a className="text-link" href="mailto:jonathan@thevillageseverythingapp.com">
+                jonathan@thevillageseverythingapp.com
+              </a>{" "}
+              if you need help with a deletion or a content report.
+            </li>
             <li>Turn off optional analytics in your browser where available.</li>
             <li>Uninstall the mobile app at any time.</li>
           </ul>

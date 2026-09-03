@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import { formatPrice } from "@/components/YardListingCard";
 import { ListingGallery } from "@/components/ListingGallery";
+import { ReportBlockControls } from "@/components/ReportBlockControls";
 import { withSellerBadges } from "@/lib/memberBadges";
 import {
   getListingById,
@@ -132,6 +133,12 @@ export default async function YardListingDetailPage({
                       </p>
                     )}
                   </div>
+                  <ReportBlockControls
+                    targetType="yard_listing"
+                    targetId={listing.id}
+                    targetMemberId={listing.memberId || listing.seller.id}
+                    targetLabel={listing.title}
+                  />
                 </>
               ) : (
                 <p className="panel-hint">Seller information unavailable.</p>

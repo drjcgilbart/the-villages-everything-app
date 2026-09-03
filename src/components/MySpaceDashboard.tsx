@@ -45,6 +45,7 @@ import {
 } from "@/lib/mySpaceProduct";
 import { SAMPLE_HINT } from "@/lib/sampleBoards";
 import { RoyaltyTrialOffer } from "@/components/RoyaltyTrialOffer";
+import { DeleteAccountPanel } from "@/components/DeleteAccountPanel";
 
 /** Explicit badge art for tier cards (client-safe; always present). */
 const TIER_CARD_BADGES: Record<
@@ -687,6 +688,11 @@ export function MySpaceDashboard() {
               onChanged={load}
               onNote={setNote}
             />
+          </div>
+        ) : null}
+        {!visitor ? (
+          <div style={{ marginTop: "1.1rem" }}>
+            <DeleteAccountPanel />
           </div>
         ) : null}
         {upgradeTiers?.length === 0 && (

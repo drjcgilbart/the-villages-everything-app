@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
+import { ReportBlockControls } from "@/components/ReportBlockControls";
 import { getForumEditToken } from "@/lib/forumClient";
 import { formatDate } from "@/lib/format";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
@@ -39,6 +40,7 @@ export function ForumPost({
 }: Props) {
   const router = useRouter();
   const [memberId, setMemberId] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
   const [hasToken, setHasToken] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title || "");
@@ -64,10 +66,20 @@ export function ForumPost({
       .catch(() => {
         if (!cancelled) setMemberId(null);
       });
+    fetch("/api/safety/block", { cache: "no-store", credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const ids: string[] = Array.isArray(data?.blockedIds) ? data.blockedIds : [];
+        setBlocked(!!authorMemberId && ids.includes(authorMemberId));
+      })
+      .catch(() => {
+        if (!cancelled) setBlocked(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authorMemberId]);
 
   const isOwner =
     hasToken ||
@@ -173,13 +185,17 @@ export function ForumPost({
         </div>
       ) : (
         <>
-          <div className="forum-post-body">
-            {body.split(/\n+/).map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-          {isOwner && !locked ? (
-            <div className="forum-post-actions">
+          {blocked ? (
+            <p className="panel-hint">Hidden — you blocked this neighbor.</p>
+          ) : (
+            <div className="forum-post-body">
+              {body.split(/\n+/).map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
+            </div>
+          )}
+          <div className="forum-post-actions">
+            {isOwner && !locked ? (
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -187,8 +203,14 @@ export function ForumPost({
               >
                 Edit
               </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
+          <ReportBlockControls
+            targetType={kind === "thread" ? "forum_thread" : "forum_reply"}
+            targetId={id}
+            targetMemberId={authorMemberId}
+            targetLabel={title || authorName}
+          />
         </>
       )}
     </div>

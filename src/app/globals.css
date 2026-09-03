@@ -1608,6 +1608,20 @@ html:has(.gch-embed) .theme-music {
   gap: 0.5rem;
 }
 
+.safety-controls {
+  margin-top: 0.75rem;
+}
+
+.safety-report-form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.delete-account-panel {
+  border: 1px solid color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
 .forum-edit-form {
   display: grid;
   gap: 0.75rem;

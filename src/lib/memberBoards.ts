@@ -72,3 +72,11 @@ export async function saveMemberBoard(
   await writeJsonFileAsync(FILE, file);
   return next[boardId];
 }
+
+export async function deleteMemberBoards(memberId: string) {
+  const file = loadFile();
+  if (!file.members[memberId]) return;
+  delete file.members[memberId];
+  file.updatedAt = new Date().toISOString();
+  await writeJsonFileAsync(FILE, file);
+}

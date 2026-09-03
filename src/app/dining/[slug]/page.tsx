@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DiningFavoriteButton } from "@/components/DiningFavoriteButton";
 import { MemberName } from "@/components/MemberName";
+import { ReportBlockControls } from "@/components/ReportBlockControls";
 import { ReviewForm } from "@/components/ReviewForm";
 import { StarRating } from "@/components/StarRating";
 import {
@@ -253,6 +254,12 @@ export default async function RestaurantPage({
                         {review.wouldReturn ? " · Would return" : " · Might skip next time"}
                       </p>
                       <p>{review.body}</p>
+                      <ReportBlockControls
+                        targetType="dining_review"
+                        targetId={review.id}
+                        targetMemberId={review.authorMemberId}
+                        targetLabel={review.title}
+                      />
                     </article>
                   ))}
                 </div>

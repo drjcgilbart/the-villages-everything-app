@@ -100,6 +100,10 @@ export function Footer() {
           <Link href="/privacy" className="text-link">
             Privacy
           </Link>
+          {" · "}
+          <Link href="/safety" className="text-link">
+            Safety
+          </Link>
         </p>
       </div>
     </footer>
