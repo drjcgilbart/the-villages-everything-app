@@ -66,7 +66,7 @@ export async function POST(req: Request) {
  * GET — gate status.
  * Public: { enabled, unlocked }
  * Admin (cookie): also { toggleOn, passwordConfigured, updatedAt }
- * Middleware probe uses ?probe=1 (same public shape).
+ * Public status shape is { enabled, unlocked }.
  */
 export async function GET(req: Request) {
   const status = await getSiteGateStatus();
