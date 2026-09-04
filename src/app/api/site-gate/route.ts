@@ -136,11 +136,13 @@ export async function PATCH(req: Request) {
       toggleOn: settings.enabled,
       passwordConfigured: status.passwordConfigured,
       updatedAt: settings.updatedAt,
-      message: settings.enabled
-        ? status.passwordConfigured
-          ? "Beta password wall is ON — visitors need the site password."
-          : "Toggle is ON, but SITE_PASSWORD is not set in env — wall stays inactive until you add it."
-        : "Beta password wall is OFF — site is public.",
+      message: status.enabled
+        ? "Beta password wall is ON — visitors need the site password."
+        : settings.enabled
+          ? status.passwordConfigured
+            ? "Preference saved. The live wall stays off until SITE_GATE_ENABLED=on in Vercel (then Redeploy)."
+            : "Preference saved, but SITE_PASSWORD is not set in env — wall stays inactive."
+          : "Beta password wall is OFF — site is public.",
     });
   } catch (err) {
     return NextResponse.json(

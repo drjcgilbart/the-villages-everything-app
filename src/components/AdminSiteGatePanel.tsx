@@ -91,9 +91,9 @@ export function AdminSiteGatePanel() {
             <p className="site-gate-status-detail">
               {wallLive
                 ? "Visitors who don’t have the beta cookie are redirected to /beta-gate."
-                : toggleOn && !status.passwordConfigured
-                  ? "You turned the wall on, but SITE_PASSWORD is empty in the environment — set it on Vercel, then the wall will engage."
-                  : "Anyone can browse without a password. Use the button below when you want private beta testing again."}
+                : !status.passwordConfigured
+                  ? "SITE_PASSWORD is empty in the environment — set it on Vercel before the wall can engage."
+                  : "Anyone can browse without a password. The live wall stays off unless SITE_GATE_ENABLED=on in Vercel — that keeps the public site from timing out."}
             </p>
           </div>
           <span
@@ -151,23 +151,21 @@ export function AdminSiteGatePanel() {
         <ul className="ts-tips-list">
           <li>
             Keep <code>SITE_PASSWORD</code> set in Vercel even when the wall is
-            off — that way you can re-enable beta access without a redeploy of
-            secrets.
+            off — that way you can re-enable beta access without changing the
+            password.
           </li>
           <li>
-            This toggle is stored in durable app settings (
-            <code>site-gate-settings.json</code>) and does not require a new
-            deploy.
+            The live wall is controlled by{" "}
+            <code>SITE_GATE_ENABLED=on</code> in Vercel. Middleware does not
+            call Redis or this site (that was causing the 504 timeout).
           </li>
           <li>
-            Middleware may take up to ~12 seconds to pick up a change on every
-            edge region (short cache). Hard-refresh if a tester still sees the
-            gate.
+            After setting <code>SITE_GATE_ENABLED</code>, Redeploy Production so
+            Routing Middleware picks it up.
           </li>
           <li>
-            Optional emergency env:{" "}
-            <code>SITE_GATE_ENABLED=off</code> forces the wall off;{" "}
-            <code>=on</code> forces it on (overrides the admin toggle).
+            <code>SITE_GATE_ENABLED=off</code> or leaving it unset keeps the
+            site public.
           </li>
         </ul>
       </div>

@@ -70,20 +70,24 @@ export function isSitePasswordConfigured(): boolean {
   return Boolean(getSitePassword());
 }
 
+function siteGateEnvOverride(): "on" | "off" | "unset" {
+  const envFlag = (process.env.SITE_GATE_ENABLED || "").trim().toLowerCase();
+  if (envFlag === "0" || envFlag === "false" || envFlag === "off") return "off";
+  if (envFlag === "1" || envFlag === "true" || envFlag === "on") return "on";
+  return "unset";
+}
+
 /**
- * Gate is active only when:
- * 1) SITE_PASSWORD is a non-empty env string, AND
- * 2) Admin toggle `enabled` is true in durable settings (default false = public).
+ * Live wall (Routing Middleware) is env-only so the public site cannot 504.
+ * On only when SITE_PASSWORD is set AND SITE_GATE_ENABLED=on|true|1.
  */
 export function isSiteGateEnabled(): boolean {
   if (!isSitePasswordConfigured()) return false;
-  return loadSiteGateSettings().enabled === true;
+  return siteGateEnvOverride() === "on";
 }
 
 export async function isSiteGateEnabledAsync(): Promise<boolean> {
-  if (!isSitePasswordConfigured()) return false;
-  const settings = await loadSiteGateSettingsAsync();
-  return settings.enabled === true;
+  return isSiteGateEnabled();
 }
 
 /**
@@ -130,12 +134,14 @@ export async function getSiteGateStatus() {
   await ensureDurableHydrated();
   const settings = loadSiteGateSettings();
   const passwordConfigured = isSitePasswordConfigured();
-  const enabled = passwordConfigured && settings.enabled === true;
+  const envOverride = siteGateEnvOverride();
+  const enabled = passwordConfigured && envOverride === "on";
   return {
     enabled,
-    /** Admin asked for the wall (may still be inactive if password missing) */
+    /** Admin asked for the wall (may still be inactive unless SITE_GATE_ENABLED=on) */
     toggleOn: settings.enabled === true,
     passwordConfigured,
+    envOverride,
     updatedAt: settings.updatedAt,
   };
 }

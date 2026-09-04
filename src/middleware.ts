@@ -40,79 +40,18 @@ function isPublicAsset(pathname: string): boolean {
   );
 }
 
-/** Short-lived cache so we don't hit Redis on every request. */
-let gateProbeCache: { at: number; active: boolean } | null = null;
-const GATE_PROBE_TTL_MS = 12_000;
-
-/** Keep in sync with redisKey() in src/lib/dataFs.ts */
-const SITE_GATE_REDIS_KEY = "tvh-data:site-gate-settings.json";
-
 /**
- * Admin toggle lives in Redis JSON. Routing Middleware must never fetch this
- * same deployment (e.g. /api/site-gate): that self-fetch deadlocks on Vercel
- * and surfaces as MIDDLEWARE_INVOCATION_TIMEOUT / 504.
+ * Live wall is env-only. Routing Middleware must not fetch this deployment
+ * or Redis/Blob: any pending network call can hang the isolate and Vercel
+ * returns 504 MIDDLEWARE_INVOCATION_TIMEOUT.
  *
- * Read the Redis key directly (different origin) with a short timeout.
- * Fail open (public site) if Redis is missing or slow.
+ * On:  SITE_GATE_ENABLED=on|true|1  (and SITE_PASSWORD set)
+ * Off: unset, or off|false|0  → public site
  */
-async function readGateEnabledFromRedis(): Promise<boolean> {
-  const url = (
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    ""
-  ).trim();
-  const token = (
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    ""
-  ).trim();
-  if (!url || !token) return false;
-
-  const res = await fetch(url.replace(/\/$/, ""), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(["GET", SITE_GATE_REDIS_KEY]),
-    cache: "no-store",
-    signal: AbortSignal.timeout(1500),
-  });
-  if (!res.ok) return false;
-
-  const data = (await res.json()) as { result?: unknown };
-  if (typeof data.result !== "string" || !data.result) return false;
-
-  const parsed = JSON.parse(data.result) as { enabled?: unknown };
-  return parsed?.enabled === true;
-}
-
-async function isGateActive(password: string): Promise<boolean> {
+function isGateActive(password: string): boolean {
   if (!password) return false;
-
-  // Optional hard env overrides (emergency / local)
   const envFlag = (process.env.SITE_GATE_ENABLED || "").trim().toLowerCase();
-  if (envFlag === "0" || envFlag === "false" || envFlag === "off") {
-    return false;
-  }
-  if (envFlag === "1" || envFlag === "true" || envFlag === "on") {
-    return true;
-  }
-
-  const now = Date.now();
-  if (gateProbeCache && now - gateProbeCache.at < GATE_PROBE_TTL_MS) {
-    return gateProbeCache.active;
-  }
-
-  try {
-    const active = await readGateEnabledFromRedis();
-    gateProbeCache = { at: now, active };
-    return active;
-  } catch {
-    // Fail open: public site if we can't read the toggle
-    gateProbeCache = { at: now, active: false };
-    return false;
-  }
+  return envFlag === "1" || envFlag === "true" || envFlag === "on";
 }
 
 function withSecurity(res: NextResponse): NextResponse {
@@ -175,8 +114,8 @@ export async function middleware(req: NextRequest) {
     return withSecurity(NextResponse.next());
   }
 
-  // No password configured, or admin toggle says gate is off → full public access
-  if (!(await isGateActive(password))) {
+  // No password configured, or SITE_GATE_ENABLED is not on → full public access
+  if (!isGateActive(password)) {
     return withSecurity(NextResponse.next());
   }
 
