@@ -206,6 +206,31 @@ export function setMemberPassword(id: string, password: string) {
   return toPublicMember(data.members[idx]);
 }
 
+/** Signed-in member: replace password after verifying the current one. */
+export function changeOwnPassword(
+  id: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  const next = String(newPassword || "");
+  if (next.length < 8) throw new Error("New password must be at least 8 characters");
+  if (next === String(currentPassword || "")) {
+    throw new Error("New password must be different from the current password");
+  }
+  const data = loadYardSale();
+  const idx = data.members.findIndex((m) => m.id === id);
+  if (idx < 0) throw new Error("Member not found");
+  if (!verifyPassword(String(currentPassword || ""), data.members[idx].passwordHash)) {
+    throw new Error("Current password is incorrect");
+  }
+  data.members[idx] = {
+    ...data.members[idx],
+    passwordHash: hashPassword(next),
+  };
+  saveYardSale(data);
+  return toPublicMember(data.members[idx]);
+}
+
 export function getMemberById(id: string) {
   return loadYardSale().members.find((m) => m.id === id) || null;
 }

@@ -45,6 +45,7 @@ import {
 } from "@/lib/mySpaceProduct";
 import { SAMPLE_HINT } from "@/lib/sampleBoards";
 import { RoyaltyTrialOffer } from "@/components/RoyaltyTrialOffer";
+import { ChangePasswordPanel } from "@/components/ChangePasswordPanel";
 import { DeleteAccountPanel } from "@/components/DeleteAccountPanel";
 
 /** Explicit badge art for tier cards (client-safe; always present). */
@@ -188,7 +189,9 @@ export function MySpaceDashboard() {
       tabParam === "plans" ||
       tabParam === "membership" ||
       tabParam === "tiers" ||
-      window.location.hash === "#ms-tiers"
+      tabParam === "password" ||
+      window.location.hash === "#ms-tiers" ||
+      window.location.hash === "#change-password"
     ) {
       setTab("membership");
     }
@@ -528,6 +531,20 @@ export function MySpaceDashboard() {
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setTab("membership");
+                  window.requestAnimationFrame(() => {
+                    document
+                      .getElementById("change-password")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  });
+                }}
+              >
+                Change password
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
                 onClick={async () => {
                   await fetch("/api/members/logout", {
                     method: "POST",
@@ -798,6 +815,11 @@ export function MySpaceDashboard() {
               onChanged={load}
               onNote={setNote}
             />
+          </div>
+        ) : null}
+        {!visitor ? (
+          <div style={{ marginTop: "1.1rem" }}>
+            <ChangePasswordPanel />
           </div>
         ) : null}
         {!visitor ? (
