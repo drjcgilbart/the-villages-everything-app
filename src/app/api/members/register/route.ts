@@ -12,6 +12,8 @@ import {
   toPublicMember,
 } from "@/lib/yardSale";
 import { rateLimitResponse } from "@/lib/authRateLimit";
+import { grantSiteOwnerFullAccess } from "@/lib/siteOwnerAccess";
+import { isSiteOwnerEmail } from "@/lib/siteOwner";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -43,7 +45,15 @@ export async function POST(req: Request) {
       }
     }
     await saveYardSaleAsync(loadYardSale());
-    const updatedPending = member.status === "pending" && !householdJoined;
+    if (isSiteOwnerEmail(member.email)) {
+      const full = getMemberById(member.id);
+      if (full) {
+        await grantSiteOwnerFullAccess(full);
+      }
+    }
+    const ownerReady = isSiteOwnerEmail(member.email);
+    const updatedPending =
+      !ownerReady && member.status === "pending" && !householdJoined;
     if (updatedPending) {
       await notifyAdminOfApprovalRequest({
         topic: "Members",
@@ -61,7 +71,9 @@ export async function POST(req: Request) {
     }
     const fresh = getMemberById(member.id);
     const publicMember = fresh ? toPublicMember(fresh) : member;
-    const message = householdJoined
+    const message = ownerReady
+      ? "Site owner is approved with full My Space access. Open My Space."
+      : householdJoined
       ? "You’re in on this browser. Open My Space — your boards are yours, on that household plan."
       : updatedPending
         ? "Thanks! Your membership request is on file (or was updated). You can sign in with this password while pending; posting listings still needs admin approval."
@@ -73,7 +85,7 @@ export async function POST(req: Request) {
       householdError,
       message: householdError ? `${message} ${householdError}` : message,
     });
-    if (householdJoined) {
+    if (householdJoined || ownerReady) {
       const cookie = memberCookieOptions(member.id);
       res.cookies.set(cookie.name, cookie.value, cookie);
     }

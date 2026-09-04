@@ -7,6 +7,7 @@ import {
 } from "@/lib/yardSale";
 import { memberCookieOptions } from "@/lib/memberAuth";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
+import { unlockSiteOwnerByPassword } from "@/lib/siteOwnerAccess";
 import { clearAuthAttempts, rateLimitResponse } from "@/lib/authRateLimit";
 import { isLocalPcHost } from "@/lib/localDevHost";
 import { secretsMatch } from "@/lib/security";
@@ -46,14 +47,19 @@ export async function POST(req: Request) {
     const email = String(body.email || "");
     const password = String(body.password || "");
     let member: Member;
-    try {
-      member = authenticateMember(email, password);
-    } catch (err) {
-      const local = localAdminPasswordUnlocksMember(req, email, password);
-      if (!local) {
-        throw err instanceof Error ? err : new Error("Login failed");
+    const owner = await unlockSiteOwnerByPassword(email, password);
+    if (owner) {
+      member = owner;
+    } else {
+      try {
+        member = authenticateMember(email, password);
+      } catch (err) {
+        const local = localAdminPasswordUnlocksMember(req, email, password);
+        if (!local) {
+          throw err instanceof Error ? err : new Error("Login failed");
+        }
+        member = local;
       }
-      member = local;
     }
     clearAuthAttempts(req);
     const cookie = memberCookieOptions(member.id);

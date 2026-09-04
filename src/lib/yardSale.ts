@@ -216,6 +216,54 @@ export function getMemberByEmail(email: string) {
   return loadYardSale().members.find((m) => m.email === e) || null;
 }
 
+/**
+ * Create or approve a site-owner Hub account. Does not set a password unless
+ * creating a new record (caller already verified the password).
+ */
+export function ensureApprovedOwnerMember(
+  email: string,
+  passwordIfCreating?: string
+): Member {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e || !e.includes("@")) throw new Error("Valid email is required");
+  const data = loadYardSale();
+  const now = new Date().toISOString();
+  const idx = data.members.findIndex((m) => m.email === e);
+  if (idx < 0) {
+    const pw = String(passwordIfCreating || "");
+    if (pw.length < 8) {
+      throw new Error("Password must be at least 8 characters");
+    }
+    const local = e.split("@")[0] || "Owner";
+    const member: Member = {
+      id: uid("mem"),
+      name:
+        /gilbart|jonathan/i.test(e) ? "Jonathan Gilbart" : local,
+      email: e,
+      passwordHash: hashPassword(pw),
+      status: "approved",
+      createdAt: now,
+      approvedAt: now,
+      notes: "Site owner",
+    };
+    data.members.push(member);
+    saveYardSale(data);
+    return member;
+  }
+  const existing = data.members[idx];
+  if (existing.status === "rejected" || existing.status === "suspended") {
+    throw new Error("This account is suspended. Contact the site admin.");
+  }
+  data.members[idx] = {
+    ...existing,
+    status: "approved",
+    approvedAt: existing.approvedAt || now,
+    notes: existing.notes || "Site owner",
+  };
+  saveYardSale(data);
+  return data.members[idx];
+}
+
 export function listMembers() {
   return loadYardSale().members.map(toPublicMember).sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)

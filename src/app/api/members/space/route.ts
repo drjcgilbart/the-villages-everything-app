@@ -9,15 +9,22 @@ import {
   updateMemberSpace,
 } from "@/lib/memberSpace";
 import { normalizePlan, paidTiers, type HubPlanId } from "@/lib/membershipTiers";
-import { toPublicMember } from "@/lib/yardSale";
+import { grantSiteOwnerFullAccess } from "@/lib/siteOwnerAccess";
+import { isSiteOwnerEmail } from "@/lib/siteOwner";
+import { getMemberById, hydrateYardSale, toPublicMember } from "@/lib/yardSale";
 import { POPULAR_CLUBS } from "@/lib/clubs";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const member = await getSessionMember();
+  await hydrateYardSale();
+  let member = await getSessionMember();
   if (!member) {
     return NextResponse.json({ error: "Please sign in" }, { status: 401 });
+  }
+  if (isSiteOwnerEmail(member.email)) {
+    member = await grantSiteOwnerFullAccess(member);
+    member = getMemberById(member.id) || member;
   }
   const space = getMemberSpace(member.id);
   const payload = {
