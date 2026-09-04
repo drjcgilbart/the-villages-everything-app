@@ -137,6 +137,7 @@ async function redisCommand(command: string[]): Promise<unknown> {
     },
     body: JSON.stringify(command),
     cache: "no-store",
+    signal: AbortSignal.timeout(2500),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -681,36 +682,42 @@ export async function hydrateDurableJsonFromBlob(): Promise<{
     return { ok: false, blob: false, redis: false, files: [] };
   }
   const loaded: string[] = [];
-  for (const file of DURABLE_JSON) {
-    // Prefer Redis (active during Blob Hobby lockout), then Blob
-    let text: string | null = null;
-    try {
-      text = await pullJsonFromRedis(file);
-    } catch {
-      // Don't use stale Blob for a failed Redis when we might write later;
-      // skip this file in bulk hydrate.
-      continue;
-    }
-    if (!text) text = await pullJsonFromBlob(file);
-    if (!text) continue;
-    try {
-      JSON.parse(text); // validate
-      memoryJson.set(file, text);
+  await Promise.all(
+    Array.from(DURABLE_JSON).map(async (file) => {
+      let text: string | null = null;
       try {
-        const dir = ensureWritableDirs();
-        fs.writeFileSync(
-          /*turbopackIgnore: true*/ path.join(dir, file),
-          text,
-          "utf8"
-        );
+        text = await pullJsonFromRedis(file);
       } catch {
-        /* memory still has it */
+        // Don't use stale Blob for a failed Redis when we might write later.
+        return;
       }
-      loaded.push(file);
-    } catch {
-      /* skip corrupt */
-    }
-  }
+      if (!text) {
+        try {
+          text = await pullJsonFromBlob(file);
+        } catch {
+          return;
+        }
+      }
+      if (!text) return;
+      try {
+        JSON.parse(text);
+        memoryJson.set(file, text);
+        try {
+          const dir = ensureWritableDirs();
+          fs.writeFileSync(
+            /*turbopackIgnore: true*/ path.join(dir, file),
+            text,
+            "utf8"
+          );
+        } catch {
+          /* memory still has it */
+        }
+        loaded.push(file);
+      } catch {
+        /* skip corrupt */
+      }
+    })
+  );
   return {
     ok: true,
     blob: blobConfigured(),
@@ -736,14 +743,18 @@ export function ensureDurableHydrated(): Promise<void> {
   if (hydrateOnce && now - lastHydrateAt < HYDRATE_TTL_MS) {
     return hydrateOnce;
   }
-  hydrateOnce = hydrateDurableJsonFromBlob()
+  lastHydrateAt = now;
+  const work = hydrateDurableJsonFromBlob()
     .then(() => {
       lastHydrateAt = Date.now();
     })
-    .catch(() => {
-      hydrateOnce = null;
-      lastHydrateAt = 0;
-    });
+    .catch(() => undefined);
+  // Never block a page more than 2s on Redis/Blob — hung storage was taking
+  // the live site down (0-byte responses until the function timed out).
+  hydrateOnce = Promise.race([
+    work,
+    new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+  ]);
   return hydrateOnce;
 }
 
