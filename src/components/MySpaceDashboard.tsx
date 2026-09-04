@@ -471,7 +471,7 @@ export function MySpaceDashboard() {
               </p>
             </>
           ) : (
-            <>
+            <div data-privacy-block="Name">
               <h2 style={{ margin: "0.35rem 0" }} className="member-name">
                 <span className="member-name-text">
                   {space?.spaceTitle ||
@@ -493,7 +493,7 @@ export function MySpaceDashboard() {
                   <span className="ms-plan-tagline"> — {space.planTagline}</span>
                 ) : null}
               </p>
-            </>
+            </div>
           )}
           <p className="panel-hint" style={{ marginBottom: 0 }}>
             Personalized boards stay on your membership. Public Hub pages
@@ -662,7 +662,7 @@ export function MySpaceDashboard() {
                 ) : null}
               </>
             )}
-          <div style={{ marginTop: "1.25rem" }}>
+          <div style={{ marginTop: "1.25rem" }} data-privacy-block="Favorites">
             <MySpaceFavoritesHub />
           </div>
         </section>
@@ -792,7 +792,7 @@ export function MySpaceDashboard() {
           })}
         </div>
         {!visitor && space?.household ? (
-          <div style={{ marginTop: "1.1rem" }}>
+          <div style={{ marginTop: "1.1rem" }} data-privacy-block="Household">
             <MySpaceHouseholdPanel
               household={space.household}
               onChanged={load}
@@ -818,7 +818,7 @@ export function MySpaceDashboard() {
       )}
 
       {tab === "favorites" && (
-        <section className="my-space-block">
+        <section className="my-space-block" data-privacy-block="Favorites">
           <MySpaceFavoritesHub />
         </section>
       )}
@@ -827,10 +827,10 @@ export function MySpaceDashboard() {
       <section id="ms-weather" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("weather").label}</h3>
         {!locked("weather") && f?.weather ? (
-          <>
+          <div data-privacy-block="Weather">
             {sampleHint}
             <MySpaceWeatherBoard />
-          </>
+          </div>
         ) : (
           glass("weather")
         )}
@@ -841,10 +841,10 @@ export function MySpaceDashboard() {
       <section id="ms-markets" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("investments").label}</h3>
         {!locked("investments") && f?.portfolio ? (
-          <>
+          <div data-privacy-block="Investments">
             {sampleHint}
             <MySpaceInvestmentsBoard />
-          </>
+          </div>
         ) : (
           glass("investments")
         )}
@@ -855,10 +855,10 @@ export function MySpaceDashboard() {
       <section id="ms-news" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("news").label}</h3>
         {!locked("news") && f?.newsPrefs ? (
-          <>
+          <div data-privacy-block="News people">
             {sampleHint}
             <MySpaceNewsBoard />
-          </>
+          </div>
         ) : (
           glass("news")
         )}
@@ -869,10 +869,10 @@ export function MySpaceDashboard() {
       <section id="ms-health" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("health").label}</h3>
         {!locked("health") && f?.healthLog ? (
-          <>
+          <div data-privacy-block="Health notes">
             {sampleHint}
             <MySpaceHealthLog />
-          </>
+          </div>
         ) : (
           glass("health")
         )}
@@ -883,10 +883,10 @@ export function MySpaceDashboard() {
       <section id="ms-pets" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("pets").label}</h3>
         {!locked("pets") && f?.petSchedule ? (
-          <>
+          <div data-privacy-block="Pet details">
             {sampleHint}
             <MySpacePetSchedule />
-          </>
+          </div>
         ) : (
           glass("pets")
         )}
@@ -897,10 +897,10 @@ export function MySpaceDashboard() {
       <section id="ms-food" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("food").label}</h3>
         {!locked("food") && f?.foodLog ? (
-          <>
+          <div data-privacy-block="Food notes">
             {sampleHint}
             <MySpaceFoodBoard />
-          </>
+          </div>
         ) : (
           glass("food")
         )}
@@ -911,10 +911,10 @@ export function MySpaceDashboard() {
       <section id="ms-entertainment" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("entertainment").label}</h3>
         {!locked("entertainment") && f?.entertainmentLog ? (
-          <>
+          <div data-privacy-block="Entertainment notes">
             {sampleHint}
             <MySpaceEntertainmentBoard />
-          </>
+          </div>
         ) : (
           glass("entertainment")
         )}
@@ -925,10 +925,10 @@ export function MySpaceDashboard() {
       <section id="ms-maintenance" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("maintenance").label}</h3>
         {!locked("maintenance") && f?.maintenanceLog ? (
-          <>
+          <div data-privacy-block="Maintenance notes">
             {sampleHint}
             <MySpaceMaintenanceBoard />
-          </>
+          </div>
         ) : (
           glass("maintenance")
         )}
@@ -939,10 +939,10 @@ export function MySpaceDashboard() {
       <section id="ms-calendar" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("calendar").label}</h3>
         {!locked("calendar") && f?.calendarBoard ? (
-          <>
+          <div data-privacy-block="Appointments">
             {sampleHint}
             <MySpaceCalendarBoard />
-          </>
+          </div>
         ) : (
           glass("calendar")
         )}
@@ -953,10 +953,10 @@ export function MySpaceDashboard() {
       <section id="ms-memories" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("memories").label}</h3>
         {!locked("memories") && f?.memoriesAlbum ? (
-          <>
+          <div data-privacy-block="Photos">
             {sampleHint}
             <MySpaceMemoriesBoard />
-          </>
+          </div>
         ) : (
           glass("memories")
         )}
@@ -967,10 +967,10 @@ export function MySpaceDashboard() {
       <section id="ms-golf-log" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("golfLog").label}</h3>
         {!locked("golfLog") && f?.golfLog ? (
-          <>
+          <div data-privacy-block="Golf log">
             {sampleHint}
             <MySpaceGolfLogBoard />
-          </>
+          </div>
         ) : (
           glass("golfLog")
         )}
@@ -981,10 +981,10 @@ export function MySpaceDashboard() {
       <section id="ms-pb-log" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("pickleballLog").label}</h3>
         {!locked("pickleballLog") && f?.pickleballLog ? (
-          <>
+          <div data-privacy-block="Pickleball log">
             {sampleHint}
             <MySpacePickleballLogBoard />
-          </>
+          </div>
         ) : (
           glass("pickleballLog")
         )}
@@ -995,7 +995,9 @@ export function MySpaceDashboard() {
       <section id="ms-lounge" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("lounge").label}</h3>
         {!locked("lounge") && f?.exclusiveLounge ? (
-          <MySpaceRoyaltyLounge />
+          <div data-privacy-block="Lounge notes">
+            <MySpaceRoyaltyLounge />
+          </div>
         ) : (
           glass("lounge")
         )}

@@ -35,8 +35,7 @@ html {
 }
 
 /* Store apps: hide purchase CTAs (Apple/Google billing rules). */
-html[data-app-shell="native"] .hide-in-native-app,
-html[data-app-shell="native"] .local-dev-tools {
+html[data-app-shell="native"] .hide-in-native-app {
   display: none !important;
 }
 
@@ -12159,6 +12158,60 @@ button.local-pros-leader-open:focus-visible {
   background: #083552;
   color: #fff;
   outline: none;
+}
+
+.local-dev-privacy {
+  gap: 0.28rem;
+  border-color: rgba(184, 92, 12, 0.35);
+  background: #9a3412;
+}
+
+.local-dev-privacy:hover,
+.local-dev-privacy:focus-visible,
+.local-dev-privacy.privacy-on {
+  background: #7c2d12;
+  color: #fff;
+  outline: none;
+}
+
+.privacy-banner {
+  margin: 0;
+  padding: 0.55rem 1rem;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #3b2a08;
+  background: rgba(232, 184, 74, 0.35);
+  border-bottom: 1px solid rgba(138, 90, 0, 0.28);
+}
+
+html.privacy-mode [data-privacy-block] {
+  position: relative;
+  isolation: isolate;
+  min-height: 120px;
+}
+
+html.privacy-mode [data-privacy-block] > * {
+  filter: blur(18px);
+  opacity: 0.28;
+  user-select: none;
+  pointer-events: none;
+}
+
+html.privacy-mode [data-privacy-block]::after {
+  content: "Hidden for recording";
+  position: absolute;
+  inset: 12px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(15, 61, 44, 0.82);
+  border: 1px dashed rgba(255, 248, 238, 0.28);
+  color: #fff8ee;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .phone-preview {

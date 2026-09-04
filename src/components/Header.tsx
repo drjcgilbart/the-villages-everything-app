@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { FavoriteSiteButton } from "@/components/FavoriteSiteButton";
+import { HideMyDataToggle } from "@/components/HideMyDataToggle";
 import { PhoneViewToggle } from "@/components/PhoneViewToggle";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
 import { SITE_BRAND } from "@/lib/siteBrand";
@@ -96,7 +97,14 @@ export function Header({
         <div className="shell utility-bar-inner">
           {isAdmin ? (
             <Suspense fallback={null}>
-              <PhoneViewToggle isAdmin={isAdmin} />
+              <div
+                className="local-dev-tools"
+                role="navigation"
+                aria-label="Admin tools"
+              >
+                <PhoneViewToggle isAdmin={isAdmin} />
+                <HideMyDataToggle isAdmin={isAdmin} />
+              </div>
             </Suspense>
           ) : null}
           <FavoriteSiteButton />

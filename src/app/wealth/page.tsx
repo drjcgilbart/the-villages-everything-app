@@ -159,7 +159,9 @@ export default async function WealthPage() {
 
       {/* Existing market + portfolio tools */}
       <MarketCharts />
-      <PortfolioTracker />
+      <div data-privacy-block="Investments">
+        <PortfolioTracker />
+      </div>
 
       {/* Local banks */}
       <section className="section" id="local-money" style={{ paddingTop: 0 }}>
