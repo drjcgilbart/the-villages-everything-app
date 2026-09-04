@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { DM_Sans, Fraunces } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -14,7 +13,6 @@ import { NativeAppBoot } from "@/components/NativeAppBoot";
 import { PhoneViewHide } from "@/components/PhoneViewHide";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { ensureDurableHydrated } from "@/lib/dataFs";
-import { isLocalPcHost } from "@/lib/localDevHost";
 import { getSessionMember } from "@/lib/memberAuth";
 import "./globals.css";
 
@@ -63,7 +61,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Pull latest membership/badge data from Vercel Blob when configured
   // so Admin Portal grants show on every page, every serverless instance.
   await ensureDurableHydrated();
-  const localPc = isLocalPcHost((await headers()).get("host"));
   const isAdmin = await isAdminAuthenticated();
   const signedIn = Boolean(await getSessionMember());
 
@@ -73,7 +70,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <NativeAppBoot />
         <PhoneViewHide>
           <PwaRegister />
-          <Header localPc={localPc} isAdmin={isAdmin} signedIn={signedIn} />
+          <Header isAdmin={isAdmin} signedIn={signedIn} />
         </PhoneViewHide>
         <main className="flex-1">{children}</main>
         <PhoneViewHide extra={["/golf-cart-hero"]}>

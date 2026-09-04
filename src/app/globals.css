@@ -12105,7 +12105,7 @@ button.local-pros-leader-open:focus-visible {
   text-decoration: underline;
 }
 
-/* Local PC only — Admin + Phone view (never shown on live site / store apps) */
+/* Admin-only Phone view (hidden from neighbors and store apps) */
 .local-dev-tools {
   display: inline-flex;
   align-items: center;

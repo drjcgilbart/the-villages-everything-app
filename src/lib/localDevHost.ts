@@ -38,7 +38,7 @@ export function isPhoneViewIframe(): boolean {
 }
 
 /**
- * Admin + Phone view shortcuts. Local PC browser only.
+ * Local-PC-only extras (e.g. member login accepting the admin password).
  * Never on the live domain, Vercel, store WebViews, or the phone-preview iframe.
  */
 export function shouldShowLocalDevTools(): boolean {

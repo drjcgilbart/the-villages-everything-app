@@ -40,11 +40,9 @@ const TOPICS_ROW_1 =
 const TOPICS_ROW_2 = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
 
 export function Header({
-  localPc = false,
   isAdmin = false,
   signedIn = false,
 }: {
-  localPc?: boolean;
   isAdmin?: boolean;
   signedIn?: boolean;
 }) {
@@ -96,9 +94,9 @@ export function Header({
     <header className="site-header hub-header">
       <div className="utility-bar">
         <div className="shell utility-bar-inner">
-          {localPc ? (
+          {isAdmin ? (
             <Suspense fallback={null}>
-              <PhoneViewToggle />
+              <PhoneViewToggle isAdmin={isAdmin} />
             </Suspense>
           ) : null}
           <FavoriteSiteButton />

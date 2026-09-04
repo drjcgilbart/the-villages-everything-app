@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-/** Hides desktop chrome on the local Phone view page. Does not import server modules. */
+/** Hides desktop chrome on the Phone view page. Does not import server modules. */
 export function PhoneViewHide({
   children,
   extra = [],

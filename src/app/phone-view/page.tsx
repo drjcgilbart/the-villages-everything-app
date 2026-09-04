@@ -1,8 +1,7 @@
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { PhoneViewStudio } from "@/components/PhoneViewStudio";
-import { isLocalPcHost } from "@/lib/localDevHost";
+import { isAdminAuthenticated } from "@/lib/auth";
 
 export const metadata = {
   title: "Phone view",
@@ -10,9 +9,8 @@ export const metadata = {
 };
 
 export default async function PhoneViewPage() {
-  const host = (await headers()).get("host");
-  if (!isLocalPcHost(host)) {
-    redirect("/");
+  if (!(await isAdminAuthenticated())) {
+    redirect("/admin");
   }
 
   return (

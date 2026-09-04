@@ -1,56 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { shouldShowLocalDevTools } from "@/lib/localDevHost";
-import { isNativeAppShell } from "@/lib/nativeAppShell";
-
-function subscribe() {
-  return () => {};
-}
-
-function localDevSnapshot() {
-  return shouldShowLocalDevTools() && !isNativeAppShell();
-}
-
-function serverSnapshot() {
-  return false;
-}
 
 /**
- * Local PC only: Admin + Phone view in the top bar.
- * Hidden on the live website and inside the iOS / Android store apps.
+ * Top-bar phone preview. Render only for an authenticated admin (Header
+ * already gates this). Hidden in store apps via .hide-in-native-app.
  */
-export function PhoneViewToggle() {
+export function PhoneViewToggle({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const search = useSearchParams();
-  const show = useSyncExternalStore(subscribe, localDevSnapshot, serverSnapshot);
 
-  if (!show) return null;
+  if (!isAdmin) return null;
+  if (pathname === "/phone-view") return null;
 
   const from = `${pathname}${search.toString() ? `?${search.toString()}` : ""}`;
-  const adminActive = pathname === "/admin" || pathname.startsWith("/admin/");
-  const onPhoneStudio = pathname === "/phone-view";
 
   return (
-    <div className="local-dev-tools hide-in-native-app" role="navigation" aria-label="Local PC tools">
+    <div
+      className="local-dev-tools hide-in-native-app"
+      role="navigation"
+      aria-label="Admin phone preview"
+    >
       <Link
-        href="/admin"
-        className={`local-dev-btn local-dev-admin${adminActive ? " active" : ""}`}
-        title="Local only — not on the live site or store apps"
+        href={`/phone-view?from=${encodeURIComponent(from)}`}
+        className="local-dev-btn local-dev-phone"
+        title="Preview this page at iPhone and Android sizes (admin only)"
       >
-        Admin
+        Phone view
       </Link>
-      {onPhoneStudio ? null : (
-        <Link
-          href={`/phone-view?from=${encodeURIComponent(from)}`}
-          className="local-dev-btn local-dev-phone"
-          title="Local only — preview iPhone and Android sizes"
-        >
-          Phone view
-        </Link>
-      )}
     </div>
   );
 }

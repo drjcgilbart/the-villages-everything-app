@@ -47,8 +47,8 @@ export function PhoneViewStudio() {
         <p>
           The window on the left is a typical phone screen. If something looks
           cramped or huge here, it will look that way on iPhone and Android too.
-          This tool only runs on your PC at localhost — not on the live site,
-          and not in the store apps.
+          Only your admin login can open this preview — neighbors never see the
+          button.
         </p>
         <div className="phone-preview-devices" role="group" aria-label="Phone size">
           {(Object.keys(DEVICES) as DeviceId[]).map((id) => (
@@ -66,7 +66,7 @@ export function PhoneViewStudio() {
           ))}
         </div>
         <p className="phone-preview-hint">
-          Local only · {spec.label} · {spec.width}×{spec.height}
+          Admin only · {spec.label} · {spec.width}×{spec.height}
         </p>
       </aside>
     </div>
