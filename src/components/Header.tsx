@@ -56,14 +56,22 @@ export function Header({
   const isGamePage = pathname === "/golf-cart-hero";
   const [open, setOpen] = useState(false);
   const [scrolledAway, setScrolledAway] = useState(isGamePage);
-  const [pinned, setPinned] = useState(false);
+  const [pagesOverride, setPagesOverride] = useState<"open" | "closed" | null>(
+    null
+  );
   const [hovering, setHovering] = useState(false);
   const scrolledAwayRef = useRef(isGamePage);
 
-  const pillsVisible = pinned || !scrolledAway || (isGamePage && hovering);
+  const autoVisible = isGamePage ? hovering : !scrolledAway;
+  const pillsVisible =
+    pagesOverride === "open" || (pagesOverride !== "closed" && autoVisible);
+
+  function togglePages() {
+    setPagesOverride(pillsVisible ? "closed" : "open");
+  }
 
   useEffect(() => {
-    setPinned(false);
+    setPagesOverride(null);
     scrolledAwayRef.current = isGamePage;
     setScrolledAway(isGamePage);
   }, [pathname, isGamePage]);
@@ -87,7 +95,6 @@ export function Header({
       scrolledAwayRef.current = away;
       lockUntil = Date.now() + SETTLE_MS;
       setScrolledAway(away);
-      if (away) setPinned(false);
     };
 
     const onScroll = () => {
@@ -227,7 +234,7 @@ export function Header({
             className="hub-pages-toggle"
             aria-expanded={pillsVisible}
             aria-controls="hub-topic-nav"
-            onClick={() => setPinned((v) => !v)}
+            onClick={togglePages}
           >
             Pages {pillsVisible ? "▴" : "▾"}
           </button>
