@@ -835,7 +835,7 @@ export const MAIN_TOPICS: {
     matchPrefixes: ["/yard-sale"],
     blurb:
       "One neighbor’s “why do I own this?” is another’s treasure — with photos. Posting is under My Space.",
-    image: "/graphics/theme-wealth.jpg",
+    image: "/graphics/theme-yard-sale.jpg",
   },
   {
     href: "/best-of-the-month",
