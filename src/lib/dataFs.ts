@@ -29,6 +29,7 @@ const DURABLE_JSON = new Set([
   "forum.json",
   "real-estate.json",
   "village-neighbors.json",
+  "village-local.json",
   "content.json",
   "entertainment-schedule.json",
   "best-of-month.json",

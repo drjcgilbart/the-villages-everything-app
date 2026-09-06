@@ -2,9 +2,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VillageSaveButton } from "@/components/VillageBrowser";
+import { VillageLocalHub } from "@/components/VillageLocalHub";
 import { VillageNeighborsSection } from "@/components/VillageNeighbors";
-import { getNeighborsForVillage } from "@/lib/villageNeighbors";
+import { ensureDurableHydrated } from "@/lib/dataFs";
+import { listApprovedServices } from "@/lib/localServices";
+import { getRecCenter, typeLabel } from "@/lib/recCenters";
+import { getApprovedListings, listingWithSeller } from "@/lib/yardSale";
 import { getVillageArt, motifEmoji } from "@/lib/villageArt";
+import {
+  getVillageAmenities,
+  mentionsVillage,
+} from "@/lib/villageAmenities";
+import { getVillageLocalBundle } from "@/lib/villageLocal";
+import { getNeighborsForVillage } from "@/lib/villageNeighbors";
 import {
   VILLAGES,
   cddLabel,
@@ -29,7 +39,7 @@ export async function generateMetadata({
   if (!village) return { title: "Village" };
   return {
     title: `Village of ${village.name}`,
-    description: village.blurb,
+    description: `Facebook groups, TeamReach codes, nearby rec and golf, and neighbor tips for the Village of ${village.name} in The Villages, FL.`,
   };
 }
 
@@ -47,12 +57,52 @@ export default async function VillageDetailPage({
   const nearbyVillages = villagesByRegion(village.region)
     .filter((v) => v.slug !== village.slug)
     .slice(0, 12);
-  // Neighbor store can fail on read-only hosts; never block the village page.
+  const amenities = getVillageAmenities(village);
+
+  try {
+    await ensureDurableHydrated();
+  } catch {
+    /* page still renders from bundled data */
+  }
+
   let neighborProfiles: ReturnType<typeof getNeighborsForVillage> = [];
+  let localBundle: ReturnType<typeof getVillageLocalBundle> = {
+    facebook: [],
+    teamreach: [],
+    tips: [],
+  };
   try {
     neighborProfiles = getNeighborsForVillage(village.slug);
   } catch {
     neighborProfiles = [];
+  }
+  try {
+    localBundle = getVillageLocalBundle(village.slug);
+  } catch {
+    localBundle = { facebook: [], teamreach: [], tips: [] };
+  }
+
+  let yardHere: ReturnType<typeof listingWithSeller>[] = [];
+  try {
+    yardHere = getApprovedListings()
+      .map(listingWithSeller)
+      .filter((l) => mentionsVillage(l.seller?.village, village))
+      .slice(0, 4);
+  } catch {
+    yardHere = [];
+  }
+
+  let prosHere: ReturnType<typeof listApprovedServices> = [];
+  try {
+    prosHere = listApprovedServices()
+      .filter(
+        (s) =>
+          mentionsVillage(s.village, village) ||
+          mentionsVillage(s.serviceArea, village)
+      )
+      .slice(0, 4);
+  } catch {
+    prosHere = [];
   }
 
   return (
@@ -134,27 +184,56 @@ export default async function VillageDetailPage({
             </div>
 
             <div className="about-panel" style={{ marginTop: "1rem" }}>
-              <h2>Useful next stops</h2>
+              <h2>Close by for {village.name}</h2>
+              <p style={{ color: "var(--muted)", marginTop: 0 }}>
+                Pins that actually matter from this village — not a generic
+                Villages-wide list.
+              </p>
               <ul className="village-related-links">
-                <li>
-                  <Link href="/town-squares">Town Squares</Link> — free music,
-                  shopping, dining
-                </li>
-                <li>
-                  <Link href="/rec-centers">Rec Centers</Link> — pools,
-                  pickleball, fitness
-                </li>
-                <li>
-                  <Link href="/dining">Dining</Link> — rate local restaurants
-                </li>
-                <li>
-                  <Link href="/golf-zone">Golf Zone</Link> — courses &amp; cart
-                  culture
-                </li>
-                <li>
-                  <Link href="/calendar">Calendar of Events</Link> — what&apos;s
-                  on
-                </li>
+                {amenities.recs.map((rec) => (
+                  <li key={rec.id}>
+                    <Link href={`/rec-centers/${rec.id}`}>{rec.name}</Link>
+                    {" — "}
+                    {rec.id === village.slug
+                      ? `this village’s ${typeLabel(rec.type).toLowerCase()}`
+                      : rec.areaHint || rec.theme}
+                    {rec.phone ? ` · ${rec.phone}` : ""}
+                  </li>
+                ))}
+                {amenities.square && (
+                  <li>
+                    <Link href={`/town-squares/${amenities.square.id}`}>
+                      {amenities.square.name}
+                    </Link>
+                    {" — nearest square · "}
+                    {amenities.square.address}
+                  </li>
+                )}
+                {amenities.golf.map((g) => (
+                  <li key={g.id}>
+                    <Link href="/golf-zone">
+                      {g.name}
+                      {g.kind === "championship" ? " Championship" : ""}
+                    </Link>
+                    {g.address ? ` — ${g.address}` : ` — ${g.kind} golf`}
+                    {g.phone ? ` · ${g.phone}` : ""}
+                  </li>
+                ))}
+                {amenities.pickle.map((p) => {
+                  const rec = getRecCenter(p.id);
+                  return (
+                    <li key={`pk-${p.id}`}>
+                      {rec ? (
+                        <Link href={`/rec-centers/${rec.id}`}>{p.name}</Link>
+                      ) : (
+                        <Link href="/pickleball">{p.name}</Link>
+                      )}
+                      {" — pickleball"}
+                      {p.courts ? ` · ${p.courts} courts` : ""}
+                      {p.indoor ? " · indoor" : ""}
+                    </li>
+                  );
+                })}
                 <li>
                   <a
                     href="https://www.districtgov.org/districts/finder/"
@@ -189,6 +268,46 @@ export default async function VillageDetailPage({
               {village.name}.”
             </div>
 
+            {(yardHere.length > 0 || prosHere.length > 0) && (
+              <div className="about-panel" style={{ marginBottom: "1rem" }}>
+                <h2>Happening in {village.name}</h2>
+                {yardHere.length > 0 && (
+                  <>
+                    <p style={{ color: "var(--muted)", marginTop: 0 }}>
+                      Yard Sale listings from neighbors who listed this village.
+                    </p>
+                    <ul className="village-related-links">
+                      {yardHere.map((l) => (
+                        <li key={l.id}>
+                          <Link href={`/yard-sale/${l.id}`}>{l.title}</Link>
+                          {l.isFree
+                            ? " — free"
+                            : l.price != null
+                              ? ` — $${l.price}`
+                              : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {prosHere.length > 0 && (
+                  <>
+                    <p style={{ color: "var(--muted)", marginTop: yardHere.length ? "0.75rem" : 0 }}>
+                      Local pros / villagers serving {village.name}.
+                    </p>
+                    <ul className="village-related-links">
+                      {prosHere.map((s) => (
+                        <li key={s.id}>
+                          <Link href="/local-pros">{s.businessName}</Link>
+                          {s.category ? ` — ${s.category}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
+
             <div className="about-panel">
               <h2>Neighboring villages in {region.shortLabel}</h2>
               <p style={{ color: "var(--muted)", marginTop: 0 }}>
@@ -203,6 +322,16 @@ export default async function VillageDetailPage({
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="shell">
+          <VillageLocalHub
+            villageSlug={village.slug}
+            villageName={village.name}
+            initial={localBundle}
+          />
         </div>
       </section>
 

@@ -24,9 +24,10 @@ export default function MyVillagePage() {
               The Villages isn&apos;t one subdivision — it&apos;s a constellation
               of individual villages (like <strong>Edenfield</strong>, Fenney,
               Bonnybrook, and many more). Search or browse by area to open a
-              village&apos;s landing page. Star favorites for this device; your
-              member dashboard and saved picks live under{" "}
-              <a href="/my-space">My Space</a>.
+              village&apos;s landing page — Facebook groups, TeamReach join
+              codes, nearby rec and golf, and neighbor tips that only apply
+              there. Star favorites for this device; your member dashboard and
+              saved picks live under <a href="/my-space">My Space</a>.
             </p>
             <div className="dining-summary-stats">
               <div className="stat">
@@ -60,9 +61,10 @@ export default function MyVillagePage() {
                 by map area (Eastport, Historic Side, North of 466…).
               </li>
               <li>
-                <strong>Open</strong> a village for local context — area, CDD
-                when known, and <strong>Meet Your Neighbors</strong> unique to
-                that village.
+                <strong>Open</strong> a village for local context — Facebook
+                groups, TeamReach codes, nearest rec / square / golf, CDD when
+                known, and <strong>Meet Your Neighbors</strong> unique to that
+                village.
               </li>
               <li>
                 <strong>Star “Mine”</strong> to save your village on this device

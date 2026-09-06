@@ -511,7 +511,7 @@ export const TOPICS: TopicDef[] = [
     title: "The Villages",
     kicker: "Find your neighborhood",
     description:
-      "The Villages is made of many individual villages — Edenfield, Fenney, Bonnybrook, and 100+ more. Search or browse by area, then open a village’s landing page. Member favorites and saved picks live under My Space.",
+      "The Villages is made of many individual villages — Edenfield, Fenney, Bonnybrook, and 100+ more. Open a village for Facebook groups, TeamReach codes, nearby rec and golf, and neighbor tips. Member favorites live under My Space.",
     image: "/graphics/theme-my-village.jpg",
     tags: [
       "village",
@@ -532,7 +532,7 @@ export const TOPICS: TopicDef[] = [
       },
       {
         title: "Village landing pages",
-        body: "Each village gets its own page with area context, CDD when known, and nearby square energy.",
+        body: "Each village has Facebook groups, TeamReach join codes, nearest rec / square / golf, and neighbor tips — unique to that village, not the whole map.",
       },
       {
         title: "Save in My Space",
@@ -697,7 +697,7 @@ export const MAIN_TOPICS: {
     icon: "🏘️",
     matchPrefixes: ["/my-village"],
     blurb:
-      "Edenfield, Fenney, and 100+ villages — search, browse by area, and open each village’s landing page.",
+      "Edenfield, Fenney, and 100+ villages — Facebook groups, TeamReach codes, nearby rec, and neighbor tips unique to each village.",
     image: "/graphics/theme-my-village.jpg",
   },
   {
