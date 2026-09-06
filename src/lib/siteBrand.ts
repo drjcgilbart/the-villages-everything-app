@@ -10,7 +10,7 @@ export const SITE_BRAND = {
   domain: "www.thevillageseverythingapp.com",
   url: "https://www.thevillageseverythingapp.com",
   /** Header / compact tag under the logo */
-  brandTag: "Everything · cart paths · FL",
+  brandTag: "Neighbor-built · The Villages, FL",
   /** Official YouTube channel (same brand as the app) */
   youtube: {
     title: "The Villages Everything App",

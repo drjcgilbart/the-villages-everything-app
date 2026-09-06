@@ -53,7 +53,28 @@ export function Header({
   signedIn?: boolean;
 }) {
   const pathname = usePathname();
+  const isGamePage = pathname === "/golf-cart-hero";
   const [open, setOpen] = useState(false);
+  const [scrolledAway, setScrolledAway] = useState(isGamePage);
+  const [pinned, setPinned] = useState(false);
+  const [hovering, setHovering] = useState(false);
+
+  const pillsVisible = pinned || !scrolledAway || (isGamePage && hovering);
+
+  useEffect(() => {
+    setPinned(false);
+    setScrolledAway(isGamePage);
+  }, [pathname, isGamePage]);
+
+  useEffect(() => {
+    if (isGamePage) return;
+    const onScroll = () => {
+      setScrolledAway(window.scrollY > 56);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isGamePage]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -97,7 +118,13 @@ export function Header({
   }
 
   return (
-    <header className="site-header hub-header">
+    <header
+      className={`site-header hub-header${pillsVisible ? "" : " pills-collapsed"}${
+        isGamePage && pillsVisible ? " pills-overlay" : ""
+      }`}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+    >
       <div className="utility-bar">
         <div className="shell utility-bar-inner">
           {isAdmin ? (
@@ -164,6 +191,15 @@ export function Header({
 
           <button
             type="button"
+            className="hub-pages-toggle"
+            aria-expanded={pillsVisible}
+            aria-controls="hub-topic-nav"
+            onClick={() => setPinned((v) => !v)}
+          >
+            Pages {pillsVisible ? "▴" : "▾"}
+          </button>
+          <button
+            type="button"
             className="nav-toggle"
             aria-expanded={open}
             aria-label="Open menu"
@@ -176,7 +212,11 @@ export function Header({
         </div>
 
         {/* Desktop: three wrapping rows so pills never clip */}
-        <nav className="hub-header-pages" aria-label="Villages pages">
+        <nav
+          id="hub-topic-nav"
+          className="hub-header-pages"
+          aria-label="Villages pages"
+        >
           <div className="hub-topics-row">
             {TOPICS_ROW_1.map((item) => topicLink(item))}
           </div>
