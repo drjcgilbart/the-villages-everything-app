@@ -95,6 +95,8 @@ export function Header({
       scrolledAwayRef.current = away;
       lockUntil = Date.now() + SETTLE_MS;
       setScrolledAway(away);
+      // Leaving the top always auto-hides. Pages can open it again after that.
+      if (away) setPagesOverride(null);
     };
 
     const onScroll = () => {
