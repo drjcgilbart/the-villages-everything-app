@@ -7,7 +7,11 @@ import {
   submitGolfRound,
 } from "@/lib/golfClub";
 import { golfBadgesForName } from "@/lib/golfBadges";
-import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
+import {
+  FOURSOME_SECTIONS,
+  GOLF_COURSES,
+  GOLF_COURSE_WRITE_IN,
+} from "@/lib/golfClubTypes";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +34,7 @@ export async function GET() {
     return NextResponse.json({
       ...feed,
       playerBadges,
-      courses: GOLF_COURSES,
+      courses: GOLF_COURSES.filter((c) => c !== GOLF_COURSE_WRITE_IN),
       sections: FOURSOME_SECTIONS,
     });
   } catch (err) {

@@ -281,7 +281,7 @@ function gc(
   };
 }
 
-/** Official Golf The Villages telephone directory (VGOLF175_1025) + putting/practice notes. */
+/** Official Golf The Villages directory (telephone list + exec/champ menus, checked Sep 2026) + putting/practice notes. */
 export const GOLF_COURSES: GolfCourse[] = [
   gc("belle-glade", "Belle Glade", "championship", { code: "087", phone: "352-674-2700", address: "434 Moyer Loop, The Villages, FL 32163" }),
   gc("bonifay", "Bonifay", "championship", { code: "040", phone: "352-753-1776", address: "1033 Pinellas Place, The Villages, FL 32163", holes: 27, note: "Destin, Fort Walton, Pensacola nines" }),

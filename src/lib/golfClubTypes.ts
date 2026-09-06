@@ -1,5 +1,7 @@
 /** Client-safe types for The Villages Golf Club hub */
 
+import { GOLF_COURSES as GOLF_COURSE_DIRECTORY } from "./entertainmentCatalog";
+
 export type GolfModStatus = "pending" | "approved" | "rejected";
 
 export type GolfFoursomeSection = "men" | "women" | "mixed";
@@ -8,51 +10,52 @@ export type GolfPlayersNeeded = 1 | 2 | 3;
 
 export type GolfHoles = 9 | 18;
 
-/** Curated Villages courses (executive + championship / club). */
-export const GOLF_COURSES = [
-  // Executive Trail (sample of popular nines)
-  "Amberwood",
-  "Bacall",
-  "Belle Aire",
-  "Buttonwood",
-  "Cane Garden",
-  "Chula Vista",
-  "Churchill Downs",
-  "Country Club Hills",
-  "De La Vista",
-  "El Diablo",
-  "Glenview",
-  "Hacienda Hills",
-  "Hemingway",
-  "Hilltop",
-  "Lake Miona",
-  "Nancy Lopez Legacy (exec)",
-  "Odell",
-  "Orange Blossom Hills",
-  "Piper",
-  "Saddlebrook",
-  "Sandhill",
-  "Southern Trades",
-  "Summerhill",
-  "Sunset Pointe",
-  "Sweetgum",
-  "Tierra del Sol",
-  "Turtle Mound",
-  "Volterra",
-  // Championship / country club
-  "Belleview Country Club",
-  "Cane Garden Country Club",
-  "Hacienda Hills Country Club",
-  "Lake Miona Country Club",
-  "Nancy Lopez Legacy Country Club",
-  "Orange Blossom Hills Country Club",
-  "Silver Lake Country Club",
-  "Southern Trades Country Club",
-  "Tierra del Sol Country Club",
-  "Other / write-in",
-] as const;
+/** Last dropdown choice — neighbors type a course name that is not listed. */
+export const GOLF_COURSE_WRITE_IN = "Other / not listed";
 
-export type GolfCourseName = (typeof GOLF_COURSES)[number] | string;
+export const GOLF_COURSE_GROUPS: {
+  kind: "championship" | "executive" | "pitch-putt";
+  label: string;
+  courses: string[];
+}[] = (
+  [
+    ["championship", "Championship / country club"],
+    ["executive", "Executive trail"],
+    ["pitch-putt", "Pitch & putt / specialty"],
+  ] as const
+).map(([kind, label]) => ({
+  kind,
+  label,
+  courses: GOLF_COURSE_DIRECTORY.filter((c) => c.kind === kind)
+    .map((c) => c.name)
+    .sort((a, b) => a.localeCompare(b, "en")),
+}));
+
+/**
+ * Official Golf The Villages playable courses (championship + executive trail
+ * + pitch & putt), plus a write-in for anything the directory missed.
+ * Sourced from golfthevillages.com course lists (checked Sep 2026).
+ */
+export const GOLF_COURSES: string[] = [
+  ...GOLF_COURSE_GROUPS.flatMap((g) => g.courses),
+  GOLF_COURSE_WRITE_IN,
+];
+
+export type GolfCourseName = string;
+
+export function isGolfCourseWriteIn(value: string) {
+  const t = value.trim();
+  return (
+    t === GOLF_COURSE_WRITE_IN ||
+    /^other\s*\/\s*(write-in|not listed)/i.test(t)
+  );
+}
+
+/** Use the typed name when the neighbor picked Other / not listed. */
+export function resolveGolfCourse(selected: string, custom?: string) {
+  if (isGolfCourseWriteIn(selected)) return (custom || "").trim();
+  return selected.trim();
+}
 
 export const FOURSOME_SECTIONS: {
   id: GolfFoursomeSection;

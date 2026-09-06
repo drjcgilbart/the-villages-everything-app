@@ -6,17 +6,18 @@ import {
   writeJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
-import type {
-  GolfAce,
-  GolfClubData,
-  GolfCourseLeader,
-  GolfFoursomePost,
-  GolfFoursomeSection,
-  GolfHandicapLeader,
-  GolfHoles,
-  GolfModStatus,
-  GolfPlayersNeeded,
-  GolfRound,
+import {
+  isGolfCourseWriteIn,
+  type GolfAce,
+  type GolfClubData,
+  type GolfCourseLeader,
+  type GolfFoursomePost,
+  type GolfFoursomeSection,
+  type GolfHandicapLeader,
+  type GolfHoles,
+  type GolfModStatus,
+  type GolfPlayersNeeded,
+  type GolfRound,
 } from "./golfClubTypes";
 
 const GOLF_FILE = "golf-club.json";
@@ -91,6 +92,9 @@ function cleanName(name: string) {
 
 function cleanCourse(course: string) {
   const t = course.trim().replace(/\s+/g, " ");
+  if (isGolfCourseWriteIn(t)) {
+    throw new Error("Type the course name — it is not on the list");
+  }
   if (t.length < 2) throw new Error("Course is required");
   if (t.length > 80) throw new Error("Course name is too long");
   return t;

@@ -13,8 +13,14 @@ import type {
   GolfPlayersNeeded,
   GolfRound,
 } from "@/lib/golfClubTypes";
-import { FOURSOME_SECTIONS, GOLF_COURSES } from "@/lib/golfClubTypes";
-import { scoreRingForRound } from "@/lib/golfClubTypes";
+import {
+  FOURSOME_SECTIONS,
+  GOLF_COURSE_GROUPS,
+  GOLF_COURSE_WRITE_IN,
+  isGolfCourseWriteIn,
+  resolveGolfCourse,
+  scoreRingForRound,
+} from "@/lib/golfClubTypes";
 import { GOLF_ART } from "@/lib/golfResources";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import { prepareUploadImageFile } from "@/lib/browserImage";
@@ -41,6 +47,76 @@ function formatDate(iso: string) {
   });
 }
 
+function CourseSelect({
+  id,
+  value,
+  onChange,
+  allowEmpty,
+  emptyLabel = "Pick a Villages course",
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  allowEmpty?: boolean;
+  emptyLabel?: string;
+}) {
+  return (
+    <>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={!allowEmpty}
+      >
+        <option value="">{emptyLabel}</option>
+        <option value={GOLF_COURSE_WRITE_IN}>
+          Other / not listed — type the name
+        </option>
+        {GOLF_COURSE_GROUPS.map((group) => (
+          <optgroup key={group.kind} label={group.label}>
+            {group.courses.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <p className="golf-muted" style={{ margin: "0.3rem 0 0" }}>
+        Don&apos;t see the course? Choose Other / not listed and type the name.
+      </p>
+    </>
+  );
+}
+
+function CourseWriteIn({
+  id,
+  selected,
+  custom,
+  onCustom,
+}: {
+  id: string;
+  selected: string;
+  custom: string;
+  onCustom: (value: string) => void;
+}) {
+  if (!isGolfCourseWriteIn(selected)) return null;
+  return (
+    <div className="field">
+      <label htmlFor={id}>Course name</label>
+      <input
+        id={id}
+        value={custom}
+        onChange={(e) => onCustom(e.target.value)}
+        required
+        maxLength={80}
+        placeholder="Type the course name"
+        autoComplete="off"
+      />
+    </div>
+  );
+}
+
 export function GolfClubHub() {
   const [feed, setFeed] = useState<Feed | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +132,8 @@ export function GolfClubHub() {
   // Round form
   const [playerName, setPlayerName] = useState("");
   const [handicap, setHandicap] = useState("");
-  const [roundCourse, setRoundCourse] = useState<string>(GOLF_COURSES[0]);
+  const [roundCourse, setRoundCourse] = useState("");
+  const [roundCourseCustom, setRoundCourseCustom] = useState("");
   const [playDate, setPlayDate] = useState("");
   const [playTime, setPlayTime] = useState("");
   const [holes, setHoles] = useState<GolfHoles>(9);
@@ -68,20 +145,20 @@ export function GolfClubHub() {
   const [section, setSection] = useState<GolfFoursomeSection>("mixed");
   const [needed, setNeeded] = useState<GolfPlayersNeeded>(1);
   const [fsCourse, setFsCourse] = useState("");
+  const [fsCourseCustom, setFsCourseCustom] = useState("");
   const [whenNote, setWhenNote] = useState("");
   const [fsMessage, setFsMessage] = useState("");
   const [contact, setContact] = useState("");
 
   // Ace form
   const [aceName, setAceName] = useState("");
-  const [aceCourse, setAceCourse] = useState<string>(GOLF_COURSES[0]);
+  const [aceCourse, setAceCourse] = useState("");
+  const [aceCourseCustom, setAceCourseCustom] = useState("");
   const [aceHole, setAceHole] = useState("1");
   const [aceDate, setAceDate] = useState("");
   const [aceClub, setAceClub] = useState("");
   const [aceStory, setAceStory] = useState("");
   const [acePhoto, setAcePhoto] = useState<File | null>(null);
-
-  const courses = feed?.courses?.length ? feed.courses : [...GOLF_COURSES];
 
   const load = useCallback(async () => {
     try {
@@ -143,7 +220,7 @@ export function GolfClubHub() {
       action: "submit-round",
       playerName,
       handicap: handicap === "" ? null : Number(handicap),
-      course: roundCourse,
+      course: resolveGolfCourse(roundCourse, roundCourseCustom),
       playDate,
       playTime: playTime || undefined,
       holes,
@@ -164,7 +241,7 @@ export function GolfClubHub() {
       organizerName: orgName,
       section,
       playersNeeded: needed,
-      course: fsCourse || undefined,
+      course: resolveGolfCourse(fsCourse, fsCourseCustom) || undefined,
       whenNote,
       message: fsMessage,
       contact,
@@ -174,6 +251,7 @@ export function GolfClubHub() {
       setFsMessage("");
       setContact("");
       setFsCourse("");
+      setFsCourseCustom("");
     }
   }
 
@@ -206,7 +284,7 @@ export function GolfClubHub() {
         body: JSON.stringify({
           action: "submit-ace",
           playerName: aceName,
-          course: aceCourse,
+          course: resolveGolfCourse(aceCourse, aceCourseCustom),
           hole: Number(aceHole),
           playDate: aceDate,
           clubUsed: aceClub || undefined,
@@ -450,17 +528,11 @@ export function GolfClubHub() {
           <div className="form-row">
             <div className="field">
               <label htmlFor="gc-course">Course</label>
-              <select
+              <CourseSelect
                 id="gc-course"
                 value={roundCourse}
-                onChange={(e) => setRoundCourse(e.target.value)}
-              >
-                {courses.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={setRoundCourse}
+              />
             </div>
             <div className="field">
               <label htmlFor="gc-holes">Holes</label>
@@ -474,6 +546,12 @@ export function GolfClubHub() {
               </select>
             </div>
           </div>
+          <CourseWriteIn
+            id="gc-course-custom"
+            selected={roundCourse}
+            custom={roundCourseCustom}
+            onCustom={setRoundCourseCustom}
+          />
           <div className="form-row">
             <div className="field">
               <label htmlFor="gc-date">Date</label>
@@ -686,20 +764,21 @@ export function GolfClubHub() {
             </div>
             <div className="field">
               <label htmlFor="fs-course">Course (optional)</label>
-              <select
+              <CourseSelect
                 id="fs-course"
                 value={fsCourse}
-                onChange={(e) => setFsCourse(e.target.value)}
-              >
-                <option value="">Any / flexible</option>
-                {courses.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={setFsCourse}
+                allowEmpty
+                emptyLabel="Any / flexible"
+              />
             </div>
           </div>
+          <CourseWriteIn
+            id="fs-course-custom"
+            selected={fsCourse}
+            custom={fsCourseCustom}
+            onCustom={setFsCourseCustom}
+          />
           <div className="field">
             <label htmlFor="fs-msg">Message</label>
             <textarea
@@ -831,19 +910,19 @@ export function GolfClubHub() {
             </div>
             <div className="field">
               <label htmlFor="ace-course">Course</label>
-              <select
+              <CourseSelect
                 id="ace-course"
                 value={aceCourse}
-                onChange={(e) => setAceCourse(e.target.value)}
-              >
-                {courses.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={setAceCourse}
+              />
             </div>
           </div>
+          <CourseWriteIn
+            id="ace-course-custom"
+            selected={aceCourse}
+            custom={aceCourseCustom}
+            onCustom={setAceCourseCustom}
+          />
           <div className="form-row">
             <div className="field">
               <label htmlFor="ace-hole">Hole #</label>
