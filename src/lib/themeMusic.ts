@@ -42,9 +42,9 @@ export const THEME_TRACKS: ThemeTrack[] = [
     id: "poolside-pickleball",
     name: "Poolside Pickleball",
     emoji: "🏓",
-    blurb: "Upbeat, carefree instrumental — sweat equity optional.",
+    blurb: "Tropical beach-party instrumental — paddle splash, not a cannonball.",
     src: "/music/poolside.mp3",
-    credit: "Royalty-free instrumental (Pixabay Content License)",
+    credit: "Beachfront Celebration — Kevin MacLeod (incompetech.com), CC BY 4.0",
   },
   {
     id: "golden-hour",
@@ -58,9 +58,9 @@ export const THEME_TRACKS: ThemeTrack[] = [
     id: "cart-parade",
     name: "Parade of Golf Carts",
     emoji: "⛳",
-    blurb: "Lively neighborhood procession energy. Wave politely.",
+    blurb: "Snappy brass-and-snare march for the neighborhood procession. Wave politely.",
     src: "/music/cart-parade.mp3",
-    credit: "Royalty-free instrumental (Pixabay Content License)",
+    credit: "Hamster March — Kevin MacLeod (incompetech.com), CC BY 4.0",
   },
   {
     id: "lanai-lullaby",
