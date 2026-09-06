@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { FavoriteSiteButton } from "@/components/FavoriteSiteButton";
 import { HideMyDataToggle } from "@/components/HideMyDataToggle";
 import { PhoneViewToggle } from "@/components/PhoneViewToggle";
@@ -58,22 +58,55 @@ export function Header({
   const [scrolledAway, setScrolledAway] = useState(isGamePage);
   const [pinned, setPinned] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const scrolledAwayRef = useRef(isGamePage);
 
   const pillsVisible = pinned || !scrolledAway || (isGamePage && hovering);
 
   useEffect(() => {
     setPinned(false);
+    scrolledAwayRef.current = isGamePage;
     setScrolledAway(isGamePage);
   }, [pathname, isGamePage]);
 
   useEffect(() => {
     if (isGamePage) return;
-    const onScroll = () => {
-      setScrolledAway(window.scrollY > 56);
+
+    // Hide only after scrolling clearly away; show only when truly at the top.
+    // One threshold caused a loop: showing the pills grows the header, which
+    // changes scrollY, which hid them again, forever.
+    const SHOW_BELOW = 8;
+    const HIDE_AFTER = 160;
+    const SETTLE_MS = 520;
+    let frame = 0;
+    let lockUntil = 0;
+
+    const y = () => window.scrollY || document.documentElement.scrollTop || 0;
+
+    const apply = (away: boolean) => {
+      if (away === scrolledAwayRef.current) return;
+      scrolledAwayRef.current = away;
+      lockUntil = Date.now() + SETTLE_MS;
+      setScrolledAway(away);
+      if (away) setPinned(false);
     };
+
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        if (Date.now() < lockUntil) return;
+        const top = y();
+        if (top <= SHOW_BELOW) apply(false);
+        else if (top >= HIDE_AFTER) apply(true);
+      });
+    };
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, [isGamePage]);
 
   useEffect(() => {
