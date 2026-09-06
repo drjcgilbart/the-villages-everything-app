@@ -58,9 +58,9 @@ export const THEME_TRACKS: ThemeTrack[] = [
     id: "cart-parade",
     name: "Parade of Golf Carts",
     emoji: "⛳",
-    blurb: "Snappy brass-and-snare march for the neighborhood procession. Wave politely.",
+    blurb: "Live concert-band ragtime — a neighborhood procession, not a circus.",
     src: "/music/cart-parade.mp3",
-    credit: "Hamster March — Kevin MacLeod (incompetech.com), CC BY 4.0",
+    credit: "Sunflower Slow Drag — U.S. Marine Band (public domain)",
   },
   {
     id: "lanai-lullaby",
