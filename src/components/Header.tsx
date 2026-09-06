@@ -34,11 +34,16 @@ const UTILITY_NAV = [
   { href: "/donate", label: "Support" },
 ];
 
-/** Second topics row always starts with Golf. */
+/**
+ * Three topic rows so every pill stays fully visible (Golf starts row 2).
+ * Two nowrap rows clipped Best of the Month on typical desktop widths.
+ */
 const GOLF_SPLIT = MAIN_TOPICS.findIndex((t) => t.href === "/golf-zone");
 const TOPICS_ROW_1 =
   GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(0, GOLF_SPLIT) : MAIN_TOPICS;
-const TOPICS_ROW_2 = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
+const AFTER_GOLF = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
+const TOPICS_ROW_2 = AFTER_GOLF.slice(0, 7);
+const TOPICS_ROW_3 = AFTER_GOLF.slice(7);
 
 export function Header({
   isAdmin = false,
@@ -170,7 +175,7 @@ export function Header({
           </button>
         </div>
 
-        {/* Desktop only: exactly two lines; line 2 starts with Golf */}
+        {/* Desktop: three wrapping rows so pills never clip */}
         <nav className="hub-header-pages" aria-label="Villages pages">
           <div className="hub-topics-row">
             {TOPICS_ROW_1.map((item) => topicLink(item))}
@@ -178,6 +183,11 @@ export function Header({
           {TOPICS_ROW_2.length > 0 && (
             <div className="hub-topics-row">
               {TOPICS_ROW_2.map((item) => topicLink(item))}
+            </div>
+          )}
+          {TOPICS_ROW_3.length > 0 && (
+            <div className="hub-topics-row">
+              {TOPICS_ROW_3.map((item) => topicLink(item))}
             </div>
           )}
         </nav>

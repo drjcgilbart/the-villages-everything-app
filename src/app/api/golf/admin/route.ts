@@ -7,6 +7,7 @@ import {
   setFoursomeStatus,
   setRoundStatus,
   updateAce,
+  updateRound,
 } from "@/lib/golfClub";
 import type { GolfModStatus } from "@/lib/golfClubTypes";
 
@@ -42,6 +43,20 @@ export async function POST(req: Request) {
     if (!id) throw new Error("id is required");
 
     if (kind === "round") {
+      if (action === "update") {
+        const round = await updateRound(id, {
+          playerName: body.playerName,
+          course: body.course,
+          playDate: body.playDate,
+          playTime: body.playTime,
+          holes: body.holes,
+          score: body.score,
+          handicap: body.handicap,
+          notes: body.notes,
+          status: body.status,
+        });
+        return NextResponse.json({ ok: true, round });
+      }
       if (!["approve", "reject", "pending"].includes(action)) {
         throw new Error("Invalid round action");
       }

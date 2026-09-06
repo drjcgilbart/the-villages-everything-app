@@ -31,6 +31,8 @@ export function AdminPendingPanel({
 }) {
   const [data, setData] = useState<Payload | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null
   );
@@ -65,11 +67,54 @@ export function AdminPendingPanel({
             ? `Approved: ${item.title}`
             : `Rejected: ${item.title}`,
       });
+      setEditingKey(null);
       await load();
     } catch (err) {
       setMsg({
         kind: "err",
         text: err instanceof Error ? err.message : "Update failed",
+      });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function startEdit(item: PendingItem) {
+    const next: Record<string, string> = {};
+    for (const f of item.editFields || []) next[f.key] = f.value;
+    setDraft(next);
+    setEditingKey(`${item.kind}:${item.id}`);
+    setMsg(null);
+  }
+
+  async function saveEdit(item: PendingItem, approve = false) {
+    setBusyId(`${item.kind}:${item.id}`);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          action: "update",
+          kind: item.kind,
+          id: item.id,
+          fields: draft,
+          approve,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Could not save");
+      setMsg({
+        kind: "ok",
+        text: approve ? `Saved and approved: ${item.title}` : `Saved: ${item.title}`,
+      });
+      setEditingKey(null);
+      await load();
+    } catch (err) {
+      setMsg({
+        kind: "err",
+        text: err instanceof Error ? err.message : "Could not save",
       });
     } finally {
       setBusyId(null);
@@ -91,8 +136,8 @@ export function AdminPendingPanel({
         </h2>
         <p style={{ margin: 0, color: "var(--muted)" }}>
           Every waiting membership, listing, suggestion, score, and DUPR
-          snapshot in one list — newest first. Approve or reject here, or jump
-          to that topic’s tab for extra editing.
+          snapshot in one list — newest first. Edit the details, then approve
+          or reject here, or jump to that topic’s tab.
         </p>
         {data.emailConfigured ? (
           <p className="panel-hint" style={{ marginBottom: 0 }}>
@@ -119,6 +164,8 @@ export function AdminPendingPanel({
           {items.map((item) => {
             const key = `${item.kind}:${item.id}`;
             const busy = busyId === key;
+            const editing = editingKey === key;
+            const canEdit = (item.editFields || []).length > 0;
             return (
               <li key={key} className="about-panel admin-pending-card">
                 <div className="admin-pending-card-head">
@@ -132,40 +179,130 @@ export function AdminPendingPanel({
                   {item.submittedBy ? `${item.submittedBy} · ` : ""}
                   {item.summary}
                 </p>
-                {item.details.length ? (
+                {editing && canEdit ? (
+                  <dl className="admin-pending-details">
+                    {item.editFields.map((row) => (
+                      <div key={row.key}>
+                        <dt>
+                          <label htmlFor={`${key}-${row.key}`}>{row.label}</label>
+                        </dt>
+                        <dd>
+                          {row.input === "textarea" ? (
+                            <textarea
+                              id={`${key}-${row.key}`}
+                              rows={3}
+                              value={draft[row.key] ?? ""}
+                              onChange={(e) =>
+                                setDraft((d) => ({
+                                  ...d,
+                                  [row.key]: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <input
+                              id={`${key}-${row.key}`}
+                              type={row.input || "text"}
+                              value={draft[row.key] ?? ""}
+                              onChange={(e) =>
+                                setDraft((d) => ({
+                                  ...d,
+                                  [row.key]: e.target.value,
+                                }))
+                              }
+                            />
+                          )}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : item.details.length ? (
                   <dl className="admin-pending-details">
                     {item.details.map((row) => (
                       <div key={row.label}>
                         <dt>{row.label}</dt>
-                        <dd>{row.value}</dd>
+                        <dd>
+                          {row.label === "Photo" &&
+                          row.value.startsWith("/") ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={row.value}
+                              alt=""
+                              className="admin-pending-photo"
+                            />
+                          ) : (
+                            row.value
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>
                 ) : null}
                 <div className="admin-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    disabled={busy}
-                    onClick={() => decide(item, "approve")}
-                  >
-                    {busy ? "Saving…" : "Approve"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    disabled={busy}
-                    onClick={() => decide(item, "reject")}
-                  >
-                    Reject
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => onOpenTab(item.tab)}
-                  >
-                    Open {TAB_LABEL[item.tab]} tab
-                  </button>
+                  {editing ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={busy}
+                        onClick={() => saveEdit(item, true)}
+                      >
+                        {busy ? "Saving…" : "Save & approve"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={busy}
+                        onClick={() => saveEdit(item, false)}
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={busy}
+                        onClick={() => setEditingKey(null)}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={busy}
+                        onClick={() => decide(item, "approve")}
+                      >
+                        {busy ? "Saving…" : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={busy}
+                        onClick={() => decide(item, "reject")}
+                      >
+                        Reject
+                      </button>
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          disabled={busy}
+                          onClick={() => startEdit(item)}
+                        >
+                          Edit
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => onOpenTab(item.tab)}
+                      >
+                        Open {TAB_LABEL[item.tab]} tab
+                      </button>
+                    </>
+                  )}
                 </div>
               </li>
             );

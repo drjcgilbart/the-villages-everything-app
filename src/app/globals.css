@@ -945,7 +945,7 @@ a {
   padding: 0.5rem 0;
 }
 
-/* Brand on top; exactly two page-link rows below (row 2 starts with Golf) */
+/* Brand on top; topic pills wrap onto three rows below */
 .hub-header-inner {
   display: flex;
   flex-direction: column;
@@ -976,44 +976,27 @@ a {
   display: none;
 }
 
-/* Exactly two rows; second row always starts with Golf */
+/* Three wrapping rows so every topic pill stays fully on screen */
 .hub-header-pages {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.22rem;
   width: 100%;
+  overflow: visible;
 }
 
 .hub-topics-row {
   display: flex;
-  flex-wrap: nowrap;
-  justify-content: flex-start;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 0.28rem;
+  gap: 0.26rem;
   width: 100%;
   box-sizing: border-box;
-  /* Keep pills fully visible: centered when they fit, scrollable when they don't.
-     justify-content:center on an overflowing row clips the first/last pills. */
-  padding-block: 0.18rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-
-.hub-topics-row::before,
-.hub-topics-row::after {
-  content: "";
-  flex: 1 0 0.45rem;
-  min-width: 0.45rem;
-  align-self: stretch;
-  pointer-events: none;
-}
-
-.hub-topics-row::-webkit-scrollbar {
-  display: none;
+  padding: 0.08rem 0.15rem;
+  overflow: visible;
 }
 
 .hub-header-pages a,
@@ -4119,6 +4102,22 @@ button.ms-home-card:hover {
 .admin-pending-details dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.admin-pending-details input,
+.admin-pending-details textarea {
+  width: 100%;
+  max-width: 36rem;
+}
+
+.admin-pending-photo {
+  display: block;
+  max-width: 220px;
+  max-height: 160px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  margin-top: 0.15rem;
 }
 
 @media (max-width: 640px) {

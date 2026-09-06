@@ -198,6 +198,63 @@ export async function setRoundStatus(
   return r;
 }
 
+export async function updateRound(
+  id: string,
+  patch: {
+    playerName?: string;
+    course?: string;
+    playDate?: string;
+    playTime?: string | null;
+    holes?: unknown;
+    score?: unknown;
+    handicap?: unknown;
+    notes?: string | null;
+    status?: GolfModStatus;
+  }
+): Promise<GolfRound> {
+  const data = await loadGolfClubAsync();
+  const r = data.rounds.find((x) => x.id === id);
+  if (!r) throw new Error("Round not found");
+
+  if (patch.playerName !== undefined) r.playerName = cleanName(patch.playerName);
+  if (patch.course !== undefined) r.course = cleanCourse(patch.course);
+  if (patch.playDate !== undefined) {
+    if (!isDate(String(patch.playDate))) {
+      throw new Error("Date is required (YYYY-MM-DD)");
+    }
+    r.playDate = String(patch.playDate);
+  }
+  if (patch.playTime !== undefined) {
+    const t = String(patch.playTime || "").trim();
+    r.playTime = t || undefined;
+  }
+  if (patch.holes !== undefined) r.holes = parseHoles(patch.holes);
+  if (patch.score !== undefined) {
+    const score = Number(patch.score);
+    if (!Number.isFinite(score) || score < 18 || score > 200) {
+      throw new Error("Score looks invalid — use total strokes for the round");
+    }
+    r.score = Math.round(score);
+  }
+  if (patch.handicap !== undefined) {
+    const raw = String(patch.handicap ?? "").trim();
+    r.handicap = raw === "" ? null : clampHandicap(Number(raw));
+  }
+  if (patch.notes !== undefined) {
+    const notes = String(patch.notes || "").trim().slice(0, 400);
+    r.notes = notes || undefined;
+  }
+  if (patch.status !== undefined) {
+    if (!["pending", "approved", "rejected"].includes(patch.status)) {
+      throw new Error("Invalid status");
+    }
+    r.status = patch.status;
+  }
+
+  await saveGolfClubAsync(data);
+  return r;
+}
+
 /* —— Foursomes —— */
 
 export async function submitFoursome(input: {
