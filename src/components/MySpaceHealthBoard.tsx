@@ -1934,7 +1934,7 @@ export function MySpaceHealthBoard() {
             open in the browser.
           </p>
 
-          <h3>Add medication</h3>
+          <h3 className="ms-h-add-bar">Add medication</h3>
           <p className="panel-hint">
             Name, dosage, and how many times per day (default dose times are created for you).
             After you save, use Edit on that medication’s card above to change name, dosage, or

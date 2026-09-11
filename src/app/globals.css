@@ -3444,6 +3444,23 @@ button.ms-home-card:hover {
   background: rgba(31, 107, 74, 0.08);
 }
 
+.ms-h-add-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 1.35rem 0 0.85rem;
+  padding: 0.95rem 1.25rem;
+  border-radius: 999px;
+  background: var(--palm);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(31, 107, 74, 0.25);
+}
+
 .ms-h-dose {
   display: grid;
   grid-template-columns: auto 1fr auto auto auto;
