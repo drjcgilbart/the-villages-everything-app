@@ -123,6 +123,8 @@ export type Racer = {
   spinVel: number;
   /** Puddle spin: rotate on the spot instead of sliding */
   spinInPlace: boolean;
+  /** Chase-cam heading; frozen while the cart spins in place */
+  camHeading: number;
   /** Seconds left in the gate-pass wave animation */
   waveTimer: number;
   /** Seconds left stuck in a sinkhole (no drive) */
@@ -376,6 +378,7 @@ export class Race {
       spinOutTimer: 0,
       spinVel: 0,
       spinInPlace: false,
+      camHeading: playerPose.angle,
       waveTimer: 0,
       trapTimer: 0,
       trapIgnoreId: 0,
@@ -421,6 +424,7 @@ export class Race {
         spinOutTimer: 0,
         spinVel: 0,
         spinInPlace: false,
+        camHeading: pose.angle,
         waveTimer: 0,
         trapTimer: 0,
         trapIgnoreId: 0,
@@ -887,6 +891,7 @@ export class Race {
     r.spinVel = (Math.random() > 0.5 ? 1 : -1) * (16 + Math.random() * 5);
     r.speed *= 0.06;
     r.spinInPlace = true;
+    r.camHeading = r.angle;
     r.effectTimer = Math.max(r.effectTimer, duration);
     r.effectSpeedMul = Math.min(r.effectSpeedMul, 0.12);
     r.steerVel = 0;
@@ -912,6 +917,7 @@ export class Race {
     if (r.spinOutTimer <= 0) {
       r.spinVel *= Math.exp(-8 * dt);
       if (Math.abs(r.spinVel) < 0.05) r.spinVel = 0;
+      if (!r.spinInPlace) r.camHeading = r.angle;
       return;
     }
     r.spinOutTimer -= dt;

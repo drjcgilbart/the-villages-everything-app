@@ -2297,14 +2297,20 @@ export class World3D {
     const lookDist = 32 + speed01 * 8;
     const lookHeight = 1.1 + speed01 * 0.3 + elev;
 
-    const behindX = player.x - Math.cos(player.angle) * dist;
-    const behindZ = player.y - Math.sin(player.angle) * dist;
+    // Puddle spin: keep looking down the road while the cart yawns in place
+    const heading =
+      player.spinInPlace && player.spinOutTimer > 0.05
+        ? player.camHeading
+        : player.angle;
+
+    const behindX = player.x - Math.cos(heading) * dist;
+    const behindZ = player.y - Math.sin(heading) * dist;
     this.tmp.set(behindX, height, behindZ);
 
     this.lookAhead.set(
-      player.x + Math.cos(player.angle) * lookDist,
+      player.x + Math.cos(heading) * lookDist,
       lookHeight,
-      player.y + Math.sin(player.angle) * lookDist
+      player.y + Math.sin(heading) * lookDist
     );
 
     if (this.cameraNeedsSnap) {
@@ -3120,34 +3126,55 @@ function buildSprinklerHazard(h: HazardInstance): THREE.Group {
   const fz = Math.sin(h.angle);
   const lawn = ROAD_HALF_WIDTH * 0.6 + 2.5;
 
+  // Road ribbon sits at y ≈ 0.08; keep the puddle clearly above it (not under asphalt).
+  const stain = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.05, 3.15, 0.05, 28),
+    new THREE.MeshStandardMaterial({
+      color: "#16364c",
+      roughness: 0.42,
+      metalness: 0.18,
+      polygonOffset: true,
+      polygonOffsetFactor: -3,
+      polygonOffsetUnits: -3,
+    }),
+  );
+  stain.position.y = 0.12;
+  stain.scale.set(1.28, 1, 0.92);
+  stain.renderOrder = 2;
+  g.add(stain);
+
   const water = new THREE.MeshStandardMaterial({
-    color: "#4eb7e8",
-    roughness: 0.08,
-    metalness: 0.42,
+    color: "#4ec6ef",
+    roughness: 0.06,
+    metalness: 0.38,
     transparent: true,
-    opacity: 0.58,
+    opacity: 0.78,
     depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -6,
+    polygonOffsetUnits: -6,
   });
-  const puddle = new THREE.Mesh(new THREE.CircleGeometry(2.6, 28), water);
-  puddle.rotation.x = -Math.PI / 2;
-  puddle.position.y = 0.05;
-  puddle.scale.set(1.25, 0.82, 1);
+  const puddle = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.85, 0.06, 28), water);
+  puddle.position.y = 0.16;
+  puddle.scale.set(1.22, 1, 0.88);
+  puddle.renderOrder = 3;
   g.add(puddle);
 
   const sheen = new THREE.Mesh(
-    new THREE.CircleGeometry(1.55, 22),
+    new THREE.CircleGeometry(1.7, 24),
     new THREE.MeshStandardMaterial({
-      color: "#9ee7ff",
-      roughness: 0.05,
+      color: "#c8f4ff",
+      roughness: 0.04,
       metalness: 0.55,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.55,
       depthWrite: false,
     }),
   );
   sheen.rotation.x = -Math.PI / 2;
-  sheen.position.y = 0.07;
+  sheen.position.y = 0.2;
   sheen.name = "sprinkler-sheen";
+  sheen.renderOrder = 4;
   g.add(sheen);
 
   const chrome = mat("#c5d0da", 0.28, 0.78);
