@@ -8,12 +8,21 @@ import { HideMyDataToggle } from "@/components/HideMyDataToggle";
 import { PhoneViewToggle } from "@/components/PhoneViewToggle";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
 import { SITE_BRAND } from "@/lib/siteBrand";
+import { isNativeAppShell } from "@/lib/nativeAppShell";
+
+type UtilityItem = {
+  href: string;
+  label: string;
+  matchPrefixes?: string[];
+};
 
 /**
  * Utility bar (top thin strip): site-wide + personal/member areas.
  * My Space owns member login, favorites, dashboard, and yard-sale seller tools.
+ * Membership is one Pages item: Support on the website (plans + tips + checkout),
+ * Plans in the store app (Apple/Google: no in-app purchase on /donate).
  */
-const UTILITY_NAV = [
+const UTILITY_NAV: UtilityItem[] = [
   { href: "/", label: "Home" },
   {
     href: "/about",
@@ -30,9 +39,13 @@ const UTILITY_NAV = [
       "/yard-sale/dashboard",
     ],
   },
-  { href: "/my-space?tab=plans", label: "Plans" },
-  { href: "/donate", label: "Support" },
 ];
+
+const WEB_MEMBERSHIP: UtilityItem = { href: "/donate", label: "Support" };
+const NATIVE_MEMBERSHIP: UtilityItem = {
+  href: "/my-space?tab=plans",
+  label: "Plans",
+};
 
 /**
  * Three topic rows so every pill stays fully visible (Golf starts row 2).
@@ -54,6 +67,7 @@ export function Header({
 }) {
   const pathname = usePathname();
   const isGamePage = pathname === "/golf-cart-hero";
+  const [native, setNative] = useState(false);
   const [open, setOpen] = useState(false);
   const [scrolledAway, setScrolledAway] = useState(isGamePage);
   const [pagesOverride, setPagesOverride] = useState<"open" | "closed" | null>(
@@ -69,6 +83,10 @@ export function Header({
   function togglePages() {
     setPagesOverride(pillsVisible ? "closed" : "open");
   }
+
+  useEffect(() => {
+    setNative(isNativeAppShell());
+  }, []);
 
   useEffect(() => {
     setPagesOverride(null);
@@ -134,14 +152,20 @@ export function Header({
     return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
-  function isUtilityActive(item: (typeof UTILITY_NAV)[number]) {
-    const prefixes = item.matchPrefixes || [item.href];
+  function isUtilityActive(item: UtilityItem) {
+    const pathOnly = item.href.split("?")[0];
+    const prefixes = item.matchPrefixes || [pathOnly];
     return prefixes.some((p) =>
       p === "/"
         ? pathname === "/"
         : pathname === p || pathname.startsWith(p + "/")
     );
   }
+
+  const utilityItems = [
+    ...UTILITY_NAV,
+    native ? NATIVE_MEMBERSHIP : WEB_MEMBERSHIP,
+  ];
 
   function topicLink(item: (typeof MAIN_TOPICS)[number], opts?: { onClick?: () => void }) {
     return (
@@ -183,13 +207,11 @@ export function Header({
           ) : null}
           <FavoriteSiteButton />
           <nav className="utility-nav" aria-label="Site links">
-            {UTILITY_NAV.map((item) => (
+            {utilityItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`${isUtilityActive(item) ? "active" : ""}${
-                  item.href === "/donate" ? " hide-in-native-app" : ""
-                }`.trim()}
+                className={isUtilityActive(item) ? "active" : ""}
               >
                 {item.label}
               </Link>
