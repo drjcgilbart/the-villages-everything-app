@@ -63,7 +63,7 @@ Report and Block:
 - Block requires sign-in; blocked neighbors’ posts stay hidden for that member
 - Reports email the host and appear in Admin → Safety; we hide/remove violating content, usually within 24 hours
 
-Paid Hub membership ($1 / $2 / $3 per month) and optional tips are sold only on the website in Safari, not inside the iOS app. The store app does not offer In-App Purchase. Reviewers do not need to pay. All public directories and the free Porch Waver account work without payment.
+Paid Hub membership ($3 / $5 / $10 per year; Porch Waver is $0) and optional tips are sold only on the website in Safari, not inside the iOS app. The store app does not offer In-App Purchase. Reviewers do not need to pay. All public directories and the free Porch Waver account work without payment.
 
 4) EXTERNAL SERVICES
 - Hosting: Vercel (thevillageseverythingapp.com)

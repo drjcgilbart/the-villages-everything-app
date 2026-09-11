@@ -63,7 +63,7 @@ export function RoyaltyTrialOffer(props: TrialOfferState) {
       <h3>One month of Square Royalty — free</h3>
       <p>
         See every private board before you spend a dollar. Request it once, poke
-        around for 30 days, then keep a paid plan ($1 / $2 / $3) or go back to
+        around for 30 days, then keep a paid plan ($3 / $5 / $10 a year) or go back to
         Porch Waver. No card required to start.
       </p>
       {props.error ? <p className="pf-form-error">{props.error}</p> : null}

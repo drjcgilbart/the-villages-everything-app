@@ -25,7 +25,7 @@ type SpaceBrief = {
 
 /**
  * Public membership catalog — Support page highlight.
- * Same $1 / $2 / $3 ladder as My Space unlocks.
+ * Same $0 / $3 / $5 / $10 per year ladder as My Space unlocks.
  */
 export function MembershipPlans() {
   const [space, setSpace] = useState<SpaceBrief | null>(null);

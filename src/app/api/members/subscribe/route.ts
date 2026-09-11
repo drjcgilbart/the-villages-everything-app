@@ -13,16 +13,16 @@ import {
 function subscriptionLineItem(tier: TierDef) {
   const priceId = stripePriceForTier(tier.id);
   if (priceId) return { price: priceId, quantity: 1 as const };
-  const usd = tier.priceUsdPerMonth;
+  const usd = tier.priceUsdPerYear;
   return {
     quantity: 1 as const,
     price_data: {
       currency: "usd",
       unit_amount: Math.round(usd * 100),
-      recurring: { interval: "month" as const },
+      recurring: { interval: "year" as const },
       product_data: {
         name: `The Villages Everything App — ${tier.label}`,
-        description: `${tier.tagline} $${usd}/month. ${tier.householdSeats === 1 ? "1 member login" : `${tier.householdSeats} member logins`} — each with their own My Space. Unlocks boards for this plan (and everything below it).`,
+        description: `${tier.tagline} $${usd}/year. ${tier.householdSeats === 1 ? "1 member login" : `${tier.householdSeats} member logins`} — each with their own My Space. Unlocks boards for this plan (and everything below it).`,
       },
     },
   };
@@ -34,10 +34,11 @@ export const dynamic = "force-dynamic";
  * Start Hub Member subscription checkout (Stripe) for a tier.
  * Body: { tier?: HubPlanId } — default cart_path_regular
  *
- * Env (any of):
+ * Env (any of) — Price IDs must be yearly ($3 / $5 / $10):
  *   STRIPE_MEMBER_PRICE_ID — Cart Path Regular (back-compat)
  *   STRIPE_PRICE_HUB / STRIPE_PRICE_PLUS / STRIPE_PRICE_PATRON
  *   or NEXT_PUBLIC_MEMBER_PAYMENT_LINK for a static Payment Link (any paid tier)
+ * Without those, Checkout uses $3 / $5 / $10 per year from the membership ladder.
  */
 export async function POST(req: NextRequest) {
   const member = await getSessionMember();
@@ -87,13 +88,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Subscriptions aren’t wired up yet. Add STRIPE_SECRET_KEY to enable $1 / $2 / $3 monthly checkout.",
+          "Subscriptions aren’t wired up yet. Add STRIPE_SECRET_KEY to enable $3 / $5 / $10 yearly checkout.",
       },
       { status: 503 }
     );
   }
 
-  if (!tier.priceUsdPerMonth) {
+  if (!tier.priceUsdPerYear) {
     return NextResponse.json(
       { error: "That plan is free — request membership instead." },
       { status: 400 }
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
     metadata: {
       memberId: member.id,
       plan: requested,
-      amount_usd_month: String(tier.priceUsdPerMonth),
+      amount_usd_year: String(tier.priceUsdPerYear),
     },
     subscription_data: {
       metadata: { memberId: member.id, plan: requested },

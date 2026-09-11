@@ -118,7 +118,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     minRank: 0,
     phase: "live",
     teaser:
-      "Porch Waver → Cart Path Regular → Lanai Legend → Square Royalty. Household logins: 1 / 2 / 3 / 4.",
+      "Porch Waver ($0/year) → Cart Path Regular ($3/year) → Lanai Legend ($5/year) → Square Royalty ($10/year). Household logins: 1 / 2 / 3 / 4.",
     previewLine:
       "Each paid tier keeps everything below it. Extra household members get their own login and boards.",
   },

@@ -404,10 +404,10 @@ export function MySpaceDashboard() {
             <span className="kicker">Membership</span>
             <h1>Plans</h1>
             <p>
-              Four rungs: Porch Waver (free, 1 login) → Cart Path Regular ($1,
-              2 logins) → Lanai Legend ($2, 3 logins) → Square Royalty ($3, 4
-              logins). Each plan keeps everything below it. Extra household
-              people get their own password and boards.
+              Four rungs: Porch Waver ($0/year, 1 login) → Cart Path Regular
+              ($3/year, 2 logins) → Lanai Legend ($5/year, 3 logins) → Square
+              Royalty ($10/year, 4 logins). Each plan keeps everything below
+              it. Extra household people get their own password and boards.
               {inNativeApp
                 ? " Paid plans are bought on thevillageseverythingapp.com, then you sign in here."
                 : ""}
