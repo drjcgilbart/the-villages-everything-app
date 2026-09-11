@@ -297,6 +297,36 @@ function formatMedTime(hhmm: string): string {
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
+/** Clock time key so 8:00 and 08:00 are the same round. */
+function normalizeMedTime(hhmm: string): string {
+  const m = String(hhmm || "").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return "";
+  const h = Math.min(23, Math.max(0, Number(m[1])));
+  const min = Math.min(59, Math.max(0, Number(m[2])));
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+type MedDoseSlot = { med: Medication; dose: DoseTime; log?: MedicationLog };
+
+function groupSlotsByTime(slots: MedDoseSlot[]): { time: string; slots: MedDoseSlot[] }[] {
+  const map = new Map<string, MedDoseSlot[]>();
+  for (const slot of slots) {
+    const t = normalizeMedTime(slot.dose.time) || "none";
+    const list = map.get(t) || [];
+    list.push(slot);
+    map.set(t, list);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([time, grouped]) => ({ time, slots: grouped }));
+}
+
+function listMedNames(names: string[]): string {
+  const unique = [...new Set(names.filter(Boolean))];
+  if (unique.length <= 2) return unique.join(" and ");
+  return `${unique.slice(0, -1).join(", ")}, and ${unique[unique.length - 1]}`;
+}
+
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
@@ -757,6 +787,17 @@ export function MySpaceHealthBoard() {
   const [newDoseTime, setNewDoseTime] = useState("12:00");
   const [newDoseLabel, setNewDoseLabel] = useState("");
   const [doseMedId, setDoseMedId] = useState<string | null>(null);
+  const [editingMedId, setEditingMedId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({
+    name: "",
+    dosage: "",
+    schedule: "",
+    notes: "",
+  });
+  const [alarmRound, setAlarmRound] = useState<{
+    time: string;
+    names: string[];
+  } | null>(null);
   const [medHistQ, setMedHistQ] = useState("");
   const [hist, setHist] = useState<Record<string, HistoryRange>>({
     meds: "week",
@@ -868,7 +909,13 @@ export function MySpaceHealthBoard() {
   const due = todaySlots.length;
   const taken = todaySlots.filter((s) => s.log).length;
   const now = nowTimeEastern();
-  const nextUp = todaySlots.find((s) => !s.log);
+  const todayRounds = groupSlotsByTime(todaySlots);
+  const nextUp = [...todaySlots]
+    .filter((s) => !s.log)
+    .sort((a, b) =>
+      normalizeMedTime(a.dose.time).localeCompare(normalizeMedTime(b.dose.time))
+    )[0];
+  const nextRound = todayRounds.find((r) => r.slots.some((s) => !s.log));
 
   const adherence = useMemo(() => {
     const last7 = [];
@@ -909,21 +956,28 @@ export function MySpaceHealthBoard() {
     if (!ready || !state.medAlarmEnabled) return;
     const fired = new Set<string>();
     const tick = () => {
-      const t = nowTimeEastern();
+      const t = normalizeMedTime(nowTimeEastern());
       const d = todayKeyEastern();
+      if (!t) return;
+      const dueNow: { med: Medication; dose: DoseTime }[] = [];
       for (const med of state.medications) {
         if (!med.active || !med.alarmEnabled) continue;
         for (const dose of med.doseTimes) {
-          if (!dose.enabled || dose.time !== t) continue;
+          if (!dose.enabled || normalizeMedTime(dose.time) !== t) continue;
           const already = state.medicationLogs.some(
             (l) => l.medicationId === med.id && l.date === d && l.doseTimeId === dose.id
           );
-          const key = `${med.id}:${dose.id}:${d}`;
-          if (already || fired.has(key)) continue;
-          fired.add(key);
-          playAlarmTone(state.medAlarmSound, state.medAlarmDurationSec || 8);
+          if (!already) dueNow.push({ med, dose });
         }
       }
+      const key = `round:${d}:${t}`;
+      if (!dueNow.length || fired.has(key)) return;
+      fired.add(key);
+      playAlarmTone(state.medAlarmSound, state.medAlarmDurationSec || 8);
+      setAlarmRound({
+        time: t,
+        names: dueNow.map((item) => item.med.name),
+      });
     };
     tick();
     const id = window.setInterval(tick, 30_000);
@@ -937,13 +991,13 @@ export function MySpaceHealthBoard() {
     state.medicationLogs,
   ]);
 
-  function markDose(
+  function withDoseMark(
+    logs: MedicationLog[],
     med: Medication,
     dose: DoseTime | null,
     done: boolean,
-    time = nowTimeEastern()
-  ) {
-    let logs = [...state.medicationLogs];
+    time: string
+  ): MedicationLog[] {
     if (done) {
       const existing = logs.find(
         (l) =>
@@ -952,9 +1006,11 @@ export function MySpaceHealthBoard() {
           (dose ? l.doseTimeId === dose.id : !l.doseTimeId)
       );
       if (existing) {
-        logs = logs.map((l) => (l.id === existing.id ? { ...l, time } : l));
-      } else {
-        logs.push({
+        return logs.map((l) => (l.id === existing.id ? { ...l, time } : l));
+      }
+      return [
+        ...logs,
+        {
           id: uid("mlog"),
           medicationId: med.id,
           medicationName: med.name,
@@ -964,19 +1020,75 @@ export function MySpaceHealthBoard() {
           scheduledTime: dose?.time || "",
           doseTimeId: dose?.id,
           notes: "",
-        });
-      }
-    } else {
-      logs = logs.filter(
-        (l) =>
-          !(
-            l.medicationId === med.id &&
-            l.date === today &&
-            (dose ? l.doseTimeId === dose.id : !l.doseTimeId)
-          )
-      );
+        },
+      ];
+    }
+    return logs.filter(
+      (l) =>
+        !(
+          l.medicationId === med.id &&
+          l.date === today &&
+          (dose ? l.doseTimeId === dose.id : !l.doseTimeId)
+        )
+    );
+  }
+
+  function markDose(
+    med: Medication,
+    dose: DoseTime | null,
+    done: boolean,
+    time = nowTimeEastern()
+  ) {
+    persist({
+      ...state,
+      medicationLogs: withDoseMark(state.medicationLogs, med, dose, done, time),
+    });
+  }
+
+  function markRound(time: string, done: boolean) {
+    const t = normalizeMedTime(time);
+    if (!t) return;
+    const stamp = nowTimeEastern();
+    let logs = [...state.medicationLogs];
+    for (const slot of todaySlots) {
+      if (normalizeMedTime(slot.dose.time) !== t) continue;
+      logs = withDoseMark(logs, slot.med, slot.dose, done, stamp);
     }
     persist({ ...state, medicationLogs: logs });
+    if (done && alarmRound && normalizeMedTime(alarmRound.time) === t) {
+      setAlarmRound(null);
+    }
+  }
+
+  function startEditMed(med: Medication) {
+    setEditingMedId(med.id);
+    setEditDraft({
+      name: med.name,
+      dosage: med.dosage,
+      schedule: med.schedule,
+      notes: med.notes,
+    });
+  }
+
+  function saveEditMed() {
+    if (!editingMedId) return;
+    const name = editDraft.name.trim();
+    if (!name) return;
+    persist({
+      ...state,
+      medications: state.medications.map((m) =>
+        m.id === editingMedId
+          ? {
+              ...m,
+              name: name.slice(0, 120),
+              dosage: editDraft.dosage.trim().slice(0, 120),
+              schedule: editDraft.schedule.trim().slice(0, 200),
+              notes: editDraft.notes.trim().slice(0, 500),
+            }
+          : m
+      ),
+    });
+    setEditingMedId(null);
   }
 
   function filterByRange<T extends { date: string }>(items: T[], tabId: string): T[] {
@@ -1289,8 +1401,10 @@ export function MySpaceHealthBoard() {
             <div>
               <h3 style={{ margin: 0 }}>Today’s checklist</h3>
               <p className="panel-hint" style={{ margin: "4px 0 0" }}>
-                {nextUp
-                  ? `Next up: ${nextUp.med.name}${nextUp.dose.time ? ` at ${formatMedTime(nextUp.dose.time)}` : ""} · remaining stay at the top`
+                {nextRound
+                  ? nextRound.slots.filter((s) => !s.log).length > 1
+                    ? `Next up: ${formatMedTime(nextRound.time)} round — ${listMedNames(nextRound.slots.filter((s) => !s.log).map((s) => s.med.name))} · remaining stay at the top`
+                    : `Next up: ${nextUp?.med.name}${nextUp?.dose.time ? ` at ${formatMedTime(nextUp.dose.time)}` : ""} · remaining stay at the top`
                   : due
                     ? "All of today’s doses are checked off."
                     : "Add medications to start checking them off."}
@@ -1326,6 +1440,7 @@ export function MySpaceHealthBoard() {
                   });
                 }
                 persist({ ...state, medicationLogs: logs });
+                setAlarmRound(null);
               }}
             >
               Mark remaining taken
@@ -1345,59 +1460,120 @@ export function MySpaceHealthBoard() {
             </button>
           </div>
 
+          {alarmRound ? (
+            <div className="ms-h-alarm-banner" role="status">
+              <div>
+                <strong>It’s {formatMedTime(alarmRound.time)}</strong>
+                <p className="panel-hint" style={{ margin: "4px 0 0" }}>
+                  One alarm for this round: {listMedNames(alarmRound.names)}.
+                </p>
+              </div>
+              <div className="hero-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => markRound(alarmRound.time, true)}
+                >
+                  Mark this round taken
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setAlarmRound(null)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {todaySlots.length === 0 ? (
             <p className="panel-hint">No medications on today’s list. Add a med below.</p>
           ) : (
-            <ul className="ms-simple-list">
-              {todaySlots.map(({ med, dose, log }) => {
-                const late = !log && dose.time && now > dose.time;
-                return (
-                  <li key={`${med.id}:${dose.id}`} className={late ? "ms-h-late" : ""}>
-                    <label className="ms-check">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(log)}
-                        onChange={(e) => markDose(med, dose, e.target.checked)}
-                      />
-                      <span>
-                        <strong>{med.name}</strong>
-                        <span className="panel-hint">
-                          {" "}
-                          · {med.dosage || "No dosage"}
-                          {dose.label ? ` · ${dose.label}` : ""}
-                        </span>
-                        <br />
-                        <small>
-                          {log
-                            ? `Logged ${formatMedTime(log.time)}`
-                            : late
-                              ? `Late · suggested ${formatMedTime(dose.time)}`
-                              : "Not taken yet"}
-                        </small>
+            todayRounds.map((round) => {
+              const remaining = round.slots.filter((s) => !s.log);
+              const roundLate =
+                remaining.length > 0 && round.time && round.time !== "none" && now > round.time;
+              return (
+                <div key={round.time} className="ms-h-round">
+                  <div className="ms-h-round-head">
+                    <div>
+                      <strong>
+                        {round.time === "none" ? "Unscheduled" : formatMedTime(round.time)}
+                      </strong>
+                      <span className="panel-hint">
+                        {" "}
+                        · {round.slots.length}{" "}
+                        {round.slots.length === 1 ? "medication" : "medications"}
+                        {remaining.length
+                          ? ` · ${remaining.length} remaining`
+                          : " · all taken"}
+                        {roundLate ? " · late" : ""}
                       </span>
-                    </label>
-                    <div className="ms-h-times">
-                      <span>
-                        Suggested
-                        <strong>{formatMedTime(dose.time)}</strong>
-                      </span>
-                      <label>
-                        Actual time
-                        <input
-                          type="time"
-                          className="ms-inline-time"
-                          value={log?.time || ""}
-                          onChange={(e) => {
-                            if (!e.target.value) return;
-                            markDose(med, dose, true, e.target.value);
-                          }}
-                        />
-                      </label>
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    {remaining.length > 1 ? (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => markRound(round.time, true)}
+                      >
+                        Mark this round taken
+                      </button>
+                    ) : null}
+                  </div>
+                  <ul className="ms-simple-list">
+                    {round.slots.map(({ med, dose, log }) => {
+                      const late = !log && dose.time && now > normalizeMedTime(dose.time);
+                      return (
+                        <li key={`${med.id}:${dose.id}`} className={late ? "ms-h-late" : ""}>
+                          <label className="ms-check">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(log)}
+                              onChange={(e) => markDose(med, dose, e.target.checked)}
+                            />
+                            <span>
+                              <strong>{med.name}</strong>
+                              <span className="panel-hint">
+                                {" "}
+                                · {med.dosage || "No dosage"}
+                                {dose.label ? ` · ${dose.label}` : ""}
+                              </span>
+                              <br />
+                              <small>
+                                {log
+                                  ? `Logged ${formatMedTime(log.time)}`
+                                  : late
+                                    ? `Late · suggested ${formatMedTime(dose.time)}`
+                                    : "Not taken yet"}
+                              </small>
+                            </span>
+                          </label>
+                          <div className="ms-h-times">
+                            <span>
+                              Suggested
+                              <strong>{formatMedTime(dose.time)}</strong>
+                            </span>
+                            <label>
+                              Actual time
+                              <input
+                                type="time"
+                                className="ms-inline-time"
+                                value={log?.time || ""}
+                                onChange={(e) => {
+                                  if (!e.target.value) return;
+                                  markDose(med, dose, true, e.target.value);
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })
           )}
 
           <h4>7-day adherence</h4>
@@ -1426,30 +1602,97 @@ export function MySpaceHealthBoard() {
 
           <h3>Schedule &amp; alarms</h3>
           <p className="panel-hint">
-            Edit times, labels, and alarms here. Day-to-day check-off lives in the checklist above.
+            Edit a medication with the Edit button on its card. Doses that share the same clock
+            time ring as <strong>one alarm</strong> and can be checked off as one round.
           </p>
-          {activeMeds.map((med) => {
+          {state.medications.map((med) => {
             const slots = med.doseTimes;
             const takenCount = slots.filter((d) =>
               state.medicationLogs.some(
                 (l) => l.medicationId === med.id && l.date === today && l.doseTimeId === d.id
               )
             ).length;
+            const editing = editingMedId === med.id;
             return (
-              <article key={med.id} className="ms-h-med">
+              <article key={med.id} id={`ms-med-${med.id}`} className="ms-h-med">
                 <div className="ms-h-progress-head">
                   <div>
                     <strong>{med.name}</strong>
                     <div className="panel-hint">
                       {med.dosage || "Dosage not set"}
                       {med.schedule ? ` · ${med.schedule}` : ""}
+                      {med.active ? "" : " · inactive"}
                     </div>
+                    {med.notes ? <div className="panel-hint">{med.notes}</div> : null}
                   </div>
-                  <span>
-                    {takenCount}/{slots.filter((d) => d.enabled).length || med.timesPerDay} doses
-                    today
-                  </span>
+                  <div className="ms-h-med-actions">
+                    <span>
+                      {takenCount}/{slots.filter((d) => d.enabled).length || med.timesPerDay} doses
+                      today
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => (editing ? setEditingMedId(null) : startEditMed(med))}
+                    >
+                      {editing ? "Cancel" : "Edit"}
+                    </button>
+                  </div>
                 </div>
+                {editing ? (
+                  <form
+                    className="form-grid ms-module-form ms-h-med-edit"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      saveEditMed();
+                    }}
+                  >
+                    <div className="field">
+                      <label>Medication name</label>
+                      <input
+                        value={editDraft.name}
+                        onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Dosage</label>
+                      <input
+                        value={editDraft.dosage}
+                        onChange={(e) => setEditDraft({ ...editDraft, dosage: e.target.value })}
+                        placeholder="e.g. 1,000 IU"
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Schedule notes</label>
+                      <input
+                        value={editDraft.schedule}
+                        onChange={(e) => setEditDraft({ ...editDraft, schedule: e.target.value })}
+                        placeholder="e.g. With breakfast"
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Other notes</label>
+                      <input
+                        value={editDraft.notes}
+                        onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })}
+                        placeholder="Prescriber, purpose, etc."
+                      />
+                    </div>
+                    <div className="hero-actions">
+                      <button type="submit" className="btn btn-primary btn-sm">
+                        Save changes
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setEditingMedId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
                 <label className="ms-check">
                   <input
                     type="checkbox"
@@ -1686,13 +1929,16 @@ export function MySpaceHealthBoard() {
           </div>
           <p className="panel-hint">
             Alarms fire only for dose times that are On, not yet taken, and for meds with “Alarm for
-            this medication” checked. Keep this tab open in the browser.
+            this medication” checked. Same clock time = one beep that lists every remaining
+            medication in that round (seven breakfast pills at 8:00 AM ring once). Keep this tab
+            open in the browser.
           </p>
 
           <h3>Add medication</h3>
           <p className="panel-hint">
-            Name, dosage, and how many times per day (default dose times are created for you — edit
-            them above).
+            Name, dosage, and how many times per day (default dose times are created for you).
+            After you save, use Edit on that medication’s card above to change name, dosage, or
+            notes.
           </p>
           <form
             className="form-grid ms-module-form"
@@ -1797,6 +2043,21 @@ export function MySpaceHealthBoard() {
                       </span>
                     </div>
                     <div className="hero-actions">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          startEditMed(m);
+                          window.setTimeout(() => {
+                            document.getElementById(`ms-med-${m.id}`)?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                          }, 50);
+                        }}
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
