@@ -121,6 +121,8 @@ export type Racer = {
   spinOutTimer: number;
   /** Angular velocity (rad/s) during spin-out */
   spinVel: number;
+  /** Puddle spin: rotate on the spot instead of sliding */
+  spinInPlace: boolean;
   /** Seconds left in the gate-pass wave animation */
   waveTimer: number;
   /** Seconds left stuck in a sinkhole (no drive) */
@@ -373,6 +375,7 @@ export class Race {
       offRoad: false,
       spinOutTimer: 0,
       spinVel: 0,
+      spinInPlace: false,
       waveTimer: 0,
       trapTimer: 0,
       trapIgnoreId: 0,
@@ -417,6 +420,7 @@ export class Race {
         offRoad: false,
         spinOutTimer: 0,
         spinVel: 0,
+        spinInPlace: false,
         waveTimer: 0,
         trapTimer: 0,
         trapIgnoreId: 0,
@@ -880,10 +884,11 @@ export class Race {
   private applyPuddleSpin(r: Racer) {
     const duration = 2.4;
     r.spinOutTimer = Math.max(r.spinOutTimer, duration);
-    r.spinVel = (Math.random() > 0.5 ? 1 : -1) * (9.5 + Math.random() * 4);
-    r.speed *= 0.2;
+    r.spinVel = (Math.random() > 0.5 ? 1 : -1) * (16 + Math.random() * 5);
+    r.speed *= 0.06;
+    r.spinInPlace = true;
     r.effectTimer = Math.max(r.effectTimer, duration);
-    r.effectSpeedMul = Math.min(r.effectSpeedMul, 0.2);
+    r.effectSpeedMul = Math.min(r.effectSpeedMul, 0.12);
     r.steerVel = 0;
   }
 
@@ -913,13 +918,15 @@ export class Race {
     // Fast yaw spin that eases off toward the end
     const t = Math.max(0, r.spinOutTimer);
     const ease = Math.min(1, t / 0.45); // full spin early, taper as timer ends
-    r.angle += r.spinVel * ease * dt;
-    r.spinVel *= Math.exp(-1.1 * dt);
-    // Bleed speed while spinning
-    r.speed *= Math.exp(-1.4 * dt);
+    const yaw = r.spinInPlace ? 1.15 : ease;
+    r.angle += r.spinVel * yaw * dt;
+    r.spinVel *= Math.exp((r.spinInPlace ? -0.42 : -1.1) * dt);
+    // Bleed speed while spinning — puddle dump almost all slide
+    r.speed *= Math.exp((r.spinInPlace ? -4.2 : -1.4) * dt);
     if (r.spinOutTimer <= 0) {
       r.spinOutTimer = 0;
       r.spinVel *= 0.2;
+      r.spinInPlace = false;
       r.effectSpeedMul = Math.max(r.effectSpeedMul, 0.55);
     }
   }
@@ -953,7 +960,7 @@ export class Race {
 
     // During spin-out: almost no control — just watch the cart rotate
     const spinning = r.spinOutTimer > 0.05;
-    const control = spinning ? 0.12 : 1;
+    const control = spinning ? (r.spinInPlace ? 0 : 0.12) : 1;
 
     const braking = input.brakeAmount;
     const gas = input.throttleAmount;
