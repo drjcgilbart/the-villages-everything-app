@@ -5,7 +5,12 @@ import {
   type DriverDef,
   type DriverId,
 } from "./data/drivers";
-import { HAZARD_DEFS, type HazardInstance, type HazardType } from "./data/hazards";
+import {
+  HAZARD_DEFS,
+  isParkedWorkHazard,
+  type HazardInstance,
+  type HazardType,
+} from "./data/hazards";
 import { LANDMARKS, WORLD } from "./data/landmarks";
 import type { AreaId } from "./data/areas";
 import { getDriveArea } from "./data/areas";
@@ -219,6 +224,7 @@ export class Race {
     this.buildSolids();
     this.spawnAmmoPickups();
     this.spawnRacers();
+    this.seedParkedWorkVehicles();
     // More obstacles at start
     for (let i = 0; i < 6; i++) {
       this.spawnHazardAhead(70 + i * 55, i % 2 === 0);
@@ -1313,8 +1319,10 @@ export class Race {
       "porch-police",
       "palm-frond",
       "sinkhole",
+      "work-van",
+      "work-trailer",
     ];
-    const weights = [1.3, 1.4, 1.2, 0.9, 1.1, 0.85, 1.2, 1.25, 0.7];
+    const weights = [1.3, 1.4, 1.2, 0.9, 1.1, 0.85, 1.2, 1.25, 0.7, 0.95, 0.95];
     let total = weights.reduce((a, b) => a + b, 0);
     let roll = Math.random() * total;
     let type: HazardType = "turtle";
@@ -1389,6 +1397,9 @@ export class Race {
         x = s.x + nx * (Math.random() - 0.5) * 3.2;
         y = s.y + ny * (Math.random() - 0.5) * 3.2;
       }
+    } else if (isParkedWorkHazard(type)) {
+      this.placeParkedWorkVehicle(idx, type, Math.random() > 0.5 ? 1 : -1);
+      return;
     }
 
     this.hazards.push({
@@ -1407,17 +1418,77 @@ export class Race {
       faceSign: 1,
     });
 
-    const active = this.hazards.filter((h) => h.active);
-    if (active.length > 12) {
-      active.sort((a, b) => a.id - b.id);
-      for (let i = 0; i < active.length - 12; i++) active[i].active = false;
+    this.cullTransientHazards();
+  }
+
+  /** Park a few contractor rigs on the curb so racers have to swerve or shoot. */
+  private seedParkedWorkVehicles() {
+    if (this.samples.length < 48) return;
+    const spots = 6;
+    const span = this.samples.length - 24;
+    for (let i = 0; i < spots; i++) {
+      const idx = 14 + Math.floor((span * (i + 0.35)) / spots);
+      const type: HazardType = i % 2 === 0 ? "work-van" : "work-trailer";
+      const side = i % 3 === 0 ? -1 : 1;
+      this.placeParkedWorkVehicle(idx, type, side);
     }
+  }
+
+  private placeParkedWorkVehicle(startIdx: number, type: HazardType, side: number) {
+    let idx = ((startIdx % this.samples.length) + this.samples.length) % this.samples.length;
+    let s = this.samples[idx];
+    if (this.nearRoundabout(s.x, s.y, 18)) {
+      let found = false;
+      for (let step = 5; step < 40; step += 3) {
+        const j = (idx + step) % this.samples.length;
+        const cand = this.samples[j];
+        if (!this.nearRoundabout(cand.x, cand.y, 16)) {
+          idx = j;
+          s = cand;
+          found = true;
+          break;
+        }
+      }
+      if (!found) return;
+    }
+
+    const nx = Math.cos(s.angle + Math.PI / 2);
+    const ny = Math.sin(s.angle + Math.PI / 2);
+    const offset = ROAD_HALF_WIDTH * 0.82;
+    const x = s.x + nx * offset * side;
+    const y = s.y + ny * offset * side;
+    if (this.nearRoundabout(x, y, 12)) return;
+
+    this.hazards.push({
+      id: this.hazardId++,
+      type,
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: 9999,
+      maxLife: 9999,
+      active: true,
+      angle: s.angle,
+      phase: Math.random() * Math.PI * 2,
+      faceSign: 1,
+      parked: true,
+    });
+  }
+
+  private cullTransientHazards() {
+    const active = this.hazards.filter((h) => h.active);
+    const transients = active.filter((h) => !h.parked);
+    const cap = 12;
+    if (transients.length <= cap) return;
+    transients.sort((a, b) => a.id - b.id);
+    for (let i = 0; i < transients.length - cap; i++) transients[i].active = false;
   }
 
   private updateHazards(dt: number) {
     for (const h of this.hazards) {
       if (!h.active) continue;
-      h.life -= dt;
+      if (!h.parked) h.life -= dt;
       h.x += h.vx * dt;
       h.y += h.vy * dt;
       // Always face the direction of travel (stops moonwalking across the path)
@@ -1558,7 +1629,11 @@ export class Race {
         best = h;
       }
     }
-    this.upcomingHazard = best ? "Watch the path!" : null;
+    this.upcomingHazard = best
+      ? isParkedWorkHazard(best.type)
+        ? "Work crew on the curb!"
+        : "Watch the path!"
+      : null;
   }
 
   getPlayer(): Racer {

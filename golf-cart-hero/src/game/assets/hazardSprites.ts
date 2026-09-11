@@ -13,6 +13,8 @@ const HAZARD_SPRITE_URLS: Partial<Record<HazardType, string>> = {
   wanderer: assetUrl("assets/hazards/wanderer.jpg"),
   cop: assetUrl("assets/hazards/cop.jpg"),
   "porch-police": assetUrl("assets/hazards/porch-police.jpg"),
+  "work-van": assetUrl("assets/hazards/work-van.jpg"),
+  "work-trailer": assetUrl("assets/hazards/work-trailer.jpg"),
 };
 
 /** World height of the sprite plane per hazard type */
@@ -23,6 +25,14 @@ export const HAZARD_SPRITE_HEIGHT: Partial<Record<HazardType, number>> = {
   wanderer: 3.4,
   cop: 2.9,
   "porch-police": 3.5,
+  "work-van": 2.9,
+  "work-trailer": 2.7,
+};
+
+/** Width / height of the sprite plane (long vehicles sit wider on the road). */
+export const HAZARD_SPRITE_ASPECT: Partial<Record<HazardType, number>> = {
+  "work-van": 1.72,
+  "work-trailer": 2.15,
 };
 
 const materialCache = new Map<HazardType, THREE.SpriteMaterial>();
@@ -110,8 +120,8 @@ export function createHazardSprite(type: HazardType): THREE.Sprite | null {
   if (!mat) return null;
   const sprite = new THREE.Sprite(mat);
   const h = HAZARD_SPRITE_HEIGHT[type] ?? 2.5;
-  // Keep roughly square aspect from art
-  sprite.scale.set(h * 1.05, h, 1);
+  const aspect = HAZARD_SPRITE_ASPECT[type] ?? 1.05;
+  sprite.scale.set(h * aspect, h, 1);
   sprite.center.set(0.5, 0);
   sprite.position.y = 0.05;
   return sprite;

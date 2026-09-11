@@ -7,7 +7,9 @@ export type HazardType =
   | "cop"
   | "porch-police"
   | "palm-frond"
-  | "sinkhole";
+  | "sinkhole"
+  | "work-van"
+  | "work-trailer";
 
 export type HazardDef = {
   type: HazardType;
@@ -133,6 +135,30 @@ export const HAZARD_DEFS: Record<HazardType, HazardDef> = {
     color: "#e85d14",
     scale: 2.4,
   },
+  "work-van": {
+    type: "work-van",
+    name: "Contractor Van",
+    emoji: "🚐",
+    scorePenalty: 110,
+    speedMul: 0.38,
+    duration: 1.5,
+    radius: 3.4,
+    message: "Work van on the curb! Lanai crew in session.",
+    color: "#e8eef4",
+    scale: 2.2,
+  },
+  "work-trailer": {
+    type: "work-trailer",
+    name: "Pickup & Trailer",
+    emoji: "🚚",
+    scorePenalty: 130,
+    speedMul: 0.32,
+    duration: 1.7,
+    radius: 4.4,
+    message: "Pickup plus cargo trailer — squeeze past the landscapers!",
+    color: "#c5cdd6",
+    scale: 2.6,
+  },
 };
 
 export type HazardInstance = {
@@ -155,6 +181,8 @@ export type HazardInstance = {
    * way the hazard is moving on screen.
    */
   faceSign: number;
+  /** Parked roadside vehicles stay for the whole race and skip cull. */
+  parked?: boolean;
 };
 
 /**
@@ -168,4 +196,10 @@ export const HAZARD_ART_FACES_RIGHT: Partial<Record<HazardType, boolean>> = {
   cop: true,
   "porch-police": true,
   lightning: true,
+  "work-van": true,
+  "work-trailer": true,
 };
+
+export function isParkedWorkHazard(type: HazardType): boolean {
+  return type === "work-van" || type === "work-trailer";
+}

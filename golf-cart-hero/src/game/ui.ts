@@ -366,6 +366,8 @@ export class UI {
             <li>Older villager with cane, arm raised (“slow down!”)</li>
             <li>Palm fronds on the pavement (after a storm)</li>
             <li>Big yellow/orange pothole with cones — fall in and you’re stuck about 5 seconds</li>
+            <li>White contractor van parked on the curb (ladder rack, cone on the bumper)</li>
+            <li>Pickup truck with a cargo trailer parked along the street — swerve around or shoot it</li>
           </ul>
           <p><strong>Score:</strong> Speed + landmark bonuses − hazard penalties + finish place. Top runs land on the <em>${leaderboardTitle()}</em> board.</p>
           ${
