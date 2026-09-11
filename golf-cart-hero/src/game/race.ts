@@ -8,6 +8,7 @@ import {
 import {
   HAZARD_DEFS,
   isParkedWorkHazard,
+  isSprinklerHazard,
   type HazardInstance,
   type HazardType,
 } from "./data/hazards";
@@ -225,6 +226,7 @@ export class Race {
     this.spawnAmmoPickups();
     this.spawnRacers();
     this.seedParkedWorkVehicles();
+    this.seedSprinklers();
     // More obstacles at start
     for (let i = 0; i < 6; i++) {
       this.spawnHazardAhead(70 + i * 55, i % 2 === 0);
@@ -874,6 +876,17 @@ export class Race {
     r.steerVel = 0;
   }
 
+  /** Sprinkler puddle: hydroplane spin for a couple of seconds. */
+  private applyPuddleSpin(r: Racer) {
+    const duration = 2.4;
+    r.spinOutTimer = Math.max(r.spinOutTimer, duration);
+    r.spinVel = (Math.random() > 0.5 ? 1 : -1) * (9.5 + Math.random() * 4);
+    r.speed *= 0.2;
+    r.effectTimer = Math.max(r.effectTimer, duration);
+    r.effectSpeedMul = Math.min(r.effectSpeedMul, 0.2);
+    r.steerVel = 0;
+  }
+
   /** Sinkhole: no drive until the timer runs out. */
   private tickTrap(r: Racer, dt: number): boolean {
     if (r.trapTimer <= 0) return false;
@@ -1321,8 +1334,9 @@ export class Race {
       "sinkhole",
       "work-van",
       "work-trailer",
+      "sprinkler",
     ];
-    const weights = [1.3, 1.4, 1.2, 0.9, 1.1, 0.85, 1.2, 1.25, 0.7, 0.95, 0.95];
+    const weights = [1.3, 1.4, 1.2, 0.9, 1.1, 0.85, 1.2, 1.25, 0.7, 0.95, 0.95, 0.9];
     let total = weights.reduce((a, b) => a + b, 0);
     let roll = Math.random() * total;
     let type: HazardType = "turtle";
@@ -1400,6 +1414,9 @@ export class Race {
     } else if (isParkedWorkHazard(type)) {
       this.placeParkedWorkVehicle(idx, type, Math.random() > 0.5 ? 1 : -1);
       return;
+    } else if (isSprinklerHazard(type)) {
+      this.placeSprinkler(idx, Math.random() > 0.5 ? 1 : -1);
+      return;
     }
 
     this.hazards.push({
@@ -1473,6 +1490,62 @@ export class Race {
       phase: Math.random() * Math.PI * 2,
       faceSign: 1,
       parked: true,
+      side,
+    });
+  }
+
+  /** A couple of lawn sprinklers dumping onto the cart path. */
+  private seedSprinklers() {
+    if (this.samples.length < 48) return;
+    const spots = 3;
+    const span = this.samples.length - 24;
+    for (let i = 0; i < spots; i++) {
+      const idx = 18 + Math.floor((span * (i + 0.7)) / spots);
+      const side = i % 2 === 0 ? 1 : -1;
+      this.placeSprinkler(idx, side);
+    }
+  }
+
+  private placeSprinkler(startIdx: number, side: number) {
+    let idx = ((startIdx % this.samples.length) + this.samples.length) % this.samples.length;
+    let s = this.samples[idx];
+    if (this.nearRoundabout(s.x, s.y, 18)) {
+      let found = false;
+      for (let step = 5; step < 40; step += 3) {
+        const j = (idx + step) % this.samples.length;
+        const cand = this.samples[j];
+        if (!this.nearRoundabout(cand.x, cand.y, 16)) {
+          idx = j;
+          s = cand;
+          found = true;
+          break;
+        }
+      }
+      if (!found) return;
+    }
+
+    const nx = Math.cos(s.angle + Math.PI / 2);
+    const ny = Math.sin(s.angle + Math.PI / 2);
+    const offset = ROAD_HALF_WIDTH * 0.4;
+    const x = s.x + nx * offset * side;
+    const y = s.y + ny * offset * side;
+    if (this.nearRoundabout(x, y, 12)) return;
+
+    this.hazards.push({
+      id: this.hazardId++,
+      type: "sprinkler",
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: 9999,
+      maxLife: 9999,
+      active: true,
+      angle: s.angle,
+      phase: Math.random() * Math.PI * 2,
+      faceSign: 1,
+      parked: true,
+      side,
     });
   }
 
@@ -1497,7 +1570,7 @@ export class Race {
         h.angle = Math.atan2(h.vy, h.vx);
       }
       // Quiet the circles: despawn anything that drifts onto a roundabout
-      if (this.nearRoundabout(h.x, h.y, 10)) {
+      if (!h.parked && this.nearRoundabout(h.x, h.y, 10)) {
         h.active = false;
         continue;
       }
@@ -1515,7 +1588,7 @@ export class Race {
       if (!h.active) continue;
       const def = HAZARD_DEFS[h.type];
       const d = Math.hypot(h.x - r.x, h.y - r.y);
-      if (h.type === "sinkhole" && r.trapIgnoreId === h.id) {
+      if ((h.type === "sinkhole" || h.type === "sprinkler") && r.trapIgnoreId === h.id) {
         // Free once they've driven well clear; next lap can fall in again
         if (d > def.radius + 6) r.trapIgnoreId = 0;
         continue;
@@ -1535,6 +1608,17 @@ export class Race {
               gained > 0 ? `+${gained} lightning bolts` : "Bolts already charged",
               1.8
             );
+          }
+          continue;
+        }
+        if (h.type === "sprinkler") {
+          this.applyPuddleSpin(r);
+          r.trapIgnoreId = h.id;
+          r.hazardsHit += 1;
+          if (r.isPlayer) {
+            r.score = Math.max(0, r.score - def.scorePenalty);
+            sfx.spinOut();
+            this.pushEvent("toast", def.message, `−${def.scorePenalty} pts`, 2.4);
           }
           continue;
         }
@@ -1632,7 +1716,9 @@ export class Race {
     this.upcomingHazard = best
       ? isParkedWorkHazard(best.type)
         ? "Work crew on the curb!"
-        : "Watch the path!"
+        : isSprinklerHazard(best.type)
+          ? "Sprinkler puddle ahead!"
+          : "Watch the path!"
       : null;
   }
 

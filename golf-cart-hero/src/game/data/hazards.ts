@@ -9,7 +9,8 @@ export type HazardType =
   | "palm-frond"
   | "sinkhole"
   | "work-van"
-  | "work-trailer";
+  | "work-trailer"
+  | "sprinkler";
 
 export type HazardDef = {
   type: HazardType;
@@ -159,6 +160,18 @@ export const HAZARD_DEFS: Record<HazardType, HazardDef> = {
     color: "#c5cdd6",
     scale: 2.6,
   },
+  sprinkler: {
+    type: "sprinkler",
+    name: "Lawn Sprinkler",
+    emoji: "💦",
+    scorePenalty: 90,
+    speedMul: 0.22,
+    duration: 2.4,
+    radius: 3.3,
+    message: "Sprinkler puddle! Cart’s doing the cha-cha.",
+    color: "#4eb7e8",
+    scale: 2.2,
+  },
 };
 
 export type HazardInstance = {
@@ -183,6 +196,8 @@ export type HazardInstance = {
   faceSign: number;
   /** Parked roadside vehicles stay for the whole race and skip cull. */
   parked?: boolean;
+  /** Shoulder side for parked vans / sprinklers (+1 left of travel, −1 right). */
+  side?: number;
 };
 
 /**
@@ -202,4 +217,8 @@ export const HAZARD_ART_FACES_RIGHT: Partial<Record<HazardType, boolean>> = {
 
 export function isParkedWorkHazard(type: HazardType): boolean {
   return type === "work-van" || type === "work-trailer";
+}
+
+export function isSprinklerHazard(type: HazardType): boolean {
+  return type === "sprinkler";
 }

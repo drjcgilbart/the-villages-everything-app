@@ -2174,9 +2174,34 @@ export class World3D {
       if (h.type === "golf-ball" && !entry.isSprite) {
         entry.root.rotation.x = this.clock * 9 + h.phase;
         entry.root.rotation.z = this.clock * 6;
-      } else if (h.type === "sinkhole") {
+      } else if (h.type === "sinkhole" || h.type === "sprinkler") {
         // Stay planted on the road — no travel yaw
         entry.root.rotation.y = 0;
+        if (h.type === "sprinkler") {
+          const sheen = entry.root.getObjectByName("sprinkler-sheen");
+          if (sheen) {
+            const pulse = 0.92 + Math.sin(this.clock * 3.2 + h.phase) * 0.08;
+            sheen.scale.set(pulse, pulse, 1);
+          }
+          const spray = entry.root.getObjectByName("sprinkler-spray");
+          if (spray) {
+            for (const child of spray.children) {
+              const arc = child.userData.arc as
+                | { p0: { x: number; y: number; z: number }; p1: { x: number; y: number; z: number }; p2: { x: number; y: number; z: number }; t0: number }
+                | undefined;
+              if (!arc) continue;
+              const t = (arc.t0 + this.clock * 0.85 + h.phase * 0.1) % 1;
+              const u = 1 - t;
+              child.position.set(
+                u * u * arc.p0.x + 2 * u * t * arc.p1.x + t * t * arc.p2.x,
+                u * u * arc.p0.y + 2 * u * t * arc.p1.y + t * t * arc.p2.y,
+                u * u * arc.p0.z + 2 * u * t * arc.p1.z + t * t * arc.p2.z
+              );
+              const s = 0.7 + t * 0.7;
+              child.scale.setScalar(s);
+            }
+          }
+        }
       } else if (!entry.isSprite) {
         entry.root.rotation.y = -h.angle + Math.PI / 2;
       } else if (entry.sprite && entry.baseScaleX) {
@@ -3086,6 +3111,92 @@ function buildSinkholeHazard(): THREE.Group {
   return g;
 }
 
+function buildSprinklerHazard(h: HazardInstance): THREE.Group {
+  const g = new THREE.Group();
+  const side = h.side ?? 1;
+  const nx = Math.cos(h.angle + Math.PI / 2) * side;
+  const nz = Math.sin(h.angle + Math.PI / 2) * side;
+  const fx = Math.cos(h.angle);
+  const fz = Math.sin(h.angle);
+  const lawn = ROAD_HALF_WIDTH * 0.6 + 2.5;
+
+  const water = new THREE.MeshStandardMaterial({
+    color: "#4eb7e8",
+    roughness: 0.08,
+    metalness: 0.42,
+    transparent: true,
+    opacity: 0.58,
+    depthWrite: false,
+  });
+  const puddle = new THREE.Mesh(new THREE.CircleGeometry(2.6, 28), water);
+  puddle.rotation.x = -Math.PI / 2;
+  puddle.position.y = 0.05;
+  puddle.scale.set(1.25, 0.82, 1);
+  g.add(puddle);
+
+  const sheen = new THREE.Mesh(
+    new THREE.CircleGeometry(1.55, 22),
+    new THREE.MeshStandardMaterial({
+      color: "#9ee7ff",
+      roughness: 0.05,
+      metalness: 0.55,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    }),
+  );
+  sheen.rotation.x = -Math.PI / 2;
+  sheen.position.y = 0.07;
+  sheen.name = "sprinkler-sheen";
+  g.add(sheen);
+
+  const chrome = mat("#c5d0da", 0.28, 0.78);
+  const dark = mat("#3a454c", 0.55, 0.35);
+  const heads = [-1.15, 1.15];
+  const spray = new THREE.Group();
+  spray.name = "sprinkler-spray";
+
+  const dropGeo = new THREE.SphereGeometry(0.07, 6, 5);
+  const dropMat = new THREE.MeshBasicMaterial({
+    color: "#b7ecff",
+    transparent: true,
+    opacity: 0.82,
+    depthWrite: false,
+  });
+
+  for (let hi = 0; hi < heads.length; hi++) {
+    const along = heads[hi];
+    const hx = nx * lawn + fx * along;
+    const hz = nz * lawn + fz * along;
+
+    const riser = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.42, 8), chrome);
+    riser.position.set(hx, 0.22, hz);
+    riser.castShadow = true;
+    g.add(riser);
+    const nozzle = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), dark);
+    nozzle.position.set(hx, 0.46, hz);
+    g.add(nozzle);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.06, 10), dark);
+    base.position.set(hx, 0.04, hz);
+    g.add(base);
+
+    const p0 = { x: hx, y: 0.5, z: hz };
+    const p2 = { x: fx * along * 0.2, y: 0.12, z: fz * along * 0.2 };
+    const p1 = {
+      x: (p0.x + p2.x) * 0.5 - nx * 0.4,
+      y: 1.85,
+      z: (p0.z + p2.z) * 0.5 - nz * 0.4,
+    };
+    for (let i = 0; i < 10; i++) {
+      const drop = new THREE.Mesh(dropGeo, dropMat);
+      drop.userData.arc = { p0, p1, p2, t0: i / 10 };
+      spray.add(drop);
+    }
+  }
+  g.add(spray);
+  return g;
+}
+
 function buildHazardMesh(
   h: HazardInstance
 ): { root: THREE.Group; isSprite: boolean; sprite?: THREE.Sprite } {
@@ -3097,6 +3208,9 @@ function buildHazardMesh(
   }
   if (h.type === "sinkhole") {
     return { root: buildSinkholeHazard(), isSprite: false };
+  }
+  if (h.type === "sprinkler") {
+    return { root: buildSprinklerHazard(h), isSprite: false };
   }
 
   const g = new THREE.Group();
