@@ -15,6 +15,49 @@
     }
   ],
   "votes": [],
-  "results": [],
-  "updatedAt": "2026-08-08T18:42:16.587Z"
+  "results": [
+    {
+      "monthKey": "2026-08",
+      "featuredInMonthKey": "2026-09",
+      "tabulatedAt": "2026-09-01T12:36:09.322Z",
+      "categories": [
+        {
+          "category": "pet",
+          "winnerEntryId": "bom-mskq065i-01ed53",
+          "honorableMentionIds": []
+        },
+        {
+          "category": "car",
+          "winnerEntryId": null,
+          "honorableMentionIds": []
+        },
+        {
+          "category": "golf-cart",
+          "winnerEntryId": null,
+          "honorableMentionIds": []
+        },
+        {
+          "category": "villager",
+          "winnerEntryId": null,
+          "honorableMentionIds": []
+        },
+        {
+          "category": "landscaping",
+          "winnerEntryId": null,
+          "honorableMentionIds": []
+        },
+        {
+          "category": "house",
+          "winnerEntryId": null,
+          "honorableMentionIds": []
+        },
+        {
+          "category": "best-of-rest",
+          "winnerEntryId": null,
+          "honorableMentionIds": []
+        }
+      ]
+    }
+  ],
+  "updatedAt": "2026-09-01T12:36:09.322Z"
 }

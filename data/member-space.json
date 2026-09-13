@@ -9,14 +9,23 @@
       "goldenLoofah": false,
       "goldenLoofahAt": null,
       "planExpiresAt": null,
-      "topTierNomination": null
+      "topTierNomination": null,
+      "trial": null,
+      "householdJoinedAt": null
     },
     {
       "memberId": "mem-msggkh7y-a66798",
-      "plan": "porch_waver",
+      "plan": "square_royalty",
       "favoriteClubIds": [],
-      "updatedAt": "2026-08-08T09:41:52.849Z"
+      "updatedAt": "2026-09-01T12:13:24.288Z",
+      "donationBadges": [],
+      "goldenLoofah": false,
+      "goldenLoofahAt": null,
+      "planExpiresAt": null,
+      "topTierNomination": null,
+      "trial": null,
+      "householdJoinedAt": null
     }
   ],
-  "updatedAt": "2026-08-08T09:41:52.849Z"
+  "updatedAt": "2026-09-01T12:13:24.289Z"
 }

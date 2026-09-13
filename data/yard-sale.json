@@ -4,13 +4,13 @@
       "id": "mem-msggkh7y-a66798",
       "name": "Jonathan Gilbart",
       "email": "dr.gilbart@comcast.net",
-      "passwordHash": "77b4bbbc9389c93e1d2e8ab5ec6c7840:577492d0ba7dd35dcc15557c0048fe30fa3c9600ac11298b6c1fd41ed35132734d60b07361d8c22dbd5db24645b874bb82561914732e6d4d89c60887e17bd0e2",
+      "passwordHash": "c4dd9a82246e4f46c70076b291e9871e:2012609773bb6237f059cae3e7eb77a6cb0c3496680887da07f5574dc1d82298a224f24c4db6830d4b567cb7a7466d7e85532c77ec792a8552f160ee7e9c9ad8",
       "village": "Eastport",
-      "status": "pending",
+      "status": "approved",
       "createdAt": "2026-08-05T19:06:43.652Z",
-      "approvedAt": null
+      "approvedAt": "2026-09-01T11:40:21.191Z"
     }
   ],
   "listings": [],
-  "updatedAt": "2026-08-05T19:06:43.767Z"
+  "updatedAt": "2026-09-01T12:13:24.290Z"
 }
