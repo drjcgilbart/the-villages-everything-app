@@ -738,6 +738,47 @@ function pct(n: number, goal: number): number {
   return clamp(Math.round((n / goal) * 100), 0, 100);
 }
 
+function HabitSlider({
+  label,
+  value,
+  max,
+  step,
+  display,
+  onChange,
+  tone,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  step: number;
+  display: string;
+  onChange: (n: number) => void;
+  tone?: "steps" | "protein" | "sleep";
+}) {
+  const ceiling = Math.max(max, value, step);
+  return (
+    <div className="ms-h-slider-block">
+      <div className="ms-h-track">
+        <span>{label}</span>
+        <strong>{display}</strong>
+      </div>
+      <input
+        type="range"
+        className={`ms-h-range-slider${tone ? ` is-${tone}` : ""}`}
+        min={0}
+        max={ceiling}
+        step={step}
+        value={Math.min(value, ceiling)}
+        aria-valuemin={0}
+        aria-valuemax={ceiling}
+        aria-valuenow={value}
+        aria-label={label}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </div>
+  );
+}
+
 /**
  * Health lanai — same feature set as My Retirement Reboot Health,
  * saved to the Hub member account (no photo files on the server).
@@ -848,6 +889,38 @@ export function MySpaceHealthBoard() {
     persist({
       ...state,
       habits: { ...state.habits, [today]: { ...habit, ...patch } },
+    });
+  }
+
+  function patchSleepHours(hours: number) {
+    const rounded = Math.min(14, Math.max(0, round1(Math.round(hours * 4) / 4)));
+    const last =
+      [...state.sleeps]
+        .filter((s) => s?.date && s.date <= today)
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-1)[0] || null;
+    const nextSleeps = last
+      ? state.sleeps.map((s) => (s.id === last.id ? { ...s, hours: rounded } : s))
+      : [
+          {
+            id: uid("sl"),
+            date: today,
+            hours: rounded,
+            quality: "average",
+            notes: "",
+            bedtime: "",
+            waketime: "",
+            interruptions: null,
+          },
+          ...state.sleeps,
+        ];
+    persist({
+      ...state,
+      sleeps: nextSleeps,
+      habits: {
+        ...state.habits,
+        [today]: { ...habit, sleep: rounded >= (state.sleepGoalHours || 8) },
+      },
     });
   }
 
@@ -1217,95 +1290,60 @@ export function MySpaceHealthBoard() {
 
           <h4>Today’s fuel &amp; movement</h4>
           <div className="track-block">
-            <div className="ms-h-track">
-              <span>💧 Water</span>
-              <strong>
-                {habit.waterOz} / {state.dailyWaterGoalOz} oz
-              </strong>
-            </div>
-            <div className="ms-h-mini">
-              <span style={{ width: `${pct(habit.waterOz, state.dailyWaterGoalOz)}%` }} />
-            </div>
-            <div className="ms-h-quick">
-              {[8, 12, 16].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => patchHabit({ waterOz: habit.waterOz + n })}
-                >
-                  +{n} oz
-                </button>
-              ))}
-            </div>
-
-            <div className="ms-h-track">
-              <span>👟 Steps</span>
-              <strong>
-                {habit.steps.toLocaleString()} / {state.dailyStepsGoal.toLocaleString()}
-              </strong>
-            </div>
-            <div className="ms-h-mini ms-h-mini-steps">
-              <span style={{ width: `${pct(habit.steps, state.dailyStepsGoal)}%` }} />
-            </div>
-            <div className="ms-h-quick">
-              {[1000, 2000, 5000].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => patchHabit({ steps: habit.steps + n })}
-                >
-                  +{n.toLocaleString()}
-                </button>
-              ))}
-            </div>
-
-            <div className="ms-h-track">
-              <span>🥩 Protein</span>
-              <strong>
-                {habit.proteinG} / {state.dailyProteinGoalG} g
-              </strong>
-            </div>
-            <div className="ms-h-mini ms-h-mini-protein">
-              <span style={{ width: `${pct(habit.proteinG, state.dailyProteinGoalG)}%` }} />
-            </div>
-            <div className="ms-h-quick">
-              {[20, 30, 40].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => patchHabit({ proteinG: habit.proteinG + n })}
-                >
-                  +{n} g
-                </button>
-              ))}
-            </div>
-
-            <div className="ms-h-track">
-              <span>😴 Sleep</span>
-              <strong>
-                {sleepStats.lastNight
+            <HabitSlider
+              label="💧 Water"
+              value={habit.waterOz}
+              max={Math.max(state.dailyWaterGoalOz * 2, 128)}
+              step={1}
+              display={`${habit.waterOz} / ${state.dailyWaterGoalOz} oz`}
+              onChange={(n) =>
+                patchHabit({
+                  waterOz: n,
+                  water: n >= state.dailyWaterGoalOz,
+                })
+              }
+            />
+            <HabitSlider
+              label="👟 Steps"
+              value={habit.steps}
+              max={Math.max(state.dailyStepsGoal * 2, 20000)}
+              step={50}
+              tone="steps"
+              display={`${habit.steps.toLocaleString()} / ${state.dailyStepsGoal.toLocaleString()}`}
+              onChange={(n) => patchHabit({ steps: n, walked: n >= 1000 || habit.walked })}
+            />
+            <HabitSlider
+              label="🥩 Protein"
+              value={habit.proteinG}
+              max={Math.max(state.dailyProteinGoalG * 2, 250)}
+              step={1}
+              tone="protein"
+              display={`${habit.proteinG} / ${state.dailyProteinGoalG} g`}
+              onChange={(n) =>
+                patchHabit({
+                  proteinG: n,
+                  protein: n >= state.dailyProteinGoalG,
+                })
+              }
+            />
+            <HabitSlider
+              label="😴 Sleep"
+              value={Number(sleepStats.lastNight?.hours) || 0}
+              max={14}
+              step={0.25}
+              tone="sleep"
+              display={
+                sleepStats.lastNight
                   ? `${sleepStats.lastNight.hours}h · ${sleepQualityMeta(sleepStats.lastNight.quality).label}`
-                  : "Not logged"}
-              </strong>
-            </div>
-            <div className="ms-h-mini ms-h-mini-sleep">
-              <span
-                style={{
-                  width: `${
-                    sleepStats.lastNight?.hours
-                      ? pct(sleepStats.lastNight.hours, state.sleepGoalHours)
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
+                  : "Drag to log hours"
+              }
+              onChange={patchSleepHours}
+            />
             <p className="panel-hint">
-              {sleepStats.lastNight
-                ? `Last night${sleepStats.streak ? ` · ${sleepStats.streak}-night goal streak` : ""}`
-                : "Log last night on the Sleep tab"}
+              Drag in small steps — 1 oz, 50 steps, 1 g, 15 minutes of sleep.
+              {sleepStats.lastNight && sleepStats.streak
+                ? ` Last night · ${sleepStats.streak}-night goal streak.`
+                : ""}
             </p>
             <p className="panel-hint">
               Today: {todayMeals.length} meal{todayMeals.length === 1 ? "" : "s"} · {todayExMin} min

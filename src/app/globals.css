@@ -3251,6 +3251,115 @@ button.ms-home-card:hover {
   background: #553c9a;
 }
 
+.ms-h-slider-block {
+  margin-top: 0.55rem;
+}
+
+.ms-h-range-slider {
+  display: block;
+  width: 100%;
+  height: 1.7rem;
+  margin: 0.1rem 0 0.35rem;
+  appearance: none;
+  background: transparent;
+  accent-color: #1f6b4a;
+  cursor: pointer;
+}
+
+.ms-h-range-slider.is-steps {
+  accent-color: #2b6cb0;
+}
+
+.ms-h-range-slider.is-protein {
+  accent-color: #c05621;
+}
+
+.ms-h-range-slider.is-sleep {
+  accent-color: #553c9a;
+}
+
+.ms-h-range-slider::-webkit-slider-runnable-track {
+  height: 0.7rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 74, 0.16);
+}
+
+.ms-h-range-slider.is-steps::-webkit-slider-runnable-track {
+  background: rgba(43, 108, 176, 0.18);
+}
+
+.ms-h-range-slider.is-protein::-webkit-slider-runnable-track {
+  background: rgba(192, 86, 33, 0.18);
+}
+
+.ms-h-range-slider.is-sleep::-webkit-slider-runnable-track {
+  background: rgba(85, 60, 154, 0.18);
+}
+
+.ms-h-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: -0.32rem;
+  border-radius: 50%;
+  background: #1f6b4a;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.ms-h-range-slider.is-steps::-webkit-slider-thumb {
+  background: #2b6cb0;
+}
+
+.ms-h-range-slider.is-protein::-webkit-slider-thumb {
+  background: #c05621;
+}
+
+.ms-h-range-slider.is-sleep::-webkit-slider-thumb {
+  background: #553c9a;
+}
+
+.ms-h-range-slider::-moz-range-track {
+  height: 0.7rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(31, 107, 74, 0.16);
+}
+
+.ms-h-range-slider.is-steps::-moz-range-track {
+  background: rgba(43, 108, 176, 0.18);
+}
+
+.ms-h-range-slider.is-protein::-moz-range-track {
+  background: rgba(192, 86, 33, 0.18);
+}
+
+.ms-h-range-slider.is-sleep::-moz-range-track {
+  background: rgba(85, 60, 154, 0.18);
+}
+
+.ms-h-range-slider::-moz-range-thumb {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: #1f6b4a;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.ms-h-range-slider.is-steps::-moz-range-thumb {
+  background: #2b6cb0;
+}
+
+.ms-h-range-slider.is-protein::-moz-range-thumb {
+  background: #c05621;
+}
+
+.ms-h-range-slider.is-sleep::-moz-range-thumb {
+  background: #553c9a;
+}
+
 .ms-h-track {
   display: flex;
   justify-content: space-between;
