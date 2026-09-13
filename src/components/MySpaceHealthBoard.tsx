@@ -756,6 +756,11 @@ function HabitSlider({
   display,
   onChange,
   tone,
+  goal,
+  goalUnit,
+  goalStep,
+  onGoalChange,
+  meet = "more",
 }: {
   label: string;
   value: number;
@@ -765,28 +770,79 @@ function HabitSlider({
   display: string;
   onChange: (n: number) => void;
   tone?: "steps" | "protein" | "sleep" | "weight";
+  goal?: number | null;
+  goalUnit?: string;
+  goalStep?: number;
+  onGoalChange?: (n: number) => void;
+  meet?: "more" | "less" | "close";
 }) {
-  const ceiling = Math.max(max, value, step);
-  const floor = Math.min(min, value);
+  const ceiling = Math.max(max, value, goal || 0, step);
+  const floor = Math.min(min, value, goal ?? min);
+  const span = Math.max(0.0001, ceiling - floor);
+  const goalPct =
+    goal != null && Number.isFinite(goal)
+      ? clamp(((goal - floor) / span) * 100, 0, 100)
+      : null;
+  const met =
+    goal != null && Number.isFinite(goal)
+      ? meet === "close"
+        ? Math.abs(value - goal) <= 1
+        : meet === "less"
+          ? value <= goal
+          : value >= goal
+      : false;
+  const flagSide = goalPct == null ? "center" : goalPct < 14 ? "start" : goalPct > 86 ? "end" : "center";
   return (
     <div className="ms-h-slider-block">
       <div className="ms-h-track">
         <span>{label}</span>
         <strong>{display}</strong>
       </div>
-      <input
-        type="range"
-        className={`ms-h-range-slider${tone ? ` is-${tone}` : ""}`}
-        min={floor}
-        max={ceiling}
-        step={step}
-        value={Math.min(Math.max(value, floor), ceiling)}
-        aria-valuemin={floor}
-        aria-valuemax={ceiling}
-        aria-valuenow={value}
-        aria-label={label}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
+      <div className="ms-h-slider-wrap">
+        {goalPct != null ? (
+          <div
+            className={`ms-h-goal-mark is-${flagSide}${met ? " is-met" : ""}`}
+            style={{ left: `${goalPct}%` }}
+          >
+            <span className="ms-h-goal-flag">
+              Goal {goal}
+              {goalUnit ? ` ${goalUnit}` : ""}
+            </span>
+          </div>
+        ) : null}
+        <input
+          type="range"
+          className={`ms-h-range-slider${tone ? ` is-${tone}` : ""}`}
+          min={floor}
+          max={ceiling}
+          step={step}
+          value={Math.min(Math.max(value, floor), ceiling)}
+          aria-valuemin={floor}
+          aria-valuemax={ceiling}
+          aria-valuenow={value}
+          aria-label={label}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+      </div>
+      <div className="ms-h-goal-edit">
+        {onGoalChange ? (
+          <label>
+            Set goal
+            <input
+              type="number"
+              min={0}
+              step={goalStep ?? step}
+              value={goal ?? ""}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isFinite(n) && n >= 0) onGoalChange(n);
+              }}
+            />
+            {goalUnit ? <span>{goalUnit}</span> : null}
+          </label>
+        ) : null}
+        {met ? <em className="ms-h-goal-met">Goal met</em> : null}
+      </div>
     </div>
   );
 }
@@ -809,8 +865,9 @@ export function MySpaceHealthBoard() {
   );
   const autoRecapOnce = useRef(false);
   const [tab, setTab] = useState<HealthTab>("overview");
-  const [weightInput, setWeightInput] = useState("");
   const [weightNote, setWeightNote] = useState("");
+  const [savingDay, setSavingDay] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [mealType, setMealType] = useState("breakfast");
   const [mealTitle, setMealTitle] = useState("");
   const [mealPick, setMealPick] = useState("__new__");
@@ -987,7 +1044,80 @@ export function MySpaceHealthBoard() {
     });
   }
 
-  const bmiVal = calcBmi(state.currentWeight, state.heightInches);
+  function patchHeight(feetRaw: string, inchesRaw: string) {
+    const feet = Number(feetRaw);
+    const inches = Number(inchesRaw);
+    if (!Number.isFinite(feet) && !Number.isFinite(inches)) {
+      persist({ ...state, heightInches: null });
+      return;
+    }
+    const ft = Number.isFinite(feet) ? Math.max(0, Math.min(8, feet)) : 0;
+    const inn = Number.isFinite(inches) ? Math.max(0, Math.min(11.9, inches)) : 0;
+    persist({ ...state, heightInches: round1(ft * 12 + inn) });
+  }
+
+  async function saveTodaysTotals() {
+    const w =
+      state.entries.find((e) => e.date === today)?.weight ??
+      state.currentWeight ??
+      [...state.entries].filter((e) => e.weight != null).slice(-1)[0]?.weight ??
+      null;
+    const next: HealthState = {
+      ...state,
+      currentWeight: w ?? state.currentWeight,
+      startWeight: state.startWeight ?? w ?? null,
+      entries:
+        w != null
+          ? [
+              ...state.entries.filter((x) => x.date !== today),
+              {
+                date: today,
+                weight: w,
+                notes: weightNote.trim().slice(0, 200),
+              },
+            ].sort((a, b) => a.date.localeCompare(b.date))
+          : state.entries,
+      habits: {
+        ...state.habits,
+        [today]: { ...habit },
+      },
+    };
+    persist(next);
+    setSavingDay(true);
+    setSaveMsg("Saving today’s totals to My Day…");
+    try {
+      const { recap } = await runHealthDayRecap({
+        date: today,
+        health: next,
+        workouts: gymBoard.value.workouts || [],
+        auto: false,
+      });
+      persist({
+        ...next,
+        dayRecaps: sanitizeDayRecaps([recap, ...next.dayRecaps]),
+      });
+      setSaveMsg("Saved. Today’s slider totals are in My Day — you can print the PDF there.");
+    } catch (err) {
+      setSaveMsg(
+        err instanceof Error
+          ? err.message
+          : "Totals are saved on Overview. Open My Day if you want the PDF now."
+      );
+    } finally {
+      setSavingDay(false);
+    }
+  }
+
+  const todayWeight =
+    state.entries.find((e) => e.date === today)?.weight ??
+    state.currentWeight ??
+    [...state.entries].filter((e) => e.weight != null).slice(-1)[0]?.weight ??
+    null;
+  const heightFeet =
+    state.heightInches != null ? Math.floor(state.heightInches / 12) : "";
+  const heightInPart =
+    state.heightInches != null ? round1(state.heightInches % 12) : "";
+  const bmiVal = calcBmi(todayWeight, state.heightInches);
   const lost =
     state.startWeight != null && state.currentWeight != null
       ? round1(state.startWeight - state.currentWeight)
@@ -1338,6 +1468,56 @@ export function MySpaceHealthBoard() {
             </div>
           </div>
 
+          <div className="ms-h-height">
+            <div>
+              <h4>Your height (needed for BMI)</h4>
+              <p className="panel-hint">
+                Enter it once. BMI uses this height plus the weight on the slider. Not medical
+                advice.
+              </p>
+            </div>
+            <div className="ms-h-height-fields">
+              <label>
+                Feet
+                <input
+                  type="number"
+                  min={3}
+                  max={8}
+                  step={1}
+                  inputMode="numeric"
+                  value={heightFeet}
+                  onChange={(e) => patchHeight(e.target.value, String(heightInPart || 0))}
+                  placeholder="5"
+                />
+              </label>
+              <label>
+                Inches
+                <input
+                  type="number"
+                  min={0}
+                  max={11.9}
+                  step={0.5}
+                  inputMode="decimal"
+                  value={heightInPart}
+                  onChange={(e) =>
+                    patchHeight(String(heightFeet || 0), e.target.value)
+                  }
+                  placeholder="10"
+                />
+              </label>
+              <p className="ms-h-bmi-live">
+                {state.heightInches != null ? (
+                  <>
+                    {heightFeet}&apos; {heightInPart}&quot; · BMI{" "}
+                    <strong>{bmiVal ?? "—"}</strong> {bmiVal != null ? `· ${bmiLabel(bmiVal)}` : ""}
+                  </>
+                ) : (
+                  "BMI appears here as soon as height and weight are both set."
+                )}
+              </p>
+            </div>
+          </div>
+
           <div className="ms-h-progress">
             <div className="ms-h-progress-head">
               <span>Journey progress</span>
@@ -1355,25 +1535,25 @@ export function MySpaceHealthBoard() {
           <div className="track-block">
             <HabitSlider
               label="⚖️ Weight"
-              value={
-                state.entries.find((e) => e.date === today)?.weight ??
-                state.currentWeight ??
-                [...state.entries].filter((e) => e.weight != null).slice(-1)[0]?.weight ??
-                0
-              }
+              value={todayWeight ?? 0}
               min={50}
               max={650}
               step={0.1}
               tone="weight"
-              display={(() => {
-                const w =
-                  state.entries.find((e) => e.date === today)?.weight ??
-                  state.currentWeight ??
-                  [...state.entries].filter((e) => e.weight != null).slice(-1)[0]?.weight;
-                if (w == null) return "Drag to set today’s weight";
-                const todaySet = state.entries.some((e) => e.date === today && e.weight != null);
-                return `${w} lbs${todaySet ? "" : " · carried from last weigh-in"}`;
-              })()}
+              goal={state.goalWeight}
+              goalUnit="lbs"
+              goalStep={0.1}
+              meet="close"
+              onGoalChange={(n) => persist({ ...state, goalWeight: round1(n) })}
+              display={
+                todayWeight == null
+                  ? "Drag to set today’s weight"
+                  : `${todayWeight} lbs${
+                      state.entries.some((e) => e.date === today && e.weight != null)
+                        ? ""
+                        : " · carried from last weigh-in"
+                    }`
+              }
               onChange={patchWeight}
             />
             <HabitSlider
@@ -1381,6 +1561,9 @@ export function MySpaceHealthBoard() {
               value={habit.waterOz}
               max={Math.max(state.dailyWaterGoalOz * 2, 128)}
               step={1}
+              goal={state.dailyWaterGoalOz}
+              goalUnit="oz"
+              onGoalChange={(n) => persist({ ...state, dailyWaterGoalOz: Math.round(n) })}
               display={`${habit.waterOz} / ${state.dailyWaterGoalOz} oz`}
               onChange={(n) =>
                 patchHabit({
@@ -1395,6 +1578,10 @@ export function MySpaceHealthBoard() {
               max={Math.max(state.dailyStepsGoal * 2, 20000)}
               step={50}
               tone="steps"
+              goal={state.dailyStepsGoal}
+              goalUnit="steps"
+              goalStep={50}
+              onGoalChange={(n) => persist({ ...state, dailyStepsGoal: Math.round(n) })}
               display={`${habit.steps.toLocaleString()} / ${state.dailyStepsGoal.toLocaleString()}`}
               onChange={(n) => patchHabit({ steps: n, walked: n >= 1000 || habit.walked })}
             />
@@ -1404,6 +1591,9 @@ export function MySpaceHealthBoard() {
               max={Math.max(state.dailyProteinGoalG * 2, 250)}
               step={1}
               tone="protein"
+              goal={state.dailyProteinGoalG}
+              goalUnit="g"
+              onGoalChange={(n) => persist({ ...state, dailyProteinGoalG: Math.round(n) })}
               display={`${habit.proteinG} / ${state.dailyProteinGoalG} g`}
               onChange={(n) =>
                 patchHabit({
@@ -1422,6 +1612,10 @@ export function MySpaceHealthBoard() {
               max={14}
               step={0.25}
               tone="sleep"
+              goal={state.sleepGoalHours}
+              goalUnit="h"
+              goalStep={0.25}
+              onGoalChange={(n) => persist({ ...state, sleepGoalHours: round1(n) })}
               display={
                 habit.sleepHours || state.sleeps.find((s) => s.date === today)?.hours
                   ? `${habit.sleepHours || state.sleeps.find((s) => s.date === today)?.hours}h / ${state.sleepGoalHours}h goal`
@@ -1430,9 +1624,8 @@ export function MySpaceHealthBoard() {
               onChange={patchSleepHours}
             />
             <p className="panel-hint">
-              Weight carries over from your last weigh-in. Water, steps, protein, and sleep start at
-              0 every morning. Totals are written into My Day when the day ends — or immediately if
-              you write today’s recap early.
+              Gold marks are your goals. Weight carries over from the last weigh-in. Water, steps,
+              protein, and sleep start at 0 every morning.
             </p>
             <p className="panel-hint">
               Today: {todayMeals.length} meal{todayMeals.length === 1 ? "" : "s"} · {todayExMin} min
@@ -1454,52 +1647,28 @@ export function MySpaceHealthBoard() {
             ))}
           </div>
 
-          <h4>Log weigh-in</h4>
-          <form
-            className="form-grid ms-module-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const w = Number(weightInput);
-              if (!Number.isFinite(w) || w <= 0) return;
-              const rounded = round1(w);
-              persist({
-                ...state,
-                currentWeight: rounded,
-                startWeight: state.startWeight ?? rounded,
-                entries: [
-                  ...state.entries.filter((x) => x.date !== today),
-                  { date: today, weight: rounded, notes: weightNote.trim().slice(0, 200) },
-                ].sort((a, b) => a.date.localeCompare(b.date)),
-              });
-              setWeightInput("");
-              setWeightNote("");
-            }}
+          <h4>Save today’s totals</h4>
+          <p className="panel-hint">
+            Stores every slider (weight, water, steps, protein, sleep) for My Day. If you skip this
+            button, the same totals still auto-log when the day ends.
+          </p>
+          <div className="field">
+            <label>Note for today (optional)</label>
+            <input
+              value={weightNote}
+              onChange={(e) => setWeightNote(e.target.value)}
+              placeholder="Felt strong today · extra walk at Brownwood"
+            />
+          </div>
+          <button
+            type="button"
+            className="ms-h-add-bar"
+            disabled={savingDay}
+            onClick={() => void saveTodaysTotals()}
           >
-            <div className="field">
-              <label>Weight (lbs)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={weightInput}
-                onChange={(e) => setWeightInput(e.target.value)}
-                placeholder={
-                  state.currentWeight != null ? String(state.currentWeight) : "e.g. 185"
-                }
-                required
-              />
-            </div>
-            <div className="field">
-              <label>Note (optional)</label>
-              <input
-                value={weightNote}
-                onChange={(e) => setWeightNote(e.target.value)}
-                placeholder="Felt strong today"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary btn-sm">
-              Save weigh-in
-            </button>
-          </form>
+            {savingDay ? "Saving today’s totals…" : "Save today’s totals to My Day"}
+          </button>
+          {saveMsg ? <p className="panel-hint">{saveMsg}</p> : null}
 
           <div className="ms-h-clear">
             <div>

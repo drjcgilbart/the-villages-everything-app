@@ -3252,7 +3252,142 @@ button.ms-home-card:hover {
 }
 
 .ms-h-slider-block {
+  margin-top: 0.7rem;
+}
+
+.ms-h-slider-wrap {
+  position: relative;
+  padding-top: 1.2rem;
+}
+
+.ms-h-goal-mark {
+  position: absolute;
+  top: 0.15rem;
+  bottom: 0.4rem;
+  width: 3px;
+  background: #c9a227;
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px #fff, 0 0 0 2px rgba(201, 162, 39, 0.45);
+}
+
+.ms-h-goal-mark.is-met {
+  background: #1f6b4a;
+  box-shadow: 0 0 0 1px #fff, 0 0 0 2px rgba(31, 107, 74, 0.4);
+}
+
+.ms-h-goal-flag {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: #c9a227;
+  color: #1a1408;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+}
+
+.ms-h-goal-mark.is-met .ms-h-goal-flag {
+  background: #1f6b4a;
+  color: #fff;
+}
+
+.ms-h-goal-mark.is-start .ms-h-goal-flag {
+  left: 0;
+  transform: none;
+}
+
+.ms-h-goal-mark.is-end .ms-h-goal-flag {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.ms-h-slider-wrap .ms-h-range-slider {
+  position: relative;
+  z-index: 2;
+}
+
+.ms-h-goal-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.85rem;
+  margin: 0.1rem 0 0.35rem;
+  font-size: 0.82rem;
+}
+
+.ms-h-goal-edit label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.ms-h-goal-edit input {
+  width: 5.2rem;
+  font: inherit;
+  padding: 0.28rem 0.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.ms-h-goal-met {
+  font-style: normal;
+  font-weight: 800;
+  font-size: 0.78rem;
+  color: #1f6b4a;
+  background: rgba(31, 107, 74, 0.12);
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+}
+
+.ms-h-height {
+  margin: 1rem 0 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(232, 184, 74, 0.14);
+}
+
+.ms-h-height h4 {
+  margin: 0 0 0.2rem;
+}
+
+.ms-h-height-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  align-items: flex-end;
   margin-top: 0.55rem;
+}
+
+.ms-h-height-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.ms-h-height-fields input {
+  width: 5.5rem;
+  font: inherit;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.ms-h-bmi-live {
+  margin: 0;
+  padding-bottom: 0.15rem;
+  font-size: 0.92rem;
 }
 
 .ms-h-range-slider {
@@ -3579,18 +3714,24 @@ button.ms-home-card:hover {
   justify-content: center;
   width: 100%;
   margin: 1.35rem 0 0.85rem;
-  padding: 0.45rem 0.85rem;
+  padding: 0.7rem 0.85rem;
   border: none;
   border-radius: 999px;
   background: var(--palm);
   color: #fff;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: normal;
   text-align: center;
+  cursor: pointer;
   box-shadow: 0 10px 24px rgba(31, 107, 74, 0.25);
+}
+
+.ms-h-add-bar:disabled {
+  opacity: 0.7;
+  cursor: wait;
 }
 
 .ms-h-dose {
