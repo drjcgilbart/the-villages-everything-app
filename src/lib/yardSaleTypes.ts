@@ -50,6 +50,11 @@ export type ItemCondition =
 export type YardListing = {
   id: string;
   memberId: string;
+  /** Guest seller (when posted without a membership). */
+  sellerName?: string;
+  sellerEmail?: string;
+  sellerPhone?: string;
+  sellerVillage?: string;
   title: string;
   description: string;
   /** null or 0 = free */

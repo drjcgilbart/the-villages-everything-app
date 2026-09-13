@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdminAuthenticated } from "@/lib/auth";
-import { getSessionMember } from "@/lib/memberAuth";
+import { rateLimitResponse } from "@/lib/authRateLimit";
 import {
   MAX_IMAGE_BYTES,
   MAX_VIDEO_BYTES,
@@ -11,14 +10,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const member = await getSessionMember();
-  const admin = await isAdminAuthenticated();
-  if (!admin && (!member || member.status !== "approved")) {
-    return NextResponse.json(
-      { error: "Approved members only can upload yard-sale media" },
-      { status: 403 }
-    );
-  }
+  const limited = rateLimitResponse(req, "yard-sale-upload", 24, 15 * 60 * 1000);
+  if (limited) return limited;
 
   try {
     const form = await req.formData();

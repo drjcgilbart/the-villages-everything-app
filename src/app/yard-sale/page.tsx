@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { YardListingCard } from "@/components/YardListingCard";
+import { YardSalePostForm } from "@/components/YardSalePostForm";
 import { withSellerBadges } from "@/lib/memberBadges";
 import { getApprovedListings, listingWithSeller } from "@/lib/yardSale";
 
@@ -17,22 +17,17 @@ export default function YardSalePage() {
       <div className="page-hero page-hero-graphic">
         <div className="shell page-hero-grid">
           <div>
-            <span className="kicker">Local Villagers only · moderated</span>
+            <span className="kicker">Free for everyone · moderated</span>
             <h1>Community Yard Sale</h1>
             <p>
-              Buy, sell, or give away items among neighbors in The Villages.
-              Listings are reviewed by the site admin before they go live.
+              Buy, sell, or give away items among neighbors in The Villages. No
+              membership required. Listings are reviewed by the site admin before
+              they go live.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
-              <Link href="/yard-sale/dashboard" className="btn btn-primary">
+              <a href="#post-item" className="btn btn-primary">
                 Post an item
-              </Link>
-              <Link href="/yard-sale/join" className="btn btn-ghost">
-                Become a member
-              </Link>
-              <Link href="/yard-sale/login?next=/yard-sale/dashboard" className="btn btn-ghost">
-                Member login
-              </Link>
+              </a>
             </div>
           </div>
           <PageHeroMascot
@@ -46,22 +41,25 @@ export default function YardSalePage() {
         <div className="shell">
           <div className="yard-how">
             <div className="yard-how-step">
-              <strong>1. Join</strong>
-              <span>Request membership — admin approves local Villagers.</span>
+              <strong>1. List</strong>
+              <span>Up to 5 photos + 1 short video, price or FREE, how to meet.</span>
             </div>
             <div className="yard-how-step">
-              <strong>2. List</strong>
-              <span>Up to 5 photos + 1 short video, price or FREE, meetup details.</span>
+              <strong>2. Review</strong>
+              <span>The site admin checks it, then it appears on this page.</span>
             </div>
             <div className="yard-how-step">
               <strong>3. Connect</strong>
-              <span>Once approved, buyers contact you and arrange the handoff.</span>
+              <span>Buyers email or call you and arrange the handoff.</span>
             </div>
           </div>
 
+          <YardSalePostForm />
+
+          <h2 style={{ marginTop: "2rem" }}>Live listings</h2>
           {listings.length === 0 ? (
             <div className="empty-state">
-              No approved listings yet. Be the first — join as a member and post an item.
+              No listings yet. Be the first — post an item above.
             </div>
           ) : (
             <div className="yard-grid">

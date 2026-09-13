@@ -321,7 +321,7 @@ function clampImages(images: unknown): string[] {
 }
 
 export function createListing(
-  memberId: string,
+  memberId: string | null,
   input: {
     title: string;
     description: string;
@@ -334,12 +334,27 @@ export function createListing(
     contactMethod?: "email" | "phone" | "either";
     images?: string[];
     videoUrl?: string | null;
+    sellerName?: string;
+    sellerEmail?: string;
+    sellerPhone?: string;
+    sellerVillage?: string;
   }
 ) {
-  const member = getMemberById(memberId);
-  if (!member) throw new Error("Member not found");
-  if (member.status !== "approved") {
-    throw new Error("Only approved members can post listings");
+  const member = memberId ? getMemberById(memberId) : null;
+  if (memberId && !member) throw new Error("Member not found");
+  if (member && member.status !== "approved") {
+    throw new Error("Your membership is not active yet");
+  }
+
+  const sellerName = (member?.name || String(input.sellerName || "")).trim().slice(0, 80);
+  const sellerEmail = (member?.email || String(input.sellerEmail || "")).trim().slice(0, 120);
+  const sellerPhone = (member?.phone || String(input.sellerPhone || "")).trim().slice(0, 40);
+  const sellerVillage = (member?.village || String(input.sellerVillage || ""))
+    .trim()
+    .slice(0, 80);
+  if (!sellerName) throw new Error("Your name is required");
+  if (!sellerEmail && !sellerPhone) {
+    throw new Error("Add an email or phone so buyers can reach you");
   }
 
   const title = String(input.title || "").trim().slice(0, 120);
@@ -359,7 +374,11 @@ export function createListing(
   const now = new Date().toISOString();
   const listing: YardListing = {
     id: uid("list"),
-    memberId,
+    memberId: member?.id || "",
+    sellerName,
+    sellerEmail: sellerEmail || undefined,
+    sellerPhone: sellerPhone || undefined,
+    sellerVillage: sellerVillage || undefined,
     title,
     description,
     price: isFree ? 0 : price,
@@ -521,25 +540,23 @@ export function listAllListings() {
 }
 
 export function listingWithSeller(listing: YardListing) {
-  const member = getMemberById(listing.memberId);
+  const member = listing.memberId ? getMemberById(listing.memberId) : null;
+  const name = member?.name || listing.sellerName;
+  const village = member?.village || listing.sellerVillage;
+  const email = member?.email || listing.sellerEmail;
+  const phone = member?.phone || listing.sellerPhone;
+  const showContact = listing.status === "approved";
+  const wantEmail = listing.contactMethod === "email" || listing.contactMethod === "either";
+  const wantPhone = listing.contactMethod === "phone" || listing.contactMethod === "either";
   return {
     ...listing,
-    seller: member
+    seller: name
       ? {
-          id: member.id,
-          name: member.name,
-          village: member.village,
-          // Contact only exposed for approved live listings
-          email:
-            listing.status === "approved" &&
-            (listing.contactMethod === "email" || listing.contactMethod === "either")
-              ? member.email
-              : undefined,
-          phone:
-            listing.status === "approved" &&
-            (listing.contactMethod === "phone" || listing.contactMethod === "either")
-              ? member.phone
-              : undefined,
+          id: member?.id,
+          name,
+          village,
+          email: showContact && wantEmail ? email : undefined,
+          phone: showContact && wantPhone ? phone : undefined,
         }
       : null,
   };

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { getSessionMember, requireApprovedMember } from "@/lib/memberAuth";
+import { rateLimitResponse } from "@/lib/authRateLimit";
+import { getSessionMember } from "@/lib/memberAuth";
 import {
   createListing,
   deleteListing,
@@ -19,10 +20,13 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    const limited = rateLimitResponse(req, "yard-sale-post", 8, 15 * 60 * 1000);
+    if (limited) return limited;
     await hydrateYardSale();
-    const member = await requireApprovedMember();
+    const member = await getSessionMember();
+    const signedIn = member && member.status === "approved" ? member : null;
     const body = await req.json();
-    const listing = createListing(member.id, {
+    const listing = createListing(signedIn?.id || null, {
       title: body.title,
       description: body.description,
       price: body.price,
@@ -34,12 +38,16 @@ export async function POST(req: Request) {
       contactMethod: body.contactMethod,
       images: body.images,
       videoUrl: body.videoUrl,
+      sellerName: body.sellerName,
+      sellerEmail: body.sellerEmail,
+      sellerPhone: body.sellerPhone,
+      sellerVillage: body.sellerVillage,
     });
     if (listing.status === "pending") {
       await notifyAdminOfApprovalRequest({
         topic: "Yard Sale",
         title: listing.title,
-        submittedBy: member.name,
+        submittedBy: listing.sellerName || signedIn?.name,
         createdAt: listing.createdAt,
         details: {
           title: listing.title,
@@ -47,8 +55,8 @@ export async function POST(req: Request) {
           price: listing.isFree ? "Free" : listing.price,
           condition: listing.condition,
           description: listing.description,
-          seller: member.name,
-          sellerEmail: member.email,
+          seller: listing.sellerName || signedIn?.name,
+          sellerEmail: listing.sellerEmail || signedIn?.email,
           photos: listing.images?.length,
         },
       });
