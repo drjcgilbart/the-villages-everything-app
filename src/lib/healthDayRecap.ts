@@ -26,12 +26,13 @@ export type DaySnapshot = {
     waterOz: number;
     steps: number;
     proteinG: number;
+    sleepHours: number;
     walked: boolean;
     water: boolean;
     protein: boolean;
     sleep: boolean;
     strength: boolean;
-  } | null;
+  };
   goals: {
     waterOz: number;
     steps: number;
@@ -116,6 +117,7 @@ export type HealthLike = {
       waterOz?: number;
       steps?: number;
       proteinG?: number;
+      sleepHours?: number;
       walked?: boolean;
       water?: boolean;
       protein?: boolean;
@@ -232,27 +234,36 @@ export function buildDaySnapshot(
       }
     }
   }
-  const weigh =
-    (health.entries || []).find((e) => e.date === date && e.weight != null)
-      ?.weight ?? health.currentWeight ?? null;
+  const dayEntry = (health.entries || []).find(
+    (e) => e.date === date && e.weight != null
+  )?.weight;
+  const carried = [...(health.entries || [])]
+    .filter((e) => e.date && e.date <= date && e.weight != null)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .slice(-1)[0]?.weight;
+  const weigh = dayEntry ?? carried ?? health.currentWeight ?? null;
   const rawHabit = health.habits?.[date];
+  const sleepHours =
+    Number(rawHabit?.sleepHours) ||
+    Number(sleeps[0]?.hours) ||
+    0;
+  const habits = {
+    waterOz: Number(rawHabit?.waterOz) || 0,
+    steps: Number(rawHabit?.steps) || 0,
+    proteinG: Number(rawHabit?.proteinG) || 0,
+    sleepHours,
+    walked: !!rawHabit?.walked,
+    water: !!rawHabit?.water,
+    protein: !!rawHabit?.protein,
+    sleep: !!rawHabit?.sleep || sleepHours > 0,
+    strength: !!rawHabit?.strength,
+  };
 
   return {
     date,
     weekday: weekdayFor(date),
     weight: weigh ?? null,
-    habits: rawHabit
-      ? {
-          waterOz: Number(rawHabit.waterOz) || 0,
-          steps: Number(rawHabit.steps) || 0,
-          proteinG: Number(rawHabit.proteinG) || 0,
-          walked: !!rawHabit.walked,
-          water: !!rawHabit.water,
-          protein: !!rawHabit.protein,
-          sleep: !!rawHabit.sleep,
-          strength: !!rawHabit.strength,
-        }
-      : null,
+    habits,
     goals: {
       waterOz: health.dailyWaterGoalOz || 64,
       steps: health.dailyStepsGoal || 8000,
@@ -297,15 +308,16 @@ export function buildDaySnapshot(
         .slice(0, 20),
       media: w.media || [],
     })),
-    sleep: sleeps[0]
-      ? {
-          hours: sleeps[0].hours ?? null,
-          quality: clip(sleeps[0].quality, 20) || "average",
-          bedtime: clip(sleeps[0].bedtime, 8),
-          waketime: clip(sleeps[0].waketime, 8),
-          notes: clip(sleeps[0].notes, 240),
-        }
-      : null,
+    sleep:
+      sleeps[0] || sleepHours
+        ? {
+            hours: sleeps[0]?.hours ?? sleepHours ?? null,
+            quality: clip(sleeps[0]?.quality, 20) || "average",
+            bedtime: clip(sleeps[0]?.bedtime, 8),
+            waketime: clip(sleeps[0]?.waketime, 8),
+            notes: clip(sleeps[0]?.notes, 240),
+          }
+        : null,
     photos: photos.map((p) => ({
       caption: clip(p.caption, 160) || "Check-in",
       weight: p.weight ?? null,
@@ -320,23 +332,24 @@ export function buildDaySnapshot(
 }
 
 export function snapshotHasLogs(snap: DaySnapshot): boolean {
+  const h = snap.habits;
   return Boolean(
     snap.medsTaken.length ||
       snap.meals.length ||
       snap.exercises.length ||
       snap.gyms.length ||
-      snap.sleep ||
       snap.photos.length ||
       snap.journals.length ||
-      (snap.habits &&
-        (snap.habits.walked ||
-          snap.habits.water ||
-          snap.habits.protein ||
-          snap.habits.sleep ||
-          snap.habits.strength ||
-          snap.habits.steps > 0 ||
-          snap.habits.waterOz > 0)) ||
-      snap.weight != null
+      (snap.sleep && (snap.sleep.hours || 0) > 0) ||
+      h.walked ||
+      h.water ||
+      h.protein ||
+      h.sleep ||
+      h.strength ||
+      h.steps > 0 ||
+      h.waterOz > 0 ||
+      h.proteinG > 0 ||
+      h.sleepHours > 0
   );
 }
 
@@ -358,7 +371,22 @@ export function datesWithLogs(
   for (const e of health.entries || []) {
     if (e.date && e.weight != null) dates.add(e.date);
   }
-  for (const d of Object.keys(health.habits || {})) dates.add(d);
+  for (const [d, h] of Object.entries(health.habits || {})) {
+    if (
+      h &&
+      (Number(h.waterOz) ||
+        Number(h.steps) ||
+        Number(h.proteinG) ||
+        Number(h.sleepHours) ||
+        h.walked ||
+        h.water ||
+        h.protein ||
+        h.sleep ||
+        h.strength)
+    ) {
+      dates.add(d);
+    }
+  }
   return dates;
 }
 
@@ -427,6 +455,10 @@ export function writeLocalDayStory(snap: DaySnapshot): DayRecapStory {
   if (snap.meals.length) bits.push(`you fed yourself ${snap.meals.length} time${snap.meals.length === 1 ? "" : "s"}`);
   if (snap.exercises.length || snap.gyms.length) bits.push("you moved your body on purpose");
   if (snap.sleep) bits.push("you logged rest");
+  if (snap.habits.waterOz || snap.habits.steps || snap.habits.proteinG) {
+    bits.push("you tracked water, steps, or protein on the Overview sliders");
+  }
+  if (snap.weight != null) bits.push(`the scale read ${snap.weight} lbs`);
   if (snap.journals.length) bits.push("you wrote it down");
   const showingUp = bits.length
     ? bits.join(", ")
@@ -458,7 +490,8 @@ export function writeLocalDayStory(snap: DaySnapshot): DayRecapStory {
     ? `In your own words: “${snap.journals[0].body.slice(0, 280)}${snap.journals[0].body.length > 280 ? "…" : ""}”`
     : "";
 
-  const p2 = `${mealText} ${moveText} ${sleepText} ${journalText}`.replace(/\s+/g, " ").trim();
+  const overviewText = `Overview sliders: ${snap.weight != null ? `${snap.weight} lbs` : "weight not set"}, ${snap.habits.waterOz} oz water (goal ${snap.goals.waterOz}), ${snap.habits.steps.toLocaleString()} steps (goal ${snap.goals.steps.toLocaleString()}), ${snap.habits.proteinG} g protein (goal ${snap.goals.proteinG}), ${snap.habits.sleepHours || snap.sleep?.hours || 0} hours of sleep (goal ${snap.goals.sleepHours}).`;
+  const p2 = `${overviewText} ${mealText} ${moveText} ${sleepText} ${journalText}`.replace(/\s+/g, " ").trim();
 
   const highlights: string[] = [];
   if (snap.medsTaken.length) {

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { emptyBoards, type GymBoard } from "@/lib/memberBoardModel";
-import { getDeviceMedia } from "@/lib/deviceMediaStore";
 import {
   buildDaySnapshot,
   datesWithLogs,
@@ -10,11 +9,9 @@ import {
   sanitizeDayRecaps,
   snapshotHasLogs,
   type DayRecap,
-  type DayRecapStory,
   type DaySnapshot,
 } from "@/lib/healthDayRecap";
-import { buildHealthDayPdf } from "@/lib/healthDayPdf";
-import { uid } from "@/lib/mySpaceStorage";
+import { runHealthDayRecap } from "@/lib/runHealthDayRecap";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import type { HealthLike } from "@/lib/healthDayRecap";
 
@@ -60,34 +57,7 @@ function recapStreak(recaps: DayRecap[], today: string) {
   return n;
 }
 
-async function collectImages(snap: DaySnapshot) {
-  const out: { bytes: Uint8Array; caption: string; kind: "photo" | "video" }[] = [];
-  for (const gym of snap.gyms) {
-    for (const media of gym.media || []) {
-      if (media.kind === "video") continue;
-      try {
-        let blob: Blob | null = null;
-        if (media.storage === "account" && media.url) {
-          const res = await fetch(media.url, { credentials: "include" });
-          if (res.ok) blob = await res.blob();
-        } else if (media.storage === "phone" && media.localId) {
-          blob = await getDeviceMedia(media.localId);
-        }
-        if (!blob || !blob.type.startsWith("image/")) continue;
-        const buf = new Uint8Array(await blob.arrayBuffer());
-        out.push({
-          bytes: buf,
-          caption: media.name || gym.gymName,
-          kind: "photo",
-        });
-      } catch {
-        /* skip */
-      }
-      if (out.length >= 6) return out;
-    }
-  }
-  return out;
-}
+
 
 export function MySpaceHealthDayRecap({
   health,
@@ -101,14 +71,13 @@ export function MySpaceHealthDayRecap({
   today: string;
 }) {
   const gymEmpty = emptyBoards().gym;
-  const { value: gym, ready: gymReady } = useMemberBoard<GymBoard>("gym", gymEmpty, true);
+  const { value: gym } = useMemberBoard<GymBoard>("gym", gymEmpty, true);
   const recaps = useMemo(() => sanitizeDayRecaps(recapsIn), [recapsIn]);
   const [selected, setSelected] = useState(today);
   const [month, setMonth] = useState(monthStart(today));
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const autoOnce = useRef(false);
 
   const workouts = gym.workouts || [];
   const snap = useMemo(
@@ -125,11 +94,6 @@ export function MySpaceHealthDayRecap({
     return m;
   }, [recaps]);
   const current = recapByDate.get(selected) || null;
-  const yesterday = useMemo(() => {
-    const d = new Date(`${today}T12:00:00`);
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
-  }, [today]);
   const streak = recapStreak(recaps, today);
   const week = useMemo(() => {
     const days: string[] = [];
@@ -144,75 +108,24 @@ export function MySpaceHealthDayRecap({
   async function generate(opts?: { auto?: boolean; date?: string }) {
     const date = opts?.date || selected;
     const daySnap = buildDaySnapshot(date, health, workouts);
-    if (!snapshotHasLogs(daySnap) && !opts?.auto) {
-      setErr("Nothing is logged for this day yet. Add a meal, med, walk, or journal first — or pick another date.");
-      return;
-    }
-    if (!snapshotHasLogs(daySnap)) return;
+    if (opts?.auto && !snapshotHasLogs(daySnap)) return;
     setBusy(true);
     setErr(null);
     setNote(opts?.auto ? "Writing yesterday’s recap…" : "Writing your day…");
     try {
-      const res = await fetch("/api/members/space/health/day-recap", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ snapshot: daySnap }),
-      });
-      const json = (await res.json().catch(() => ({}))) as {
-        story?: DayRecapStory;
-        source?: string;
-        error?: string;
-      };
-      if (!res.ok) throw new Error(json.error || "Could not write recap");
-      const story = json.story;
-      if (!story) throw new Error("Empty recap");
-      setNote("Saving PDF…");
-      const images = await collectImages(daySnap);
-      const pdfBytes = await buildHealthDayPdf(story, daySnap, images);
-      const file = new File(
-        [new Uint8Array(pdfBytes)],
-        `my-day-${date}.pdf`,
-        { type: "application/pdf" }
-      );
-      const fd = new FormData();
-      fd.append("file", file);
-      const up = await fetch("/api/members/space/health/day-recap/upload", {
-        method: "POST",
-        credentials: "include",
-        body: fd,
-      });
-      const upJson = (await up.json().catch(() => ({}))) as {
-        url?: string;
-        error?: string;
-      };
-      if (!up.ok) throw new Error(upJson.error || "Could not save PDF");
-      const recap: DayRecap = {
-        id: uid("recap"),
+      const { recap, source } = await runHealthDayRecap({
         date,
-        generatedAt: new Date().toISOString(),
+        health,
+        workouts,
         auto: !!opts?.auto,
         favorite: recapByDate.get(date)?.favorite || false,
-        title: story.title,
-        headline: story.headline,
-        article: story.article,
-        highlights: story.highlights,
-        improve: story.improve,
-        bestMoment: story.bestMoment,
-        closer: story.closer,
-        pdfUrl: String(upJson.url || ""),
-        mood: daySnap.journals[0]?.mood || "",
-      };
-      const next = sanitizeDayRecaps([
-        recap,
-        ...recaps.filter((r) => r.date !== date),
-      ]);
-      onSaveRecaps(next);
+      });
+      onSaveRecaps(sanitizeDayRecaps([recap, ...recaps.filter((r) => r.date !== date)]));
       setSelected(date);
       setNote(
-        json.source === "grok"
-          ? "Recap saved. You can print it any time."
-          : "Recap saved (written on this app — add XAI_API_KEY in Vercel for Grok’s voice)."
+        source === "grok"
+          ? "Recap saved with today’s Overview sliders. You can print it any time."
+          : "Recap saved with today’s Overview sliders."
       );
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not write recap");
@@ -220,22 +133,6 @@ export function MySpaceHealthDayRecap({
       setBusy(false);
     }
   }
-
-  useEffect(() => {
-    if (!gymReady || autoOnce.current || busy) return;
-    if (recapByDate.has(yesterday)) {
-      autoOnce.current = true;
-      return;
-    }
-    const ySnap = buildDaySnapshot(yesterday, health, workouts);
-    if (!snapshotHasLogs(ySnap)) {
-      autoOnce.current = true;
-      return;
-    }
-    autoOnce.current = true;
-    void generate({ auto: true, date: yesterday });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gymReady, yesterday, recaps.length, workouts.length]);
 
   function toggleFavorite() {
     if (!current) return;
@@ -262,10 +159,10 @@ export function MySpaceHealthDayRecap({
     <div className="about-panel ms-module">
       <p className="ms-module-lead">My Day — one story of how you lived it</p>
       <p className="panel-hint">
-        When a day ends, we gather meds, meals, exercise, gym, sleep, photos, and journal into one
-        optimistic recap and save a PDF. Open any date on the calendar. Print it for the fridge or
-        the grandkids. Not medical advice — a neighborly highlight reel of you becoming your best
-        self.
+        When a day ends, we gather Overview sliders (weight, water, steps, protein, sleep), plus
+        meds, meals, exercise, gym, photos, and journal into one optimistic recap PDF. Write it
+        early and we still pull the current slider values. Open any date on the calendar. Not
+        medical advice.
       </p>
 
       <div className="ms-h-toolbar">
@@ -388,14 +285,13 @@ export function MySpaceHealthDayRecap({
       {err ? <p className="pf-form-error">{err}</p> : null}
 
       <h3>{prettyDate(selected)}</h3>
+      <DayFacts snap={snap} />
       {!snapshotHasLogs(snap) && !current ? (
         <p className="panel-hint">
-          Nothing logged this date yet. Live the day (or pick one with a green square), then write
-          the recap.
+          You can still write today’s recap now — it will snapshot the current Overview sliders,
+          even if some are still at zero.
         </p>
-      ) : (
-        <DayFacts snap={snap} />
-      )}
+      ) : null}
 
       {current ? (
         <article className="ms-day-story">
@@ -450,8 +346,8 @@ export function MySpaceHealthDayRecap({
         </article>
       ) : snapshotHasLogs(snap) ? (
         <p className="panel-hint">
-          This day has notes but no PDF yet. Tap <strong>Write this day’s recap</strong>. Yesterday
-          writes itself the next time you open My Day.
+          This day has notes but no PDF yet. Tap <strong>Write this day’s recap</strong> to snapshot
+          the current Overview sliders. Yesterday writes itself the next time you open Health.
         </p>
       ) : null}
 
@@ -485,17 +381,19 @@ export function MySpaceHealthDayRecap({
 function DayFacts({ snap }: { snap: DaySnapshot }) {
   const items: string[] = [];
   if (snap.weight != null) items.push(`Weight ${snap.weight} lbs`);
+  items.push(`${snap.habits.waterOz} oz water`);
+  items.push(`${snap.habits.steps.toLocaleString()} steps`);
+  items.push(`${snap.habits.proteinG} g protein`);
+  items.push(`${snap.habits.sleepHours || snap.sleep?.hours || 0}h sleep`);
   if (snap.medsTaken.length) items.push(`${snap.medsTaken.length} meds taken`);
   if (snap.meals.length) items.push(`${snap.meals.length} meals`);
   if (snap.exercises.length) items.push(`${snap.exercises.length} exercise`);
   if (snap.gyms.length) items.push(`${snap.gyms.length} gym`);
-  if (snap.sleep) items.push(`Sleep ${snap.sleep.hours ?? "—"} h`);
   if (snap.journals.length) items.push("Journal");
   if (snap.photos.length) items.push(`${snap.photos.length} photo note${snap.photos.length === 1 ? "" : "s"}`);
-  if (!items.length) return null;
   return (
     <p className="panel-hint">
-      In the log: {items.join(" · ")}
+      Overview + log: {items.join(" · ")}
     </p>
   );
 }

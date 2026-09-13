@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   nowTimeEastern,
   playAlarmTone,
@@ -10,9 +10,16 @@ import {
 } from "@/lib/mySpaceStorage";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_HEALTH } from "@/lib/sampleBoards";
+import { emptyBoards, type GymBoard } from "@/lib/memberBoardModel";
 import { MySpaceGymBoard } from "@/components/MySpaceGymBoard";
 import { MySpaceHealthDayRecap } from "@/components/MySpaceHealthDayRecap";
-import { sanitizeDayRecaps, type DayRecap } from "@/lib/healthDayRecap";
+import {
+  buildDaySnapshot,
+  sanitizeDayRecaps,
+  snapshotHasLogs,
+  type DayRecap,
+} from "@/lib/healthDayRecap";
+import { runHealthDayRecap } from "@/lib/runHealthDayRecap";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -120,6 +127,7 @@ type DayHabit = {
   waterOz: number;
   steps: number;
   proteinG: number;
+  sleepHours: number;
   walked: boolean;
   water: boolean;
   protein: boolean;
@@ -243,6 +251,7 @@ function emptyHabit(): DayHabit {
     waterOz: 0,
     steps: 0,
     proteinG: 0,
+    sleepHours: 0,
     walked: false,
     water: false,
     protein: false,
@@ -741,6 +750,7 @@ function pct(n: number, goal: number): number {
 function HabitSlider({
   label,
   value,
+  min = 0,
   max,
   step,
   display,
@@ -749,13 +759,15 @@ function HabitSlider({
 }: {
   label: string;
   value: number;
+  min?: number;
   max: number;
   step: number;
   display: string;
   onChange: (n: number) => void;
-  tone?: "steps" | "protein" | "sleep";
+  tone?: "steps" | "protein" | "sleep" | "weight";
 }) {
   const ceiling = Math.max(max, value, step);
+  const floor = Math.min(min, value);
   return (
     <div className="ms-h-slider-block">
       <div className="ms-h-track">
@@ -765,11 +777,11 @@ function HabitSlider({
       <input
         type="range"
         className={`ms-h-range-slider${tone ? ` is-${tone}` : ""}`}
-        min={0}
+        min={floor}
         max={ceiling}
         step={step}
-        value={Math.min(value, ceiling)}
-        aria-valuemin={0}
+        value={Math.min(Math.max(value, floor), ceiling)}
+        aria-valuemin={floor}
         aria-valuemax={ceiling}
         aria-valuenow={value}
         aria-label={label}
@@ -790,10 +802,12 @@ export function MySpaceHealthBoard() {
     true,
     { localKey: KEY, debounceMs: 700 }
   );
+  const gymBoard = useMemberBoard<GymBoard>("gym", emptyBoards().gym, true);
   const state = useMemo(
     () => hydrateHealth((value || {}) as Record<string, unknown>),
     [value]
   );
+  const autoRecapOnce = useRef(false);
   const [tab, setTab] = useState<HealthTab>("overview");
   const [weightInput, setWeightInput] = useState("");
   const [weightNote, setWeightNote] = useState("");
@@ -883,6 +897,38 @@ export function MySpaceHealthBoard() {
     void save(next);
   }
 
+  useEffect(() => {
+    if (!ready || !gymBoard.ready || autoRecapOnce.current) return;
+    const yesterday = dateOffset(today, -1);
+    if (state.dayRecaps.some((r) => r.date === yesterday)) {
+      autoRecapOnce.current = true;
+      return;
+    }
+    const snap = buildDaySnapshot(yesterday, state, gymBoard.value.workouts || []);
+    if (!snapshotHasLogs(snap)) {
+      autoRecapOnce.current = true;
+      return;
+    }
+    autoRecapOnce.current = true;
+    void runHealthDayRecap({
+      date: yesterday,
+      health: state,
+      workouts: gymBoard.value.workouts || [],
+      auto: true,
+    })
+      .then(({ recap }) => {
+        persist({
+          ...state,
+          dayRecaps: sanitizeDayRecaps([recap, ...state.dayRecaps]),
+        });
+      })
+      .catch(() => {
+        /* next visit can retry */
+        autoRecapOnce.current = false;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, gymBoard.ready, today]);
+
   const habit = { ...emptyHabit(), ...(state.habits[today] || {}) };
 
   function patchHabit(patch: Partial<DayHabit>) {
@@ -894,13 +940,9 @@ export function MySpaceHealthBoard() {
 
   function patchSleepHours(hours: number) {
     const rounded = Math.min(14, Math.max(0, round1(Math.round(hours * 4) / 4)));
-    const last =
-      [...state.sleeps]
-        .filter((s) => s?.date && s.date <= today)
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(-1)[0] || null;
-    const nextSleeps = last
-      ? state.sleeps.map((s) => (s.id === last.id ? { ...s, hours: rounded } : s))
+    const todaySleep = state.sleeps.find((s) => s.date === today);
+    const nextSleeps = todaySleep
+      ? state.sleeps.map((s) => (s.id === todaySleep.id ? { ...s, hours: rounded } : s))
       : [
           {
             id: uid("sl"),
@@ -919,8 +961,29 @@ export function MySpaceHealthBoard() {
       sleeps: nextSleeps,
       habits: {
         ...state.habits,
-        [today]: { ...habit, sleep: rounded >= (state.sleepGoalHours || 8) },
+        [today]: {
+          ...habit,
+          sleepHours: rounded,
+          sleep: rounded >= (state.sleepGoalHours || 8),
+        },
       },
+    });
+  }
+
+  function patchWeight(lbs: number) {
+    const rounded = round1(Math.min(400, Math.max(50, lbs)));
+    persist({
+      ...state,
+      currentWeight: rounded,
+      startWeight: state.startWeight ?? rounded,
+      entries: [
+        ...state.entries.filter((x) => x.date !== today),
+        {
+          date: today,
+          weight: rounded,
+          notes: state.entries.find((x) => x.date === today)?.notes || "",
+        },
+      ].sort((a, b) => a.date.localeCompare(b.date)),
     });
   }
 
@@ -1291,6 +1354,29 @@ export function MySpaceHealthBoard() {
           <h4>Today’s fuel &amp; movement</h4>
           <div className="track-block">
             <HabitSlider
+              label="⚖️ Weight"
+              value={
+                state.entries.find((e) => e.date === today)?.weight ??
+                state.currentWeight ??
+                [...state.entries].filter((e) => e.weight != null).slice(-1)[0]?.weight ??
+                0
+              }
+              min={50}
+              max={400}
+              step={0.1}
+              tone="weight"
+              display={(() => {
+                const w =
+                  state.entries.find((e) => e.date === today)?.weight ??
+                  state.currentWeight ??
+                  [...state.entries].filter((e) => e.weight != null).slice(-1)[0]?.weight;
+                if (w == null) return "Drag to set today’s weight";
+                const todaySet = state.entries.some((e) => e.date === today && e.weight != null);
+                return `${w} lbs${todaySet ? "" : " · carried from last weigh-in"}`;
+              })()}
+              onChange={patchWeight}
+            />
+            <HabitSlider
               label="💧 Water"
               value={habit.waterOz}
               max={Math.max(state.dailyWaterGoalOz * 2, 128)}
@@ -1328,22 +1414,25 @@ export function MySpaceHealthBoard() {
             />
             <HabitSlider
               label="😴 Sleep"
-              value={Number(sleepStats.lastNight?.hours) || 0}
+              value={
+                habit.sleepHours ||
+                state.sleeps.find((s) => s.date === today)?.hours ||
+                0
+              }
               max={14}
               step={0.25}
               tone="sleep"
               display={
-                sleepStats.lastNight
-                  ? `${sleepStats.lastNight.hours}h · ${sleepQualityMeta(sleepStats.lastNight.quality).label}`
-                  : "Drag to log hours"
+                habit.sleepHours || state.sleeps.find((s) => s.date === today)?.hours
+                  ? `${habit.sleepHours || state.sleeps.find((s) => s.date === today)?.hours}h / ${state.sleepGoalHours}h goal`
+                  : "Starts at 0 each morning — drag to log hours"
               }
               onChange={patchSleepHours}
             />
             <p className="panel-hint">
-              Drag in small steps — 1 oz, 50 steps, 1 g, 15 minutes of sleep.
-              {sleepStats.lastNight && sleepStats.streak
-                ? ` Last night · ${sleepStats.streak}-night goal streak.`
-                : ""}
+              Weight carries over from your last weigh-in. Water, steps, protein, and sleep start at
+              0 every morning. Totals are written into My Day when the day ends — or immediately if
+              you write today’s recap early.
             </p>
             <p className="panel-hint">
               Today: {todayMeals.length} meal{todayMeals.length === 1 ? "" : "s"} · {todayExMin} min

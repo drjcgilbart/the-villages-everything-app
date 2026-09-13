@@ -311,10 +311,10 @@ function logSummary(snap: DaySnapshot): string[] {
       `Sleep: ${snap.sleep.hours ?? "—"} h · ${snap.sleep.quality}${snap.sleep.bedtime ? ` · bed ${snap.sleep.bedtime}` : ""}`
     );
   }
-  if (snap.habits) {
+  {
     const h = snap.habits;
     lines.push(
-      `Habits: water ${h.waterOz} oz · steps ${h.steps} · protein ${h.proteinG} g${h.walked ? " · walked" : ""}`
+      `Overview sliders: water ${h.waterOz} oz · steps ${h.steps.toLocaleString()} · protein ${h.proteinG} g · sleep ${h.sleepHours || snap.sleep?.hours || 0} h${h.walked ? " · walked" : ""}`
     );
   }
   if (snap.journals.length) {

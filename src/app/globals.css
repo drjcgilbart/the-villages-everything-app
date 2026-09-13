@@ -3278,6 +3278,10 @@ button.ms-home-card:hover {
   accent-color: #553c9a;
 }
 
+.ms-h-range-slider.is-weight {
+  accent-color: #b7791f;
+}
+
 .ms-h-range-slider::-webkit-slider-runnable-track {
   height: 0.7rem;
   border-radius: 999px;
@@ -3294,6 +3298,10 @@ button.ms-home-card:hover {
 
 .ms-h-range-slider.is-sleep::-webkit-slider-runnable-track {
   background: rgba(85, 60, 154, 0.18);
+}
+
+.ms-h-range-slider.is-weight::-webkit-slider-runnable-track {
+  background: rgba(183, 121, 31, 0.18);
 }
 
 .ms-h-range-slider::-webkit-slider-thumb {
@@ -3320,6 +3328,10 @@ button.ms-home-card:hover {
   background: #553c9a;
 }
 
+.ms-h-range-slider.is-weight::-webkit-slider-thumb {
+  background: #b7791f;
+}
+
 .ms-h-range-slider::-moz-range-track {
   height: 0.7rem;
   border: none;
@@ -3337,6 +3349,10 @@ button.ms-home-card:hover {
 
 .ms-h-range-slider.is-sleep::-moz-range-track {
   background: rgba(85, 60, 154, 0.18);
+}
+
+.ms-h-range-slider.is-weight::-moz-range-track {
+  background: rgba(183, 121, 31, 0.18);
 }
 
 .ms-h-range-slider::-moz-range-thumb {
@@ -3358,6 +3374,10 @@ button.ms-home-card:hover {
 
 .ms-h-range-slider.is-sleep::-moz-range-thumb {
   background: #553c9a;
+}
+
+.ms-h-range-slider.is-weight::-moz-range-thumb {
+  background: #b7791f;
 }
 
 .ms-h-track {
