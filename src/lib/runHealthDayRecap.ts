@@ -106,7 +106,12 @@ export async function runHealthDayRecap(opts: {
   auto?: boolean;
   favorite?: boolean;
   useGrok?: boolean;
-}): Promise<{ recap: DayRecap; source: string; grokConfigured?: boolean }> {
+}): Promise<{
+  recap: DayRecap;
+  source: string;
+  grokConfigured?: boolean;
+  grokError?: string;
+}> {
   const snap = buildDaySnapshot(opts.date, opts.health, opts.workouts);
   const useGrok = opts.useGrok ?? readUseGrok();
   const res = await fetch("/api/members/space/health/day-recap", {
@@ -120,6 +125,7 @@ export async function runHealthDayRecap(opts: {
     source?: string;
     error?: string;
     grokConfigured?: boolean;
+    grokError?: string;
   };
   if (!res.ok) throw new Error(json.error || "Could not write recap");
   const story = json.story;
@@ -141,6 +147,7 @@ export async function runHealthDayRecap(opts: {
   return {
     source: json.source || "local",
     grokConfigured: json.grokConfigured,
+    grokError: json.grokError,
     recap: {
       id: uid("recap"),
       date: opts.date,

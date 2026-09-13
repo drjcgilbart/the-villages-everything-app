@@ -123,7 +123,7 @@ export function MySpaceHealthDayRecap({
     setErr(null);
     setNote(opts?.auto ? "Writing yesterday’s recap…" : "Writing your day…");
     try {
-      const { recap, source, grokConfigured } = await runHealthDayRecap({
+      const { recap, source, grokConfigured, grokError } = await runHealthDayRecap({
         date,
         health,
         workouts,
@@ -136,7 +136,7 @@ export function MySpaceHealthDayRecap({
       if (useGrok && source !== "grok") {
         setNote(
           grokConfigured
-            ? "Saved the standard recap — Grok didn’t respond this time. You were not charged."
+            ? `Saved the standard recap — Grok didn’t finish (${grokError || "no reply"}). You were not charged for a completed write-up.`
             : "Saved the standard recap. To turn Grok on, add XAI_API_KEY in Vercel → Settings → Environment Variables (Production), then Redeploy."
         );
       } else if (source === "grok") {

@@ -11,6 +11,7 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 function parseStory(raw: string): DayRecapStory | null {
   const start = raw.indexOf("{");
@@ -36,6 +37,106 @@ function parseStory(raw: string): DayRecapStory | null {
   } catch {
     return null;
   }
+}
+
+function messageText(json: Record<string, unknown>): string {
+  const choices = json.choices as
+    | { message?: { content?: unknown; reasoning_content?: unknown } }[]
+    | undefined;
+  const msg = choices?.[0]?.message;
+  const content = msg?.content;
+  if (typeof content === "string" && content.trim()) return content;
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object") {
+          const p = part as { text?: string; content?: string };
+          return p.text || p.content || "";
+        }
+        return "";
+      })
+      .join("");
+    if (joined.trim()) return joined;
+  }
+  if (typeof json.output_text === "string" && json.output_text.trim()) {
+    return json.output_text;
+  }
+  return "";
+}
+
+function slimSnapshot(snap: DaySnapshot): DaySnapshot {
+  return {
+    ...snap,
+    gyms: (snap.gyms || []).map((g) => ({
+      ...g,
+      media: (g.media || []).map((m) => ({
+        ...m,
+        url: m.url ? "[photo]" : "",
+        localId: m.localId ? "[local]" : "",
+      })),
+    })),
+  };
+}
+
+async function askXai(
+  key: string,
+  snap: DaySnapshot
+): Promise<{ story: DayRecapStory | null; error: string | null }> {
+  const models = [
+    { model: "grok-4.6", extra: { reasoning_effort: "low" } },
+    { model: "grok-4.6", extra: {} },
+    { model: "grok-4.5", extra: { reasoning_effort: "low" } },
+  ];
+  let lastError: string | null = null;
+  for (const attempt of models) {
+    try {
+      const res = await fetch("https://api.x.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: attempt.model,
+          temperature: 0.6,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: recapSystemPrompt() },
+            {
+              role: "user",
+              content: `Write the recap JSON for this private day log:\n${JSON.stringify(slimSnapshot(snap)).slice(0, 10000)}`,
+            },
+          ],
+          ...attempt.extra,
+        }),
+        signal: AbortSignal.timeout(50_000),
+      });
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+        error?: { message?: string } | string;
+      };
+      if (!res.ok) {
+        const errMsg =
+          typeof json.error === "string"
+            ? json.error
+            : json.error?.message || `xAI ${res.status}`;
+        lastError = `${attempt.model}: ${errMsg}`.slice(0, 180);
+        console.error("[day-recap] xAI", attempt.model, res.status, errMsg);
+        continue;
+      }
+      const raw = messageText(json);
+      const story = parseStory(raw);
+      if (story) return { story, error: null };
+      lastError = `${attempt.model}: reply was not valid recap JSON`.slice(0, 180);
+    } catch (err) {
+      lastError =
+        err instanceof Error && err.name === "TimeoutError"
+          ? `${attempt.model}: timed out`
+          : `${attempt.model}: ${err instanceof Error ? err.message : "network error"}`;
+      console.error("[day-recap]", attempt.model, err);
+    }
+  }
+  return { story: null, error: lastError };
 }
 
 export async function POST(req: Request) {
@@ -83,50 +184,11 @@ export async function POST(req: Request) {
     });
   }
 
-  try {
-    const res = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "grok-4.6",
-        temperature: 0.7,
-        messages: [
-          { role: "system", content: recapSystemPrompt() },
-          {
-            role: "user",
-            content: `Write the recap JSON for this private day log:\n${JSON.stringify(snap).slice(0, 12000)}`,
-          },
-        ],
-      }),
-      signal: AbortSignal.timeout(45000),
-    });
-    const json = (await res.json().catch(() => ({}))) as {
-      choices?: { message?: { content?: string } }[];
-      error?: { message?: string };
-    };
-    if (!res.ok) {
-      console.error("[day-recap] xAI", res.status, json.error?.message);
-      return NextResponse.json({
-        story: fallback,
-        source: "local",
-        grokConfigured,
-      });
-    }
-    const story = parseStory(String(json.choices?.[0]?.message?.content || ""));
-    return NextResponse.json({
-      story: story || fallback,
-      source: story ? "grok" : "local",
-      grokConfigured,
-    });
-  } catch (err) {
-    console.error("[day-recap]", err);
-    return NextResponse.json({
-      story: fallback,
-      source: "local",
-      grokConfigured,
-    });
-  }
+  const { story, error } = await askXai(key, snap);
+  return NextResponse.json({
+    story: story || fallback,
+    source: story ? "grok" : "local",
+    grokConfigured,
+    grokError: story ? undefined : error,
+  });
 }
