@@ -14,6 +14,7 @@ import {
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { grantSiteOwnerFullAccess } from "@/lib/siteOwnerAccess";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
+import { isolateAllCopiedOwnerBoards, seedNewMemberBoards } from "@/lib/memberBoards";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -45,6 +46,10 @@ export async function POST(req: Request) {
       }
     }
     await saveYardSaleAsync(loadYardSale());
+    if (!isSiteOwnerEmail(member.email)) {
+      await seedNewMemberBoards(member.id);
+      await isolateAllCopiedOwnerBoards();
+    }
     if (isSiteOwnerEmail(member.email)) {
       const full = getMemberById(member.id);
       if (full) {

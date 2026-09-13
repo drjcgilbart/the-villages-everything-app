@@ -65,7 +65,7 @@ export function PortfolioTracker({
       const fromAccount = Array.isArray(account.value.holdings)
         ? account.value.holdings
         : [];
-      setHoldings(fromAccount.length ? fromAccount : readPortfolio());
+      setHoldings(fromAccount);
       setHydrated(true);
       return;
     }

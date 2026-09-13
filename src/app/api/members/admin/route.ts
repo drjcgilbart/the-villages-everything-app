@@ -37,6 +37,11 @@ import {
 } from "@/lib/yardSale";
 import type { MemberStatus } from "@/lib/yardSaleTypes";
 import { sendMemberWelcomeEmail } from "@/lib/memberWelcomeMail";
+import {
+  isolateAllCopiedOwnerBoards,
+  isolateCopiedOwnerBoards,
+  seedNewMemberBoards,
+} from "@/lib/memberBoards";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,6 +83,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   await ensureDurableHydrated();
+  await isolateAllCopiedOwnerBoards();
   const durable = durableConfigured();
   const redis = redisConfigured();
   const blob = blobConfigured();
@@ -244,6 +250,10 @@ export async function POST(req: Request) {
       if (becameApproved) {
         setMemberStatus(id, "approved");
       }
+      if (becameApproved && mem && !isSiteOwnerEmail(mem.email)) {
+        await seedNewMemberBoards(id);
+        await isolateCopiedOwnerBoards(id);
+      }
       approveTopTierMembership(id);
       appendAdminLog(id, "Square Royalty (1 year) approved.");
       await persistAll();
@@ -323,6 +333,10 @@ export async function POST(req: Request) {
     }
     const before = getMemberById(String(body.id || ""));
     const member = setMemberStatus(body.id, status, body.notes);
+    if (status === "approved" && before && !isSiteOwnerEmail(before.email)) {
+      await seedNewMemberBoards(String(body.id || ""));
+      await isolateCopiedOwnerBoards(String(body.id || ""));
+    }
     const statusLine =
       status === "approved"
         ? "Membership approved."

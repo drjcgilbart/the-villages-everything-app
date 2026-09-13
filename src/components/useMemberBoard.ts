@@ -2,27 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { StoredBoardId } from "@/lib/memberBoardModel";
-import { readJsonStorage, writeJsonStorage } from "@/lib/mySpaceStorage";
-
-function looksEmpty(value: unknown): boolean {
-  if (value == null) return true;
-  if (Array.isArray(value)) return value.length === 0;
-  if (typeof value !== "object") return false;
-  const rec = value as Record<string, unknown>;
-  const keys = Object.keys(rec);
-  if (keys.length === 0) return true;
-  if (keys.length === 1 && Array.isArray(rec.items) && rec.items.length === 0) {
-    return true;
-  }
-  if (
-    keys.length === 1 &&
-    Array.isArray(rec.holdings) &&
-    rec.holdings.length === 0
-  ) {
-    return true;
-  }
-  return false;
-}
+import { writeJsonStorage } from "@/lib/mySpaceStorage";
 
 export function useMemberBoard<T>(
   board: StoredBoardId,
@@ -31,15 +11,16 @@ export function useMemberBoard<T>(
   opts?: {
     localKey?: string;
     debounceMs?: number;
-    isEmpty?: (value: T) => boolean;
   }
 ) {
   const [value, setValue] = useState<T>(fallback);
+  const [memberId, setMemberId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const emptyCheck = opts?.isEmpty || looksEmpty;
+  const scopedKey =
+    opts?.localKey && memberId ? `${opts.localKey}::${memberId}` : null;
 
   const put = useCallback(
     async (next: T) => {
@@ -67,9 +48,7 @@ export function useMemberBoard<T>(
 
   useEffect(() => {
     if (!enabled) {
-      if (opts?.localKey) {
-        setValue(readJsonStorage(opts.localKey, fallback));
-      }
+      setValue(fallback);
       setReady(true);
       return;
     }
@@ -79,41 +58,40 @@ export function useMemberBoard<T>(
       credentials: "include",
     })
       .then((res) => (res.ok ? res.json() : null))
-      .then((json: { boards?: Record<string, T> } | null) => {
-        if (cancelled) return;
-        const server = json?.boards?.[board];
-        const local = opts?.localKey
-          ? readJsonStorage<T>(opts.localKey, fallback)
-          : fallback;
-        if (server && !emptyCheck(server)) {
-          setValue(server);
-        } else if (!emptyCheck(local) && local !== fallback) {
-          setValue(local);
-          void put(local);
-        } else if (server) {
-          setValue(server);
+      .then(
+        (json: { boards?: Record<string, T>; memberId?: string } | null) => {
+          if (cancelled) return;
+          const id = json?.memberId ? String(json.memberId) : null;
+          setMemberId(id);
+          const server = json?.boards?.[board];
+          const key = opts?.localKey && id ? `${opts.localKey}::${id}` : null;
+          // Logged-in boards come from this member’s server row only.
+          // Never hydrate from another login’s unscoped localStorage.
+          if (server != null) {
+            setValue(server);
+            if (key) writeJsonStorage(key, server);
+          } else {
+            setValue(fallback);
+          }
+          setReady(true);
         }
-        setReady(true);
-      })
+      )
       .catch(() => {
         if (!cancelled) {
-          if (opts?.localKey) {
-            setValue(readJsonStorage(opts.localKey, fallback));
-          }
+          setValue(fallback);
           setReady(true);
         }
       });
     return () => {
       cancelled = true;
     };
-    // fallback is a stable empty factory from callers
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [board, enabled, opts?.localKey, put]);
+  }, [board, enabled, opts?.localKey]);
 
   const save = useCallback(
     async (next: T) => {
       setValue(next);
-      if (opts?.localKey) writeJsonStorage(opts.localKey, next);
+      if (scopedKey) writeJsonStorage(scopedKey, next);
       if (!enabled) return;
       const wait = opts?.debounceMs ?? 0;
       if (wait <= 0) {
@@ -125,7 +103,7 @@ export function useMemberBoard<T>(
         void put(next);
       }, wait);
     },
-    [enabled, opts?.debounceMs, opts?.localKey, put]
+    [enabled, opts?.debounceMs, put, scopedKey]
   );
 
   useEffect(() => {

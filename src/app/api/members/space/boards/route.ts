@@ -1,32 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ensureDurableHydrated } from "@/lib/dataFs";
 import { getSessionMember } from "@/lib/memberAuth";
 import {
   STORED_BOARD_FEATURE,
   getMemberBoards,
+  isolateCopiedOwnerBoards,
   isStoredBoardId,
   saveMemberBoard,
 } from "@/lib/memberBoards";
+import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import { getMemberSpace, memberCanAccess } from "@/lib/memberSpace";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  await ensureDurableHydrated();
   const member = await getSessionMember();
   if (!member) {
     return NextResponse.json({ error: "Please sign in" }, { status: 401 });
   }
   const space = getMemberSpace(member.id);
-  const all = getMemberBoards(member.id);
+  const all = isSiteOwnerEmail(member.email)
+    ? getMemberBoards(member.id)
+    : await isolateCopiedOwnerBoards(member.id);
   const boards: Record<string, unknown> = {};
   for (const [id, feature] of Object.entries(STORED_BOARD_FEATURE)) {
     if (memberCanAccess(space, feature)) {
       boards[id] = all[id as keyof typeof all];
     }
   }
-  return NextResponse.json({ boards });
+  return NextResponse.json(
+    { boards, memberId: member.id },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
 
 export async function PUT(req: NextRequest) {
+  await ensureDurableHydrated();
   const member = await getSessionMember();
   if (!member) {
     return NextResponse.json({ error: "Please sign in" }, { status: 401 });
