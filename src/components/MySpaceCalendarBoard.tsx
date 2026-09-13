@@ -315,13 +315,42 @@ export function MySpaceCalendarBoard() {
   if (!ready) return <p className="panel-hint">Loading calendar board…</p>;
 
   const cols = view === "month" ? 7 : days.length;
+  const hourNow = Number(
+    new Date().toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hour12: false,
+    })
+  );
 
   return (
     <div className="ms-ent-board">
-      <p className="ms-module-lead">
-        Shows, rec clubs, watch-later nights, and tasks land here automatically. Double-click an
-        item for details. Google is optional — you do not need it.
-      </p>
+      <div className="ms-cal-hero">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="ms-cal-hero-mascot"
+          src="/graphics/mascot-calendar.jpg"
+          alt="Golf-ball mascot holding a calendar with a gold star on today"
+          width={92}
+          height={92}
+        />
+        <div>
+          <span className="kicker">Lanai calendar</span>
+          <h4>Your week in sunshine — not a cave</h4>
+          <p>
+            Tee times, pickleball, square nights, and sticky notes land here.
+            Click a chip for details. Today gets the gold star.
+          </p>
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="ms-cal-hero-banner"
+          src="/graphics/ms-cal-banner.jpg"
+          alt=""
+          width={220}
+          height={108}
+        />
+      </div>
       <p className="panel-hint">
         Public Hub calendar stays free:{" "}
         <Link href="/calendar" className="text-link">
@@ -331,6 +360,7 @@ export function MySpaceCalendarBoard() {
         <Link href="/town-squares" className="text-link">
           Town Squares
         </Link>
+        . Google is optional — you do not need it.
       </p>
       {error ? <p className="pf-form-error">{error}</p> : null}
       {saving ? <p className="panel-hint">Saving to your account…</p> : null}
@@ -340,8 +370,18 @@ export function MySpaceCalendarBoard() {
           {overlay.filter((e) => e.kind !== "square" || e.id.startsWith("square:")).length} on
           calendar · {left} tasks left
         </span>
-        <span className="panel-hint">Local schedule · Google optional</span>
+        <span className="panel-hint">Private to this login</span>
       </div>
+
+      <ul className="ms-cal-legend" aria-label="Calendar colors">
+        <li className="kind-task"><i /> Task</li>
+        <li className="kind-show"><i /> Show</li>
+        <li className="kind-club"><i /> Rec club</li>
+        <li className="kind-watch"><i /> Watch later</li>
+        <li className="kind-golf"><i /> Golf</li>
+        <li className="kind-pickle"><i /> Pickleball</li>
+        <li className="kind-square"><i /> Town square</li>
+      </ul>
 
       <div className="ms-h-quick">
         {(
@@ -446,7 +486,7 @@ export function MySpaceCalendarBoard() {
                 return (
                   <div
                     key={`${iso}-${h}`}
-                    className="ms-cal-slot"
+                    className={`ms-cal-slot${iso === today && h === hourNow ? " is-now" : ""}`}
                     onClick={() => {
                       setAnchor(iso);
                       setForm({
@@ -546,7 +586,19 @@ export function MySpaceCalendarBoard() {
           alarm. <span className="ms-h-pill">{left} left</span>
         </p>
         {todayTasks.length === 0 ? (
-          <p className="panel-hint">No tasks for today. Add one below.</p>
+          <div className="ms-cal-empty">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/graphics/ms-cal-empty.jpg"
+              alt="Golf-ball mascot napping with an empty calendar"
+              width={88}
+              height={88}
+            />
+            <p>
+              No tasks for today. The alarm clock is napping. Add one below —
+              or just protect early-bird.
+            </p>
+          </div>
         ) : (
           <ul className="ms-cal-list">
             {todayTasks.map((t) => {
