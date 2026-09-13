@@ -155,9 +155,10 @@ export function MembershipPlans() {
               <p className="ms-tier-blurb">{TIER_SUMMARY[t.id].blurb}</p>
               <p className="panel-hint">{TIER_SUMMARY[t.id].includes}</p>
               {t.rank === 0 && !signedIn ? (
-                <Link href="/yard-sale/join" className="btn btn-primary btn-sm">
-                  Request free membership
-                </Link>
+                <p className="panel-hint" style={{ marginBottom: 0 }}>
+                  This is the free neighbor account. Use{" "}
+                  <strong>Request membership</strong> above to join.
+                </p>
               ) : null}
               {t.rank === 0 && signedIn ? (
                 <p className="panel-hint" style={{ marginBottom: 0 }}>

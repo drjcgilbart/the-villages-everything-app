@@ -986,6 +986,25 @@ a {
   background: rgba(31, 107, 74, 0.1);
 }
 
+.member-login-join {
+  margin: 1rem 0 0.45rem;
+  font-size: 1.02rem;
+}
+
+.member-login-join-link {
+  display: inline-block;
+  margin-left: 0.15rem;
+  font-weight: 800;
+  font-size: 1.08rem;
+  color: var(--palm-deep);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.member-login-join-link:hover {
+  color: var(--palm);
+}
+
 .header-inner {
   display: flex;
   align-items: center;

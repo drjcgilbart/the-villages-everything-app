@@ -81,9 +81,14 @@ export function MemberLoginForm() {
           <Link href="/admin">Admin</Link> → Members → Set password.
         </p>
       ) : null}
+      <p className="member-login-join">
+        Need an account?{" "}
+        <Link href="/yard-sale/join" className="member-login-join-link">
+          Request membership
+        </Link>
+      </p>
       <p className="panel-hint" style={{ marginBottom: 0 }}>
-        Need an account? <Link href="/yard-sale/join">Request membership</Link>
-        . Forgot your password while still pending? Submit the membership form
+        Forgot your password while still pending? Submit the membership form
         again with the same email and a new password.
       </p>
     </div>

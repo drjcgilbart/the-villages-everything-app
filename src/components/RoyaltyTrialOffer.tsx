@@ -69,11 +69,11 @@ export function RoyaltyTrialOffer(props: TrialOfferState) {
       {props.error ? <p className="pf-form-error">{props.error}</p> : null}
       {!props.signedIn ? (
         <div className="hero-actions">
-          <Link href="/yard-sale/login?next=/my-space" className="btn btn-primary">
-            Sign in to start the free month
+          <Link href="/yard-sale/join" className="btn btn-primary">
+            Request membership
           </Link>
-          <Link href="/yard-sale/join" className="btn btn-ghost">
-            Request a neighbor account
+          <Link href="/yard-sale/login?next=/donate" className="btn btn-ghost">
+            Already a member? Sign in
           </Link>
         </div>
       ) : !props.approved ? (
