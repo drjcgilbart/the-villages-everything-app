@@ -40,7 +40,7 @@ function siteBase() {
 }
 
 const RESEND_STARTER_FROM =
-  "The Villages Everything App <beth.t@example.com>";
+  "The Villages Everything App <onboarding@resend.dev>";
 
 function replyToAddress() {
   return adminNotifyEmail();
@@ -58,7 +58,7 @@ function parseResendError(body: string) {
 function fromAddress() {
   return (
     process.env.ADMIN_NOTIFY_FROM?.trim() ||
-    "The Villages Everything App <beth.t@example.com>"
+    "The Villages Everything App <admin@thevillageseverythingapp.com>"
   );
 }
 
@@ -214,9 +214,16 @@ async function sendViaResend(
       attachments: attach,
     });
     if (retry.ok) return true;
-    throw new Error(`Resend ${retry.status}: ${retry.message.slice(0, 220)}`);
+    throw new Error(friendlyResendError(retry.status, retry.message));
   }
-  throw new Error(`Resend ${first.status}: ${first.message.slice(0, 220)}`);
+  throw new Error(friendlyResendError(first.status, first.message));
+}
+
+function friendlyResendError(status: number, message: string) {
+  if (/domain is not verified|only send testing emails/i.test(message)) {
+    return "Resend will not deliver until thevillageseverythingapp.com is verified. Add it at resend.com/domains, put the DNS records at your domain host, wait until it says Verified, then click Send welcome email again.";
+  }
+  return `Resend ${status}: ${message.slice(0, 180)}`;
 }
 
 async function sendViaSendgrid(
