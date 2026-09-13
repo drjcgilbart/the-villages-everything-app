@@ -868,6 +868,7 @@ export function MySpaceHealthBoard() {
   const [weightNote, setWeightNote] = useState("");
   const [savingDay, setSavingDay] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [goalsSavedOpen, setGoalsSavedOpen] = useState(false);
   const [mealType, setMealType] = useState("breakfast");
   const [mealTitle, setMealTitle] = useState("");
   const [mealPick, setMealPick] = useState("__new__");
@@ -953,6 +954,15 @@ export function MySpaceHealthBoard() {
   function persist(next: HealthState) {
     void save(next);
   }
+
+  useEffect(() => {
+    if (!goalsSavedOpen) return;
+    const t = window.setTimeout(() => {
+      setGoalsSavedOpen(false);
+      setTab("overview");
+    }, 1800);
+    return () => window.clearTimeout(t);
+  }, [goalsSavedOpen]);
 
   useEffect(() => {
     if (!ready || !gymBoard.ready || autoRecapOnce.current) return;
@@ -1419,6 +1429,16 @@ export function MySpaceHealthBoard() {
         <span className="panel-hint">Today · {today}</span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTab("goals")}>
           Edit goals
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => {
+            persist(state);
+            setGoalsSavedOpen(true);
+          }}
+        >
+          Save Goals
         </button>
       </div>
       <p className="panel-hint">
@@ -3395,8 +3415,42 @@ export function MySpaceHealthBoard() {
             ))}
           </div>
           <p className="panel-hint">Not medical advice — for personal tracking and motivation only.</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              persist(state);
+              setGoalsSavedOpen(true);
+            }}
+          >
+            Save Goals
+          </button>
         </div>
       )}
+
+      {goalsSavedOpen ? (
+        <div
+          className="ms-h-popup-scrim"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ms-h-goals-saved-title"
+        >
+          <div className="ms-h-popup">
+            <h4 id="ms-h-goals-saved-title">Goals saved</h4>
+            <p>Your goal numbers are stored on this account.</p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setGoalsSavedOpen(false);
+                setTab("overview");
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
