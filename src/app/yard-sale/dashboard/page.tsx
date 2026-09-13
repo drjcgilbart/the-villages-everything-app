@@ -11,7 +11,7 @@ export default function YardSaleDashboardPage() {
           <span className="kicker">Member area</span>
           <h1>My Yard Sale listings</h1>
           <p>
-            Create listings with up to 5 photos and one short video. New posts
+            Create listings with up to 3 photos and one short video (big files shrink automatically). New posts
             wait for admin approval before they appear publicly.
           </p>
         </div>

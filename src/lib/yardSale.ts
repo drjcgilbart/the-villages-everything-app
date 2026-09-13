@@ -26,9 +26,9 @@ const YARD_FILE = "yard-sale.json";
 /** @deprecated path kept for exports/debug — runtime writes use dataFs */
 const YARD_PATH = path.join(BUNDLE_DATA_DIR, YARD_FILE);
 
-const MAX_IMAGES = 5;
-const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGES = 3;
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 function uid(prefix = "id") {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
@@ -363,7 +363,7 @@ export function createListing(
   if (!description) throw new Error("Description is required");
 
   const images = clampImages(input.images);
-  if (!images.length) throw new Error("Add at least one photo (up to 5)");
+  if (!images.length) throw new Error("Add at least one photo (up to 3)");
 
   const isFree = !!input.isFree || input.price === 0 || input.price === null;
   let price: number | null = isFree ? 0 : Number(input.price);

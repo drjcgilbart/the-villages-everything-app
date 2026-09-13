@@ -42,7 +42,7 @@ export default function YardSalePage() {
           <div className="yard-how">
             <div className="yard-how-step">
               <strong>1. List</strong>
-              <span>Up to 5 photos + 1 short video, price or FREE, how to meet.</span>
+              <span>Up to 3 photos + 1 short video (we shrink big files), price or FREE, how to meet.</span>
             </div>
             <div className="yard-how-step">
               <strong>2. Review</strong>

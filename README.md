@@ -45,7 +45,7 @@ You maintain **one website**. Phone apps are a native wrapper with your icon/spl
 | **Donate** | “Buy me a cup of Joe” tips via Stripe Checkout |
 | **About** | Mission + disclaimer (not affiliated with The Villages® operators) |
 | **Photo Journal** | Picture gallery with short captions (upload via Studio) |
-| **Community Yard Sale** | Moderated marketplace for Villagers — members request approval, post items (up to 5 photos + 1 short video), admin approves listings before they go live |
+| **Community Yard Sale** | Moderated marketplace — anyone can post (up to 3 photos + 1 short video, files shrink automatically); admin approves listings before they go live |
 | **Admin Portal** (`/admin`) | Site-owner tools: members, yard sale, dining, real estate |
 | **Creator Studio** (`/studio`) | Password-protected content dashboard (blog, photos, videos) |
 | **Theme music** | Optional multi-mood audio (bottom-right 🎵) with track switcher — **real royalty-free instrumental MP3s** (Sunny Morning, Evening Jazz Cart Ride, etc.). See `public/music/CREDITS.md` |

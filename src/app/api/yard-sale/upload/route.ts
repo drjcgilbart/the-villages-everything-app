@@ -32,13 +32,13 @@ export async function POST(req: Request) {
     }
     if (isImage && file.size > MAX_IMAGE_BYTES) {
       return NextResponse.json(
-        { error: "Image must be under 8 MB" },
+        { error: "Image must be under 3 MB after shrinking" },
         { status: 400 }
       );
     }
     if (isVideo && file.size > MAX_VIDEO_BYTES) {
       return NextResponse.json(
-        { error: "Video must be under 40 MB (keep it short)" },
+        { error: "Video must be under 20 MB after shrinking — keep it short" },
         { status: 400 }
       );
     }

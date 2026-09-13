@@ -15,7 +15,8 @@ import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import { formatPrice } from "@/components/YardListingCard";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import { formatDate } from "@/lib/format";
-import { prepareUploadImageFile } from "@/lib/browserImage";
+import { DEFAULT_PHOTO_MAX_BYTES, prepareUploadImageFile } from "@/lib/browserImage";
+import { DEFAULT_VIDEO_MAX_BYTES, prepareUploadVideoFile } from "@/lib/browserVideo";
 
 const emptyForm = {
   title: "",
@@ -67,19 +68,15 @@ export function MemberDashboard() {
     setListings([]);
   }
 
-  async function uploadFile(file: File, kind: "image" | "video") {
-    const ready =
-      kind === "image"
-        ? (await prepareUploadImageFile(file, { maxBytes: 6.5 * 1024 * 1024 })).file
-        : file;
+  async function uploadReady(file: File, kind: "image" | "video") {
     const fd = new FormData();
-    fd.append("file", ready);
+    fd.append("file", file);
     const res = await fetch("/api/yard-sale/upload", { method: "POST", body: fd });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Upload failed");
     if (kind === "image") {
       setForm((f) => {
-        if (f.images.length >= 5) throw new Error("Maximum 5 photos");
+        if (f.images.length >= 3) throw new Error("Maximum 3 photos");
         return { ...f, images: [...f.images, data.url] };
       });
     } else {
@@ -91,14 +88,26 @@ export function MemberDashboard() {
     if (!files?.length) return;
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
-        if (form.images.length + 1 > 5) {
-          flash("err", "Maximum 5 photos per listing");
-          break;
-        }
-        await uploadFile(file, "image");
+      const room = Math.max(0, 3 - form.images.length);
+      const picked = Array.from(files).slice(0, room);
+      if (!picked.length) {
+        flash("err", "Maximum 3 photos per listing");
+        return;
       }
-      flash("ok", "Photo(s) uploaded");
+      let shrunk = 0;
+      for (const file of picked) {
+        const prepared = await prepareUploadImageFile(file, {
+          maxBytes: DEFAULT_PHOTO_MAX_BYTES,
+        });
+        if (prepared.compressed) shrunk += 1;
+        await uploadReady(prepared.file, "image");
+      }
+      flash(
+        "ok",
+        shrunk
+          ? `Photo(s) uploaded — ${shrunk} shrunk to fit.`
+          : "Photo(s) uploaded"
+      );
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -110,10 +119,21 @@ export function MemberDashboard() {
     if (!file) return;
     setUploading(true);
     try {
-      await uploadFile(file, "video");
-      flash("ok", "Video uploaded");
+      const prepared = await prepareUploadVideoFile(file, {
+        maxBytes: DEFAULT_VIDEO_MAX_BYTES,
+      });
+      await uploadReady(prepared.file, "video");
+      flash(
+        "ok",
+        prepared.compressed ? "Video shrunk and uploaded." : "Video uploaded"
+      );
     } catch (err) {
-      flash("err", err instanceof Error ? err.message : "Upload failed");
+      flash(
+        "err",
+        err instanceof Error
+          ? err.message
+          : "Video is too large. Record a shorter clip."
+      );
     } finally {
       setUploading(false);
     }
@@ -378,7 +398,8 @@ export function MemberDashboard() {
           </div>
           <div className="field">
             <label>
-              Photos (required, up to 5) {uploading ? "· uploading…" : ""}
+              Photos (required, up to 3 — large files shrink automatically){" "}
+              {uploading ? "· working…" : ""}
             </label>
             <input
               type="file"
@@ -416,7 +437,7 @@ export function MemberDashboard() {
             )}
           </div>
           <div className="field">
-            <label>Optional short video (1 max, under 40 MB)</label>
+            <label>Optional short video (1 max — large clips shrink automatically)</label>
             <input
               type="file"
               accept="video/*"
