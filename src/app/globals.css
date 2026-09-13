@@ -8390,6 +8390,25 @@ button.text-link {
   gap: 0.4rem;
 }
 
+.admin-list .admin-item {
+  align-items: flex-start;
+}
+
+.admin-member-log {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.18rem;
+  max-width: 38rem;
+}
+
+.admin-member-log li {
+  font-size: 0.8rem;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
 .msg {
   margin: 0.75rem 0;
   padding: 0.7rem 0.9rem;

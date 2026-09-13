@@ -24,6 +24,8 @@ import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
 import { deleteMemberAccount } from "@/lib/memberDelete";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import {
+  appendAdminLog,
+  getAdminLog,
   getMemberById,
   listMembers,
   loadYardSale,
@@ -61,6 +63,7 @@ function membersWithPlans() {
       donationBadges: pub.donationBadges,
       topTierNomination: pub.topTierNomination,
       badges: full ? badgesForMemberRecord(full) : [],
+      adminLog: getAdminLog(m.id),
     };
   });
 }
@@ -117,6 +120,7 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+      appendAdminLog(id, "Admin started delete (account will be removed).");
       await deleteMemberAccount(id);
       await persistAll();
       return NextResponse.json({
@@ -134,6 +138,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Member not found" }, { status: 404 });
       }
       const welcomeEmail = await sendMemberWelcomeEmail(mem);
+      appendAdminLog(
+        id,
+        welcomeEmail.ok
+          ? "Welcome email sent."
+          : `Welcome email failed${"error" in welcomeEmail && welcomeEmail.error ? `: ${welcomeEmail.error}` : ""}.`
+      );
+      await persistAll();
       return NextResponse.json({
         memberId: id,
         members: membersWithPlans(),
@@ -144,6 +155,7 @@ export async function POST(req: Request) {
 
     if (body.action === "setPassword") {
       const member = setMemberPassword(String(body.id || ""), body.password);
+      appendAdminLog(String(body.id || ""), "Password was set by admin.");
       await persistAll();
       return NextResponse.json({
         member,
@@ -160,6 +172,7 @@ export async function POST(req: Request) {
         // Manual plan set is open-ended unless clearing royalty
         planExpiresAt: plan === "square_royalty" ? null : null,
       });
+      appendAdminLog(id, `Plan set to ${publicSpacePayload(getMemberSpace(id)).planLabel}.`);
       await persistAll();
       return NextResponse.json({
         memberId: id,
@@ -185,6 +198,10 @@ export async function POST(req: Request) {
       } else {
         grantGoldenLoofah(id);
       }
+      appendAdminLog(
+        id,
+        body.goldenLoofah === false ? "Golden Loofah removed." : "Golden Loofah granted."
+      );
       await persistAll();
       return NextResponse.json({
         memberId: id,
@@ -202,6 +219,7 @@ export async function POST(req: Request) {
         setMemberStatus(id, "approved");
       }
       approveTopTierMembership(id);
+      appendAdminLog(id, "Square Royalty (1 year) approved.");
       await persistAll();
       let welcomeEmail: Awaited<ReturnType<typeof sendMemberWelcomeEmail>> | null =
         null;
@@ -232,6 +250,7 @@ export async function POST(req: Request) {
           },
         });
       }
+      appendAdminLog(id, "Free Square Royalty month granted.");
       await persistAll();
       return NextResponse.json({
         memberId: id,
@@ -251,6 +270,7 @@ export async function POST(req: Request) {
           },
         });
       }
+      appendAdminLog(id, "Free month ended.");
       await persistAll();
       return NextResponse.json({
         memberId: id,
@@ -262,6 +282,7 @@ export async function POST(req: Request) {
     if (body.action === "rejectTopTier") {
       const id = String(body.id || "");
       rejectTopTierMembership(id);
+      appendAdminLog(id, "Square Royalty nomination rejected.");
       await persistAll();
       return NextResponse.json({
         memberId: id,
@@ -276,12 +297,32 @@ export async function POST(req: Request) {
     }
     const before = getMemberById(String(body.id || ""));
     const member = setMemberStatus(body.id, status, body.notes);
+    const statusLine =
+      status === "approved"
+        ? "Membership approved."
+        : status === "rejected"
+          ? "Membership rejected."
+          : status === "suspended"
+            ? "Membership suspended."
+            : status === "pending"
+              ? "Membership set back to pending."
+              : `Status set to ${status}.`;
+    appendAdminLog(String(body.id || ""), statusLine);
     await persistAll();
     let welcomeEmail: Awaited<ReturnType<typeof sendMemberWelcomeEmail>> | null =
       null;
     if (status === "approved" && before && before.status !== "approved") {
       const full = getMemberById(String(body.id || ""));
-      if (full) welcomeEmail = await sendMemberWelcomeEmail(full);
+      if (full) {
+        welcomeEmail = await sendMemberWelcomeEmail(full);
+        appendAdminLog(
+          String(body.id || ""),
+          welcomeEmail.ok
+            ? "Welcome email sent."
+            : `Welcome email failed${"error" in welcomeEmail && welcomeEmail.error ? `: ${welcomeEmail.error}` : ""}.`
+        );
+        await persistAll();
+      }
     }
     return NextResponse.json({
       member,

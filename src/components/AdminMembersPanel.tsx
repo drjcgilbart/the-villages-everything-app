@@ -15,7 +15,10 @@ type TopTierNom = {
   decidedAt?: string | null;
 };
 
+type AdminLogEntry = { at: string; text: string };
+
 type AdminMember = PublicMember & {
+  adminLog?: AdminLogEntry[];
   plan?: HubPlanId | string;
   accessPlan?: HubPlanId | string;
   planLabel?: string;
@@ -28,6 +31,19 @@ type AdminMember = PublicMember & {
 };
 
 type TierOpt = { id: string; label: string; shortLabel: string; rank: number };
+
+function formatAdminWhen(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export function AdminMembersPanel() {
   const [members, setMembers] = useState<AdminMember[]>([]);
@@ -111,7 +127,17 @@ export function AdminMembersPanel() {
     }
   }
 
-  async function setMemberStatus(id: string, status: string) {
+  async function setMemberStatus(id: string, status: string, name?: string) {
+    if (status === "suspended") {
+      const who = name || "this member";
+      if (
+        !window.confirm(
+          `Are you sure you want to suspend ${who}?\n\nThey will not be able to sign in until you reinstate them.`
+        )
+      ) {
+        return;
+      }
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/members/admin", {
@@ -442,7 +468,7 @@ function MemberAdminRow({
   tiers: TierOpt[];
   busy: boolean;
   emphasize?: boolean;
-  onStatus: (id: string, status: string) => void;
+  onStatus: (id: string, status: string, name?: string) => void;
   onPlan: (id: string, plan: string) => void;
   onLoofah: (id: string, next: boolean) => void;
   onPassword: (id: string, name: string) => void;
@@ -483,6 +509,15 @@ function MemberAdminRow({
           {nom?.status === "pending" ? " · Royalty nomination pending" : ""}
           {nom?.status === "approved" ? " · Royalty nomination approved" : ""}
         </span>
+        {m.adminLog && m.adminLog.length > 0 ? (
+          <ul className="admin-member-log">
+            {[...m.adminLog].reverse().map((entry, i) => (
+              <li key={`${entry.at}-${i}`}>
+                {formatAdminWhen(entry.at)} — {entry.text}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
       <div className="admin-actions">
         {tiers.length > 0 && (
@@ -545,7 +580,7 @@ function MemberAdminRow({
             type="button"
             className="btn btn-primary btn-sm"
             disabled={busy}
-            onClick={() => onStatus(m.id, "approved")}
+            onClick={() => onStatus(m.id, "approved", m.name)}
           >
             Approve
           </button>
@@ -555,7 +590,7 @@ function MemberAdminRow({
             type="button"
             className="btn btn-ghost btn-sm"
             disabled={busy}
-            onClick={() => onStatus(m.id, "rejected")}
+            onClick={() => onStatus(m.id, "rejected", m.name)}
           >
             Reject
           </button>
@@ -565,7 +600,7 @@ function MemberAdminRow({
             type="button"
             className="btn btn-ghost btn-sm"
             disabled={busy}
-            onClick={() => onStatus(m.id, "rejected")}
+            onClick={() => onStatus(m.id, "rejected", m.name)}
           >
             Reject
           </button>
@@ -575,7 +610,7 @@ function MemberAdminRow({
             type="button"
             className="btn btn-danger btn-sm"
             disabled={busy}
-            onClick={() => onStatus(m.id, "suspended")}
+            onClick={() => onStatus(m.id, "suspended", m.name)}
           >
             Suspend
           </button>
@@ -585,7 +620,7 @@ function MemberAdminRow({
             type="button"
             className="btn btn-primary btn-sm"
             disabled={busy}
-            onClick={() => onStatus(m.id, "approved")}
+            onClick={() => onStatus(m.id, "approved", m.name)}
           >
             Reinstate
           </button>

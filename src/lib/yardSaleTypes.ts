@@ -1,5 +1,10 @@
 export type MemberStatus = "pending" | "approved" | "rejected" | "suspended";
 
+export type AdminLogEntry = {
+  at: string;
+  text: string;
+};
+
 export type Member = {
   id: string;
   name: string;
@@ -12,6 +17,7 @@ export type Member = {
   createdAt: string;
   approvedAt?: string | null;
   notes?: string;
+  adminLog?: AdminLogEntry[];
 };
 
 /** Safe member shape for clients (no password hash) */

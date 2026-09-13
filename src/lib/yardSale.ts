@@ -310,6 +310,30 @@ export function setMemberStatus(id: string, status: MemberStatus, notes?: string
   return toPublicMember(data.members[idx]);
 }
 
+export function getAdminLog(id: string): { at: string; text: string }[] {
+  const m = getMemberById(id);
+  return Array.isArray(m?.adminLog) ? m!.adminLog : [];
+}
+
+export function appendAdminLog(id: string, text: string) {
+  const data = loadYardSale();
+  const idx = data.members.findIndex((m) => m.id === id);
+  if (idx < 0) return;
+  const entry = {
+    at: new Date().toISOString(),
+    text: String(text || "").trim().slice(0, 280),
+  };
+  if (!entry.text) return;
+  const prev = Array.isArray(data.members[idx].adminLog)
+    ? data.members[idx].adminLog!
+    : [];
+  data.members[idx] = {
+    ...data.members[idx],
+    adminLog: [...prev, entry].slice(-60),
+  };
+  saveYardSale(data);
+}
+
 // ——— Listings ———
 
 function clampImages(images: unknown): string[] {
