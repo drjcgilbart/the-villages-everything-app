@@ -137,7 +137,19 @@ export function formatAdminNotifyEmail(payload: AdminNotifyPayload) {
   return { subject, text: textLines.join("\n"), html };
 }
 
-async function sendViaResend(to: string, subject: string, text: string, html: string) {
+export type MailAttachment = {
+  filename: string;
+  contentBase64: string;
+  contentType?: string;
+};
+
+async function sendViaResend(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  attachments?: MailAttachment[]
+) {
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) return false;
   const res = await fetch("https://api.resend.com/emails", {
@@ -152,6 +164,10 @@ async function sendViaResend(to: string, subject: string, text: string, html: st
       subject,
       text,
       html,
+      attachments: attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.contentBase64,
+      })),
     }),
   });
   if (!res.ok) {
@@ -161,7 +177,13 @@ async function sendViaResend(to: string, subject: string, text: string, html: st
   return true;
 }
 
-async function sendViaSendgrid(to: string, subject: string, text: string, html: string) {
+async function sendViaSendgrid(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  attachments?: MailAttachment[]
+) {
   const key = process.env.SENDGRID_API_KEY?.trim();
   if (!key) return false;
   const fromRaw = fromAddress();
@@ -183,6 +205,12 @@ async function sendViaSendgrid(to: string, subject: string, text: string, html: 
         { type: "text/plain", value: text },
         { type: "text/html", value: html },
       ],
+      attachments: attachments?.map((a) => ({
+        filename: a.filename,
+        type: a.contentType || "application/pdf",
+        content: a.contentBase64,
+        disposition: "attachment",
+      })),
     }),
   });
   if (!res.ok) {
@@ -197,6 +225,7 @@ export async function sendOutboundEmail(opts: {
   subject: string;
   text: string;
   html: string;
+  attachments?: MailAttachment[];
 }): Promise<
   | { ok: true }
   | { ok: false; skipped: true }
@@ -207,10 +236,10 @@ export async function sendOutboundEmail(opts: {
     return { ok: false, error: "No email address" };
   }
   try {
-    if (await sendViaResend(to, opts.subject, opts.text, opts.html)) {
+    if (await sendViaResend(to, opts.subject, opts.text, opts.html, opts.attachments)) {
       return { ok: true };
     }
-    if (await sendViaSendgrid(to, opts.subject, opts.text, opts.html)) {
+    if (await sendViaSendgrid(to, opts.subject, opts.text, opts.html, opts.attachments)) {
       return { ok: true };
     }
     console.error(

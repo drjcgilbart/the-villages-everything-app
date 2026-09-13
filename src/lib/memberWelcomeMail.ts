@@ -1,4 +1,6 @@
-import { sendOutboundEmail } from "./adminNotify";
+import fs from "fs";
+import path from "path";
+import { sendOutboundEmail, type MailAttachment } from "./adminNotify";
 import { SITE_BRAND } from "./siteBrand";
 
 function escapeHtml(s: string) {
@@ -15,59 +17,105 @@ function siteBase() {
   );
 }
 
+function welcomePdfAttachment(): MailAttachment | null {
+  const filePath = path.join(process.cwd(), "mail-assets", "welcome-letter.pdf");
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    return {
+      filename: "Welcome-to-The-Villages-Everything-App.pdf",
+      contentBase64: fs.readFileSync(filePath).toString("base64"),
+      contentType: "application/pdf",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function formatMemberWelcomeEmail(opts: {
   name: string;
   village?: string;
 }) {
-  const first = (opts.name || "neighbor").trim().split(/\s+/)[0] || "neighbor";
+  const first = (opts.name || "Neighbor").trim().split(/\s+/)[0] || "Neighbor";
   const village = String(opts.village || "").trim();
   const base = siteBase();
-  const subject = `Welcome to ${SITE_BRAND.name} — you're in`;
-  const villageLine = village
-    ? `You listed the Village of ${village}. Open The Villages page anytime to star it as yours, look up your CDD bond, and find the Architectural Review application.`
-    : `When you have a minute, open The Villages page, find your neighborhood, star it as yours, and peek at CDD bond and ARC links on your village card.`;
+  const subject = "Welcome to the Neighborhood — your membership is approved";
+  const villageBit = village
+    ? ` You listed the Village of ${village} — open The Villages page anytime to star it as yours.`
+    : "";
 
   const text = [
-    `Hi ${first},`,
+    `CART FIRST, QUESTIONS LATER`,
+    `Welcome to the Neighborhood`,
+    `Your membership request has been approved`,
     ``,
-    `You're approved. Welcome to ${SITE_BRAND.name} — the neighbor-built everything app for ${SITE_BRAND.location}.`,
+    `Dear ${first},`,
     ``,
-    villageLine,
+    `Thank you for requesting membership at The Villages Everything App. I am delighted to welcome you — truly. You asked to join, I approved your request, and now the porch light is on for you.${villageBit}`,
     ``,
-    `What to try first:`,
-    `• My Space — ${base}/my-space — private health log, gym, journal, photos`,
-    `• Dining, golf, rec centers, pickleball, clubs, calendar`,
-    `• Yard Sale — list something for the neighbors`,
-    `• Search this website (next to the golf-ball logo) if you get lost`,
+    `This is the moderately ridiculous everything app for The Villages, Florida — a neighbor-built hub where you can find your village, rate a restaurant, chase live music, and still laugh about the plot twist of starting over here. Whimsical on purpose. Useful on accident. (Mostly on purpose.)`,
     ``,
-    `Sign in: ${base}/yard-sale/login`,
-    `Plans & support: ${base}/donate`,
+    `The public Hub stays free for everyone — Town Squares, Rec Centers, Dining, Calendar, Golf, Pickleball, Clubs, Forums, Yard Sale, Best of the Month, and our sister game, Golf Cart Hero. Phone browser works today; store apps are rolling out. Pull up a chair anytime.`,
     ``,
-    `This is not official Villages operator mail. We're neighbors who built a useful (and slightly ridiculous) app. If something's off, reply to this note or use Support on the site.`,
+    `A friendly nudge — not a sales pitch`,
+    `Membership is optional. If you are happy waving from the porch, that is a perfectly honorable Villages lifestyle. If you would like a more personal lanai — your own weather, boards, household logins, and private tools — I hope you will take a gentle look at the plans below.`,
+    `Approved neighbors can try Square Royalty free for 30 days — no card required. Poke around, see if the private boards feel like home, then keep a paid plan or go back to Porch Waver. Either way, you remain welcome.`,
     ``,
-    `See you on the cart path,`,
-    `Jonathan`,
-    `${SITE_BRAND.name}`,
-    base,
+    `What membership unlocks`,
+    `Public Hub pages stay free. Membership simply unlocks your private My Space lanai. Each paid tier keeps everything below it, and extra household seats get their own login, password, and boards.`,
+    ``,
+    `Porch Waver — $0 / year — Free neighbor account, 1 login. Preview the Reboot boards. My Space door, favorites, shortcuts, and yard-sale posting when approved.`,
+    `Cart Path Regular — $3 / year — 2 member logins, each with their own password and boards. Daily dashboard energy — full weather, investments, news prefs, and entertainment picks.`,
+    `Lanai Legend — $5 / year — 3 member logins. The private Reboot: health, pets, kitchen, gym, maintenance, personal calendar, private photos, golf and pickleball.`,
+    `Square Royalty — $10 / year — 4 member logins. Everything on the lanai, plus the royalty lounge, badge flair, and early access to new My Space boards.`,
+    ``,
+    `A few easy first steps`,
+    `1. Sign in and open My Space — that is your private lanai. ${base}/my-space`,
+    `2. Add the site to your phone’s Home Screen so it feels like an app (Safari Share on iPhone; Chrome menu on Android).`,
+    `3. Wander the Hub — rate a restaurant, peek at tonight’s square, or take Golf Cart Hero for a lap.`,
+    `4. If you want the full private boards, start the 30-day Square Royalty trial from the Plans page. No rush and no hard feelings if you stay a Porch Waver. ${base}/donate`,
+    ``,
+    `I built this place because I came here to reboot — loudly, sunnily, and with better snacks. The hub is just the map. You bringing your own story to it is what makes it a neighborhood.`,
+    ``,
+    `Welcome home. Watch for the cart. Wave anyway.`,
+    ``,
+    `Sincerely,`,
+    `Jonathan Gilbart`,
+    `Creator of The Villages Everything App`,
+    `www.TheVillagesEverythingApp.com`,
   ].join("\n");
 
   const html = `<!doctype html>
-<html><body style="margin:0;padding:24px;background:#f6f1e7;font-family:Georgia,serif;color:#1c2430">
-  <div style="max-width:560px;margin:0 auto;background:#fffdf8;border:1px solid #e6dcc8;border-radius:18px;padding:28px 26px">
-    <p style="margin:0 0 8px;color:#1f6b4a;font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:12px">You're in</p>
-    <h1 style="margin:0 0 12px;font-size:26px;line-height:1.25">Welcome, ${escapeHtml(first)}</h1>
-    <p>Your membership is <strong>approved</strong>. ${escapeHtml(SITE_BRAND.name)} is the neighbor-built everything app for ${escapeHtml(SITE_BRAND.location)} — dining, golf, rec centers, your village, and a private My Space notebook.</p>
-    <p>${escapeHtml(villageLine)}</p>
-    <p><a href="${escapeHtml(base)}/my-space" style="display:inline-block;background:#1f6b4a;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none;font-weight:700">Open My Space</a></p>
-    <p style="margin:18px 0 8px"><strong>Handy doors</strong></p>
-    <ul style="margin:0;padding-left:18px;line-height:1.6">
-      <li><a href="${escapeHtml(base)}/yard-sale/login">Sign in</a></li>
-      <li><a href="${escapeHtml(base)}/my-village">Find your village</a></li>
-      <li><a href="${escapeHtml(base)}/dining">Dining</a> · <a href="${escapeHtml(base)}/golf-zone">Golf</a> · <a href="${escapeHtml(base)}/calendar">Calendar</a></li>
-      <li><a href="${escapeHtml(base)}/donate">Plans &amp; support</a></li>
-    </ul>
-    <p style="margin:18px 0 0;font-size:14px;color:#5c6675">Not official Villages® operator mail — just neighbors. Reply if something's off.</p>
-    <p style="margin:8px 0 0">See you on the cart path,<br/>Jonathan<br/>${escapeHtml(SITE_BRAND.name)}</p>
+<html><body style="margin:0;padding:24px;background:#f4efe4;font-family:Georgia,'Times New Roman',serif;color:#1c2430">
+  <div style="max-width:620px;margin:0 auto;background:#fffdf8;border:1px solid #e6dcc8;border-radius:18px;padding:28px 26px 32px">
+    <p style="margin:0 0 6px;color:#1f6b4a;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:11px">Cart first, questions later</p>
+    <h1 style="margin:0 0 6px;font-size:28px;line-height:1.2;color:#123d2d">Welcome to the Neighborhood</h1>
+    <p style="margin:0 0 18px;color:#1f6b4a;font-weight:700">Your membership request has been approved</p>
+    <p>Dear ${escapeHtml(first)},</p>
+    <p>Thank you for requesting membership at The Villages Everything App. I am delighted to welcome you — truly. You asked to join, I approved your request, and now the porch light is on for you.${village ? ` You listed the Village of <strong>${escapeHtml(village)}</strong>.` : ""}</p>
+    <p>This is the moderately ridiculous everything app for The Villages, Florida — a neighbor-built hub where you can find your village, rate a restaurant, chase live music, and still laugh about the plot twist of starting over here. Whimsical on purpose. Useful on accident. (Mostly on purpose.)</p>
+    <p>The public Hub stays free for everyone — Town Squares, Rec Centers, Dining, Calendar, Golf, Pickleball, Clubs, Forums, Yard Sale, Best of the Month, and our sister game, Golf Cart Hero. Phone browser works today; store apps are rolling out. Pull up a chair anytime.</p>
+    <h2 style="margin:22px 0 8px;font-size:18px;color:#123d2d">A friendly nudge — not a sales pitch</h2>
+    <p>Membership is optional. If you are happy waving from the porch, that is a perfectly honorable Villages lifestyle. If you would like a more personal lanai — your own weather, boards, household logins, and private tools — I hope you will take a gentle look at the plans below.</p>
+    <p>Approved neighbors can try Square Royalty free for 30 days — no card required. Poke around, see if the private boards feel like home, then keep a paid plan or go back to Porch Waver. Either way, you remain welcome.</p>
+    <h2 style="margin:22px 0 8px;font-size:18px;color:#123d2d">What membership unlocks</h2>
+    <p>Public Hub pages stay free. Membership simply unlocks your private My Space lanai. Each paid tier keeps everything below it, and extra household seats get their own login, password, and boards.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 18px">
+      <tr style="background:#eef6f0"><td style="padding:8px;border:1px solid #e6dcc8"><strong>Porch Waver</strong> · $0 / year</td><td style="padding:8px;border:1px solid #e6dcc8">1 login. Preview the Reboot boards. My Space door, favorites, shortcuts, and yard-sale posting.</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e6dcc8"><strong>Cart Path Regular</strong> · $3 / year</td><td style="padding:8px;border:1px solid #e6dcc8">2 member logins. Full weather, investments, news prefs, and entertainment picks.</td></tr>
+      <tr style="background:#eef6f0"><td style="padding:8px;border:1px solid #e6dcc8"><strong>Lanai Legend</strong> · $5 / year</td><td style="padding:8px;border:1px solid #e6dcc8">3 member logins. Health, pets, kitchen, gym, maintenance, personal calendar, private photos, golf and pickleball.</td></tr>
+      <tr><td style="padding:8px;border:1px solid #e6dcc8"><strong>Square Royalty</strong> · $10 / year</td><td style="padding:8px;border:1px solid #e6dcc8">4 member logins. Everything on the lanai, plus royalty lounge, badge flair, and early access.</td></tr>
+    </table>
+    <h2 style="margin:22px 0 8px;font-size:18px;color:#123d2d">A few easy first steps</h2>
+    <ol style="margin:0 0 16px;padding-left:20px;line-height:1.55">
+      <li>Sign in and open <a href="${escapeHtml(base)}/my-space">My Space</a> — that is your private lanai.</li>
+      <li>Add the site to your phone’s Home Screen so it feels like an app (Safari Share on iPhone; Chrome menu on Android).</li>
+      <li>Wander the Hub — rate a restaurant, peek at tonight’s square, or take Golf Cart Hero for a lap.</li>
+      <li>If you want the full private boards, start the 30-day Square Royalty trial from the <a href="${escapeHtml(base)}/donate">Plans page</a>. No rush and no hard feelings if you stay a Porch Waver.</li>
+    </ol>
+    <p>I built this place because I came here to reboot — loudly, sunnily, and with better snacks. The hub is just the map. You bringing your own story to it is what makes it a neighborhood.</p>
+    <p><strong>Welcome home. Watch for the cart. Wave anyway.</strong></p>
+    <p>Sincerely,<br/>Jonathan Gilbart<br/>Creator of The Villages Everything App<br/><a href="${escapeHtml(base)}">www.TheVillagesEverythingApp.com</a></p>
+    <p style="margin:18px 0 0;font-size:13px;color:#5c6675">A PDF copy of this welcome letter is attached. Sign in: <a href="${escapeHtml(base)}/yard-sale/login">${escapeHtml(base)}/yard-sale/login</a></p>
   </div>
 </body></html>`;
 
@@ -82,8 +130,15 @@ export async function sendMemberWelcomeEmail(member: {
   const email = String(member.email || "").trim();
   if (!email) return { ok: false as const, error: "Member has no email" };
   const { subject, text, html } = formatMemberWelcomeEmail({
-    name: member.name || "neighbor",
+    name: member.name || "Neighbor",
     village: member.village,
   });
-  return sendOutboundEmail({ to: email, subject, text, html });
+  const pdf = welcomePdfAttachment();
+  return sendOutboundEmail({
+    to: email,
+    subject,
+    text,
+    html,
+    attachments: pdf ? [pdf] : undefined,
+  });
 }
