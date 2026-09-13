@@ -11,6 +11,8 @@ import {
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_HEALTH } from "@/lib/sampleBoards";
 import { MySpaceGymBoard } from "@/components/MySpaceGymBoard";
+import { MySpaceHealthDayRecap } from "@/components/MySpaceHealthDayRecap";
+import { sanitizeDayRecaps, type DayRecap } from "@/lib/healthDayRecap";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -24,6 +26,7 @@ type HealthTab =
   | "sleep"
   | "photos"
   | "journal"
+  | "day"
   | "goals";
 
 type DoseTime = {
@@ -124,7 +127,7 @@ type DayHabit = {
   strength: boolean;
 };
 
-type HealthState = {
+export type HealthState = {
   unit: "lbs";
   startWeight: number | null;
   currentWeight: number | null;
@@ -147,6 +150,7 @@ type HealthState = {
   medicationLogs: MedicationLog[];
   sleeps: SleepLog[];
   progressPhotos: ProgressPhoto[];
+  dayRecaps: DayRecap[];
 };
 
 const EXERCISE_PRESETS = [
@@ -231,6 +235,7 @@ const TABS: { id: HealthTab; label: string; icon: string }[] = [
   { id: "sleep", label: "Sleep", icon: "😴" },
   { id: "photos", label: "Photos", icon: "📷" },
   { id: "journal", label: "Journal", icon: "📓" },
+  { id: "day", label: "My Day", icon: "🌞" },
 ];
 
 function emptyHabit(): DayHabit {
@@ -270,6 +275,7 @@ function defaultState(): HealthState {
     medicationLogs: [],
     sleeps: [],
     progressPhotos: [],
+    dayRecaps: [],
   };
 }
 
@@ -615,6 +621,7 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
       progressPhotos,
       SAMPLE_HEALTH.progressPhotos as ProgressPhoto[]
     ),
+    dayRecaps: sanitizeDayRecaps(r.dayRecaps),
   };
 }
 
@@ -3047,6 +3054,15 @@ export function MySpaceHealthBoard() {
             </button>
           </div>
         </div>
+      )}
+
+      {tab === "day" && (
+        <MySpaceHealthDayRecap
+          health={state}
+          recaps={state.dayRecaps}
+          onSaveRecaps={(dayRecaps) => persist({ ...state, dayRecaps })}
+          today={today}
+        />
       )}
 
       {tab === "goals" && (

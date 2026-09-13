@@ -1,0 +1,501 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { emptyBoards, type GymBoard } from "@/lib/memberBoardModel";
+import { getDeviceMedia } from "@/lib/deviceMediaStore";
+import {
+  buildDaySnapshot,
+  datesWithLogs,
+  prettyDate,
+  sanitizeDayRecaps,
+  snapshotHasLogs,
+  type DayRecap,
+  type DayRecapStory,
+  type DaySnapshot,
+} from "@/lib/healthDayRecap";
+import { buildHealthDayPdf } from "@/lib/healthDayPdf";
+import { uid } from "@/lib/mySpaceStorage";
+import { useMemberBoard } from "@/components/useMemberBoard";
+import type { HealthLike } from "@/lib/healthDayRecap";
+
+
+
+function monthStart(date: string) {
+  return `${date.slice(0, 7)}-01`;
+}
+
+function addMonths(date: string, delta: number) {
+  const [y, m] = date.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function daysInMonth(start: string) {
+  const [y, m] = start.split("-").map(Number);
+  const count = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const firstDow = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  const cells: (string | null)[] = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= count; d++) {
+    cells.push(`${start.slice(0, 7)}-${String(d).padStart(2, "0")}`);
+  }
+  return cells;
+}
+
+function recapStreak(recaps: DayRecap[], today: string) {
+  const set = new Set(recaps.map((r) => r.date));
+  let n = 0;
+  let cursor = today;
+  if (!set.has(cursor)) {
+    const y = new Date(`${today}T12:00:00`);
+    y.setDate(y.getDate() - 1);
+    cursor = y.toISOString().slice(0, 10);
+  }
+  while (set.has(cursor) && n < 400) {
+    n += 1;
+    const d = new Date(`${cursor}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    cursor = d.toISOString().slice(0, 10);
+  }
+  return n;
+}
+
+async function collectImages(snap: DaySnapshot) {
+  const out: { bytes: Uint8Array; caption: string; kind: "photo" | "video" }[] = [];
+  for (const gym of snap.gyms) {
+    for (const media of gym.media || []) {
+      if (media.kind === "video") continue;
+      try {
+        let blob: Blob | null = null;
+        if (media.storage === "account" && media.url) {
+          const res = await fetch(media.url, { credentials: "include" });
+          if (res.ok) blob = await res.blob();
+        } else if (media.storage === "phone" && media.localId) {
+          blob = await getDeviceMedia(media.localId);
+        }
+        if (!blob || !blob.type.startsWith("image/")) continue;
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        out.push({
+          bytes: buf,
+          caption: media.name || gym.gymName,
+          kind: "photo",
+        });
+      } catch {
+        /* skip */
+      }
+      if (out.length >= 6) return out;
+    }
+  }
+  return out;
+}
+
+export function MySpaceHealthDayRecap({
+  health,
+  recaps: recapsIn,
+  onSaveRecaps,
+  today,
+}: {
+  health: HealthLike;
+  recaps: DayRecap[];
+  onSaveRecaps: (next: DayRecap[]) => void;
+  today: string;
+}) {
+  const gymEmpty = emptyBoards().gym;
+  const { value: gym, ready: gymReady } = useMemberBoard<GymBoard>("gym", gymEmpty, true);
+  const recaps = useMemo(() => sanitizeDayRecaps(recapsIn), [recapsIn]);
+  const [selected, setSelected] = useState(today);
+  const [month, setMonth] = useState(monthStart(today));
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const autoOnce = useRef(false);
+
+  const workouts = gym.workouts || [];
+  const snap = useMemo(
+    () => buildDaySnapshot(selected, health, workouts),
+    [selected, health, workouts]
+  );
+  const loggedDates = useMemo(
+    () => datesWithLogs(health, workouts),
+    [health, workouts]
+  );
+  const recapByDate = useMemo(() => {
+    const m = new Map<string, DayRecap>();
+    for (const r of recaps) m.set(r.date, r);
+    return m;
+  }, [recaps]);
+  const current = recapByDate.get(selected) || null;
+  const yesterday = useMemo(() => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, [today]);
+  const streak = recapStreak(recaps, today);
+  const week = useMemo(() => {
+    const days: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(`${today}T12:00:00`);
+      d.setDate(d.getDate() - i);
+      days.push(d.toISOString().slice(0, 10));
+    }
+    return days;
+  }, [today]);
+
+  async function generate(opts?: { auto?: boolean; date?: string }) {
+    const date = opts?.date || selected;
+    const daySnap = buildDaySnapshot(date, health, workouts);
+    if (!snapshotHasLogs(daySnap) && !opts?.auto) {
+      setErr("Nothing is logged for this day yet. Add a meal, med, walk, or journal first — or pick another date.");
+      return;
+    }
+    if (!snapshotHasLogs(daySnap)) return;
+    setBusy(true);
+    setErr(null);
+    setNote(opts?.auto ? "Writing yesterday’s recap…" : "Writing your day…");
+    try {
+      const res = await fetch("/api/members/space/health/day-recap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ snapshot: daySnap }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        story?: DayRecapStory;
+        source?: string;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(json.error || "Could not write recap");
+      const story = json.story;
+      if (!story) throw new Error("Empty recap");
+      setNote("Saving PDF…");
+      const images = await collectImages(daySnap);
+      const pdfBytes = await buildHealthDayPdf(story, daySnap, images);
+      const file = new File(
+        [new Uint8Array(pdfBytes)],
+        `my-day-${date}.pdf`,
+        { type: "application/pdf" }
+      );
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch("/api/members/space/health/day-recap/upload", {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+      const upJson = (await up.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+      if (!up.ok) throw new Error(upJson.error || "Could not save PDF");
+      const recap: DayRecap = {
+        id: uid("recap"),
+        date,
+        generatedAt: new Date().toISOString(),
+        auto: !!opts?.auto,
+        favorite: recapByDate.get(date)?.favorite || false,
+        title: story.title,
+        headline: story.headline,
+        article: story.article,
+        highlights: story.highlights,
+        improve: story.improve,
+        bestMoment: story.bestMoment,
+        closer: story.closer,
+        pdfUrl: String(upJson.url || ""),
+        mood: daySnap.journals[0]?.mood || "",
+      };
+      const next = sanitizeDayRecaps([
+        recap,
+        ...recaps.filter((r) => r.date !== date),
+      ]);
+      onSaveRecaps(next);
+      setSelected(date);
+      setNote(
+        json.source === "grok"
+          ? "Recap saved. You can print it any time."
+          : "Recap saved (written on this app — add XAI_API_KEY in Vercel for Grok’s voice)."
+      );
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not write recap");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!gymReady || autoOnce.current || busy) return;
+    if (recapByDate.has(yesterday)) {
+      autoOnce.current = true;
+      return;
+    }
+    const ySnap = buildDaySnapshot(yesterday, health, workouts);
+    if (!snapshotHasLogs(ySnap)) {
+      autoOnce.current = true;
+      return;
+    }
+    autoOnce.current = true;
+    void generate({ auto: true, date: yesterday });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gymReady, yesterday, recaps.length, workouts.length]);
+
+  function toggleFavorite() {
+    if (!current) return;
+    onSaveRecaps(
+      recaps.map((r) =>
+        r.date === current.date ? { ...r, favorite: !r.favorite } : r
+      )
+    );
+  }
+
+  function removeRecap() {
+    if (!current) return;
+    if (!window.confirm("Remove this day's recap PDF from your account?")) return;
+    onSaveRecaps(recaps.filter((r) => r.date !== current.date));
+  }
+
+  const cells = daysInMonth(month);
+  const monthLabel = new Date(`${month}T12:00:00`).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div className="about-panel ms-module">
+      <p className="ms-module-lead">My Day — one story of how you lived it</p>
+      <p className="panel-hint">
+        When a day ends, we gather meds, meals, exercise, gym, sleep, photos, and journal into one
+        optimistic recap and save a PDF. Open any date on the calendar. Print it for the fridge or
+        the grandkids. Not medical advice — a neighborly highlight reel of you becoming your best
+        self.
+      </p>
+
+      <div className="ms-h-toolbar">
+        <span className="ms-h-pill">
+          {streak ? `${streak}-day recap streak` : "Start a recap streak"}
+        </span>
+        <span className="panel-hint">{recaps.length} saved PDF{recaps.length === 1 ? "" : "s"}</span>
+      </div>
+
+      <div className="ms-day-week" aria-label="Last 7 days">
+        {week.map((d) => {
+          const rec = recapByDate.has(d);
+          const logged = loggedDates.has(d);
+          return (
+            <button
+              key={d}
+              type="button"
+              className={`ms-day-week-cell${selected === d ? " is-on" : ""}${rec ? " has-recap" : ""}`}
+              onClick={() => {
+                setSelected(d);
+                setMonth(monthStart(d));
+              }}
+            >
+              <span>
+                {new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { weekday: "narrow" })}
+              </span>
+              <strong>{Number(d.slice(8))}</strong>
+              <i>{rec ? "PDF" : logged ? "log" : ""}</i>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="ms-day-cal">
+        <div className="ms-day-cal-nav">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setMonth(addMonths(month, -1))}
+          >
+            ←
+          </button>
+          <strong>{monthLabel}</strong>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setMonth(addMonths(month, 1))}
+          >
+            →
+          </button>
+        </div>
+        <div className="ms-day-cal-dow">
+          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+            <span key={`${d}-${i}`}>{d}</span>
+          ))}
+        </div>
+        <div className="ms-day-cal-grid">
+          {cells.map((d, i) =>
+            d ? (
+              <button
+                key={d}
+                type="button"
+                className={`ms-day-cal-cell${selected === d ? " is-on" : ""}${
+                  recapByDate.has(d) ? " has-recap" : ""
+                }${loggedDates.has(d) && !recapByDate.has(d) ? " has-log" : ""}${
+                  d === today ? " is-today" : ""
+                }`}
+                onClick={() => setSelected(d)}
+              >
+                {Number(d.slice(8))}
+              </button>
+            ) : (
+              <span key={`e-${i}`} />
+            )
+          )}
+        </div>
+        <p className="panel-hint">
+          Filled = saved recap · outline = something logged · today is circled.
+        </p>
+      </div>
+
+      <div className="hero-actions" style={{ margin: "0.75rem 0" }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => void generate({ date: selected })}
+        >
+          {current
+            ? selected === today
+              ? "Rewrite today’s recap"
+              : "Rewrite this day’s recap"
+            : selected === today
+              ? "Write today’s recap now"
+              : "Write this day’s recap"}
+        </button>
+        {current?.pdfUrl ? (
+          <>
+            <a className="btn btn-ghost" href={current.pdfUrl} target="_blank" rel="noreferrer">
+              Open PDF
+            </a>
+            <a className="btn btn-ghost" href={current.pdfUrl} download={`my-day-${selected}.pdf`}>
+              Download
+            </a>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                const w = window.open(current.pdfUrl, "_blank");
+                w?.addEventListener("load", () => w.print());
+              }}
+            >
+              Print
+            </button>
+          </>
+        ) : null}
+      </div>
+      {busy ? <p className="panel-hint">{note || "Working…"}</p> : null}
+      {!busy && note ? <p className="panel-hint">{note}</p> : null}
+      {err ? <p className="pf-form-error">{err}</p> : null}
+
+      <h3>{prettyDate(selected)}</h3>
+      {!snapshotHasLogs(snap) && !current ? (
+        <p className="panel-hint">
+          Nothing logged this date yet. Live the day (or pick one with a green square), then write
+          the recap.
+        </p>
+      ) : (
+        <DayFacts snap={snap} />
+      )}
+
+      {current ? (
+        <article className="ms-day-story">
+          <div className="ms-day-story-head">
+            <div>
+              <p className="panel-hint">
+                Saved {current.generatedAt ? new Date(current.generatedAt).toLocaleString() : ""}
+                {current.auto ? " · auto after the day ended" : ""}
+                {current.mood ? ` · mood: ${current.mood}` : ""}
+              </p>
+              <h4>{current.title}</h4>
+              {current.headline ? <p className="ms-day-kicker">{current.headline}</p> : null}
+            </div>
+            <div className="hero-actions">
+              <button type="button" className="btn btn-ghost btn-sm" onClick={toggleFavorite}>
+                {current.favorite ? "★ Favorite" : "☆ Favorite"}
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={removeRecap}>
+                Delete recap
+              </button>
+            </div>
+          </div>
+          {current.article.split(/\n+/).map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+          {current.bestMoment ? (
+            <blockquote className="ms-day-best">
+              <strong>Best moment.</strong> {current.bestMoment}
+            </blockquote>
+          ) : null}
+          {current.highlights.length ? (
+            <div className="ms-day-cols">
+              <div>
+                <h4>What went well</h4>
+                <ul>
+                  {current.highlights.map((h) => (
+                    <li key={h}>{h}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4>Grow from here</h4>
+                <ul>
+                  {current.improve.map((h) => (
+                    <li key={h}>{h}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+          {current.closer ? <p className="ms-day-closer">{current.closer}</p> : null}
+        </article>
+      ) : snapshotHasLogs(snap) ? (
+        <p className="panel-hint">
+          This day has notes but no PDF yet. Tap <strong>Write this day’s recap</strong>. Yesterday
+          writes itself the next time you open My Day.
+        </p>
+      ) : null}
+
+      {recaps.filter((r) => r.favorite).length ? (
+        <>
+          <h3>Favorites</h3>
+          <ul className="ms-simple-list">
+            {recaps
+              .filter((r) => r.favorite)
+              .map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    className="text-link"
+                    onClick={() => {
+                      setSelected(r.date);
+                      setMonth(monthStart(r.date));
+                    }}
+                  >
+                    {prettyDate(r.date)} — {r.title}
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function DayFacts({ snap }: { snap: DaySnapshot }) {
+  const items: string[] = [];
+  if (snap.weight != null) items.push(`Weight ${snap.weight} lbs`);
+  if (snap.medsTaken.length) items.push(`${snap.medsTaken.length} meds taken`);
+  if (snap.meals.length) items.push(`${snap.meals.length} meals`);
+  if (snap.exercises.length) items.push(`${snap.exercises.length} exercise`);
+  if (snap.gyms.length) items.push(`${snap.gyms.length} gym`);
+  if (snap.sleep) items.push(`Sleep ${snap.sleep.hours ?? "—"} h`);
+  if (snap.journals.length) items.push("Journal");
+  if (snap.photos.length) items.push(`${snap.photos.length} photo note${snap.photos.length === 1 ? "" : "s"}`);
+  if (!items.length) return null;
+  return (
+    <p className="panel-hint">
+      In the log: {items.join(" · ")}
+    </p>
+  );
+}

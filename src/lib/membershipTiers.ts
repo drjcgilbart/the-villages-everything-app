@@ -181,7 +181,7 @@ export const FEATURE_META: Record<
   healthLog: {
     title: "Health lanai",
     teaser:
-      "Weight log, meds with dose times & alarms, meals, gym, workouts, journal, and daily goals.",
+      "Weight log, meds with dose times & alarms, meals, gym, workouts, journal, and a My Day recap PDF.",
     anchor: "ms-health",
   },
   petSchedule: {

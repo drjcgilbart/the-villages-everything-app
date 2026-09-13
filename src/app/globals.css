@@ -3665,6 +3665,155 @@ button.ms-home-card:hover {
   }
 }
 
+.ms-day-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.ms-day-week-cell {
+  appearance: none;
+  font: inherit;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.35rem 0.15rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  cursor: pointer;
+}
+
+.ms-day-week-cell span,
+.ms-day-week-cell i {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.ms-day-week-cell.is-on {
+  border-color: var(--palm);
+  background: rgba(31, 107, 74, 0.1);
+}
+
+.ms-day-week-cell.has-recap {
+  box-shadow: inset 0 -3px 0 var(--palm);
+}
+
+.ms-day-cal {
+  margin: 0.5rem 0 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ms-day-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.55rem;
+}
+
+.ms-day-cal-dow,
+.ms-day-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.ms-day-cal-dow {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.ms-day-cal-cell {
+  appearance: none;
+  font: inherit;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 10px;
+  padding: 0.4rem 0;
+  cursor: pointer;
+}
+
+.ms-day-cal-cell.has-log {
+  border-color: color-mix(in srgb, var(--palm) 35%, var(--line));
+}
+
+.ms-day-cal-cell.has-recap {
+  background: rgba(31, 107, 74, 0.16);
+  font-weight: 700;
+}
+
+.ms-day-cal-cell.is-today {
+  box-shadow: 0 0 0 2px var(--gold, #e8b84a);
+}
+
+.ms-day-cal-cell.is-on {
+  background: var(--palm);
+  color: #fff;
+}
+
+.ms-day-story {
+  margin-top: 1rem;
+  padding: 1rem 1.05rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fffdf8;
+}
+
+.ms-day-story-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.ms-day-story h4 {
+  margin: 0.15rem 0 0.35rem;
+}
+
+.ms-day-kicker {
+  font-style: italic;
+  color: var(--palm-deep, #1f6b4a);
+  margin: 0 0 0.75rem;
+}
+
+.ms-day-story p {
+  line-height: 1.55;
+}
+
+.ms-day-best {
+  margin: 0.85rem 0;
+  padding: 0.75rem 0.9rem;
+  border-left: 4px solid var(--gold, #e8b84a);
+  background: rgba(232, 184, 74, 0.12);
+}
+
+.ms-day-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin: 0.85rem 0;
+}
+
+.ms-day-cols ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.ms-day-closer {
+  font-weight: 600;
+  color: var(--palm-deep, #1f6b4a);
+}
+
 .ms-pet-roster {
   display: flex;
   flex-wrap: wrap;
