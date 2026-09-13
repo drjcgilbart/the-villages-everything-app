@@ -200,6 +200,19 @@ export type FoodBoard = {
 
 export type GymSet = { weight: number | ""; reps: number | ""; seconds: number | "" };
 export type GymLift = { name: string; kind: string; equipment: string; sets: GymSet[] };
+export type GymMediaKind = "photo" | "video";
+export type GymMediaStorage = "account" | "phone";
+export type GymMediaItem = {
+  id: string;
+  kind: GymMediaKind;
+  storage: GymMediaStorage;
+  name: string;
+  /** Account URL (`/api/media/…`) when storage is account. */
+  url: string;
+  /** IndexedDB key when storage is phone-only. */
+  localId: string;
+  bytes: number;
+};
 export type GymWorkout = {
   id: string;
   date: string;
@@ -210,6 +223,7 @@ export type GymWorkout = {
   felt: string;
   notes: string;
   exercises: GymLift[];
+  media: GymMediaItem[];
 };
 export type GymPlace = {
   id: string;
@@ -847,6 +861,34 @@ function mealMap(raw: unknown): FoodBoard["meals"] {
   return out;
 }
 
+function gymMediaItems(raw: unknown): GymMediaItem[] {
+  if (!Array.isArray(raw)) return [];
+  const out: GymMediaItem[] = [];
+  for (const row of raw.slice(0, 3)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const kind: GymMediaKind = clip(r.kind, 12) === "video" ? "video" : "photo";
+    const storage: GymMediaStorage =
+      clip(r.storage, 12) === "phone" ? "phone" : "account";
+    const url = storage === "account" ? safeMemoryUrl(r.url) : "";
+    const localId = storage === "phone" ? clip(r.localId, 80) : "";
+    if (storage === "account" && !url) continue;
+    if (storage === "phone" && !localId) continue;
+    out.push({
+      id: clip(r.id, 40) || uid("gm"),
+      kind,
+      storage,
+      name: clip(r.name, 80),
+      url,
+      localId,
+      bytes: Math.max(0, Math.min(Number(r.bytes) || 0, 120 * 1024 * 1024)),
+    });
+  }
+  const video = out.find((item) => item.kind === "video");
+  if (video) return [video];
+  return out.filter((item) => item.kind === "photo").slice(0, 3);
+}
+
 function gymWorkouts(raw: unknown): GymWorkout[] {
   if (!Array.isArray(raw)) return [];
   const out: GymWorkout[] = [];
@@ -864,6 +906,7 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
         felt: "",
         notes: clip(r.text, 400),
         exercises: [],
+        media: gymMediaItems(r.media),
       });
       continue;
     }
@@ -893,6 +936,7 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
       felt: clip(r.felt, 20),
       notes: clip(r.notes, 400),
       exercises: lifts,
+      media: gymMediaItems(r.media),
     });
   }
   return out;

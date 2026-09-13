@@ -5,11 +5,18 @@ import {
   emptyBoards,
   type GymBoard,
   type GymLift,
+  type GymMediaItem,
   type GymPlace,
   type GymSet,
   type GymWorkout,
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import {
+  forgetPhoneMedia,
+  GymWorkoutMediaPicker,
+  GymWorkoutMediaStrip,
+  phoneLocalIds,
+} from "@/components/GymWorkoutMedia";
 
 type GymTab = "today" | "gyms" | "history" | "supps";
 
@@ -249,6 +256,13 @@ function emptyLift(): GymLift {
   return { name: "Leg press", kind: "machine", equipment: "", sets: [emptySet()] };
 }
 
+function mediaHint(workout: GymWorkout) {
+  const items = workout.media || [];
+  if (!items.length) return "";
+  if (items.some((item) => item.kind === "video")) return " · video";
+  return ` · ${items.length} photo${items.length === 1 ? "" : "s"}`;
+}
+
 function gymVolume(workout: GymWorkout) {
   let sets = 0;
   let reps = 0;
@@ -320,6 +334,8 @@ export function MySpaceGymBoard() {
   const [notes, setNotes] = useState("");
   const [gymId, setGymId] = useState("");
   const [lifts, setLifts] = useState<GymLift[]>([emptyLift()]);
+  const [media, setMedia] = useState<GymMediaItem[]>([]);
+  const [savedPhoneIds, setSavedPhoneIds] = useState<string[]>([]);
   const [editWorkoutId, setEditWorkoutId] = useState<string | null>(null);
   const [openDetails, setOpenDetails] = useState<string | null>(null);
   const [placeName, setPlaceName] = useState("");
@@ -399,10 +415,17 @@ export function MySpaceGymBoard() {
           }))
         : [emptyLift()]
     );
+    const existing = w.media || [];
+    setMedia(existing);
+    setSavedPhoneIds(phoneLocalIds(existing));
     setTab("today");
   }
 
   function resetForm() {
+    const unsaved = media.filter(
+      (item) => item.storage === "phone" && item.localId && !savedPhoneIds.includes(item.localId)
+    );
+    if (unsaved.length) void forgetPhoneMedia(unsaved);
     setEditWorkoutId(null);
     setDate(today());
     setTime("");
@@ -411,6 +434,8 @@ export function MySpaceGymBoard() {
     setNotes("");
     setGymId(value.homeGymId || "");
     setLifts([emptyLift()]);
+    setMedia([]);
+    setSavedPhoneIds([]);
   }
 
   function saveWorkout() {
@@ -422,7 +447,7 @@ export function MySpaceGymBoard() {
         sets: l.sets.filter((s) => s.weight !== "" || s.reps !== "" || s.seconds !== "").slice(0, 20),
       }))
       .filter((l) => l.name && l.sets.length);
-    if (!cleaned.length && !notes.trim()) return;
+    if (!cleaned.length && !notes.trim() && !media.length) return;
     const selected = allPlaces.find((p) => p.id === (gymId || value.homeGymId));
     const wo: GymWorkout = {
       id: editWorkoutId || uid("wo"),
@@ -434,12 +459,43 @@ export function MySpaceGymBoard() {
       felt,
       notes: notes.trim().slice(0, 400),
       exercises: cleaned,
+      media: media.some((item) => item.kind === "video")
+        ? media.filter((item) => item.kind === "video").slice(0, 1)
+        : media.filter((item) => item.kind === "photo").slice(0, 3),
     };
+    const previous = editWorkoutId
+      ? workouts.find((w) => w.id === editWorkoutId)?.media || []
+      : [];
+    const kept = new Set(phoneLocalIds(wo.media));
+    const dropped = previous.filter(
+      (item) => item.storage === "phone" && item.localId && !kept.has(item.localId)
+    );
+    if (dropped.length) void forgetPhoneMedia(dropped);
     const next = editWorkoutId
       ? workouts.map((w) => (w.id === editWorkoutId ? wo : w))
       : [wo, ...workouts];
     persist({ ...value, workouts: next.slice(0, 80) });
-    resetForm();
+    setEditWorkoutId(null);
+    setDate(today());
+    setTime("");
+    setMinutes("45");
+    setFelt("");
+    setNotes("");
+    setGymId(value.homeGymId || "");
+    setLifts([emptyLift()]);
+    setMedia([]);
+    setSavedPhoneIds([]);
+  }
+
+  function deleteWorkout(id: string) {
+    const row = workouts.find((w) => w.id === id);
+    if (row?.media?.length) void forgetPhoneMedia(row.media);
+    persist({ ...value, workouts: workouts.filter((x) => x.id !== id) });
+    if (editWorkoutId === id) {
+      setEditWorkoutId(null);
+      setMedia([]);
+      setSavedPhoneIds([]);
+    }
   }
 
   function loadPlace(g: GymPlace) {
@@ -760,6 +816,12 @@ export function MySpaceGymBoard() {
               placeholder="Busy at 9am · skipped leg press"
             />
           </div>
+          <GymWorkoutMediaPicker
+            items={media}
+            onChange={setMedia}
+            protectedLocalIds={savedPhoneIds}
+            disabled={saving}
+          />
           <div className="hero-actions" style={{ marginTop: "0.75rem" }}>
             <button type="button" className="btn btn-primary btn-sm" onClick={saveWorkout}>
               {editWorkoutId ? "Save changes" : "Save workout"}
@@ -782,13 +844,11 @@ export function MySpaceGymBoard() {
                 key={w.id}
                 w={w}
                 title={placeNameById(w.gymId, w.gymName)}
-                sub={`${w.durationMin ? `${w.durationMin} min · ` : ""}${gymVolume(w).sets} sets · ${gymVolume(w).reps} reps`}
+                sub={`${w.durationMin ? `${w.durationMin} min · ` : ""}${gymVolume(w).sets} sets · ${gymVolume(w).reps} reps${mediaHint(w)}`}
                 open={openDetails === w.id}
                 onDetails={() => setOpenDetails(openDetails === w.id ? null : w.id)}
                 onEdit={() => loadWorkout(w)}
-                onDelete={() =>
-                  persist({ ...value, workouts: workouts.filter((x) => x.id !== w.id) })
-                }
+                onDelete={() => deleteWorkout(w.id)}
               />
             ))
           )}
@@ -1023,13 +1083,11 @@ export function MySpaceGymBoard() {
                   key={w.id}
                   w={w}
                   title={`${w.date}${w.time ? ` · ${w.time}` : ""}`}
-                  sub={`${placeNameById(w.gymId, w.gymName)}${w.durationMin ? ` · ${w.durationMin} min` : ""} · ${gymVolume(w).sets} sets`}
+                  sub={`${placeNameById(w.gymId, w.gymName)}${w.durationMin ? ` · ${w.durationMin} min` : ""} · ${gymVolume(w).sets} sets${mediaHint(w)}`}
                   open={openDetails === w.id}
                   onDetails={() => setOpenDetails(openDetails === w.id ? null : w.id)}
                   onEdit={() => loadWorkout(w)}
-                  onDelete={() =>
-                    persist({ ...value, workouts: workouts.filter((x) => x.id !== w.id) })
-                  }
+                  onDelete={() => deleteWorkout(w.id)}
                 />
               ))
           )}
@@ -1237,6 +1295,7 @@ function SessionRow({
           </button>
         </div>
       </div>
+      <GymWorkoutMediaStrip items={w.media || []} />
       {open ? (
         <div>
           <p>

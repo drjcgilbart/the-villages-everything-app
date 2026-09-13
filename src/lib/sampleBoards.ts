@@ -368,6 +368,7 @@ export function sampleBoards(): MemberBoards {
           durationMin: 40,
           felt: "fine",
           notes: "Leg day postponed due to pickleball diplomacy. Example — delete me.",
+          media: [],
           exercises: [
             {
               name: "Recumbent bike (the thinking person’s cardio)",
