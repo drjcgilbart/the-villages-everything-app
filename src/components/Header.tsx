@@ -234,7 +234,6 @@ export function Header({
               </Link>
             ) : null}
           </nav>
-          <SiteSearch />
         </div>
       </div>
 
