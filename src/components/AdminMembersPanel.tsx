@@ -58,6 +58,32 @@ export function AdminMembersPanel() {
     load().catch((err) => flash("err", err.message || "Load failed"));
   }, [load]);
 
+  async function sendWelcome(id: string, name: string) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sendWelcomeEmail", id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not send welcome email");
+      const mail = data.welcomeEmail as
+        | { ok?: boolean; skipped?: boolean; error?: string }
+        | undefined;
+      if (mail?.ok) flash("ok", `Welcome email sent to ${name}`);
+      else if (mail?.skipped) {
+        flash("err", "Mail is not configured (RESEND_API_KEY)");
+      } else {
+        flash("err", mail?.error || "Welcome email failed");
+      }
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function deleteMember(id: string, name: string) {
     const who = name || "this neighbor";
     if (
@@ -355,6 +381,7 @@ export function AdminMembersPanel() {
                 onLoofah={toggleGoldenLoofah}
                 onPassword={resetMemberPassword}
                 onDelete={deleteMember}
+                onWelcome={sendWelcome}
                 onTopTier={topTierAction}
                 onTrial={trialAction}
               />
@@ -389,6 +416,7 @@ export function AdminMembersPanel() {
             onTopTier={topTierAction}
             onTrial={trialAction}
             onDelete={deleteMember}
+            onWelcome={sendWelcome}
           />
         ))}
       </div>
@@ -408,6 +436,7 @@ function MemberAdminRow({
   onTopTier,
   onTrial,
   onDelete,
+  onWelcome,
 }: {
   m: AdminMember;
   tiers: TierOpt[];
@@ -420,6 +449,7 @@ function MemberAdminRow({
   onTopTier: (id: string, action: "approveTopTier" | "rejectTopTier") => void;
   onTrial: (id: string, action: "grantTrial" | "endTrial") => void;
   onDelete: (id: string, name: string) => void;
+  onWelcome: (id: string, name: string) => void;
 }) {
   const nom = m.topTierNomination;
   return (
@@ -560,6 +590,16 @@ function MemberAdminRow({
             Reinstate
           </button>
         )}
+        {m.status === "approved" ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={busy}
+            onClick={() => onWelcome(m.id, m.name)}
+          >
+            Send welcome email
+          </button>
+        ) : null}
         <button
           type="button"
           className="btn btn-ghost btn-sm"

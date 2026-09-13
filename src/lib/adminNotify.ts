@@ -39,6 +39,22 @@ function siteBase() {
   );
 }
 
+const RESEND_STARTER_FROM =
+  "The Villages Everything App <beth.t@example.com>";
+
+function replyToAddress() {
+  return adminNotifyEmail();
+}
+
+function parseResendError(body: string) {
+  try {
+    const json = JSON.parse(body) as { message?: string };
+    return json.message || body;
+  } catch {
+    return body;
+  }
+}
+
 function fromAddress() {
   return (
     process.env.ADMIN_NOTIFY_FROM?.trim() ||
@@ -143,6 +159,23 @@ export type MailAttachment = {
   contentType?: string;
 };
 
+async function postResend(
+  key: string,
+  payload: Record<string, unknown>
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) return { ok: true };
+  const body = await res.text().catch(() => "");
+  return { ok: false, status: res.status, message: parseResendError(body) };
+}
+
 async function sendViaResend(
   to: string,
   subject: string,
@@ -152,29 +185,38 @@ async function sendViaResend(
 ) {
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) return false;
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromAddress(),
+  const attach = attachments?.map((a) => ({
+    filename: a.filename,
+    content: a.contentBase64,
+  }));
+  const reply_to = replyToAddress();
+  const preferredFrom = fromAddress();
+  const first = await postResend(key, {
+    from: preferredFrom,
+    to: [to],
+    reply_to,
+    subject,
+    text,
+    html,
+    attachments: attach,
+  });
+  if (first.ok) return true;
+  const unverified =
+    first.status === 403 || /domain is not verified/i.test(first.message);
+  if (unverified && !preferredFrom.includes("resend.dev")) {
+    const retry = await postResend(key, {
+      from: RESEND_STARTER_FROM,
       to: [to],
+      reply_to,
       subject,
       text,
       html,
-      attachments: attachments?.map((a) => ({
-        filename: a.filename,
-        content: a.contentBase64,
-      })),
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Resend ${res.status}: ${body.slice(0, 400)}`);
+      attachments: attach,
+    });
+    if (retry.ok) return true;
+    throw new Error(`Resend ${retry.status}: ${retry.message.slice(0, 220)}`);
   }
-  return true;
+  throw new Error(`Resend ${first.status}: ${first.message.slice(0, 220)}`);
 }
 
 async function sendViaSendgrid(

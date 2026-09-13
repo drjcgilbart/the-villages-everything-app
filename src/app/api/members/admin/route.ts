@@ -127,6 +127,21 @@ export async function POST(req: Request) {
       });
     }
 
+    if (body.action === "sendWelcomeEmail") {
+      const id = String(body.id || "");
+      const mem = getMemberById(id);
+      if (!mem) {
+        return NextResponse.json({ error: "Member not found" }, { status: 404 });
+      }
+      const welcomeEmail = await sendMemberWelcomeEmail(mem);
+      return NextResponse.json({
+        memberId: id,
+        members: membersWithPlans(),
+        durableStorage: durableConfigured(),
+        welcomeEmail,
+      });
+    }
+
     if (body.action === "setPassword") {
       const member = setMemberPassword(String(body.id || ""), body.password);
       await persistAll();
