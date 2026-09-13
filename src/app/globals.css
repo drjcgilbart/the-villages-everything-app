@@ -10719,6 +10719,11 @@ body.theme-music-open .mascot-quip-popup {
   color: var(--palm);
 }
 
+.village-cdd-panel h3 {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+
 @media (max-width: 860px) {
   .hero-grid,
   .about-grid,

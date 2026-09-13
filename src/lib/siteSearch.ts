@@ -109,6 +109,14 @@ function collect(): Raw[] {
     snippet: "District map of The Villages.",
     section: "Pages",
   });
+  add({
+    title: "CDD bonds & ARC applications",
+    href: "/my-village",
+    snippet:
+      "Look up village CDD bond amortization schedules and submit an Architectural Review Committee application. Open a village page for district links.",
+    section: "Pages",
+    extra: "bond assessment architectural review committee ARC deed compliance",
+  });
 
   for (const t of MAIN_TOPICS) {
     add({

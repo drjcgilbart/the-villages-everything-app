@@ -15,6 +15,7 @@ import {
 } from "@/lib/villageAmenities";
 import { getVillageLocalBundle } from "@/lib/villageLocal";
 import { getNeighborsForVillage } from "@/lib/villageNeighbors";
+import { villageDistrictLinks } from "@/lib/villageCdd";
 import {
   VILLAGES,
   cddLabel,
@@ -58,6 +59,7 @@ export default async function VillageDetailPage({
     .filter((v) => v.slug !== village.slug)
     .slice(0, 12);
   const amenities = getVillageAmenities(village);
+  const district = villageDistrictLinks(village);
 
   try {
     await ensureDurableHydrated();
@@ -169,6 +171,91 @@ export default async function VillageDetailPage({
                   <strong>Vibe</strong> {region.vibe}
                 </li>
               </ul>
+            </div>
+
+            <div className="about-panel village-cdd-panel" style={{ marginTop: "1rem" }}>
+              <h2>CDD bonds &amp; Architectural Review</h2>
+              <p className="panel-hint" style={{ marginTop: 0 }}>
+                Official District Government links for {village.name}
+                {district.known ? ` (${district.label})` : ""}. Bond dollar amounts
+                vary by <strong>unit / home type</strong>, not just village name —
+                look yours up on the district site. Not affiliated with The
+                Villages® operators.
+              </p>
+              <h3>Bond amount</h3>
+              <p>
+                Annual bond (debt) assessments appear on the county tax bill as a
+                non-ad valorem “Bond Debt Assessment.” The district publishes
+                per-unit amortization schedules. Exact payoff: Bond Team{" "}
+                <a href={`tel:+1${district.bondPhone.replace(/-/g, "")}`}>
+                  {district.bondPhone}
+                </a>
+                .
+              </p>
+              <ul className="village-related-links">
+                <li>
+                  <a href={district.districtPage} target="_blank" rel="noreferrer">
+                    {district.known
+                      ? `${district.label} page — bonds, budgets, deed rules`
+                      : "Find my CDD district"}
+                  </a>{" "}
+                  (official)
+                </li>
+                <li>
+                  <a href={district.finance} target="_blank" rel="noreferrer">
+                    Bond assessments &amp; amortization schedules
+                  </a>{" "}
+                  — look up the current schedule for your unit
+                </li>
+                {!district.known ? (
+                  <li>
+                    <a href={district.finder} target="_blank" rel="noreferrer">
+                      District finder
+                    </a>{" "}
+                    if you are not sure which CDD this village sits in
+                  </li>
+                ) : null}
+                <li>
+                  <a href={district.faq} target="_blank" rel="noreferrer">
+                    Bond payoff FAQs
+                  </a>
+                </li>
+              </ul>
+              <h3>Architectural Review Committee (ARC)</h3>
+              <p>
+                Exterior changes (pool, lanai, paint, landscaping, driveway, etc.)
+                usually need ARC approval <strong>before work starts</strong>.
+                Submitting an application is <strong>free</strong> — any request for
+                payment is a scam. Community Standards:{" "}
+                <a href={`tel:+1${district.arcPhone.replace(/-/g, "")}`}>
+                  {district.arcPhone}
+                </a>
+                .
+              </p>
+              <ul className="village-related-links">
+                <li>
+                  <a href={district.arcApply} target="_blank" rel="noreferrer">
+                    Submit an ARC application online
+                  </a>{" "}
+                  — official portal (create an account with your property address)
+                </li>
+                <li>
+                  <a href={district.arcCommittee} target="_blank" rel="noreferrer">
+                    Architectural Review Committee
+                  </a>{" "}
+                  — rules, meetings, and how review works
+                </li>
+                {district.arcManual ? (
+                  <li>
+                    <a href={district.arcManual} target="_blank" rel="noreferrer">
+                      {district.label} ARC manual
+                    </a>
+                  </li>
+                ) : null}
+              </ul>
+              <p className="panel-hint" style={{ marginBottom: 0 }}>
+                {district.meetingHint}
+              </p>
             </div>
 
             <div className="about-panel" style={{ marginTop: "1rem" }}>
