@@ -30,6 +30,7 @@ import {
   setMemberStatus,
 } from "@/lib/yardSale";
 import type { MemberStatus } from "@/lib/yardSaleTypes";
+import { sendMemberWelcomeEmail } from "@/lib/memberWelcomeMail";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -157,15 +158,22 @@ export async function POST(req: Request) {
     if (body.action === "approveTopTier") {
       const id = String(body.id || "");
       const mem = getMemberById(id);
-      if (mem && mem.status === "pending") {
+      const becameApproved = mem?.status === "pending";
+      if (becameApproved) {
         setMemberStatus(id, "approved");
       }
       approveTopTierMembership(id);
       await persistAll();
+      let welcomeEmail: Awaited<ReturnType<typeof sendMemberWelcomeEmail>> | null =
+        null;
+      if (becameApproved && mem) {
+        welcomeEmail = await sendMemberWelcomeEmail(mem);
+      }
       return NextResponse.json({
         memberId: id,
         members: membersWithPlans(),
         durableStorage: durableConfigured(),
+        welcomeEmail,
       });
     }
 
@@ -227,12 +235,20 @@ export async function POST(req: Request) {
     if (!["pending", "approved", "rejected", "suspended"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
+    const before = getMemberById(String(body.id || ""));
     const member = setMemberStatus(body.id, status, body.notes);
     await persistAll();
+    let welcomeEmail: Awaited<ReturnType<typeof sendMemberWelcomeEmail>> | null =
+      null;
+    if (status === "approved" && before && before.status !== "approved") {
+      const full = getMemberById(String(body.id || ""));
+      if (full) welcomeEmail = await sendMemberWelcomeEmail(full);
+    }
     return NextResponse.json({
       member,
       members: membersWithPlans(),
       durableStorage: durableConfigured(),
+      welcomeEmail,
     });
   } catch (err) {
     return NextResponse.json(

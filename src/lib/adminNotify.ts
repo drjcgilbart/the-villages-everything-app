@@ -192,25 +192,46 @@ async function sendViaSendgrid(to: string, subject: string, text: string, html: 
   return true;
 }
 
-export async function sendAdminApprovalEmail(payload: AdminNotifyPayload) {
-  const to = adminNotifyEmail();
-  const { subject, text, html } = formatAdminNotifyEmail(payload);
+export async function sendOutboundEmail(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<
+  | { ok: true }
+  | { ok: false; skipped: true }
+  | { ok: false; error: string }
+> {
+  const to = String(opts.to || "").trim();
+  if (!to || !to.includes("@")) {
+    return { ok: false, error: "No email address" };
+  }
   try {
-    if (await sendViaResend(to, subject, text, html)) {
-      return { ok: true as const };
+    if (await sendViaResend(to, opts.subject, opts.text, opts.html)) {
+      return { ok: true };
     }
-    if (await sendViaSendgrid(to, subject, text, html)) {
-      return { ok: true as const };
+    if (await sendViaSendgrid(to, opts.subject, opts.text, opts.html)) {
+      return { ok: true };
     }
     console.error(
-      "[admin-mail] skipped — set RESEND_API_KEY or SENDGRID_API_KEY so approvals email",
+      "[admin-mail] skipped — set RESEND_API_KEY or SENDGRID_API_KEY so mail can send",
       to
     );
-    return { ok: false as const, skipped: true as const };
+    return { ok: false, skipped: true };
   } catch (err) {
     console.error("[admin-mail] send failed", err);
-    return { ok: false as const, error: err instanceof Error ? err.message : "send failed" };
+    return { ok: false, error: err instanceof Error ? err.message : "send failed" };
   }
+}
+
+export async function sendAdminApprovalEmail(payload: AdminNotifyPayload) {
+  const { subject, text, html } = formatAdminNotifyEmail(payload);
+  return sendOutboundEmail({
+    to: adminNotifyEmail(),
+    subject,
+    text,
+    html,
+  });
 }
 
 /** Fire after a public submit. Never throws; never blocks the visitor on failure. */

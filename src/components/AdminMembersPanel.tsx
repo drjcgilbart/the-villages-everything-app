@@ -69,7 +69,22 @@ export function AdminMembersPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Update failed");
       setMembers(data.members || []);
-      flash("ok", `Member ${status}`);
+      const mail = data.welcomeEmail as
+        | { ok?: boolean; skipped?: boolean; error?: string }
+        | null
+        | undefined;
+      if (status === "approved" && mail?.ok) {
+        flash("ok", "Member approved — welcome email sent");
+      } else if (status === "approved" && mail?.skipped) {
+        flash(
+          "err",
+          "Member approved, but no welcome email: set RESEND_API_KEY (or SENDGRID_API_KEY) in Vercel"
+        );
+      } else if (status === "approved" && mail?.error) {
+        flash("err", `Member approved, but welcome email failed: ${mail.error}`);
+      } else {
+        flash("ok", `Member ${status}`);
+      }
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Failed");
     } finally {
