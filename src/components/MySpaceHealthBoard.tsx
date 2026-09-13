@@ -971,7 +971,7 @@ export function MySpaceHealthBoard() {
   }
 
   function patchWeight(lbs: number) {
-    const rounded = round1(Math.min(400, Math.max(50, lbs)));
+    const rounded = round1(Math.min(650, Math.max(50, lbs)));
     persist({
       ...state,
       currentWeight: rounded,
@@ -1362,7 +1362,7 @@ export function MySpaceHealthBoard() {
                 0
               }
               min={50}
-              max={400}
+              max={650}
               step={0.1}
               tone="weight"
               display={(() => {
