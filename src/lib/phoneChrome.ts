@@ -56,6 +56,39 @@ function ensureListening() {
   );
 }
 
+/** Hide a floating control after idle; scroll / wheel / touch brings it back. Works on desktop too. */
+export function useIdleHide(idleMs = 3200): boolean {
+  const [isIdle, setIsIdle] = useState(false);
+
+  useEffect(() => {
+    let hidden = false;
+    let timer: number | null = null;
+    const ping = () => {
+      if (hidden) {
+        hidden = false;
+        setIsIdle(false);
+      }
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        hidden = true;
+        setIsIdle(true);
+      }, idleMs);
+    };
+    ping();
+    window.addEventListener("scroll", ping, { passive: true });
+    window.addEventListener("wheel", ping, { passive: true });
+    window.addEventListener("touchmove", ping, { passive: true });
+    return () => {
+      if (timer != null) window.clearTimeout(timer);
+      window.removeEventListener("scroll", ping);
+      window.removeEventListener("wheel", ping);
+      window.removeEventListener("touchmove", ping);
+    };
+  }, [idleMs]);
+
+  return isIdle;
+}
+
 /** True when phone floating controls should slide away. */
 export function usePhoneChromeIdle(): boolean {
   const [isIdle, setIsIdle] = useState(false);

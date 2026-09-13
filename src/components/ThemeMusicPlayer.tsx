@@ -98,6 +98,8 @@ export function ThemeMusicPlayer() {
     } catch {
       /* ignore */
     }
+    document.body.classList.toggle("theme-music-open", open);
+    return () => document.body.classList.remove("theme-music-open");
   }, [open]);
 
   useEffect(() => {
@@ -229,6 +231,7 @@ export function ThemeMusicPlayer() {
               ✕
             </button>
           </div>
+          <div className="theme-music-body">
           <p className="theme-music-note">
             Optional royalty-free instrumentals. Check the moods to rotate. When a
             track ends, the next checked one plays so it doesn’t get stale. Check
@@ -338,6 +341,7 @@ export function ThemeMusicPlayer() {
               );
             })}
           </ul>
+          </div>
 
           <div className="theme-music-controls">
             <button
@@ -360,9 +364,9 @@ export function ThemeMusicPlayer() {
                 aria-label="Music volume"
               />
             </label>
+            <p className="theme-music-credit">{active.credit}</p>
+            {error ? <p className="theme-music-error">{error}</p> : null}
           </div>
-          <p className="theme-music-credit">{active.credit}</p>
-          {error && <p className="theme-music-error">{error}</p>}
         </div>
       )}
     </div>
