@@ -85,6 +85,9 @@ export type MusicEngine = {
   getTrackId: () => TrackId;
   isPlaying: () => boolean;
   isTrackPlaying: (id: TrackId | string) => boolean;
+  /** When true, the current file repeats. When false, `onEnded` fires so the player can advance. */
+  setRepeatOne: (repeat: boolean) => void;
+  setOnEnded: (cb: ((id: TrackId) => void) | null) => void;
   dispose: () => void;
 };
 
@@ -95,7 +98,7 @@ let sharedGeneration = 0;
 function getSharedAudio(): HTMLAudioElement {
   if (!sharedAudio) {
     sharedAudio = new Audio();
-    sharedAudio.loop = true;
+    sharedAudio.loop = false;
     sharedAudio.preload = "auto";
   }
   return sharedAudio;
@@ -129,6 +132,8 @@ export function createThemeMusicEngine(
   let playing = false;
   let volume = 0.35;
   let track = getTrack(initialTrack);
+  let repeatOne = false;
+  let onEnded: ((id: TrackId) => void) | null = null;
 
   function stopAll() {
     sharedGeneration += 1;
@@ -147,8 +152,14 @@ export function createThemeMusicEngine(
     const gen = (sharedGeneration += 1);
     const a = getSharedAudio();
     silenceAudio(a);
-    a.loop = true;
+    a.loop = repeatOne;
     a.volume = volume;
+    a.onended = () => {
+      if (gen !== sharedGeneration) return;
+      if (a.loop) return;
+      playing = false;
+      onEnded?.(track.id);
+    };
     if (!srcMatches(a, track.src)) {
       a.src = track.src;
     }
@@ -190,7 +201,15 @@ export function createThemeMusicEngine(
     isTrackPlaying(id: TrackId | string) {
       return playing && !!sharedAudio && !sharedAudio.paused && track.id === id;
     },
+    setRepeatOne(repeat: boolean) {
+      repeatOne = !!repeat;
+      if (sharedAudio) sharedAudio.loop = repeatOne;
+    },
+    setOnEnded(cb) {
+      onEnded = cb;
+    },
     dispose() {
+      onEnded = null;
       stopAll();
     },
   };

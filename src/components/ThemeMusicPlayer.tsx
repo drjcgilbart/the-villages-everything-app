@@ -11,6 +11,23 @@ import {
 const STORAGE_VOL = "tvi-theme-vol";
 const STORAGE_OPEN = "tvi-theme-music-open";
 const STORAGE_TRACK = "tvi-theme-track";
+const STORAGE_LOOP = "tvi-theme-loop-ids";
+
+const ALL_TRACK_IDS = THEME_TRACKS.map((t) => t.id);
+
+function parseLoopIds(raw: string | null): TrackId[] {
+  if (!raw) return [...ALL_TRACK_IDS];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [...ALL_TRACK_IDS];
+    const ids = parsed.filter((id): id is TrackId =>
+      THEME_TRACKS.some((t) => t.id === id)
+    );
+    return ids.length ? ids : [...ALL_TRACK_IDS];
+  } catch {
+    return [...ALL_TRACK_IDS];
+  }
+}
 
 export function ThemeMusicPlayer() {
   const engineRef = useRef<ReturnType<typeof createThemeMusicEngine> | null>(null);
@@ -18,11 +35,15 @@ export function ThemeMusicPlayer() {
   const [volume, setVolume] = useState(0.35);
   const [open, setOpen] = useState(false);
   const [trackId, setTrackId] = useState<TrackId>("sunny-morning");
+  const [loopIds, setLoopIds] = useState<TrackId[]>([...ALL_TRACK_IDS]);
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [inNativeApp, setInNativeApp] = useState(false);
+  const loopIdsRef = useRef<TrackId[]>(loopIds);
+  const playTrackRef = useRef<(id: TrackId) => Promise<void>>(async () => undefined);
 
   const active = THEME_TRACKS.find((t) => t.id === trackId) || THEME_TRACKS[0];
+  loopIdsRef.current = loopIds;
 
   useEffect(() => {
     setHydrated(true);
@@ -43,11 +64,19 @@ export function ThemeMusicPlayer() {
         initial = t as TrackId;
         setTrackId(initial);
       }
+      setLoopIds(parseLoopIds(localStorage.getItem(STORAGE_LOOP)));
     } catch {
       /* ignore */
     }
 
     engineRef.current = createThemeMusicEngine(initial);
+    engineRef.current.setOnEnded((endedId) => {
+      const list = loopIdsRef.current.length ? loopIdsRef.current : ALL_TRACK_IDS;
+      if (list.length <= 1) return;
+      const i = list.indexOf(endedId);
+      const next = list[(i + 1 + list.length) % list.length];
+      void playTrackRef.current(next);
+    });
     return () => {
       engineRef.current?.dispose();
       engineRef.current = null;
@@ -79,6 +108,15 @@ export function ThemeMusicPlayer() {
     }
   }, [trackId]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_LOOP, JSON.stringify(loopIds));
+    } catch {
+      /* ignore */
+    }
+    engineRef.current?.setRepeatOne(loopIds.length <= 1);
+  }, [loopIds]);
+
   function stopAll() {
     engineRef.current?.stopAll();
     setPlaying(false);
@@ -91,6 +129,7 @@ export function ThemeMusicPlayer() {
     const eng = engineRef.current;
     if (!eng) return;
     try {
+      eng.setRepeatOne(loopIdsRef.current.length <= 1);
       eng.stopAll();
       eng.setTrack(id);
       eng.setVolume(volume);
@@ -102,6 +141,7 @@ export function ThemeMusicPlayer() {
       setPlaying(false);
     }
   }
+  playTrackRef.current = playTrack;
 
   function stopTrack(id: TrackId) {
     const eng = engineRef.current;
@@ -127,10 +167,29 @@ export function ThemeMusicPlayer() {
   }
 
   async function nextTrack(dir: 1 | -1) {
-    const idx = THEME_TRACKS.findIndex((t) => t.id === trackId);
-    const next =
-      THEME_TRACKS[(idx + dir + THEME_TRACKS.length) % THEME_TRACKS.length];
-    await selectTrack(next.id);
+    const list = loopIds.length ? loopIds : ALL_TRACK_IDS;
+    const idx = list.indexOf(trackId);
+    const from = idx >= 0 ? idx : 0;
+    const next = list[(from + dir + list.length) % list.length];
+    await selectTrack(next);
+  }
+
+  function toggleLoop(id: TrackId) {
+    setLoopIds((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((x) => x !== id);
+        return next.length ? next : prev;
+      }
+      return ALL_TRACK_IDS.filter((x) => prev.includes(x) || x === id);
+    });
+  }
+
+  function loopAll() {
+    setLoopIds([...ALL_TRACK_IDS]);
+  }
+
+  function loopThisOnly() {
+    setLoopIds([trackId]);
   }
 
   // Phone app WebView: no floating music control (desktop/browser still has it)
@@ -171,9 +230,9 @@ export function ThemeMusicPlayer() {
             </button>
           </div>
           <p className="theme-music-note">
-            Optional royalty-free instrumentals. Only one mood plays at a time —
-            switching tracks stops the previous one. Use Stop on a mood, or Stop
-            all music.
+            Optional royalty-free instrumentals. Check the moods to rotate. When a
+            track ends, the next checked one plays so it doesn’t get stale. Check
+            all to hear everything.
           </p>
 
           <div className="theme-music-now">
@@ -220,14 +279,35 @@ export function ThemeMusicPlayer() {
             </button>
           </div>
 
+          <div className="theme-music-loop-bar">
+            <span>
+              Rotate {loopIds.length} of {THEME_TRACKS.length}
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={loopAll}>
+              All moods
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={loopThisOnly}>
+              This mood only
+            </button>
+          </div>
+
           <ul className="theme-music-tracks">
             {THEME_TRACKS.map((t) => {
               const on = playing && t.id === trackId;
+              const inLoop = loopIds.includes(t.id);
               return (
                 <li
                   key={t.id}
                   className={`theme-music-track ${on ? "playing" : ""} ${t.id === trackId ? "selected" : ""}`}
                 >
+                  <label className="theme-music-loop-check">
+                    <input
+                      type="checkbox"
+                      checked={inLoop}
+                      onChange={() => toggleLoop(t.id)}
+                      aria-label={`Include ${t.name} in the rotation`}
+                    />
+                  </label>
                   <button
                     type="button"
                     className="theme-music-track-label"
