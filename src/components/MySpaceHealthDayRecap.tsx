@@ -80,9 +80,27 @@ export function MySpaceHealthDayRecap({
   const [note, setNote] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [useGrok, setUseGrok] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    setUseGrok(readUseGrok());
+    let cancelled = false;
+    fetch("/api/members/me", { credentials: "include", cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: { isAdmin?: boolean }) => {
+        if (cancelled) return;
+        const admin = json.isAdmin === true;
+        setIsAdmin(admin);
+        setUseGrok(admin ? readUseGrok() : false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsAdmin(false);
+          setUseGrok(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const workouts = gym.workouts || [];
@@ -129,7 +147,7 @@ export function MySpaceHealthDayRecap({
         workouts,
         auto: !!opts?.auto,
         favorite: recapByDate.get(date)?.favorite || false,
-        useGrok,
+        useGrok: isAdmin && useGrok,
       });
       onSaveRecaps(sanitizeDayRecaps([recap, ...recaps.filter((r) => r.date !== date)]));
       setSelected(date);
@@ -265,20 +283,27 @@ export function MySpaceHealthDayRecap({
       <div className="hero-actions" style={{ margin: "0.75rem 0" }}>
         <button
           type="button"
-          className={`btn btn-sm ${useGrok ? "btn-primary" : "btn-ghost"}`}
-          aria-pressed={useGrok}
+          className={`btn btn-sm ${isAdmin && useGrok ? "btn-primary" : "btn-ghost"}`}
+          aria-pressed={isAdmin && useGrok}
+          disabled={!isAdmin}
+          title={
+            isAdmin
+              ? "Only you can turn Grok on or off. Neighbors always get the standard recap."
+              : "Grok write-up is an admin control. Your recaps use the standard write-up."
+          }
           onClick={() => {
+            if (!isAdmin) return;
             const next = !useGrok;
             setUseGrok(next);
             writeUseGrok(next);
             setNote(
               next
-                ? "Grok write-up is ON for the next recap. You are only charged when you write or rewrite a recap with this on."
+                ? "Grok write-up is ON for your recaps only. Neighbors are not charged."
                 : "Grok write-up is OFF. Recaps use the standard write-up — no Grok charge."
             );
           }}
         >
-          {useGrok ? "Grok write-up: On" : "Grok write-up: Off"}
+          {isAdmin && useGrok ? "Grok write-up: On" : "Grok write-up: Off"}
         </button>
         <button
           type="button"

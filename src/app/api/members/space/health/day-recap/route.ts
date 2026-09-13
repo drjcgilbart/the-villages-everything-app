@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
+import { isAdminAuthenticated } from "@/lib/auth";
 import { getSessionMember } from "@/lib/memberAuth";
 import { getMemberSpace, memberCanAccess } from "@/lib/memberSpace";
 import {
@@ -175,7 +176,8 @@ export async function POST(req: Request) {
   const fallback = writeLocalDayStory(snap);
   const key = process.env.XAI_API_KEY?.trim();
   const grokConfigured = Boolean(key);
-  const wantGrok = body.useGrok === true;
+  const admin = await isAdminAuthenticated();
+  const wantGrok = body.useGrok === true && admin;
   if (!wantGrok || !key) {
     return NextResponse.json({
       story: fallback,
