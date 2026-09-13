@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FavoriteSiteButton } from "@/components/FavoriteSiteButton";
 import { HideMyDataToggle } from "@/components/HideMyDataToggle";
 import { PhoneViewToggle } from "@/components/PhoneViewToggle";
@@ -333,15 +334,38 @@ function AccountMenu({
   adminActive: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
   const box = useRef<HTMLDivElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  function place() {
+    const r = btn.current?.getBoundingClientRect();
+    if (!r) return;
+    setPos({
+      top: Math.round(r.bottom + 6),
+      right: Math.round(Math.max(8, window.innerWidth - r.right)),
+    });
+  }
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (box.current?.contains(t) || panel.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onReposition = () => {
+      if (open) place();
     };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [open]);
 
   async function logout() {
     await fetch("/api/members/logout", { method: "POST" });
@@ -352,29 +376,41 @@ function AccountMenu({
   return (
     <div className="account-menu" ref={box}>
       <button
+        ref={btn}
         type="button"
         className={`utility-studio account-menu-btn${adminActive ? " active" : ""}`}
         aria-expanded={open}
         aria-haspopup="menu"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          place();
+          setOpen((v) => !v);
+        }}
       >
-        {label}
+        {label} ▾
       </button>
-      {open ? (
-        <div className="account-menu-panel" role="menu">
-          {isAdmin ? (
-            <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>
-              Admin portal
-            </Link>
-          ) : null}
-          <Link href="/my-space" role="menuitem" onClick={() => setOpen(false)}>
-            My Space
-          </Link>
-          <button type="button" role="menuitem" onClick={() => void logout()}>
-            Log out
-          </button>
-        </div>
-      ) : null}
+      {open
+        ? createPortal(
+            <div
+              ref={panel}
+              className="account-menu-panel"
+              role="menu"
+              style={{ top: pos.top, right: pos.right }}
+            >
+              {isAdmin ? (
+                <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>
+                  Admin portal
+                </Link>
+              ) : null}
+              <Link href="/my-space" role="menuitem" onClick={() => setOpen(false)}>
+                My Space
+              </Link>
+              <button type="button" role="menuitem" onClick={() => void logout()}>
+                Log out
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
