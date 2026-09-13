@@ -176,11 +176,12 @@ export function MySpaceHealthDayRecap({
         {week.map((d) => {
           const rec = recapByDate.has(d);
           const logged = loggedDates.has(d);
+          const dow = new Date(`${d}T12:00:00`).getDay();
           return (
             <button
               key={d}
               type="button"
-              className={`ms-day-week-cell${selected === d ? " is-on" : ""}${rec ? " has-recap" : ""}`}
+              className={`ms-day-week-cell dow-${dow}${selected === d ? " is-on" : ""}${rec ? " has-recap" : ""}${logged && !rec ? " has-log" : ""}`}
               onClick={() => {
                 setSelected(d);
                 setMonth(monthStart(d));
@@ -225,22 +226,22 @@ export function MySpaceHealthDayRecap({
               <button
                 key={d}
                 type="button"
-                className={`ms-day-cal-cell${selected === d ? " is-on" : ""}${
-                  recapByDate.has(d) ? " has-recap" : ""
-                }${loggedDates.has(d) && !recapByDate.has(d) ? " has-log" : ""}${
-                  d === today ? " is-today" : ""
-                }`}
+                className={`ms-day-cal-cell${i % 7 === 0 || i % 7 === 6 ? " is-weekend" : ""}${
+                  selected === d ? " is-on" : ""
+                }${recapByDate.has(d) ? " has-recap" : ""}${
+                  loggedDates.has(d) && !recapByDate.has(d) ? " has-log" : ""
+                }${d === today ? " is-today" : ""}`}
                 onClick={() => setSelected(d)}
               >
                 {Number(d.slice(8))}
               </button>
             ) : (
-              <span key={`e-${i}`} />
+              <span key={`e-${i}`} className="ms-day-cal-empty" />
             )
           )}
         </div>
         <p className="panel-hint">
-          Filled = saved recap · outline = something logged · today is circled.
+          Green = saved recap · blue = something logged · gold ring = today · weekends are warmer.
         </p>
       </div>
 

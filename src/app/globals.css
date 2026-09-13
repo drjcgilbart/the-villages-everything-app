@@ -3975,89 +3975,174 @@ button.ms-home-card:hover {
 .ms-day-week-cell {
   appearance: none;
   font: inherit;
-  border: 1px solid var(--line);
-  background: #fff;
+  border: 1px solid transparent;
   border-radius: 12px;
-  padding: 0.35rem 0.15rem 0.45rem;
+  padding: 0.4rem 0.15rem 0.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
   cursor: pointer;
+  color: var(--palm-deep);
+}
+
+.ms-day-week-cell.dow-0 {
+  background: #fff1ec;
+  border-color: rgba(200, 92, 74, 0.28);
+}
+
+.ms-day-week-cell.dow-1 {
+  background: #eef6f0;
+  border-color: rgba(31, 107, 74, 0.18);
+}
+
+.ms-day-week-cell.dow-2 {
+  background: #eef4fb;
+  border-color: rgba(43, 108, 176, 0.2);
+}
+
+.ms-day-week-cell.dow-3 {
+  background: #f4f8ee;
+  border-color: rgba(31, 107, 74, 0.16);
+}
+
+.ms-day-week-cell.dow-4 {
+  background: #f3eef8;
+  border-color: rgba(85, 60, 154, 0.18);
+}
+
+.ms-day-week-cell.dow-5 {
+  background: #f7f3ea;
+  border-color: rgba(183, 121, 31, 0.22);
+}
+
+.ms-day-week-cell.dow-6 {
+  background: #fff6dc;
+  border-color: rgba(232, 184, 74, 0.45);
 }
 
 .ms-day-week-cell span,
 .ms-day-week-cell i {
   font-size: 0.68rem;
-  color: var(--muted);
+  color: inherit;
+  opacity: 0.72;
   font-style: normal;
 }
 
 .ms-day-week-cell.is-on {
-  border-color: var(--palm);
-  background: rgba(31, 107, 74, 0.1);
+  background: var(--palm);
+  border-color: var(--palm-deep);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(31, 107, 74, 0.28);
 }
 
-.ms-day-week-cell.has-recap {
-  box-shadow: inset 0 -3px 0 var(--palm);
+.ms-day-week-cell.has-recap:not(.is-on) {
+  box-shadow: inset 0 -4px 0 var(--palm);
+}
+
+.ms-day-week-cell.has-log:not(.is-on):not(.has-recap) {
+  box-shadow: inset 0 -4px 0 #2b6cb0;
 }
 
 .ms-day-cal {
   margin: 0.5rem 0 1rem;
-  padding: 0.85rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #fff;
+  padding: 0.95rem 0.9rem 0.85rem;
+  border: 1px solid rgba(31, 107, 74, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, #fffdf6 0%, #f4eee3 100%);
+  box-shadow: 0 10px 24px rgba(15, 61, 44, 0.06);
 }
 
 .ms-day-cal-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.65rem;
+  color: var(--palm-deep);
 }
 
 .ms-day-cal-dow,
 .ms-day-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.25rem;
+  gap: 0.3rem;
   text-align: center;
 }
 
 .ms-day-cal-dow {
   font-size: 0.72rem;
-  color: var(--muted);
-  font-weight: 700;
-  margin-bottom: 0.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+}
+
+.ms-day-cal-dow span:nth-child(1) {
+  color: #c45c4a;
+}
+
+.ms-day-cal-dow span:nth-child(2),
+.ms-day-cal-dow span:nth-child(3),
+.ms-day-cal-dow span:nth-child(4) {
+  color: var(--palm-deep);
+}
+
+.ms-day-cal-dow span:nth-child(5) {
+  color: #2b6cb0;
+}
+
+.ms-day-cal-dow span:nth-child(6) {
+  color: #6b4c9a;
+}
+
+.ms-day-cal-dow span:nth-child(7) {
+  color: #b7791f;
 }
 
 .ms-day-cal-cell {
   appearance: none;
   font: inherit;
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid rgba(31, 107, 74, 0.08);
+  background: rgba(255, 255, 255, 0.72);
   border-radius: 10px;
-  padding: 0.4rem 0;
+  padding: 0.45rem 0;
   cursor: pointer;
+  color: var(--ink);
+}
+
+.ms-day-cal-cell.is-weekend {
+  background: rgba(232, 184, 74, 0.16);
+  border-color: rgba(183, 121, 31, 0.18);
 }
 
 .ms-day-cal-cell.has-log {
-  border-color: color-mix(in srgb, var(--palm) 35%, var(--line));
-}
-
-.ms-day-cal-cell.has-recap {
-  background: rgba(31, 107, 74, 0.16);
+  background: rgba(43, 108, 176, 0.16);
+  border-color: rgba(43, 108, 176, 0.38);
+  color: #163a66;
   font-weight: 700;
 }
 
-.ms-day-cal-cell.is-today {
+.ms-day-cal-cell.has-recap {
+  background: rgba(31, 107, 74, 0.22);
+  border-color: rgba(31, 107, 74, 0.38);
+  color: var(--palm-deep);
+  font-weight: 800;
+}
+
+.ms-day-cal-cell.is-today:not(.is-on) {
   box-shadow: 0 0 0 2px var(--gold, #e8b84a);
 }
 
 .ms-day-cal-cell.is-on {
   background: var(--palm);
+  border-color: var(--palm-deep);
   color: #fff;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(31, 107, 74, 0.28);
+}
+
+.ms-day-cal-cell:hover:not(.is-on) {
+  filter: brightness(0.97);
 }
 
 .ms-day-story {
