@@ -9,6 +9,7 @@ import { PhoneViewToggle } from "@/components/PhoneViewToggle";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
 import { SITE_BRAND } from "@/lib/siteBrand";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
+import { SiteSearch } from "@/components/SiteSearch";
 
 type UtilityItem = {
   href: string;
@@ -253,6 +254,8 @@ export function Header({
             </span>
           </Link>
 
+          <SiteSearch />
+
           <button
             type="button"
             className="hub-pages-toggle"
@@ -301,6 +304,7 @@ export function Header({
           aria-label="Main"
         >
           <p className="hub-mobile-intro">Where to first, cart pilot?</p>
+          <SiteSearch compact />
           <div className="hub-mobile-links hub-mobile-main-topics">
             {MAIN_TOPICS.map((item) =>
               topicLink(item, { onClick: () => setOpen(false) })
