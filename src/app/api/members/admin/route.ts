@@ -21,6 +21,8 @@ import {
   updateMemberSpace,
 } from "@/lib/memberSpace";
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
+import { deleteMemberAccount } from "@/lib/memberDelete";
+import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import {
   getMemberById,
   listMembers,
@@ -102,6 +104,28 @@ export async function POST(req: Request) {
   try {
     await ensureDurableHydrated();
     const body = await req.json();
+
+    if (body.action === "deleteMember") {
+      const id = String(body.id || "");
+      const mem = getMemberById(id);
+      if (!mem) {
+        return NextResponse.json({ error: "Member not found" }, { status: 404 });
+      }
+      if (isSiteOwnerEmail(mem.email)) {
+        return NextResponse.json(
+          { error: "The site-owner account cannot be deleted from here." },
+          { status: 400 }
+        );
+      }
+      await deleteMemberAccount(id);
+      await persistAll();
+      return NextResponse.json({
+        memberId: id,
+        deleted: true,
+        members: membersWithPlans(),
+        durableStorage: durableConfigured(),
+      });
+    }
 
     if (body.action === "setPassword") {
       const member = setMemberPassword(String(body.id || ""), body.password);

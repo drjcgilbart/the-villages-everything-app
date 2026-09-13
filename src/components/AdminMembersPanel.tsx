@@ -58,6 +58,33 @@ export function AdminMembersPanel() {
     load().catch((err) => flash("err", err.message || "Load failed"));
   }, [load]);
 
+  async function deleteMember(id: string, name: string) {
+    const who = name || "this neighbor";
+    if (
+      !window.confirm(
+        `Delete ${who} permanently?\n\nThis removes their login, My Space, and yard-sale listings. It cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deleteMember", id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not delete member");
+      setMembers(data.members || []);
+      flash("ok", `${who} deleted`);
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function setMemberStatus(id: string, status: string) {
     setBusy(true);
     try {
@@ -327,6 +354,7 @@ export function AdminMembersPanel() {
                 onPlan={setMemberPlan}
                 onLoofah={toggleGoldenLoofah}
                 onPassword={resetMemberPassword}
+                onDelete={deleteMember}
                 onTopTier={topTierAction}
                 onTrial={trialAction}
               />
@@ -360,6 +388,7 @@ export function AdminMembersPanel() {
             onPassword={resetMemberPassword}
             onTopTier={topTierAction}
             onTrial={trialAction}
+            onDelete={deleteMember}
           />
         ))}
       </div>
@@ -378,6 +407,7 @@ function MemberAdminRow({
   onPassword,
   onTopTier,
   onTrial,
+  onDelete,
 }: {
   m: AdminMember;
   tiers: TierOpt[];
@@ -389,6 +419,7 @@ function MemberAdminRow({
   onPassword: (id: string, name: string) => void;
   onTopTier: (id: string, action: "approveTopTier" | "rejectTopTier") => void;
   onTrial: (id: string, action: "grantTrial" | "endTrial") => void;
+  onDelete: (id: string, name: string) => void;
 }) {
   const nom = m.topTierNomination;
   return (
@@ -536,6 +567,14 @@ function MemberAdminRow({
           onClick={() => onPassword(m.id, m.name)}
         >
           Set password
+        </button>
+        <button
+          type="button"
+          className="btn btn-danger btn-sm"
+          disabled={busy}
+          onClick={() => onDelete(m.id, m.name)}
+        >
+          Delete
         </button>
       </div>
     </div>
