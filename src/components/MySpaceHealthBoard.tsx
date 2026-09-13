@@ -932,6 +932,19 @@ export function MySpaceHealthBoard() {
     sleep: { start: "", end: "" },
   });
   const [dictating, setDictating] = useState(false);
+  const dictatingRef = useRef(false);
+  const journalRecRef = useRef<{
+    onresult: ((ev: {
+      resultIndex: number;
+      results: ArrayLike<{ isFinal?: boolean; 0?: { transcript: string } }>;
+    }) => void) | null;
+    onend: (() => void) | null;
+    onerror: ((ev: { error?: string }) => void) | null;
+    start: () => void;
+    stop: () => void;
+    abort: () => void;
+  } | null>(null);
+  const journalBaseRef = useRef("");
 
   const today = todayKeyEastern();
 
@@ -954,6 +967,105 @@ export function MySpaceHealthBoard() {
   function persist(next: HealthState) {
     void save(next);
   }
+
+  function stopJournalDictation() {
+    dictatingRef.current = false;
+    setDictating(false);
+    const rec = journalRecRef.current;
+    journalRecRef.current = null;
+    if (!rec) return;
+    rec.onresult = null;
+    rec.onend = null;
+    rec.onerror = null;
+    try {
+      rec.stop();
+    } catch {
+      /* already stopped */
+    }
+    try {
+      rec.abort();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function startJournalDictation() {
+    const w = window as unknown as {
+      SpeechRecognition?: new () => NonNullable<typeof journalRecRef.current> & {
+        lang: string;
+        continuous: boolean;
+        interimResults: boolean;
+      };
+      webkitSpeechRecognition?: new () => NonNullable<typeof journalRecRef.current> & {
+        lang: string;
+        continuous: boolean;
+        interimResults: boolean;
+      };
+    };
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) {
+      window.alert("Speech recognition isn’t available in this browser.");
+      return;
+    }
+    stopJournalDictation();
+    journalBaseRef.current = journalBody.trim();
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (ev) => {
+      let committed = journalBaseRef.current;
+      let interim = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const piece = ev.results[i];
+        const text = String(piece?.[0]?.transcript || "").replace(/\s+/g, " ").trim();
+        if (!text) continue;
+        if (piece?.isFinal) {
+          committed = committed ? `${committed} ${text}` : text;
+        } else {
+          interim = interim ? `${interim} ${text}` : text;
+        }
+      }
+      journalBaseRef.current = committed;
+      setJournalBody(interim ? (committed ? `${committed} ${interim}` : interim) : committed);
+    };
+    rec.onerror = (ev) => {
+      if (ev.error === "aborted" || ev.error === "no-speech") return;
+      if (ev.error === "not-allowed") {
+        stopJournalDictation();
+        window.alert("Microphone permission is blocked for this site.");
+      }
+    };
+    rec.onend = () => {
+      if (!dictatingRef.current || journalRecRef.current !== rec) return;
+      try {
+        rec.start();
+      } catch {
+        stopJournalDictation();
+      }
+    };
+    journalRecRef.current = rec;
+    dictatingRef.current = true;
+    setDictating(true);
+    try {
+      rec.start();
+    } catch {
+      stopJournalDictation();
+      window.alert("Could not start the microphone. Try again.");
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      dictatingRef.current = false;
+      try {
+        journalRecRef.current?.abort();
+      } catch {
+        /* unmount */
+      }
+      journalRecRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!goalsSavedOpen) return;
@@ -3263,69 +3375,28 @@ export function MySpaceHealthBoard() {
                   <textarea
                     rows={8}
                     value={journalBody}
-                    onChange={(e) => setJournalBody(e.target.value)}
+                    onChange={(e) => {
+                      setJournalBody(e.target.value);
+                      if (dictatingRef.current) journalBaseRef.current = e.target.value;
+                    }}
                     placeholder="What went well? What was hard? What will I try tomorrow? Or tap Speak and talk."
                     required
                   />
                 </div>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-sm"
+                  className={`btn btn-sm ${dictating ? "btn-primary" : "btn-ghost"}`}
+                  aria-pressed={dictating}
                   onClick={() => {
-                    const w = window as unknown as {
-                      SpeechRecognition?: new () => {
-                        lang: string;
-                        continuous: boolean;
-                        interimResults: boolean;
-                        onresult: ((ev: {
-                          resultIndex: number;
-                          results: ArrayLike<ArrayLike<{ transcript: string }>>;
-                        }) => void) | null;
-                        onend: (() => void) | null;
-                        start: () => void;
-                        stop: () => void;
-                      };
-                      webkitSpeechRecognition?: new () => {
-                        lang: string;
-                        continuous: boolean;
-                        interimResults: boolean;
-                        onresult: ((ev: {
-                          resultIndex: number;
-                          results: ArrayLike<ArrayLike<{ transcript: string }>>;
-                        }) => void) | null;
-                        onend: (() => void) | null;
-                        start: () => void;
-                        stop: () => void;
-                      };
-                    };
-                    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
-                    if (!SR) {
-                      window.alert("Speech recognition isn’t available in this browser.");
-                      return;
-                    }
-                    const rec = new SR();
-                    rec.lang = "en-US";
-                    rec.continuous = true;
-                    rec.interimResults = true;
-                    rec.onresult = (ev) => {
-                      let chunk = "";
-                      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-                        chunk += ev.results[i]?.[0]?.transcript || "";
-                      }
-                      if (chunk) setJournalBody((prev) => (prev ? `${prev} ${chunk}` : chunk));
-                    };
-                    rec.onend = () => setDictating(false);
-                    if (dictating) {
-                      rec.stop();
-                      setDictating(false);
-                    } else {
-                      rec.start();
-                      setDictating(true);
-                    }
+                    if (dictatingRef.current) stopJournalDictation();
+                    else startJournalDictation();
                   }}
                 >
-                  {dictating ? "Stop" : "🎤 Speak"}
+                  {dictating ? "Stop microphone" : "🎤 Speak"}
                 </button>
+                {dictating ? (
+                  <p className="panel-hint">Listening… tap Stop microphone when you’re done.</p>
+                ) : null}
                 <button type="submit" className="btn btn-primary btn-sm">
                   {state.journals.some((j) => j.date === today)
                     ? "Update today’s entry"
