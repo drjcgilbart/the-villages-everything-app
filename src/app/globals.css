@@ -8409,6 +8409,24 @@ button.text-link {
   line-height: 1.4;
 }
 
+.admin-member-edit {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-password-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.admin-password-row input {
+  flex: 1;
+}
+
 .msg {
   margin: 0.75rem 0;
   padding: 0.7rem 0.9rem;

@@ -28,6 +28,9 @@ type AdminMember = PublicMember & {
   goldenLoofah?: boolean;
   badges?: BadgeDef[];
   topTierNomination?: TopTierNom | null;
+  notes?: string;
+  approvedAt?: string | null;
+  hasPassword?: boolean;
 };
 
 type TierOpt = { id: string; label: string; shortLabel: string; rank: number };
@@ -260,6 +263,36 @@ export function AdminMembersPanel() {
     }
   }
 
+  async function saveMemberDetails(
+    id: string,
+    fields: {
+      name: string;
+      email: string;
+      phone: string;
+      village: string;
+      notes: string;
+      password: string;
+    }
+  ) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "updateMember", id, ...fields }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not save member");
+      if (Array.isArray(data.members)) setMembers(data.members);
+      else await load();
+      flash("ok", "Member details saved");
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function resetMemberPassword(id: string, name: string) {
     const password = window.prompt(
       `New password for ${name} (min 8 characters):`,
@@ -408,6 +441,7 @@ export function AdminMembersPanel() {
                 onPassword={resetMemberPassword}
                 onDelete={deleteMember}
                 onWelcome={sendWelcome}
+                onSaveDetails={saveMemberDetails}
                 onTopTier={topTierAction}
                 onTrial={trialAction}
               />
@@ -443,6 +477,7 @@ export function AdminMembersPanel() {
             onTrial={trialAction}
             onDelete={deleteMember}
             onWelcome={sendWelcome}
+            onSaveDetails={saveMemberDetails}
           />
         ))}
       </div>
@@ -463,6 +498,7 @@ function MemberAdminRow({
   onTrial,
   onDelete,
   onWelcome,
+  onSaveDetails,
 }: {
   m: AdminMember;
   tiers: TierOpt[];
@@ -476,8 +512,37 @@ function MemberAdminRow({
   onTrial: (id: string, action: "grantTrial" | "endTrial") => void;
   onDelete: (id: string, name: string) => void;
   onWelcome: (id: string, name: string) => void;
+  onSaveDetails: (
+    id: string,
+    fields: {
+      name: string;
+      email: string;
+      phone: string;
+      village: string;
+      notes: string;
+      password: string;
+    }
+  ) => void;
 }) {
   const nom = m.topTierNomination;
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(m.name);
+  const [email, setEmail] = useState(m.email);
+  const [phone, setPhone] = useState(m.phone || "");
+  const [village, setVillage] = useState(m.village || "");
+  const [notes, setNotes] = useState(m.notes || "");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    setName(m.name);
+    setEmail(m.email);
+    setPhone(m.phone || "");
+    setVillage(m.village || "");
+    setNotes(m.notes || "");
+    setPassword("");
+  }, [m.id, m.name, m.email, m.phone, m.village, m.notes]);
+
   return (
     <div
       className={`admin-item ${emphasize ? "admin-item-pending" : ""}`}
@@ -517,6 +582,94 @@ function MemberAdminRow({
               </li>
             ))}
           </ul>
+        ) : null}
+        {editing ? (
+          <form
+            className="admin-member-edit"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSaveDetails(m.id, {
+                name,
+                email,
+                phone,
+                village,
+                notes,
+                password,
+              });
+              setPassword("");
+              setEditing(false);
+            }}
+          >
+            <div className="form-row">
+              <div className="field">
+                <label>Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
+              <div className="field">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="field">
+                <label>Phone</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Village</label>
+                <input value={village} onChange={(e) => setVillage(e.target.value)} />
+              </div>
+            </div>
+            <div className="field">
+              <label>Admin notes</label>
+              <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Password</label>
+              <p className="panel-hint" style={{ margin: "0 0 0.35rem" }}>
+                Stored hashed — the current password cannot be shown. Leave blank to keep
+                it, or type a new one (min 8 characters) and Save.
+              </p>
+              <div className="admin-password-row">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  placeholder={m.hasPassword ? "New password (optional)" : "Set a password"}
+                  minLength={password ? 8 : undefined}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+            <p className="panel-hint">
+              Joined {formatAdminWhen(m.createdAt)}
+              {m.approvedAt ? ` · approved ${formatAdminWhen(m.approvedAt)}` : ""}
+            </p>
+            <div className="hero-actions">
+              <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
+                Save details
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         ) : null}
       </div>
       <div className="admin-actions">
@@ -635,6 +788,14 @@ function MemberAdminRow({
             Send welcome email
           </button>
         ) : null}
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          disabled={busy}
+          onClick={() => setEditing((v) => !v)}
+        >
+          {editing ? "Close details" : "Edit details"}
+        </button>
         <button
           type="button"
           className="btn btn-ghost btn-sm"

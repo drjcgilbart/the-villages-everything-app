@@ -231,6 +231,54 @@ export function changeOwnPassword(
   return toPublicMember(data.members[idx]);
 }
 
+export function updateMemberDetails(
+  id: string,
+  input: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    village?: string;
+    notes?: string;
+    password?: string;
+  }
+) {
+  const data = loadYardSale();
+  const idx = data.members.findIndex((m) => m.id === id);
+  if (idx < 0) throw new Error("Member not found");
+  const prev = data.members[idx];
+  const name = input.name !== undefined ? String(input.name).trim().slice(0, 80) : prev.name;
+  const email =
+    input.email !== undefined
+      ? String(input.email).trim().toLowerCase().slice(0, 120)
+      : prev.email;
+  if (!name) throw new Error("Name is required");
+  if (!email || !email.includes("@")) throw new Error("Valid email is required");
+  const clash = data.members.find((m) => m.email === email && m.id !== id);
+  if (clash) throw new Error("Another member already uses that email");
+  const password = String(input.password || "");
+  if (password && password.length < 8) {
+    throw new Error("Password must be at least 8 characters");
+  }
+  data.members[idx] = {
+    ...prev,
+    name,
+    email,
+    phone:
+      input.phone !== undefined
+        ? String(input.phone).trim().slice(0, 40) || undefined
+        : prev.phone,
+    village:
+      input.village !== undefined
+        ? String(input.village).trim().slice(0, 80) || undefined
+        : prev.village,
+    notes:
+      input.notes !== undefined ? String(input.notes).trim().slice(0, 500) : prev.notes,
+    passwordHash: password ? hashPassword(password) : prev.passwordHash,
+  };
+  saveYardSale(data);
+  return data.members[idx];
+}
+
 export function getMemberById(id: string) {
   return loadYardSale().members.find((m) => m.id === id) || null;
 }

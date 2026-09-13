@@ -32,6 +32,8 @@ import {
   saveYardSaleAsync,
   setMemberPassword,
   setMemberStatus,
+  toPublicMember,
+  updateMemberDetails,
 } from "@/lib/yardSale";
 import type { MemberStatus } from "@/lib/yardSaleTypes";
 import { sendMemberWelcomeEmail } from "@/lib/memberWelcomeMail";
@@ -64,6 +66,9 @@ function membersWithPlans() {
       topTierNomination: pub.topTierNomination,
       badges: full ? badgesForMemberRecord(full) : [],
       adminLog: getAdminLog(m.id),
+      notes: full?.notes || "",
+      approvedAt: full?.approvedAt || null,
+      hasPassword: Boolean(full?.passwordHash),
     };
   });
 }
@@ -150,6 +155,27 @@ export async function POST(req: Request) {
         members: membersWithPlans(),
         durableStorage: durableConfigured(),
         welcomeEmail,
+      });
+    }
+
+    if (body.action === "updateMember") {
+      const id = String(body.id || "");
+      const updated = updateMemberDetails(id, {
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        village: body.village,
+        notes: body.notes,
+        password: body.password,
+      });
+      const bits = ["Profile details saved."];
+      if (String(body.password || "").trim()) bits.push("Password updated.");
+      appendAdminLog(id, bits.join(" "));
+      await persistAll();
+      return NextResponse.json({
+        member: toPublicMember(updated),
+        members: membersWithPlans(),
+        durableStorage: durableConfigured(),
       });
     }
 
