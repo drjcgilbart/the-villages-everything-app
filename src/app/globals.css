@@ -7175,6 +7175,15 @@ a.ts-square-card:hover .ts-square-card-img {
   font-size: 0.88rem;
 }
 
+.btn:disabled,
+.btn:disabled:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+  transform: none;
+  pointer-events: none;
+}
+
 .hero-card {
   background: linear-gradient(160deg, #123d2d 0%, #1f6b4a 45%, #2a8f63 100%);
   color: #f4fff8;
