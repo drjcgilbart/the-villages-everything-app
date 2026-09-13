@@ -59,12 +59,21 @@ const AFTER_GOLF = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
 const TOPICS_ROW_2 = AFTER_GOLF.slice(0, 7);
 const TOPICS_ROW_3 = AFTER_GOLF.slice(7);
 
+function displayName(full: string | null | undefined) {
+  const n = String(full || "").trim();
+  if (!n) return "Neighbor";
+  const first = n.split(/\s+/)[0];
+  return first.length > 18 ? `${first.slice(0, 16)}…` : first;
+}
+
 export function Header({
   isAdmin = false,
   signedIn = false,
+  signedInName = null,
 }: {
   isAdmin?: boolean;
   signedIn?: boolean;
+  signedInName?: string | null;
 }) {
   const pathname = usePathname();
   const isGamePage = pathname === "/golf-cart-hero";
@@ -217,22 +226,20 @@ export function Header({
                 {item.label}
               </Link>
             ))}
-            {isAdmin ? (
-              <Link
-                href="/admin"
-                className={`utility-studio${pathname === "/admin" || pathname.startsWith("/admin/") ? " active" : ""}`}
-              >
-                Admin
-              </Link>
-            ) : null}
-            {!signedIn ? (
+            {isAdmin || signedIn ? (
+              <AccountMenu
+                isAdmin={isAdmin}
+                label={isAdmin ? "Admin" : displayName(signedInName)}
+                adminActive={pathname === "/admin" || pathname.startsWith("/admin/")}
+              />
+            ) : (
               <Link
                 href="/yard-sale/login"
                 className={pathname === "/yard-sale/login" ? "active" : ""}
               >
                 Sign in
               </Link>
-            ) : null}
+            )}
           </nav>
         </div>
       </div>
@@ -313,5 +320,61 @@ export function Header({
         </nav>
       </div>
     </header>
+  );
+}
+
+function AccountMenu({
+  isAdmin,
+  label,
+  adminActive,
+}: {
+  isAdmin: boolean;
+  label: string;
+  adminActive: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  async function logout() {
+    await fetch("/api/members/logout", { method: "POST" });
+    if (isAdmin) await fetch("/api/auth", { method: "DELETE" });
+    window.location.href = "/";
+  }
+
+  return (
+    <div className="account-menu" ref={box}>
+      <button
+        type="button"
+        className={`utility-studio account-menu-btn${adminActive ? " active" : ""}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {label}
+      </button>
+      {open ? (
+        <div className="account-menu-panel" role="menu">
+          {isAdmin ? (
+            <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>
+              Admin portal
+            </Link>
+          ) : null}
+          <Link href="/my-space" role="menuitem" onClick={() => setOpen(false)}>
+            My Space
+          </Link>
+          <button type="button" role="menuitem" onClick={() => void logout()}>
+            Log out
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }

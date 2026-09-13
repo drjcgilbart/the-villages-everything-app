@@ -63,7 +63,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // so Admin Portal grants show on every page, every serverless instance.
   await ensureDurableHydrated();
   const isAdmin = await isAdminAuthenticated();
-  const signedIn = Boolean(await getSessionMember());
+  const member = await getSessionMember();
+  const signedIn = Boolean(member);
 
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
@@ -72,7 +73,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <PrivacyModeRoot isAdmin={isAdmin} />
         <PhoneViewHide>
           <PwaRegister />
-          <Header isAdmin={isAdmin} signedIn={signedIn} />
+          <Header
+            isAdmin={isAdmin}
+            signedIn={signedIn}
+            signedInName={member?.name || null}
+          />
         </PhoneViewHide>
         <main className="flex-1">{children}</main>
         <PhoneViewHide extra={["/golf-cart-hero"]}>

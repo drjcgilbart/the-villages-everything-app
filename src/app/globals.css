@@ -925,15 +925,67 @@ a {
   background: rgba(31, 107, 74, 0.08);
 }
 
-.utility-nav a.utility-studio {
+.utility-nav a.utility-studio,
+.utility-nav .account-menu-btn {
   background: var(--palm);
   color: white;
   margin-left: 0.25rem;
+  border: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
-.utility-nav a.utility-studio:hover {
+.utility-nav a.utility-studio:hover,
+.utility-nav .account-menu-btn:hover,
+.utility-nav .account-menu-btn.active {
   background: var(--palm-deep);
   color: white;
+}
+
+.account-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.account-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 90;
+  min-width: 10.5rem;
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fffdf8;
+  box-shadow: 0 12px 28px rgba(28, 36, 48, 0.14);
+  display: flex;
+  flex-direction: column;
+}
+
+.account-menu-panel a,
+.account-menu-panel button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.account-menu-panel a:hover,
+.account-menu-panel button:hover {
+  background: rgba(31, 107, 74, 0.1);
 }
 
 .header-inner {
