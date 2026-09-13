@@ -657,6 +657,13 @@ a {
   overscroll-behavior: contain;
 }
 
+.utility-bar-inner .site-search {
+  flex: 1 1 14rem;
+  min-width: 14rem;
+  max-width: 22rem;
+  margin-left: auto;
+}
+
 .utility-bar-label {
   flex-shrink: 0;
   font-size: 0.68rem;
