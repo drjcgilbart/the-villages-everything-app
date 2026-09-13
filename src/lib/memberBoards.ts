@@ -2,6 +2,7 @@ import { readJsonFile, writeJsonFileAsync } from "./dataFs";
 import {
   type MemberBoards,
   type StoredBoardId,
+  clearedBoards,
   emptyBoards,
   sanitizeBoard,
 } from "./memberBoardModel";
@@ -145,6 +146,7 @@ function payloadCopiesOwner(
   if (owners.includes(memberId)) return false;
   const samples = sampleBoards()[boardId];
   const sanitized = sanitizeBoard(boardId, data);
+  if (sameBoard(sanitized, clearedBoards()[boardId])) return false;
   const file = loadFile();
   for (const ownerId of owners) {
     if (
@@ -291,6 +293,13 @@ export function getMemberBoards(memberId: string): MemberBoards {
     ) as MemberBoards["portfolio"],
     weather: sanitizeBoard("weather", rec.weather) as MemberBoards["weather"],
   };
+}
+
+export async function clearMemberBoard(
+  memberId: string,
+  boardId: StoredBoardId
+) {
+  return saveMemberBoard(memberId, boardId, clearedBoards()[boardId]);
 }
 
 export async function saveMemberBoard(

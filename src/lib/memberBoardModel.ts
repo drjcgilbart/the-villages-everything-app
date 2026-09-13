@@ -1,6 +1,7 @@
 import type { FeatureKey } from "./membershipTiers";
 import { NEWS_PRESETS } from "./newsCatalog";
 import { sampleBoards } from "./sampleBoards";
+import { VILLAGES_LAT, VILLAGES_LON, VILLAGES_TZ } from "./weather";
 
 const MAX_ITEMS = 60;
 
@@ -488,6 +489,133 @@ function notes(raw: unknown, extraMax = 80): NoteItem[] {
 
 export function emptyBoards(): MemberBoards {
   return sampleBoards();
+}
+
+/** Truly empty boards — used when a neighbor permanently deletes their data. */
+export function clearedBoards(): MemberBoards {
+  return {
+    news: {
+      topics: [],
+      customTopics: [],
+      youtube: [],
+      saved: [],
+      people: [
+        {
+          id: "me",
+          name: "Me",
+          topics: [],
+          creators: [],
+          muteWords: [],
+          saved: [],
+          hidden: [],
+        },
+      ],
+      activePersonId: "me",
+    },
+    entertainment: {
+      tonightSquare: "",
+      tonightNotes: "",
+      tonightDate: "",
+      watchLater: [],
+      shows: [],
+      clubs: [],
+      golfFavs: [],
+      pickleFavs: [],
+    },
+    food: {
+      favorites: [],
+      happyHours: [],
+      grocery: [],
+      groceryStores: [],
+      cellar: [],
+      meals: {},
+      recipes: [],
+      tipPct: 18,
+    },
+    gym: {
+      homeGymId: "",
+      gyms: [],
+      workouts: [],
+      supplements: [],
+      supplementLogs: [],
+    },
+    maintenance: {
+      assets: [],
+      tasks: [],
+      activeAssetId: "",
+    },
+    memories: { photos: [] },
+    golfLog: {
+      rounds: [],
+      teeTimes: [],
+      looking: [],
+      regulars: [],
+      favoriteCourseIds: [],
+      myName: "",
+      myHdcp: "",
+    },
+    pickleballLog: {
+      profile: {
+        name: "",
+        duprSingles: "",
+        duprDoubles: "",
+        notes: "",
+        phone: "",
+        pcvg: "",
+      },
+      matches: [],
+      people: [],
+      looking: [],
+      favoriteCourtIds: [],
+      leagues: [],
+    },
+    health: {
+      unit: "lbs",
+      startWeight: null,
+      currentWeight: null,
+      goalWeight: null,
+      heightInches: null,
+      dailyCalorieTarget: 1800,
+      dailyWaterGoalOz: 64,
+      dailyStepsGoal: 8000,
+      dailyProteinGoalG: 120,
+      sleepGoalHours: 8,
+      medAlarmSound: "classic",
+      medAlarmDurationSec: 30,
+      medAlarmEnabled: true,
+      habits: {},
+      entries: [],
+      meals: [],
+      exercises: [],
+      journals: [],
+      medications: [],
+      medicationLogs: [],
+      sleeps: [],
+      progressPhotos: [],
+      dayRecaps: [],
+    },
+    pets: { activePetId: "", pets: [], completions: {} },
+    calendar: { tasks: [] },
+    portfolio: { holdings: [], accounts: [], watchlist: [] },
+    weather: {
+      activeId: "loc-home",
+      locations: [
+        {
+          id: "loc-home",
+          label: "The Villages, FL",
+          query: "34762",
+          zip: "34762",
+          name: "The Villages",
+          admin1: "Florida",
+          country: "United States",
+          countryCode: "US",
+          latitude: VILLAGES_LAT,
+          longitude: VILLAGES_LON,
+          timezone: VILLAGES_TZ,
+        },
+      ],
+    },
+  };
 }
 
 function hasKey(obj: object, key: string) {

@@ -3,6 +3,7 @@ import { ensureDurableHydrated } from "@/lib/dataFs";
 import { getSessionMember } from "@/lib/memberAuth";
 import {
   STORED_BOARD_FEATURE,
+  clearMemberBoard,
   getMemberBoards,
   isolateCopiedOwnerBoards,
   isStoredBoardId,
@@ -70,4 +71,58 @@ export async function PUT(req: NextRequest) {
 
   const saved = await saveMemberBoard(member.id, boardId, body.data);
   return NextResponse.json({ board: boardId, data: saved });
+}
+
+export async function POST(req: NextRequest) {
+  await ensureDurableHydrated();
+  const member = await getSessionMember();
+  if (!member) {
+    return NextResponse.json({ error: "Please sign in" }, { status: 401 });
+  }
+  if (member.status !== "approved") {
+    return NextResponse.json(
+      { error: "Membership must be approved first" },
+      { status: 403 }
+    );
+  }
+
+  let body: { action?: string; boards?: unknown; board?: unknown } = {};
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (body.action !== "clear") {
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  }
+
+  const requested = [
+    ...(Array.isArray(body.boards) ? body.boards : []),
+    body.board,
+  ]
+    .map((id) => String(id || ""))
+    .filter(isStoredBoardId);
+  const unique = [...new Set(requested)];
+  if (!unique.length) {
+    return NextResponse.json({ error: "No board to clear" }, { status: 400 });
+  }
+
+  const space = getMemberSpace(member.id);
+  const cleared: string[] = [];
+  for (const boardId of unique) {
+    const feature = STORED_BOARD_FEATURE[boardId];
+    if (!memberCanAccess(space, feature)) continue;
+    await clearMemberBoard(member.id, boardId);
+    cleared.push(boardId);
+  }
+  if (!cleared.length) {
+    return NextResponse.json(
+      { error: "This board is locked on your plan" },
+      { status: 403 }
+    );
+  }
+  return NextResponse.json(
+    { ok: true, boards: cleared },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

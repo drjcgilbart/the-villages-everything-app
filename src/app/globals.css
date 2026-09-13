@@ -2293,6 +2293,82 @@ html:has(.gch-embed) .hub-header-inner {
   margin: 0 0 0.65rem;
 }
 
+.ms-privacy-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 0.85rem;
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(15, 61, 44, 0.04);
+}
+
+.ms-privacy-bar-note {
+  margin: 0;
+  flex: 1 1 200px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.ms-privacy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ms-privacy-hide-on {
+  border-color: rgba(184, 92, 12, 0.45);
+  background: #9a3412;
+  color: #fff8ee;
+}
+
+.ms-privacy-hide-on:hover,
+.ms-privacy-hide-on:focus-visible {
+  background: #7c2d12;
+  color: #fff;
+}
+
+.ms-privacy-wrap {
+  position: relative;
+}
+
+.ms-privacy-wrap[data-hidden="true"] {
+  isolation: isolate;
+  min-height: 140px;
+}
+
+.ms-privacy-wrap[data-hidden="true"] .ms-privacy-body {
+  filter: blur(18px);
+  opacity: 0.28;
+  user-select: none;
+  pointer-events: none;
+}
+
+.ms-privacy-cover {
+  position: absolute;
+  inset: 12px;
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(15, 61, 44, 0.82);
+  border: 1px dashed rgba(255, 248, 238, 0.28);
+  color: #fff8ee;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.ms-privacy-cover span {
+  font-weight: 500;
+  font-size: 0.9rem;
+  max-width: 28rem;
+}
+
 .my-space-weather-wrap {
   border-radius: 16px;
   overflow: hidden;
