@@ -76,7 +76,7 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Cart Path",
     tagline: "Knows which gate is which (most days).",
     blurb:
-      "2 member logins — you plus one neighbor, each with their own password and My Space data. Daily dashboard energy: full Villages weather, starred clubs, the investment board, news prefs, and entertainment picks.",
+      "2 member logins — you plus one family member, each with their own password and My Space data. Daily dashboard energy: full Villages weather, starred clubs, the investment board, news prefs, and entertainment picks.",
     badgeImage: "/graphics/badges/cart-path-regular.jpg",
     priceUsdPerYear: 3,
     householdSeats: 2,
@@ -89,7 +89,7 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Lanai",
     tagline: "Screened-in serenity with a side of spreadsheets.",
     blurb:
-      "3 member logins — you plus two neighbors, each with their own password and My Space data. The private Reboot: health, pets, food, gym, maintenance, personal calendar, photos & movies, plus golf and pickleball.",
+      "3 member logins — you plus two family members, each with their own password and My Space data. The private Reboot: health, pets, food, gym, maintenance, personal calendar, photos & movies, plus golf and pickleball.",
     badgeImage: "/graphics/badges/lanai-legend.jpg",
     priceUsdPerYear: 5,
     householdSeats: 3,
