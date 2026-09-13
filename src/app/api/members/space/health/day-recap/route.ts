@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { snapshot?: DaySnapshot } = {};
+  let body: { snapshot?: DaySnapshot; useGrok?: boolean } = {};
   try {
     body = await req.json();
   } catch {
@@ -73,8 +73,14 @@ export async function POST(req: Request) {
 
   const fallback = writeLocalDayStory(snap);
   const key = process.env.XAI_API_KEY?.trim();
-  if (!key) {
-    return NextResponse.json({ story: fallback, source: "local" });
+  const grokConfigured = Boolean(key);
+  const wantGrok = body.useGrok === true;
+  if (!wantGrok || !key) {
+    return NextResponse.json({
+      story: fallback,
+      source: "local",
+      grokConfigured,
+    });
   }
 
   try {
@@ -103,15 +109,24 @@ export async function POST(req: Request) {
     };
     if (!res.ok) {
       console.error("[day-recap] xAI", res.status, json.error?.message);
-      return NextResponse.json({ story: fallback, source: "local" });
+      return NextResponse.json({
+        story: fallback,
+        source: "local",
+        grokConfigured,
+      });
     }
     const story = parseStory(String(json.choices?.[0]?.message?.content || ""));
     return NextResponse.json({
       story: story || fallback,
       source: story ? "grok" : "local",
+      grokConfigured,
     });
   } catch (err) {
     console.error("[day-recap]", err);
-    return NextResponse.json({ story: fallback, source: "local" });
+    return NextResponse.json({
+      story: fallback,
+      source: "local",
+      grokConfigured,
+    });
   }
 }

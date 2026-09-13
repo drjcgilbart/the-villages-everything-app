@@ -302,8 +302,9 @@ function logSummary(snap: DaySnapshot): string[] {
     );
   }
   for (const g of snap.gyms) {
+    const pics = (g.media || []).filter((m) => m.kind === "photo").length;
     lines.push(
-      `Gym: ${g.gymName}${g.durationMin ? ` · ${g.durationMin} min` : ""}${g.lifts.length ? ` · ${g.lifts.slice(0, 6).join(" · ")}` : ""}`
+      `Gym: ${g.gymName}${g.durationMin ? ` · ${g.durationMin} min` : ""}${g.lifts.length ? ` · ${g.lifts.slice(0, 6).join(" · ")}` : ""}${pics ? ` · ${pics} photo${pics === 1 ? "" : "s"}` : ""}`
     );
   }
   if (snap.sleep) {

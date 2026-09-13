@@ -4199,6 +4199,14 @@ button.ms-home-card:hover {
   color: var(--palm-deep, #1f6b4a);
 }
 
+.ms-day-photos {
+  margin: 0.85rem 0 0.35rem;
+}
+
+.ms-day-photos h4 {
+  margin: 0 0 0.35rem;
+}
+
 .ms-pet-roster {
   display: flex;
   flex-wrap: wrap;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { emptyBoards, type GymBoard } from "@/lib/memberBoardModel";
+import { useEffect, useMemo, useState } from "react";
+import { emptyBoards, type GymBoard, type GymMediaItem } from "@/lib/memberBoardModel";
 import {
   buildDaySnapshot,
   datesWithLogs,
@@ -11,9 +11,10 @@ import {
   type DayRecap,
   type DaySnapshot,
 } from "@/lib/healthDayRecap";
-import { runHealthDayRecap } from "@/lib/runHealthDayRecap";
+import { readUseGrok, runHealthDayRecap, writeUseGrok } from "@/lib/runHealthDayRecap";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import type { HealthLike } from "@/lib/healthDayRecap";
+import { GymWorkoutMediaStrip } from "@/components/GymWorkoutMedia";
 
 
 
@@ -71,13 +72,18 @@ export function MySpaceHealthDayRecap({
   today: string;
 }) {
   const gymEmpty = emptyBoards().gym;
-  const { value: gym } = useMemberBoard<GymBoard>("gym", gymEmpty, true);
+  const { value: gym, ready: gymReady } = useMemberBoard<GymBoard>("gym", gymEmpty, true);
   const recaps = useMemo(() => sanitizeDayRecaps(recapsIn), [recapsIn]);
   const [selected, setSelected] = useState(today);
   const [month, setMonth] = useState(monthStart(today));
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [useGrok, setUseGrok] = useState(false);
+
+  useEffect(() => {
+    setUseGrok(readUseGrok());
+  }, []);
 
   const workouts = gym.workouts || [];
   const snap = useMemo(
@@ -107,26 +113,37 @@ export function MySpaceHealthDayRecap({
 
   async function generate(opts?: { auto?: boolean; date?: string }) {
     const date = opts?.date || selected;
+    if (!gymReady && !opts?.auto) {
+      setErr("Still loading gym workouts and photos — tap Rewrite again in a moment.");
+      return;
+    }
     const daySnap = buildDaySnapshot(date, health, workouts);
     if (opts?.auto && !snapshotHasLogs(daySnap)) return;
     setBusy(true);
     setErr(null);
     setNote(opts?.auto ? "Writing yesterday’s recap…" : "Writing your day…");
     try {
-      const { recap, source } = await runHealthDayRecap({
+      const { recap, source, grokConfigured } = await runHealthDayRecap({
         date,
         health,
         workouts,
         auto: !!opts?.auto,
         favorite: recapByDate.get(date)?.favorite || false,
+        useGrok,
       });
       onSaveRecaps(sanitizeDayRecaps([recap, ...recaps.filter((r) => r.date !== date)]));
       setSelected(date);
-      setNote(
-        source === "grok"
-          ? "Recap saved with today’s Overview sliders. You can print it any time."
-          : "Recap saved with today’s Overview sliders."
-      );
+      if (useGrok && source !== "grok") {
+        setNote(
+          grokConfigured
+            ? "Saved the standard recap — Grok didn’t respond this time. You were not charged."
+            : "Saved the standard recap. To turn Grok on, add XAI_API_KEY in Vercel → Settings → Environment Variables (Production), then Redeploy."
+        );
+      } else if (source === "grok") {
+        setNote("Grok wrote this recap. Workout photos are in the story below and in the PDF.");
+      } else {
+        setNote("Standard recap saved. Workout photos are in the story below and in the PDF.");
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not write recap");
     } finally {
@@ -248,6 +265,23 @@ export function MySpaceHealthDayRecap({
       <div className="hero-actions" style={{ margin: "0.75rem 0" }}>
         <button
           type="button"
+          className={`btn btn-sm ${useGrok ? "btn-primary" : "btn-ghost"}`}
+          aria-pressed={useGrok}
+          onClick={() => {
+            const next = !useGrok;
+            setUseGrok(next);
+            writeUseGrok(next);
+            setNote(
+              next
+                ? "Grok write-up is ON for the next recap. You are only charged when you write or rewrite a recap with this on."
+                : "Grok write-up is OFF. Recaps use the standard write-up — no Grok charge."
+            );
+          }}
+        >
+          {useGrok ? "Grok write-up: On" : "Grok write-up: Off"}
+        </button>
+        <button
+          type="button"
           className="btn btn-primary"
           disabled={busy}
           onClick={() => void generate({ date: selected })}
@@ -318,6 +352,7 @@ export function MySpaceHealthDayRecap({
           {current.article.split(/\n+/).map((p, i) => (
             <p key={i}>{p}</p>
           ))}
+          <RecapPhotos current={current} snap={snap} />
           {current.bestMoment ? (
             <blockquote className="ms-day-best">
               <strong>Best moment.</strong> {current.bestMoment}
@@ -379,7 +414,38 @@ export function MySpaceHealthDayRecap({
   );
 }
 
+function recapMedia(current: DayRecap | null, snap: DaySnapshot): GymMediaItem[] {
+  const live = snap.gyms.flatMap((g) =>
+    (g.media || []).filter((m) => m.kind === "photo" || m.kind === "video")
+  );
+  if (live.length) return live;
+  return (current?.photos || []).map((p, i) => ({
+    id: `recap-photo-${i}`,
+    kind: "photo" as const,
+    storage: p.localId ? ("phone" as const) : ("account" as const),
+    name: p.caption,
+    url: p.url,
+    localId: p.localId,
+    bytes: 0,
+  }));
+}
+
+function RecapPhotos({ current, snap }: { current: DayRecap; snap: DaySnapshot }) {
+  const items = recapMedia(current, snap);
+  if (!items.length) return null;
+  return (
+    <div className="ms-day-photos">
+      <h4>Photos from the day</h4>
+      <GymWorkoutMediaStrip items={items} />
+    </div>
+  );
+}
+
 function DayFacts({ snap }: { snap: DaySnapshot }) {
+  const gymPhotos = snap.gyms.reduce(
+    (n, g) => n + (g.media || []).filter((m) => m.kind === "photo").length,
+    0
+  );
   const items: string[] = [];
   if (snap.weight != null) items.push(`Weight ${snap.weight} lbs`);
   items.push(`${snap.habits.waterOz} oz water`);
@@ -390,6 +456,7 @@ function DayFacts({ snap }: { snap: DaySnapshot }) {
   if (snap.meals.length) items.push(`${snap.meals.length} meals`);
   if (snap.exercises.length) items.push(`${snap.exercises.length} exercise`);
   if (snap.gyms.length) items.push(`${snap.gyms.length} gym`);
+  if (gymPhotos) items.push(`${gymPhotos} workout photo${gymPhotos === 1 ? "" : "s"}`);
   if (snap.journals.length) items.push("Journal");
   if (snap.photos.length) items.push(`${snap.photos.length} photo note${snap.photos.length === 1 ? "" : "s"}`);
   return (

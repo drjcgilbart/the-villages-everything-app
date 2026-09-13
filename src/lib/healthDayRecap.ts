@@ -16,6 +16,7 @@ export type DayRecap = {
   closer: string;
   pdfUrl: string;
   mood: string;
+  photos: { url: string; localId: string; caption: string }[];
 };
 
 export type DaySnapshot = {
@@ -419,6 +420,24 @@ export function sanitizeDayRecaps(raw: unknown): DayRecap[] {
       closer: clip(r.closer, 280),
       pdfUrl,
       mood: clip(r.mood, 40),
+      photos: Array.isArray(r.photos)
+        ? r.photos
+            .map((p) => {
+              if (!p || typeof p !== "object") return null;
+              const row = p as Record<string, unknown>;
+              const url = clip(row.url, 220);
+              const localId = clip(row.localId, 80);
+              if (url && !url.startsWith("/api/media/")) return null;
+              if (!url && !localId) return null;
+              return {
+                url,
+                localId,
+                caption: clip(row.caption, 80),
+              };
+            })
+            .filter(Boolean)
+            .slice(0, 6) as DayRecap["photos"]
+        : [],
     });
   }
   const byDate = new Map<string, DayRecap>();
@@ -476,8 +495,9 @@ export function writeLocalDayStory(snap: DaySnapshot): DayRecapStory {
     );
   }
   for (const g of snap.gyms) {
+    const pics = (g.media || []).filter((m) => m.kind === "photo").length;
     moveParts.push(
-      `${g.gymName}${g.durationMin ? ` · ${g.durationMin} min` : ""}${g.felt ? ` · felt ${g.felt}` : ""}`
+      `${g.gymName}${g.durationMin ? ` · ${g.durationMin} min` : ""}${g.felt ? ` · felt ${g.felt}` : ""}${pics ? ` · ${pics} photo${pics === 1 ? "" : "s"}` : ""}`
     );
   }
   const moveText = moveParts.length
