@@ -32,6 +32,7 @@ export function VillageBrowser() {
       : "all"
   );
   const [mySlug, setMySlug] = useState<string | null>(null);
+  const [letter, setLetter] = useState<string | null>(null);
 
   useEffect(() => {
     setMySlug(readMyVillageSlug());
@@ -53,6 +54,7 @@ export function VillageBrowser() {
     const q = query.trim().toLowerCase();
     return VILLAGES.filter((v) => {
       if (region !== "all" && v.region !== region) return false;
+      if (letter && (v.name[0]?.toUpperCase() || "") !== letter) return false;
       if (!q) return true;
       const reg = getRegion(v.region);
       return (
@@ -64,7 +66,7 @@ export function VillageBrowser() {
         (v.cdd != null && String(v.cdd).includes(q))
       );
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [query, region]);
+  }, [query, region, letter]);
 
   const grouped = useMemo(() => {
     const map = new Map<VillageRegionId, Village[]>();
@@ -89,9 +91,22 @@ export function VillageBrowser() {
   }
 
   const letters = useMemo(() => {
-    const set = new Set(filtered.map((v) => v.name[0]?.toUpperCase() || "#"));
+    const pool = VILLAGES.filter((v) =>
+      region === "all" ? true : v.region === region
+    );
+    const set = new Set(pool.map((v) => v.name[0]?.toUpperCase() || "#"));
     return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").filter((L) => set.has(L));
-  }, [filtered]);
+  }, [region]);
+
+  function pickLetter(L: string) {
+    setLetter((prev) => (prev === L ? null : L));
+    window.requestAnimationFrame(() => {
+      document.getElementById("village-results")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
 
   return (
     <div className="village-browser">
@@ -157,26 +172,34 @@ export function VillageBrowser() {
           })}
         </div>
         {letters.length > 0 && (
-          <div className="village-az" aria-label="Jump by letter">
+          <div className="village-az" role="group" aria-label="Filter by first letter">
             {letters.map((L) => (
-              <a key={L} href={`#letter-${L}`}>
+              <button
+                key={L}
+                type="button"
+                className={letter === L ? "active" : ""}
+                aria-pressed={letter === L}
+                onClick={() => pickLetter(L)}
+              >
                 {L}
-              </a>
+              </button>
             ))}
           </div>
         )}
         <p className="village-result-count">
           Showing <strong>{filtered.length}</strong> village
           {filtered.length === 1 ? "" : "s"}
+          {letter ? ` starting with ${letter}` : ""}
           {query ? ` matching “${query}”` : ""}
         </p>
       </div>
 
+      <div id="village-results">
       {filtered.length === 0 ? (
         <div className="empty-state">
           No villages match that search. Try a shorter name or pick an area filter.
         </div>
-      ) : region === "all" && !query.trim() ? (
+      ) : region === "all" && !query.trim() && !letter ? (
         <div className="village-region-blocks">
           {grouped.map(({ region: r, villages }) => (
             <section key={r.id} id={`region-${r.id}`} className="village-region-block">
@@ -228,6 +251,7 @@ export function VillageBrowser() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

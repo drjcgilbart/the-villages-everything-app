@@ -10101,22 +10101,37 @@ body.theme-music-open .mascot-quip-popup {
   gap: 0.25rem;
 }
 
-.village-az a {
+.village-az a,
+.village-az button {
   width: 1.75rem;
   height: 1.75rem;
   display: grid;
   place-items: center;
   border-radius: 8px;
+  font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid var(--line);
+  cursor: pointer;
+  padding: 0;
 }
 
-.village-az a:hover {
+.village-az a:hover,
+.village-az button:hover {
   color: var(--ink);
   background: rgba(232, 184, 74, 0.25);
+}
+
+.village-az button.active {
+  background: var(--palm);
+  border-color: var(--palm);
+  color: #fff;
+}
+
+#village-results {
+  scroll-margin-top: 5.5rem;
 }
 
 .village-result-count {
