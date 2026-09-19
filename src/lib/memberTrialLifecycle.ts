@@ -1,10 +1,9 @@
 import { ensureDurableHydrated } from "./dataFs";
-import { isPaidPlan } from "./membershipTiers";
 import {
+  hasPaidMembership,
   isRoyaltyTrialActive,
   loadMemberSpaces,
   saveMemberSpacesAsync,
-  standingPlan,
   trialDaysRemaining,
   updateMemberSpace,
   type MemberSpaceRecord,
@@ -52,8 +51,7 @@ export async function sweepRoyaltyTrials(opts?: {
     const trial = space.trial;
     if (!trial?.expiresAt) continue;
 
-    const standing = standingPlan(space);
-    const paid = isPaidPlan(standing);
+    const paid = hasPaidMembership(space);
     const active = isRoyaltyTrialActive(space);
     const days = trialDaysRemaining(trial.expiresAt);
 

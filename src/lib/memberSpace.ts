@@ -243,6 +243,24 @@ export function hasUsedRoyaltyTrial(space: MemberSpaceRecord): boolean {
   return Boolean(space.trial?.startedAt);
 }
 
+/**
+ * True when this login actually bought (or was granted) a paid plan —
+ * Stripe checkout, a dated Square Royalty year, or an admin-set Cart Path /
+ * Lanai standing plan. Trial-only Square Royalty without Stripe is not paid.
+ */
+export function hasPaidMembership(space: MemberSpaceRecord): boolean {
+  if (space.stripeSubscriptionId) return true;
+  if (
+    space.planExpiresAt &&
+    new Date(space.planExpiresAt).getTime() > Date.now() &&
+    isPaidPlan(standingPlan(space))
+  ) {
+    return true;
+  }
+  const standing = standingPlan(space);
+  return standing === "cart_path_regular" || standing === "lanai_legend";
+}
+
 /** Paid or free plan they keep after a trial (or without one). */
 export function standingPlan(space: MemberSpaceRecord): HubPlanId {
   let plan = normalizePlan(space.plan);
@@ -335,6 +353,44 @@ export function startRoyaltyTrial(
       endedAt: null,
     },
   });
+}
+
+/**
+ * On first admin approval, unpaid neighbors get Square Royalty plus the
+ * one-time free month. Paid / household / already-trialed accounts are left
+ * alone. Standing plan is set to Square Royalty so Admin shows the tier;
+ * when the month ends with no purchase they still roll back to Porch Waver.
+ */
+export function grantUnpaidApprovalRoyalty(memberId: string): {
+  trialStarted: boolean;
+  planSet: boolean;
+} {
+  const space = getMemberSpace(memberId);
+  if (space.householdOwnerId) {
+    return { trialStarted: false, planSet: false };
+  }
+  if (hasPaidMembership(space)) {
+    return { trialStarted: false, planSet: false };
+  }
+
+  let trialStarted = false;
+  if (trialAvailable(space)) {
+    startRoyaltyTrial(memberId, "approval");
+    trialStarted = true;
+  }
+
+  const after = getMemberSpace(memberId);
+  let planSet = false;
+  if (
+    !hasPaidMembership(after) &&
+    standingPlan(after) !== "square_royalty" &&
+    (trialStarted || isRoyaltyTrialActive(after))
+  ) {
+    updateMemberSpace(memberId, { plan: "square_royalty" });
+    planSet = true;
+  }
+
+  return { trialStarted, planSet };
 }
 
 export function loadMemberSpaces(): SpaceFile {

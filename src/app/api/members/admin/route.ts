@@ -13,6 +13,7 @@ import {
   approveTopTierMembership,
   getMemberSpace,
   grantGoldenLoofah,
+  grantUnpaidApprovalRoyalty,
   loadMemberSpaces,
   publicSpacePayload,
   rejectTopTierMembership,
@@ -356,10 +357,22 @@ export async function POST(req: Request) {
               ? "Membership set back to pending."
               : `Status set to ${status}.`;
     appendAdminLog(String(body.id || ""), statusLine);
+    const firstApproval =
+      status === "approved" && before && before.status !== "approved";
+    let royaltyGrant = { trialStarted: false, planSet: false };
+    if (firstApproval) {
+      royaltyGrant = grantUnpaidApprovalRoyalty(String(body.id || ""));
+      if (royaltyGrant.trialStarted) {
+        appendAdminLog(String(body.id || ""), "Free Square Royalty month granted.");
+      }
+      if (royaltyGrant.planSet) {
+        appendAdminLog(String(body.id || ""), "Plan set to Square Royalty.");
+      }
+    }
     await persistAll();
     let welcomeEmail: Awaited<ReturnType<typeof sendMemberWelcomeEmail>> | null =
       null;
-    if (status === "approved" && before && before.status !== "approved") {
+    if (firstApproval && before) {
       const full = getMemberById(String(body.id || ""));
       if (full) {
         welcomeEmail = await sendMemberWelcomeEmail(full);
@@ -377,6 +390,7 @@ export async function POST(req: Request) {
       members: membersWithPlans(),
       durableStorage: durableConfigured(),
       welcomeEmail,
+      royaltyGrant: firstApproval ? royaltyGrant : null,
     });
   } catch (err) {
     return NextResponse.json(

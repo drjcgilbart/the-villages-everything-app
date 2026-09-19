@@ -157,15 +157,36 @@ export function AdminMembersPanel() {
         | { ok?: boolean; skipped?: boolean; error?: string }
         | null
         | undefined;
+      const granted =
+        data.royaltyGrant?.trialStarted || data.royaltyGrant?.planSet;
       if (status === "approved" && mail?.ok) {
-        flash("ok", "Member approved — welcome email sent");
+        flash(
+          "ok",
+          granted
+            ? "Member approved — Square Royalty free month started, welcome email sent"
+            : "Member approved — welcome email sent"
+        );
       } else if (status === "approved" && mail?.skipped) {
         flash(
           "err",
-          "Member approved, but no welcome email: set RESEND_API_KEY (or SENDGRID_API_KEY) in Vercel"
+          granted
+            ? "Member approved and free month started, but no welcome email: set RESEND_API_KEY (or SENDGRID_API_KEY) in Vercel"
+            : "Member approved, but no welcome email: set RESEND_API_KEY (or SENDGRID_API_KEY) in Vercel"
         );
       } else if (status === "approved" && mail?.error) {
-        flash("err", `Member approved, but welcome email failed: ${mail.error}`);
+        flash(
+          "err",
+          granted
+            ? `Member approved and free month started, but welcome email failed: ${mail.error}`
+            : `Member approved, but welcome email failed: ${mail.error}`
+        );
+      } else if (status === "approved") {
+        flash(
+          "ok",
+          granted
+            ? "Member approved — Square Royalty free month started"
+            : "Member approved"
+        );
       } else {
         flash("ok", `Member ${status}`);
       }

@@ -78,8 +78,8 @@ export function RoyaltyTrialOffer(props: TrialOfferState) {
         </div>
       ) : !props.approved ? (
         <p className="panel-hint" style={{ marginBottom: 0 }}>
-          Once an admin approves your neighbor account, tap here for the free
-          month.
+          Once an admin approves your neighbor account, your free Square Royalty
+          month starts automatically.
         </p>
       ) : (
         <div className="hero-actions">

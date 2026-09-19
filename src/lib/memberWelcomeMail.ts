@@ -58,7 +58,7 @@ export function formatMemberWelcomeEmail(opts: {
     ``,
     `A friendly nudge — not a sales pitch`,
     `Membership is optional. If you are happy waving from the porch, that is a perfectly honorable Villages lifestyle. If you would like a more personal lanai — your own weather, boards, household logins, and private tools — I hope you will take a gentle look at the plans below.`,
-    `Approved neighbors can try Square Royalty free for 30 days — no card required. Poke around, see if the private boards feel like home, then keep a paid plan or go back to Porch Waver. Either way, you remain welcome.`,
+    `Your Square Royalty free month is already running — no card required. Poke around, see if the private boards feel like home, then keep a paid plan or go back to Porch Waver. Either way, you remain welcome.`,
     ``,
     `What membership unlocks`,
     `Public Hub pages stay free. Membership simply unlocks your private My Space lanai. Each paid tier keeps everything below it, and extra household seats get their own login, password, and boards.`,
@@ -72,7 +72,7 @@ export function formatMemberWelcomeEmail(opts: {
     `1. Sign in and open My Space — that is your private lanai. ${base}/my-space`,
     `2. Add the site to your phone’s Home Screen so it feels like an app (Safari Share on iPhone; Chrome menu on Android).`,
     `3. Wander the Hub — rate a restaurant, peek at tonight’s square, or take Golf Cart Hero for a lap.`,
-    `4. If you want the full private boards, start the 30-day Square Royalty trial from the Plans page. No rush and no hard feelings if you stay a Porch Waver. ${base}/donate`,
+    `4. Your 30-day Square Royalty free month is already on. Open My Space and try every private board. After that you can keep a paid plan or go back to Porch Waver. ${base}/my-space`,
     ``,
     `I built this place because I came here to reboot — loudly, sunnily, and with better snacks. The hub is just the map. You bringing your own story to it is what makes it a neighborhood.`,
     ``,
@@ -96,7 +96,7 @@ export function formatMemberWelcomeEmail(opts: {
     <p>The public Hub stays free for everyone — Town Squares, Rec Centers, Dining, Calendar, Golf, Pickleball, Clubs, Forums, Yard Sale, Best of the Month, and our sister game, Golf Cart Hero. Phone browser works today; store apps are rolling out. Pull up a chair anytime.</p>
     <h2 style="margin:22px 0 8px;font-size:18px;color:#123d2d">A friendly nudge — not a sales pitch</h2>
     <p>Membership is optional. If you are happy waving from the porch, that is a perfectly honorable Villages lifestyle. If you would like a more personal lanai — your own weather, boards, household logins, and private tools — I hope you will take a gentle look at the plans below.</p>
-    <p>Approved neighbors can try Square Royalty free for 30 days — no card required. Poke around, see if the private boards feel like home, then keep a paid plan or go back to Porch Waver. Either way, you remain welcome.</p>
+    <p>Your Square Royalty free month is already running — no card required. Poke around, see if the private boards feel like home, then keep a paid plan or go back to Porch Waver. Either way, you remain welcome.</p>
     <h2 style="margin:22px 0 8px;font-size:18px;color:#123d2d">What membership unlocks</h2>
     <p>Public Hub pages stay free. Membership simply unlocks your private My Space lanai. Each paid tier keeps everything below it, and extra household seats get their own login, password, and boards.</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 18px">
@@ -110,7 +110,7 @@ export function formatMemberWelcomeEmail(opts: {
       <li>Sign in and open <a href="${escapeHtml(base)}/my-space">My Space</a> — that is your private lanai.</li>
       <li>Add the site to your phone’s Home Screen so it feels like an app (Safari Share on iPhone; Chrome menu on Android).</li>
       <li>Wander the Hub — rate a restaurant, peek at tonight’s square, or take Golf Cart Hero for a lap.</li>
-      <li>If you want the full private boards, start the 30-day Square Royalty trial from the <a href="${escapeHtml(base)}/donate">Plans page</a>. No rush and no hard feelings if you stay a Porch Waver.</li>
+      <li>Your 30-day Square Royalty free month is already on. Open <a href="${escapeHtml(base)}/my-space">My Space</a> and try every private board. After that you can keep a paid plan or go back to Porch Waver.</li>
     </ol>
     <p>I built this place because I came here to reboot — loudly, sunnily, and with better snacks. The hub is just the map. You bringing your own story to it is what makes it a neighborhood.</p>
     <p><strong>Welcome home. Watch for the cart. Wave anyway.</strong></p>
