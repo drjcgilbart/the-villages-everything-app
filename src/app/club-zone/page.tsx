@@ -1,14 +1,16 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ClubBrowser } from "@/components/ClubBrowser";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { ClubLeaderDirectory } from "@/components/ClubLeaderDirectory";
 import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
+import { CLUB_OFFICIAL_RESOURCES } from "@/lib/clubs";
 import { clubCategoryCounts, loadClubListingsAsync } from "@/lib/clubListings";
 import {
-  CLUB_CATEGORY_ICONS,
+  CLUB_CATEGORY_ART,
+  CLUB_CATEGORY_BLURB,
   clubCategoryHref,
 } from "@/lib/clubPaths";
 import { getTopicContentAsync } from "@/lib/topicContent";
@@ -41,9 +43,6 @@ export default async function ClubZonePage() {
               <a href="#leader-directory" className="btn btn-primary">
                 Club directory
               </a>
-              <a href="#clubs" className="btn btn-ghost">
-                Popular starter clubs
-              </a>
               <a href="#club-leader-form" className="btn btn-ghost">
                 Leaders: update your club
               </a>
@@ -60,7 +59,7 @@ export default async function ClubZonePage() {
       </div>
 
       <section className="section" id="leader-directory">
-        <div className="shell">
+        <div className="shell" id="clubs">
           <div className="section-head">
             <div>
               <h2>Club directory</h2>
@@ -84,39 +83,60 @@ export default async function ClubZonePage() {
               Search
             </button>
           </form>
-          <div className="club-cat-grid">
+          <div className="club-grid">
             {categories.map((row) => (
               <Link
                 key={row.category}
                 href={clubCategoryHref(row.category)}
-                className="about-panel club-cat-card"
+                className="about-panel club-card"
               >
-                <span className="club-cat-icon" aria-hidden>
-                  {CLUB_CATEGORY_ICONS[row.category]}
-                </span>
-                <strong>{row.category}</strong>
-                <span className="panel-hint">
-                  {row.count.toLocaleString()} club{row.count === 1 ? "" : "s"}
-                </span>
+                <div className="club-card-art">
+                  <Image
+                    src={CLUB_CATEGORY_ART[row.category]}
+                    alt=""
+                    width={640}
+                    height={640}
+                    className="club-card-img"
+                  />
+                </div>
+                <div className="club-card-body">
+                  <h3>{row.category}</h3>
+                  <p className="club-card-blurb">
+                    {CLUB_CATEGORY_BLURB[row.category]}
+                  </p>
+                  <p className="club-card-meta">
+                    <strong>
+                      {row.count.toLocaleString()} club
+                      {row.count === 1 ? "" : "s"}
+                    </strong>
+                    {" · tap to browse"}
+                  </p>
+                </div>
               </Link>
             ))}
           </div>
-          <ClubLeaderDirectory />
-        </div>
-      </section>
-
-      <section className="section" id="clubs" style={{ paddingTop: 0 }}>
-        <div className="shell">
-          <div className="section-head">
-            <div>
-              <h2>Popular clubs &amp; how to join the fun</h2>
-              <p>
-                A curated starter set of high-interest club types. The full
-                District list is in the directory above.
-              </p>
-            </div>
+          <div className="about-panel club-resources" style={{ marginBottom: "1.25rem" }}>
+            <h2 style={{ marginTop: 0 }}>Official club finders</h2>
+            <p className="ts-detail-muted" style={{ marginTop: 0 }}>
+              Confirm meeting times with District Recreation or the club leader
+              — listings change.
+            </p>
+            <ul className="ts-links-list">
+              {CLUB_OFFICIAL_RESOURCES.map((r) => (
+                <li key={r.id}>
+                  {r.href.startsWith("/") ? (
+                    <Link href={r.href}>{r.label}</Link>
+                  ) : (
+                    <a href={r.href} target="_blank" rel="noopener noreferrer">
+                      {r.label}
+                    </a>
+                  )}
+                  <span>{r.note}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ClubBrowser />
+          <ClubLeaderDirectory />
         </div>
       </section>
 

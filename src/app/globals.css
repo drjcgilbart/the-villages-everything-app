@@ -2103,6 +2103,11 @@ html:has(.gch-embed) .hub-header-inner {
   overflow: hidden;
 }
 
+a.club-card {
+  text-decoration: none;
+  color: inherit;
+}
+
 .club-card.is-fav {
   border-color: rgba(232, 184, 74, 0.55);
   box-shadow: 0 10px 28px rgba(232, 184, 74, 0.14);
