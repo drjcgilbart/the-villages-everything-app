@@ -25,6 +25,8 @@ type AdminMember = PublicMember & {
   planExpiresAt?: string | null;
   trialActive?: boolean;
   trialExpiresAt?: string | null;
+  trialDaysLeft?: number | null;
+  trialReminderSent?: boolean;
   goldenLoofah?: boolean;
   badges?: BadgeDef[];
   topTierNomination?: TopTierNom | null;
@@ -568,12 +570,26 @@ function MemberAdminRow({
             </>
           ) : null}
           {m.planExpiresAt ? ` · plan until ${formatDate(m.planExpiresAt)}` : ""}
-          {m.trialActive && m.trialExpiresAt
-            ? ` · free month until ${formatDate(m.trialExpiresAt)}`
-            : ""}
           {nom?.status === "pending" ? " · Royalty nomination pending" : ""}
           {nom?.status === "approved" ? " · Royalty nomination approved" : ""}
         </span>
+        {m.trialActive && typeof m.trialDaysLeft === "number" ? (
+          <span
+            className={`admin-trial-countdown${
+              m.trialDaysLeft <= 7 ? " is-soon" : ""
+            }`}
+          >
+            {m.trialDaysLeft <= 0
+              ? "Free month ends today"
+              : `Free month · ${m.trialDaysLeft} day${
+                  m.trialDaysLeft === 1 ? "" : "s"
+                } left`}
+            {m.trialExpiresAt
+              ? ` · until ${formatDate(m.trialExpiresAt)}`
+              : ""}
+            {m.trialReminderSent ? " · reminder emailed" : ""}
+          </span>
+        ) : null}
         {m.adminLog && m.adminLog.length > 0 ? (
           <ul className="admin-member-log">
             {[...m.adminLog].reverse().map((entry, i) => (

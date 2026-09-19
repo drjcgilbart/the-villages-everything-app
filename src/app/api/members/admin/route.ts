@@ -37,6 +37,7 @@ import {
 } from "@/lib/yardSale";
 import type { MemberStatus } from "@/lib/yardSaleTypes";
 import { sendMemberWelcomeEmail } from "@/lib/memberWelcomeMail";
+import { sweepRoyaltyTrials } from "@/lib/memberTrialLifecycle";
 import {
   isolateAllCopiedOwnerBoards,
   isolateCopiedOwnerBoards,
@@ -64,6 +65,8 @@ function membersWithPlans() {
       planExpiresAt: pub.planExpiresAt,
       trialActive: pub.trialActive,
       trialExpiresAt: pub.trialExpiresAt,
+      trialDaysLeft: pub.trialDaysLeft,
+      trialReminderSent: pub.trialReminderSent,
       householdOwnerId: pub.householdOwnerId || null,
       householdSeats: pub.householdSeats,
       goldenLoofah: pub.goldenLoofah,
@@ -84,6 +87,9 @@ export async function GET() {
   }
   await ensureDurableHydrated();
   await isolateAllCopiedOwnerBoards();
+  await sweepRoyaltyTrials({ sendMail: true }).catch((err) => {
+    console.error("[admin] trial sweep", err);
+  });
   const durable = durableConfigured();
   const redis = redisConfigured();
   const blob = blobConfigured();
@@ -283,6 +289,8 @@ export async function POST(req: Request) {
             startedAt: now.toISOString(),
             expiresAt: ends.toISOString(),
             source: "admin",
+            reminderSentAt: null,
+            endedAt: null,
           },
         });
       }

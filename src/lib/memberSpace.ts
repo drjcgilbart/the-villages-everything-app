@@ -66,6 +66,10 @@ export type RoyaltyTrial = {
   startedAt: string;
   expiresAt: string;
   source: string;
+  /** Set when the 7-day reminder email went out. */
+  reminderSentAt?: string | null;
+  /** Set when the free month actually ended (paid plan kept, or Porch Waver). */
+  endedAt?: string | null;
 };
 
 export const ROYALTY_TRIAL_DAYS = 30;
@@ -171,6 +175,8 @@ function normalizeTrial(raw: Partial<MemberSpaceRecord>): RoyaltyTrial | null {
     startedAt: String(t.startedAt),
     expiresAt: String(t.expiresAt),
     source: String(t.source || "request"),
+    reminderSentAt: t.reminderSentAt ? String(t.reminderSentAt) : null,
+    endedAt: t.endedAt ? String(t.endedAt) : null,
   };
 }
 
@@ -215,8 +221,22 @@ function normalizeHousehold(
 
 export function isRoyaltyTrialActive(space: MemberSpaceRecord): boolean {
   if (!space.trial?.expiresAt) return false;
+  if (space.trial.endedAt) return false;
   const ends = new Date(space.trial.expiresAt).getTime();
   return Number.isFinite(ends) && ends > Date.now();
+}
+
+/** Whole days left on an active free month (1 if any time remains today). */
+export function trialDaysRemaining(
+  expiresAt: string | null | undefined,
+  now = Date.now()
+): number | null {
+  if (!expiresAt) return null;
+  const ends = new Date(expiresAt).getTime();
+  if (!Number.isFinite(ends)) return null;
+  const ms = ends - now;
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (24 * 60 * 60 * 1000));
 }
 
 export function hasUsedRoyaltyTrial(space: MemberSpaceRecord): boolean {
@@ -311,6 +331,8 @@ export function startRoyaltyTrial(
       startedAt: now.toISOString(),
       expiresAt: plusDaysIso(ROYALTY_TRIAL_DAYS, now),
       source,
+      reminderSentAt: null,
+      endedAt: null,
     },
   });
 }
@@ -630,7 +652,11 @@ export function publicSpacePayload(space: MemberSpaceRecord) {
     planExpiresAt: space.planExpiresAt || null,
     topTierNomination: space.topTierNomination || null,
     trialActive: trialOn,
-    trialExpiresAt: trialOn ? space.trial?.expiresAt || null : space.trial?.expiresAt || null,
+    trialExpiresAt: space.trial?.expiresAt || null,
+    trialDaysLeft: trialOn
+      ? trialDaysRemaining(space.trial?.expiresAt)
+      : null,
+    trialReminderSent: Boolean(space.trial?.reminderSentAt),
     trialAvailable: trialAvailable(space),
     standingPlan: standing,
     standingPlanLabel: standingTier.label,
