@@ -10,7 +10,11 @@ import {
   type ReactNode,
 } from "react";
 import { POPULAR_CLUBS } from "@/lib/clubs";
-import { clubDetailHref, type ClubListSummary } from "@/lib/clubPaths";
+import {
+  clubCategoryHref,
+  clubDetailHref,
+  type ClubListSummary,
+} from "@/lib/clubPaths";
 import {
   readDiningFavorites,
   toggleDiningFavorite,
@@ -65,8 +69,15 @@ function readAll(): FavSnapshot {
  * Aggregates every site-wide favorite (home village, squares, rec centers,
  * clubs, dining) into My Space while leaving starring on the original pages
  * unchanged.
+ *
+ * `manage` is the Favorites board (cards + unstar). `jump` is the Shortcuts
+ * tab: one compact link per starred pick so you can open it directly.
  */
-export function MySpaceFavoritesHub() {
+export function MySpaceFavoritesHub({
+  variant = "manage",
+}: {
+  variant?: "manage" | "jump";
+}) {
   const [snap, setSnap] = useState<FavSnapshot>({
     villageSlug: null,
     squareIds: [],
@@ -185,7 +196,7 @@ export function MySpaceFavoritesHub() {
           return {
             id: popular.id,
             name: popular.name,
-            href: "/club-zone#clubs",
+            href: popular.href || clubCategoryHref(popular.category),
             category: popular.category,
             meta: popular.areaHint,
             blurb: popular.blurb,
@@ -219,7 +230,7 @@ export function MySpaceFavoritesHub() {
     (homeVillage ? 1 : 0) +
     squares.length +
     recCenters.length +
-    clubs.length +
+    snap.clubIds.length +
     snap.diningIds.length;
 
   function removeSquare(id: string) {
@@ -257,11 +268,163 @@ export function MySpaceFavoritesHub() {
   }
 
   if (!ready) {
+    if (variant === "jump") {
+      return (
+        <div id="ms-starred-shortcuts">
+          <h3 className="my-space-block-title">Your starred shortcuts</h3>
+          <p className="panel-hint">Loading your stars…</p>
+        </div>
+      );
+    }
     return (
       <section id="ms-favorites" className="my-space-block">
         <h3 className="my-space-block-title">My favorites</h3>
         <p className="panel-hint">Loading your stars…</p>
       </section>
+    );
+  }
+
+  if (variant === "jump") {
+    return (
+      <div id="ms-starred-shortcuts">
+        <h3 className="my-space-block-title">Your starred shortcuts</h3>
+        <p style={{ color: "var(--muted)", marginTop: 0 }}>
+          {total === 0 ? (
+            <>
+              Star villages, squares, rec centers, clubs, and restaurants
+              around the site — they all land here as jump links.
+            </>
+          ) : (
+            <>
+              Tap any pick to jump straight there
+              {total > 0 ? (
+                <>
+                  {" "}
+                  · <strong>{total}</strong> saved
+                </>
+              ) : null}
+              .
+            </>
+          )}
+        </p>
+
+        {total === 0 ? (
+          <div className="empty-state about-panel">
+            <p style={{ marginTop: 0 }}>
+              No starred shortcuts yet. Star items on these pages and they
+              show up here:
+            </p>
+            <div className="ms-fav-start-links">
+              <Link href="/my-village" className="btn btn-ghost btn-sm">
+                The Villages
+              </Link>
+              <Link href="/town-squares" className="btn btn-ghost btn-sm">
+                Town Squares
+              </Link>
+              <Link href="/rec-centers" className="btn btn-ghost btn-sm">
+                Rec Centers
+              </Link>
+              <Link href="/dining" className="btn btn-ghost btn-sm">
+                Dining
+              </Link>
+              <Link href="/club-zone" className="btn btn-ghost btn-sm">
+                Clubs
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <>
+            {homeVillage ? (
+              <div className="ms-jump-group">
+                <h4>Home village</h4>
+                <div className="my-space-links">
+                  <JumpCard
+                    href={`/my-village/${homeVillage.slug}`}
+                    title={homeVillage.name}
+                    subtitle={`Home village · ${getRegion(homeVillage.region).label}`}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {squares.length > 0 ? (
+              <div className="ms-jump-group">
+                <h4>Town squares</h4>
+                <div className="my-space-links">
+                  {squares.map((s) => (
+                    <JumpCard
+                      key={s.id}
+                      href={`/town-squares/${s.id}`}
+                      title={s.shortName}
+                      subtitle="Town square"
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {recCenters.length > 0 ? (
+              <div className="ms-jump-group">
+                <h4>Rec centers</h4>
+                <div className="my-space-links">
+                  {recCenters.map((c) => (
+                    <JumpCard
+                      key={c.id}
+                      href={`/rec-centers/${c.id}`}
+                      title={c.shortName}
+                      subtitle={c.areaHint}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {snap.diningIds.length > 0 ? (
+              <div className="ms-jump-group">
+                <h4>Dining</h4>
+                {restaurants.length === 0 ? (
+                  <p className="panel-hint" style={{ marginBottom: 0 }}>
+                    Loading restaurant details…
+                  </p>
+                ) : (
+                  <div className="my-space-links">
+                    {restaurants.map((r) => (
+                      <JumpCard
+                        key={r.id}
+                        href={`/dining/${r.slug}`}
+                        title={r.name}
+                        subtitle={`${r.cuisine} · ${r.area}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {snap.clubIds.length > 0 ? (
+              <div className="ms-jump-group">
+                <h4>Clubs</h4>
+                {clubs.length === 0 ? (
+                  <p className="panel-hint" style={{ marginBottom: 0 }}>
+                    Loading club details…
+                  </p>
+                ) : (
+                  <div className="my-space-links">
+                    {clubs.map((c) => (
+                      <JumpCard
+                        key={c.id}
+                        href={c.href}
+                        title={c.name}
+                        subtitle={c.meta || c.category}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
     );
   }
 
@@ -545,6 +708,23 @@ export function MySpaceFavoritesHub() {
         </div>
       )}
     </section>
+  );
+}
+
+function JumpCard({
+  href,
+  title,
+  subtitle,
+}: {
+  href: string;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Link href={href} className="about-panel my-space-link-card">
+      <strong>{title}</strong>
+      <span>{subtitle}</span>
+    </Link>
   );
 }
 

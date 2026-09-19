@@ -44,6 +44,10 @@ import {
   type BoardId,
 } from "@/lib/mySpaceProduct";
 import { SAMPLE_HINT } from "@/lib/sampleBoards";
+import {
+  readClubFavoritesLocal,
+  writeClubFavoritesLocal,
+} from "@/lib/siteFavorites";
 import { RoyaltyTrialOffer } from "@/components/RoyaltyTrialOffer";
 import { ChangePasswordPanel } from "@/components/ChangePasswordPanel";
 import { DeleteAccountPanel } from "@/components/DeleteAccountPanel";
@@ -157,6 +161,14 @@ export function MySpaceDashboard() {
       const j = (await res.json()) as SpacePayload;
       setData(j);
       setError(null);
+      const remoteClubs = j.space?.favoriteClubIds;
+      if (Array.isArray(remoteClubs) && remoteClubs.length) {
+        const local = readClubFavoritesLocal();
+        const localSet = new Set(local);
+        if (remoteClubs.some((id) => !localSet.has(id))) {
+          writeClubFavoritesLocal([...new Set([...local, ...remoteClubs])]);
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -195,6 +207,20 @@ export function MySpaceDashboard() {
       window.location.hash === "#change-password"
     ) {
       setTab("membership");
+    }
+    if (
+      tabParam === "shortcuts" ||
+      tabParam === "links" ||
+      window.location.hash === "#ms-links" ||
+      window.location.hash === "#ms-starred-shortcuts"
+    ) {
+      setTab("links");
+    }
+    if (
+      tabParam === "favorites" ||
+      window.location.hash === "#ms-favorites"
+    ) {
+      setTab("favorites");
     }
     if (params.get("joined") === "household") {
       setNote("You’re on the household. Your boards stay on this login.");
@@ -1047,10 +1073,23 @@ export function MySpaceDashboard() {
 
       {tab === "links" && (
       <section id="ms-links" className="my-space-block">
-        <h3 className="my-space-block-title">Site shortcuts</h3>
+        {visitor ? (
+          <MySpaceFavoritesHub variant="jump" />
+        ) : (
+          <MySpacePrivacySection
+            board="favorites"
+            title="Starred shortcuts"
+            memberId={member?.id}
+          >
+            <MySpaceFavoritesHub variant="jump" />
+          </MySpacePrivacySection>
+        )}
+        <h3 className="my-space-block-title" style={{ marginTop: "1.5rem" }}>
+          Public directories
+        </h3>
         <p style={{ color: "var(--muted)", marginTop: 0 }}>
-          Jump back to public directories — your saved favorites and tools stay
-          on this My Space page.
+          Browse these Hub pages to star more picks — they land in the list
+          above.
         </p>
         <div className="my-space-links">
           <Link href="/my-village" className="about-panel my-space-link-card">
@@ -1064,6 +1103,14 @@ export function MySpaceDashboard() {
           <Link href="/rec-centers" className="about-panel my-space-link-card">
             <strong>Rec Centers</strong>
             <span>Pools &amp; complexes</span>
+          </Link>
+          <Link href="/dining" className="about-panel my-space-link-card">
+            <strong>Dining</strong>
+            <span>Star restaurants by cuisine</span>
+          </Link>
+          <Link href="/club-zone" className="about-panel my-space-link-card">
+            <strong>Clubs</strong>
+            <span>Star clubs in the directory</span>
           </Link>
           <Link href="/real-estate" className="about-panel my-space-link-card">
             <strong>Real Estate</strong>

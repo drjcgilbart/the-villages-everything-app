@@ -2288,6 +2288,16 @@ a.club-card {
   gap: 0.5rem;
 }
 
+.ms-jump-group {
+  margin-bottom: 1.1rem;
+}
+
+.ms-jump-group h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
 .my-space-block {
   margin-bottom: 1.75rem;
 }

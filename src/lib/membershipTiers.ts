@@ -144,7 +144,8 @@ export const FEATURE_META: Record<
   },
   shortcuts: {
     title: "Site shortcuts",
-    teaser: "Quick cart-path links around the site.",
+    teaser:
+      "Starred villages, squares, recs, clubs, and dining — plus public Hub pages.",
     anchor: "ms-links",
   },
   yardSalePost: {

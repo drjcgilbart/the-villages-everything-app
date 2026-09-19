@@ -99,8 +99,9 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "🗺️",
     minRank: 0,
     phase: "live",
-    teaser: "Quick cart-path links back to public Hub pages.",
-    previewLine: "The Villages · Town Squares · Rec Centers · Golf · Forums",
+    teaser:
+      "Starred villages, squares, recs, clubs, and dining — plus public Hub pages.",
+    previewLine: "Your stars · Villages · Dining · Clubs · Rec Centers",
   },
   {
     id: "yardSale",
