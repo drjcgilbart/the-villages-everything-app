@@ -1,4 +1,4 @@
-import { loadDining, saveDining } from "./dining";
+import { loadDiningAsync, saveDiningAsync } from "./dining";
 import { loadForum, saveForumAsync } from "./forum";
 import { leaveHousehold, removeHouseholdMember } from "./household";
 import { deleteMemberBoards } from "./memberBoards";
@@ -77,7 +77,7 @@ export async function deleteMemberAccount(memberId: string) {
   }
   if (forumChanged) await saveForumAsync(forum);
 
-  const dining = loadDining();
+  const dining = await loadDiningAsync();
   let diningChanged = false;
   for (const review of dining.reviews) {
     if (review.authorMemberId === id) {
@@ -86,5 +86,5 @@ export async function deleteMemberAccount(memberId: string) {
       diningChanged = true;
     }
   }
-  if (diningChanged) saveDining(dining);
+  if (diningChanged) await saveDiningAsync(dining);
 }

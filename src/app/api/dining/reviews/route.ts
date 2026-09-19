@@ -4,7 +4,7 @@ import {
   addReview,
   deleteReview,
   getVisibleReviews,
-  loadDining,
+  loadDiningAsync,
   setReviewHidden,
 } from "@/lib/dining";
 import { getSessionMember } from "@/lib/memberAuth";
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const restaurantId = searchParams.get("restaurantId") || undefined;
   const includeHidden = searchParams.get("all") === "1";
-  const data = loadDining();
+  const data = await loadDiningAsync();
   const admin = includeHidden ? await isAdminAuthenticated() : false;
   let reviews = admin
     ? data.reviews
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const session = await getSessionMember();
-    const review = addReview({
+    const review = await addReview({
       restaurantId: String(body.restaurantId || ""),
       authorName: String(body.authorName || session?.name || ""),
       rating: Number(body.rating),
@@ -60,7 +60,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const id = String(body.id || "");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const data = setReviewHidden(id, !!body.hidden);
+    const data = await setReviewHidden(id, !!body.hidden);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
@@ -78,7 +78,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const data = deleteReview(id);
+    const data = await deleteReview(id);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(

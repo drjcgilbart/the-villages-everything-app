@@ -1,5 +1,14 @@
 import crypto from "crypto";
-import { readJsonFile, writeJsonFile } from "./dataFs";
+import {
+  cacheDurableJson,
+  durableConfigured,
+  ensureDurableHydrated,
+  isEphemeralHost,
+  pullDurableJson,
+  readJsonFile,
+  writeJsonFile,
+  writeJsonFileAsync,
+} from "./dataFs";
 import type {
   Cuisine,
   DiningData,
@@ -119,9 +128,50 @@ export function loadDining(): DiningData {
   };
 }
 
+/**
+ * Pull dining.json from Redis/Blob before reading. API routes and pages must
+ * use this on Vercel — the git seed in /data is not the live restaurant list.
+ */
+export async function loadDiningAsync(): Promise<DiningData> {
+  if (isEphemeralHost() && durableConfigured()) {
+    try {
+      const text = await pullDurableJson(DINING_FILE);
+      if (text) cacheDurableJson(DINING_FILE, text);
+    } catch (err) {
+      console.error(
+        "[dining] durable pull failed; falling back to bulk hydrate",
+        err
+      );
+      await ensureDurableHydrated().catch(() => undefined);
+    }
+  } else {
+    await ensureDurableHydrated().catch(() => undefined);
+  }
+  return loadDining();
+}
+
 export function saveDining(data: DiningData) {
   data.updatedAt = new Date().toISOString();
   writeJsonFile(DINING_FILE, data);
+  return data;
+}
+
+/**
+ * Prefer in API routes so Redis/Blob finishes before the response.
+ * On Vercel, sync writeJsonFile only hits memory + /tmp and skips durable
+ * storage — that made Admin restaurant adds vanish after the next request.
+ */
+export async function saveDiningAsync(data: DiningData) {
+  data.updatedAt = new Date().toISOString();
+  try {
+    await writeJsonFileAsync(DINING_FILE, data);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not save dining data on this host"
+    );
+  }
   return data;
 }
 
@@ -164,12 +214,14 @@ export function computeStats(
   };
 }
 
-export function getRestaurantBySlug(slug: string): Restaurant | null {
-  return loadDining().restaurants.find((r) => r.slug === slug) || null;
+export async function getRestaurantBySlug(slug: string): Promise<Restaurant | null> {
+  const data = await loadDiningAsync();
+  return data.restaurants.find((r) => r.slug === slug) || null;
 }
 
-export function getRestaurantById(id: string): Restaurant | null {
-  return loadDining().restaurants.find((r) => r.id === id) || null;
+export async function getRestaurantById(id: string): Promise<Restaurant | null> {
+  const data = await loadDiningAsync();
+  return data.restaurants.find((r) => r.id === id) || null;
 }
 
 export function withStats(restaurants: Restaurant[], reviews: Review[]) {
@@ -254,14 +306,14 @@ export function getInterviews(opts?: { restaurantId?: string; featuredOnly?: boo
     .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
 }
 
-export function upsertRestaurant(
+export async function upsertRestaurant(
   input: Partial<Restaurant> & {
     name: string;
     cuisine: Cuisine;
     description: string;
   }
 ) {
-  const data = loadDining();
+  const data = await loadDiningAsync();
   const now = new Date().toISOString();
   if (input.id) {
     const idx = data.restaurants.findIndex((r) => r.id === input.id);
@@ -310,15 +362,15 @@ export function upsertRestaurant(
       updatedAt: now,
     });
   }
-  return saveDining(data);
+  return saveDiningAsync(data);
 }
 
-export function deleteRestaurant(id: string) {
-  const data = loadDining();
+export async function deleteRestaurant(id: string) {
+  const data = await loadDiningAsync();
   data.restaurants = data.restaurants.filter((r) => r.id !== id);
   data.reviews = data.reviews.filter((r) => r.restaurantId !== id);
   data.interviews = data.interviews.filter((i) => i.restaurantId !== id);
-  return saveDining(data);
+  return saveDiningAsync(data);
 }
 
 
@@ -329,7 +381,7 @@ function normalizePrice(raw: unknown): PriceRange {
 }
 
 /** Public: visitor suggests a restaurant for admin review. */
-export function submitRestaurantSuggestion(input: {
+export async function submitRestaurantSuggestion(input: {
   name: string;
   cuisine?: string;
   area?: string;
@@ -343,8 +395,8 @@ export function submitRestaurantSuggestion(input: {
   suggestedBy: string;
   suggestedByEmail?: string;
   note?: string;
-}): RestaurantSuggestion {
-  const data = loadDining();
+}): Promise<RestaurantSuggestion> {
+  const data = await loadDiningAsync();
   const name = String(input.name || "").trim().slice(0, 120);
   if (name.length < 2) throw new Error("Please enter the restaurant name");
 
@@ -408,14 +460,14 @@ export function submitRestaurantSuggestion(input: {
   };
 
   data.suggestions.unshift(suggestion);
-  saveDining(data);
+  await saveDiningAsync(data);
   return suggestion;
 }
 
-export function listRestaurantSuggestions(opts?: {
+export async function listRestaurantSuggestions(opts?: {
   status?: RestaurantSuggestion["status"] | "all";
-}): RestaurantSuggestion[] {
-  const data = loadDining();
+}): Promise<RestaurantSuggestion[]> {
+  const data = await loadDiningAsync();
   const status = opts?.status || "all";
   return data.suggestions
     .filter((s) => (status === "all" ? true : s.status === status))
@@ -424,11 +476,11 @@ export function listRestaurantSuggestions(opts?: {
 }
 
 /** Admin: approve → creates live restaurant and marks suggestion approved. */
-export function approveRestaurantSuggestion(id: string): {
+export async function approveRestaurantSuggestion(id: string): Promise<{
   suggestion: RestaurantSuggestion;
   restaurant: Restaurant;
-} {
-  const data = loadDining();
+}> {
+  const data = await loadDiningAsync();
   const idx = data.suggestions.findIndex((s) => s.id === id);
   if (idx < 0) throw new Error("Suggestion not found");
   const sug = data.suggestions[idx];
@@ -481,15 +533,15 @@ export function approveRestaurantSuggestion(id: string): {
     reviewedAt: now,
     approvedRestaurantId: restaurant.id,
   };
-  saveDining(data);
+  await saveDiningAsync(data);
   return { suggestion: data.suggestions[idx], restaurant };
 }
 
-export function rejectRestaurantSuggestion(
+export async function rejectRestaurantSuggestion(
   id: string,
   reason?: string
-): RestaurantSuggestion {
-  const data = loadDining();
+): Promise<RestaurantSuggestion> {
+  const data = await loadDiningAsync();
   const idx = data.suggestions.findIndex((s) => s.id === id);
   if (idx < 0) throw new Error("Suggestion not found");
   if (data.suggestions[idx].status === "approved") {
@@ -501,17 +553,17 @@ export function rejectRestaurantSuggestion(
     reviewedAt: new Date().toISOString(),
     rejectReason: reason ? String(reason).trim().slice(0, 300) : undefined,
   };
-  saveDining(data);
+  await saveDiningAsync(data);
   return data.suggestions[idx];
 }
 
-export function deleteRestaurantSuggestion(id: string) {
-  const data = loadDining();
+export async function deleteRestaurantSuggestion(id: string) {
+  const data = await loadDiningAsync();
   data.suggestions = data.suggestions.filter((s) => s.id !== id);
-  return saveDining(data);
+  return saveDiningAsync(data);
 }
 
-export function addReview(input: {
+export async function addReview(input: {
   restaurantId: string;
   authorName: string;
   rating: number;
@@ -521,7 +573,7 @@ export function addReview(input: {
   dish?: string;
   authorMemberId?: string | null;
 }) {
-  const data = loadDining();
+  const data = await loadDiningAsync();
   if (!data.restaurants.some((r) => r.id === input.restaurantId)) {
     throw new Error("Restaurant not found");
   }
@@ -547,25 +599,25 @@ export function addReview(input: {
     createdAt: new Date().toISOString(),
   };
   data.reviews.unshift(review);
-  saveDining(data);
+  await saveDiningAsync(data);
   return review;
 }
 
-export function setReviewHidden(id: string, hidden: boolean) {
-  const data = loadDining();
+export async function setReviewHidden(id: string, hidden: boolean) {
+  const data = await loadDiningAsync();
   const idx = data.reviews.findIndex((r) => r.id === id);
   if (idx < 0) throw new Error("Review not found");
   data.reviews[idx] = { ...data.reviews[idx], hidden: !!hidden };
-  return saveDining(data);
+  return saveDiningAsync(data);
 }
 
-export function deleteReview(id: string) {
-  const data = loadDining();
+export async function deleteReview(id: string) {
+  const data = await loadDiningAsync();
   data.reviews = data.reviews.filter((r) => r.id !== id);
-  return saveDining(data);
+  return saveDiningAsync(data);
 }
 
-export function upsertInterview(
+export async function upsertInterview(
   input: Partial<Interview> & {
     restaurantId: string;
     personName: string;
@@ -574,7 +626,7 @@ export function upsertInterview(
     body: string;
   }
 ) {
-  const data = loadDining();
+  const data = await loadDiningAsync();
   if (!data.restaurants.some((r) => r.id === input.restaurantId)) {
     throw new Error("Restaurant not found");
   }
@@ -611,13 +663,13 @@ export function upsertInterview(
       featured: !!input.featured,
     });
   }
-  return saveDining(data);
+  return saveDiningAsync(data);
 }
 
-export function deleteInterview(id: string) {
-  const data = loadDining();
+export async function deleteInterview(id: string) {
+  const data = await loadDiningAsync();
   data.interviews = data.interviews.filter((i) => i.id !== id);
-  return saveDining(data);
+  return saveDiningAsync(data);
 }
 
 export function diningSummary() {

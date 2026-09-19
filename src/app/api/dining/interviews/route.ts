@@ -3,12 +3,14 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import {
   deleteInterview,
   getInterviews,
+  loadDiningAsync,
   upsertInterview,
 } from "@/lib/dining";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  await loadDiningAsync();
   return NextResponse.json({ interviews: getInterviews() });
 }
 
@@ -18,7 +20,7 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
-    const data = upsertInterview({
+    const data = await upsertInterview({
       id: body.id || undefined,
       restaurantId: body.restaurantId,
       personName: body.personName,
@@ -48,7 +50,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const data = deleteInterview(id);
+    const data = await deleteInterview(id);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(

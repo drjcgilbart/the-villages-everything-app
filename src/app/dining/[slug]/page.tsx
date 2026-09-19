@@ -11,7 +11,7 @@ import {
   getInterviews,
   getRestaurantBySlug,
   getVisibleReviews,
-  loadDining,
+  loadDiningAsync,
   topByCuisine,
 } from "@/lib/dining";
 import { cuisineArtPath } from "@/lib/diningTypes";
@@ -25,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const restaurant = getRestaurantBySlug(slug);
+  const restaurant = await getRestaurantBySlug(slug);
   if (!restaurant) return { title: "Restaurant" };
   return {
     title: restaurant.name,
@@ -39,10 +39,10 @@ export default async function RestaurantPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const restaurant = getRestaurantBySlug(slug);
+  const restaurant = await getRestaurantBySlug(slug);
   if (!restaurant) notFound();
 
-  const data = loadDining();
+  const data = await loadDiningAsync();
   const stats = computeStats(restaurant.id, data.reviews);
   const reviews = getVisibleReviews(data.reviews, restaurant.id);
   const interviews = getInterviews({ restaurantId: restaurant.id });

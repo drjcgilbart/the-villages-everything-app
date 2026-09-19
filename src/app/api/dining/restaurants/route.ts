@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
   deleteRestaurant,
-  loadDining,
+  loadDiningAsync,
   upsertRestaurant,
   withStats,
 } from "@/lib/dining";
@@ -12,7 +12,7 @@ import { PRICE_RANGES, normalizeCuisine } from "@/lib/diningTypes";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const data = loadDining();
+  const data = await loadDiningAsync();
   return NextResponse.json({
     restaurants: withStats(data.restaurants, data.reviews),
   });
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       .split(",")
       .map((t: string) => t.trim())
       .filter(Boolean);
-    const data = upsertRestaurant({
+    const data = await upsertRestaurant({
       id: body.id || undefined,
       name: body.name,
       slug: body.slug,
@@ -69,7 +69,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    const data = deleteRestaurant(id);
+    const data = await deleteRestaurant(id);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(

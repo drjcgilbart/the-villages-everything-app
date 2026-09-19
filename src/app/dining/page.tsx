@@ -10,7 +10,7 @@ import {
   allCuisineLeaders,
   diningSummary,
   getInterviews,
-  loadDining,
+  loadDiningAsync,
   overallLeaders,
   recentReviews,
   withStats,
@@ -25,8 +25,8 @@ export const metadata = {
     "Dining in and around The Villages — restaurant reviews, ratings, top 5 by cuisine, and staff interviews.",
 };
 
-export default function DiningPage() {
-  const data = loadDining();
+export default async function DiningPage() {
+  const data = await loadDiningAsync();
   const summary = diningSummary();
   // Include unrated spots so jump anchors always exist for listed cuisines
   const cuisineLeaders = allCuisineLeaders(8, 0);

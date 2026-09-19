@@ -22,10 +22,11 @@ export async function GET(req: Request) {
     | "approved"
     | "rejected"
     | "all";
-  const suggestions = listRestaurantSuggestions({ status });
+  const suggestions = await listRestaurantSuggestions({ status });
+  const pending = await listRestaurantSuggestions({ status: "pending" });
   return NextResponse.json({
     suggestions,
-    pendingCount: listRestaurantSuggestions({ status: "pending" }).length,
+    pendingCount: pending.length,
   });
 }
 
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "submit") {
-      const suggestion = submitRestaurantSuggestion({
+      const suggestion = await submitRestaurantSuggestion({
         name: body.name,
         cuisine: body.cuisine,
         area: body.area,
@@ -95,7 +96,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "approve") {
-      const result = approveRestaurantSuggestion(id);
+      const result = await approveRestaurantSuggestion(id);
       return NextResponse.json({
         ok: true,
         ...result,
@@ -104,7 +105,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "reject") {
-      const suggestion = rejectRestaurantSuggestion(id, body.reason);
+      const suggestion = await rejectRestaurantSuggestion(id, body.reason);
       return NextResponse.json({
         ok: true,
         suggestion,
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
     }
 
     if (action === "delete") {
-      deleteRestaurantSuggestion(id);
+      await deleteRestaurantSuggestion(id);
       return NextResponse.json({ ok: true, message: "Suggestion removed." });
     }
 

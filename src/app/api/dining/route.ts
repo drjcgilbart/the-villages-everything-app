@@ -3,7 +3,7 @@ import {
   allCuisineLeaders,
   diningSummary,
   getInterviews,
-  loadDining,
+  loadDiningAsync,
   overallLeaders,
   withStats,
 } from "@/lib/dining";
@@ -11,7 +11,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const data = loadDining();
+  const data = await loadDiningAsync();
   const restaurants = withStats(data.restaurants, data.reviews).sort((a, b) =>
     a.name.localeCompare(b.name)
   );

@@ -3,7 +3,11 @@ import { BOM_CATEGORY_META } from "./bestOfMonthTypes";
 import { loadClubListingsAsync, saveClubListingsAsync } from "./clubListings";
 import { membershipLabel } from "./clubListingsTypes";
 import { ensureDurableHydrated } from "./dataFs";
-import { listRestaurantSuggestions, loadDining, saveDining } from "./dining";
+import {
+  listRestaurantSuggestions,
+  loadDiningAsync,
+  saveDiningAsync,
+} from "./dining";
 import { loadGolfClubAsync, updateAce, updateRound } from "./golfClub";
 import { loadLocalServicesAsync, updateLocalService } from "./localServices";
 import { isVillagerOwned, listingScope } from "./localServicesTypes";
@@ -196,7 +200,7 @@ export async function listPendingApprovals(): Promise<PendingItem[]> {
     });
   }
 
-  for (const s of listRestaurantSuggestions({ status: "pending" })) {
+  for (const s of await listRestaurantSuggestions({ status: "pending" })) {
     items.push({
       id: s.id,
       kind: "dining",
@@ -553,7 +557,7 @@ export async function applyPendingEdit(
       return listing;
     }
     case "dining": {
-      const data = loadDining();
+      const data = await loadDiningAsync();
       const idx = data.suggestions.findIndex((s) => s.id === id);
       if (idx < 0) throw new Error("Dining suggestion not found");
       const cur = data.suggestions[idx];
@@ -571,7 +575,7 @@ export async function applyPendingEdit(
         note: str(fields, "note")?.trim() || cur.note,
         status: approve ? "approved" : cur.status,
       };
-      saveDining(data);
+      await saveDiningAsync(data);
       return data.suggestions[idx];
     }
     case "club": {
