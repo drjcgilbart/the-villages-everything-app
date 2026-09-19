@@ -26,7 +26,7 @@ export function Footer() {
         </div>
 
         <div className="footer-groups">
-          <div className="footer-group">
+          <div className="footer-group footer-group-topics">
             <strong>Main topics</strong>
             <div className="footer-group-links footer-topics-grid">
               {MAIN_TOPICS.map((t) => (

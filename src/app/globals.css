@@ -2298,6 +2298,36 @@ a.club-card {
   font-weight: 650;
 }
 
+a.my-space-link-card.ms-jump-card {
+  padding: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+.ms-jump-art {
+  position: relative;
+  display: block;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  background: linear-gradient(145deg, #fde8d8, #fff5eb);
+}
+
+.ms-jump-art-img {
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+a.my-space-link-card.ms-jump-card:hover .ms-jump-art-img {
+  transform: scale(1.03);
+}
+
+.ms-jump-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem 0.85rem;
+}
+
 .my-space-block {
   margin-bottom: 1.75rem;
 }
@@ -6880,8 +6910,15 @@ a.ts-square-card:hover .ts-square-card-img {
 
 .footer-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem 1.25rem;
+  grid-template-columns: 1fr;
+  gap: 1.15rem 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .footer-groups {
+    grid-template-columns: minmax(0, 2.2fr) minmax(140px, 1fr) minmax(160px, 1fr);
+    align-items: start;
+  }
 }
 
 .footer-group strong {
@@ -6909,13 +6946,13 @@ a.ts-square-card:hover .ts-square-card-img {
 
 .footer-topics-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.28rem 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.28rem 0.9rem;
 }
 
-@media (min-width: 720px) {
+@media (min-width: 560px) {
   .footer-topics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { POPULAR_CLUBS } from "@/lib/clubs";
 import {
+  CLUB_CATEGORY_ART,
   clubCategoryHref,
   clubDetailHref,
   type ClubListSummary,
@@ -20,7 +21,7 @@ import {
   toggleDiningFavorite,
   writeDiningFavorites,
 } from "@/lib/diningFavorites";
-import type { Restaurant } from "@/lib/diningTypes";
+import { cuisineArtPath, type Restaurant } from "@/lib/diningTypes";
 import { getRecCenter } from "@/lib/recCenters";
 import {
   readRecFavorites,
@@ -40,6 +41,7 @@ import {
   toggleTownSquareFavorite,
   writeTownSquareFavorites,
 } from "@/lib/townSquareFavorites";
+import { getVillageArt } from "@/lib/villageArt";
 import { getRegion, getVillageBySlug } from "@/lib/villages";
 
 type FavSnapshot = {
@@ -52,7 +54,14 @@ type FavSnapshot = {
 
 type DiningListItem = Pick<
   Restaurant,
-  "id" | "name" | "slug" | "cuisine" | "area" | "priceRange" | "description"
+  | "id"
+  | "name"
+  | "slug"
+  | "cuisine"
+  | "area"
+  | "priceRange"
+  | "description"
+  | "imageUrl"
 >;
 
 function readAll(): FavSnapshot {
@@ -154,6 +163,7 @@ export function MySpaceFavoritesHub({
                   area: r.area,
                   priceRange: r.priceRange,
                   description: r.description,
+                  imageUrl: r.imageUrl,
                 }) satisfies DiningListItem
             )
           );
@@ -212,7 +222,7 @@ export function MySpaceFavoritesHub({
           category: listing.category,
           meta: listing.location,
           blurb: undefined as string | undefined,
-          image: undefined as string | undefined,
+          image: CLUB_CATEGORY_ART[listing.category],
         };
       })
       .filter((c): c is NonNullable<typeof c> => Boolean(c));
@@ -342,6 +352,7 @@ export function MySpaceFavoritesHub({
                     href={`/my-village/${homeVillage.slug}`}
                     title={homeVillage.name}
                     subtitle={`Home village · ${getRegion(homeVillage.region).label}`}
+                    image={getVillageArt(homeVillage).image}
                   />
                 </div>
               </div>
@@ -357,6 +368,7 @@ export function MySpaceFavoritesHub({
                       href={`/town-squares/${s.id}`}
                       title={s.shortName}
                       subtitle="Town square"
+                      image={s.photo.src}
                     />
                   ))}
                 </div>
@@ -373,6 +385,7 @@ export function MySpaceFavoritesHub({
                       href={`/rec-centers/${c.id}`}
                       title={c.shortName}
                       subtitle={c.areaHint}
+                      image={c.image}
                     />
                   ))}
                 </div>
@@ -394,6 +407,7 @@ export function MySpaceFavoritesHub({
                         href={`/dining/${r.slug}`}
                         title={r.name}
                         subtitle={`${r.cuisine} · ${r.area}`}
+                        image={r.imageUrl || cuisineArtPath(r.cuisine)}
                       />
                     ))}
                   </div>
@@ -416,6 +430,7 @@ export function MySpaceFavoritesHub({
                         href={c.href}
                         title={c.name}
                         subtitle={c.meta || c.category}
+                        image={c.image}
                       />
                     ))}
                   </div>
@@ -715,15 +730,38 @@ function JumpCard({
   href,
   title,
   subtitle,
+  image,
 }: {
   href: string;
   title: string;
   subtitle: string;
+  image?: string;
 }) {
   return (
-    <Link href={href} className="about-panel my-space-link-card">
-      <strong>{title}</strong>
-      <span>{subtitle}</span>
+    <Link
+      href={href}
+      className={
+        image
+          ? "about-panel my-space-link-card ms-jump-card"
+          : "about-panel my-space-link-card"
+      }
+    >
+      {image ? (
+        <span className="ms-jump-art">
+          <Image
+            src={image}
+            alt=""
+            fill
+            sizes="200px"
+            loading="eager"
+            className="ms-jump-art-img"
+          />
+        </span>
+      ) : null}
+      <span className="ms-jump-copy">
+        <strong>{title}</strong>
+        <span>{subtitle}</span>
+      </span>
     </Link>
   );
 }
