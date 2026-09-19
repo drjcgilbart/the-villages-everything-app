@@ -172,11 +172,16 @@ function mapCuisine(raw: string, amenity?: string): Cuisine {
   if (/\bsushi|japanese|chinese|thai|korean|vietnamese|asian|hibachi/.test(t)) {
     return "Asian";
   }
-  if (/\bbakery|pastry|donut|dessert/.test(t)) return "Bakery";
+  if (/\bice.?cream|gelato|frozen yogurt|froyo|dessert|sweet treat/.test(t)) {
+    return "Ice Cream & Sweet Treats";
+  }
+  if (/\bbakery|pastry|donut/.test(t)) return "Bakery";
+  if (/\bcoffee|tea|cafe|café|espresso|beverage/.test(t) || amenity === "cafe") {
+    return "Coffee/Tea/Beverages";
+  }
   if (/\bbreakfast|brunch|pancake|omelet/.test(t)) return "Breakfast";
   if (/\bsouthern|soul_food|soul food/.test(t)) return "Southern";
   if (amenity === "fast_food" || /\bfast.?food/.test(t)) return "Fast food";
-  if (amenity === "cafe" || /\bcafe|coffee/.test(t)) return "Breakfast";
   return normalizeCuisine(raw);
 }
 

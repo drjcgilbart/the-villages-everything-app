@@ -19,6 +19,8 @@ export const CUISINES = [
   "Latin American",
   "Irish",
   "Southern",
+  "Coffee/Tea/Beverages",
+  "Ice Cream & Sweet Treats",
 ] as const;
 
 export type Cuisine = (typeof CUISINES)[number];
@@ -35,6 +37,20 @@ const CUISINE_ALIASES: Record<string, Cuisine> = {
   fastfood: "Fast food",
   "latin-american": "Latin American",
   latin: "Latin American",
+  coffee: "Coffee/Tea/Beverages",
+  tea: "Coffee/Tea/Beverages",
+  cafe: "Coffee/Tea/Beverages",
+  café: "Coffee/Tea/Beverages",
+  beverages: "Coffee/Tea/Beverages",
+  "coffee/tea/beverages": "Coffee/Tea/Beverages",
+  "ice cream": "Ice Cream & Sweet Treats",
+  icecream: "Ice Cream & Sweet Treats",
+  "ice-cream": "Ice Cream & Sweet Treats",
+  gelato: "Ice Cream & Sweet Treats",
+  dessert: "Ice Cream & Sweet Treats",
+  sweets: "Ice Cream & Sweet Treats",
+  "frozen yogurt": "Ice Cream & Sweet Treats",
+  "ice cream & sweet treats": "Ice Cream & Sweet Treats",
   other: FALLBACK_CUISINE,
 };
 
@@ -85,6 +101,8 @@ export const CUISINE_ART: Record<Cuisine, string> = {
   "Latin American": "/graphics/cuisines/latin-american-v2.jpg", // green iguana
   Irish: "/graphics/cuisines/irish-v2.jpg", // great blue heron
   Southern: "/graphics/cuisines/southern-v2.jpg", // wild turkey
+  "Coffee/Tea/Beverages": "/graphics/cuisines/coffee-tea-v2.jpg", // snowy egret
+  "Ice Cream & Sweet Treats": "/graphics/cuisines/sweets-v2.jpg", // key deer
 };
 
 export function cuisineArtPath(cuisine: string): string {
