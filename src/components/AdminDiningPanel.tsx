@@ -354,26 +354,6 @@ export function AdminDiningPanel() {
         reviews, and kitchen interviews. Leaderboards update automatically from
         star ratings.
       </p>
-      <div className="hero-actions" style={{ marginBottom: "1rem" }}>
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={busy || refreshing}
-          onClick={() => void refreshRestaurants()}
-        >
-          {refreshing ? "Refreshing restaurants…" : "Refresh restaurants"}
-        </button>
-      </div>
-      <p style={{ color: "var(--muted)", marginTop: 0, fontSize: "0.92rem" }}>
-        Looks up public maps and Villages dining guides. Existing spots stay on
-        the site unless a listing looks closed — then you choose Keep or
-        Remove.
-      </p>
-      {refreshSummary && (
-        <p className="panel-hint" style={{ marginTop: 0 }}>
-          {refreshSummary}
-        </p>
-      )}
       {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
 
       {closedQueue[0] && (
@@ -436,6 +416,14 @@ export function AdminDiningPanel() {
       <div className="admin-tabs" style={{ marginBottom: "1rem" }}>
         <button
           type="button"
+          className="active"
+          disabled={busy || refreshing}
+          onClick={() => void refreshRestaurants()}
+        >
+          {refreshing ? "Refreshing…" : "Refresh restaurants"}
+        </button>
+        <button
+          type="button"
           className={sub === "suggestions" ? "active" : ""}
           onClick={() => setSub("suggestions")}
         >
@@ -463,6 +451,15 @@ export function AdminDiningPanel() {
           Interviews
         </button>
       </div>
+      <p style={{ color: "var(--muted)", marginTop: 0, fontSize: "0.92rem" }}>
+        Refresh looks up public maps and Villages dining guides. Existing spots
+        stay unless a listing looks closed — then you choose Keep or Remove.
+      </p>
+      {refreshSummary && (
+        <p className="panel-hint" style={{ marginTop: 0 }}>
+          {refreshSummary}
+        </p>
+      )}
 
       {sub === "suggestions" && (
         <>
