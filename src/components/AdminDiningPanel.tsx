@@ -12,6 +12,7 @@ import {
   type RestaurantSuggestion,
   type Review,
 } from "@/lib/diningTypes";
+import type { DiningClosedCandidate } from "@/lib/diningRefreshTypes";
 
 type RestRow = Restaurant & { stats: RestaurantStats };
 
@@ -85,6 +86,9 @@ export function AdminDiningPanel() {
     "suggestions" | "restaurants" | "reviews" | "interviews"
   >("suggestions");
   const [sugFilter, setSugFilter] = useState<"pending" | "all">("pending");
+  const [refreshing, setRefreshing] = useState(false);
+  const [closedQueue, setClosedQueue] = useState<DiningClosedCandidate[]>([]);
+  const [refreshSummary, setRefreshSummary] = useState<string | null>(null);
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -153,6 +157,67 @@ export function AdminDiningPanel() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function refreshRestaurants() {
+    setRefreshing(true);
+    setRefreshSummary(null);
+    try {
+      const res = await fetch("/api/dining/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refresh" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Refresh failed");
+      const added = Array.isArray(data.added) ? data.added.length : 0;
+      const updated = Array.isArray(data.updated) ? data.updated.length : 0;
+      const closed = Array.isArray(data.closedCandidates)
+        ? data.closedCandidates
+        : [];
+      const extra =
+        Array.isArray(data.errors) && data.errors.length
+          ? ` Notes: ${data.errors.join(" · ")}`
+          : "";
+      setRefreshSummary(
+        `Added ${added} new spot${added === 1 ? "" : "s"}, updated ${updated}.${extra}`
+      );
+      setClosedQueue(closed);
+      if (closed.length === 0) {
+        flash(
+          "ok",
+          `Refresh finished — added ${added}, updated ${updated}. Existing restaurants were kept.`
+        );
+      }
+      await load();
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function decideClosed(keep: boolean) {
+    const current = closedQueue[0];
+    if (!current) return;
+    if (!keep) {
+      try {
+        const res = await fetch("/api/dining/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "remove-closed", id: current.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Could not remove restaurant");
+        flash("ok", `Removed ${current.name}`);
+        if (restForm.id === current.id) setRestForm(emptyRest);
+        await load();
+      } catch (err) {
+        flash("err", err instanceof Error ? err.message : "Could not remove");
+        return;
+      }
+    }
+    setClosedQueue((q) => q.slice(1));
   }
 
   async function removeRestaurant(id: string) {
@@ -289,7 +354,84 @@ export function AdminDiningPanel() {
         reviews, and kitchen interviews. Leaderboards update automatically from
         star ratings.
       </p>
+      <div className="hero-actions" style={{ marginBottom: "1rem" }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy || refreshing}
+          onClick={() => void refreshRestaurants()}
+        >
+          {refreshing ? "Refreshing restaurants…" : "Refresh restaurants"}
+        </button>
+      </div>
+      <p style={{ color: "var(--muted)", marginTop: 0, fontSize: "0.92rem" }}>
+        Looks up public maps and Villages dining guides. Existing spots stay on
+        the site unless a listing looks closed — then you choose Keep or
+        Remove.
+      </p>
+      {refreshSummary && (
+        <p className="panel-hint" style={{ marginTop: 0 }}>
+          {refreshSummary}
+        </p>
+      )}
       {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
+
+      {closedQueue[0] && (
+        <div
+          className="fav-site-overlay"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) void decideClosed(true);
+          }}
+        >
+          <div
+            className="fav-site-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dining-closed-title"
+          >
+            <p className="fav-site-kicker">Possible closed restaurant</p>
+            <h2 id="dining-closed-title">{closedQueue[0].name}</h2>
+            <p className="fav-site-lead">
+              This spot may have gone out of business. Refresh does not delete
+              restaurants on its own — you decide.
+            </p>
+            <p>
+              <strong>Why it was flagged:</strong> {closedQueue[0].reason}
+            </p>
+            <p style={{ color: "var(--muted)" }}>{closedQueue[0].evidence}</p>
+            {closedQueue[0].area && (
+              <p style={{ color: "var(--muted)" }}>
+                Listed area: {closedQueue[0].area}
+              </p>
+            )}
+            <p>
+              Remove it if neighbors can no longer eat there. Keep it if you
+              are not sure — it stays in Dining with its reviews.
+            </p>
+            <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
+              {closedQueue.length} possible closed listing
+              {closedQueue.length === 1 ? "" : "s"} to review.
+            </p>
+            <div className="hero-actions">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => void decideClosed(true)}
+              >
+                Keep it
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void decideClosed(false)}
+              >
+                Remove from Dining
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="admin-tabs" style={{ marginBottom: "1rem" }}>
         <button
