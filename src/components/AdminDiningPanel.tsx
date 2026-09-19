@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CUISINES,
   PRICE_RANGES,
@@ -89,6 +89,7 @@ export function AdminDiningPanel() {
   const [refreshing, setRefreshing] = useState(false);
   const [closedQueue, setClosedQueue] = useState<DiningClosedCandidate[]>([]);
   const [refreshSummary, setRefreshSummary] = useState<string | null>(null);
+  const restFormRef = useRef<HTMLDivElement>(null);
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -296,6 +297,17 @@ export function AdminDiningPanel() {
       featured: !!r.featured,
     });
     setSub("restaurants");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        restFormRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        restFormRef.current
+          ?.querySelector<HTMLInputElement>("form input")
+          ?.focus({ preventScroll: true });
+      });
+    });
   }
 
   function editInterview(i: Interview) {
@@ -594,6 +606,11 @@ export function AdminDiningPanel() {
 
       {sub === "restaurants" && (
         <>
+          <div
+            ref={restFormRef}
+            id="admin-dining-edit"
+            className="dining-anchor-target"
+          >
           <h2>{restForm.id ? "Edit restaurant" : "Add restaurant"}</h2>
           <form className="form-grid" onSubmit={saveRestaurant}>
             <div className="form-row">
@@ -735,6 +752,7 @@ export function AdminDiningPanel() {
               )}
             </div>
           </form>
+          </div>
 
           <h2 style={{ marginTop: "1.75rem" }}>Directory</h2>
           <div className="admin-list">
