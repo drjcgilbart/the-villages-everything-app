@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import {
   ensureDurableHydrated,
   readJsonFile,
@@ -34,9 +36,51 @@ export function loadClubListings(): ClubListingsData {
   };
 }
 
+function clubDedupeKey(l: ClubListing): string {
+  return `${l.name}|${l.location}`.toLowerCase();
+}
+
+function readBundledClubSeed(): ClubListingsData | null {
+  try {
+    const p = path.join(process.cwd(), "data", FILE);
+    if (!fs.existsSync(/*turbopackIgnore: true*/ p)) return null;
+    const raw = JSON.parse(
+      fs.readFileSync(/*turbopackIgnore: true*/ p, "utf8")
+    ) as ClubListingsData;
+    return {
+      listings: Array.isArray(raw.listings) ? raw.listings : [],
+      updatedAt: raw.updatedAt || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function mergeMissingSeedClubs(
+  data: ClubListingsData
+): Promise<ClubListingsData> {
+  const seed = readBundledClubSeed();
+  if (!seed?.listings.length) return data;
+  const byId = new Set(data.listings.map((l) => l.id));
+  const byKey = new Set(data.listings.map(clubDedupeKey));
+  const toAdd = seed.listings.filter((l) => {
+    if (!l?.id || !l.name) return false;
+    if (byId.has(l.id)) return false;
+    return !byKey.has(clubDedupeKey(l));
+  });
+  if (!toAdd.length) return data;
+  const merged: ClubListingsData = {
+    listings: [...data.listings, ...toAdd],
+    updatedAt: new Date().toISOString(),
+  };
+  await saveClubListingsAsync(merged);
+  return merged;
+}
+
 export async function loadClubListingsAsync(): Promise<ClubListingsData> {
   await ensureDurableHydrated();
-  return loadClubListings();
+  const data = loadClubListings();
+  return mergeMissingSeedClubs(data);
 }
 
 export function saveClubListings(data: ClubListingsData) {

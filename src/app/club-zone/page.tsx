@@ -31,7 +31,7 @@ export default async function ClubZonePage() {
             <p>{topic.description}</p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
               <a href="#leader-directory" className="btn btn-primary">
-                Leader-updated directory
+                Club directory
               </a>
               <a href="#clubs" className="btn btn-ghost">
                 Popular starter clubs
@@ -63,8 +63,9 @@ export default async function ClubZonePage() {
             <div>
               <h2>Popular clubs &amp; how to join the fun</h2>
               <p>
-                A curated starter set of high-interest club types — not the full
-                3,000. Star favorites, then save them to your Hub Member space.
+                A curated starter set of high-interest club types. The full
+                District list is in the directory above — search, filter by
+                category, and star favorites to My Space.
               </p>
             </div>
           </div>

@@ -21,7 +21,12 @@ export function ClubLeaderDirectory() {
   const [filter, setFilter] = useState<"all" | "open" | "waitlist" | "closed">(
     "all"
   );
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | ClubListingCategory
+  >("all");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 30;
 
   // Form
   const [name, setName] = useState("");
@@ -63,18 +68,37 @@ export function ClubLeaderDirectory() {
   const filtered = useMemo(() => {
     const list = feed?.listings || [];
     const q = query.trim().toLowerCase();
-    return list.filter((l) => {
-      if (filter !== "all" && l.membershipStatus !== filter) return false;
-      if (!q) return true;
-      return (
-        l.name.toLowerCase().includes(q) ||
-        l.leaderName.toLowerCase().includes(q) ||
-        l.location.toLowerCase().includes(q) ||
-        l.description.toLowerCase().includes(q) ||
-        l.category.toLowerCase().includes(q)
-      );
-    });
-  }, [feed, filter, query]);
+    return list
+      .filter((l) => {
+        if (filter !== "all" && l.membershipStatus !== filter) return false;
+        if (categoryFilter !== "all" && l.category !== categoryFilter) return false;
+        if (!q) return true;
+        return (
+          l.name.toLowerCase().includes(q) ||
+          l.leaderName.toLowerCase().includes(q) ||
+          l.location.toLowerCase().includes(q) ||
+          l.description.toLowerCase().includes(q) ||
+          l.category.toLowerCase().includes(q)
+        );
+      })
+      .slice()
+      .sort((a, b) => {
+        const cat = a.category.localeCompare(b.category);
+        if (cat) return cat;
+        return a.name.localeCompare(b.name);
+      });
+  }, [feed, filter, categoryFilter, query]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageSafe = Math.min(page, pageCount - 1);
+  const pageItems = filtered.slice(
+    pageSafe * PAGE_SIZE,
+    pageSafe * PAGE_SIZE + PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [query, filter, categoryFilter]);
 
   function prefillUpdate(l: ClubListing) {
     setReplacesId(l.id);
@@ -142,11 +166,12 @@ export function ClubLeaderDirectory() {
     <div className="club-leader-dir">
       <div className="section-head">
         <div>
-          <h2>Leader-updated club directory</h2>
+          <h2>Club directory</h2>
           <p>
-            Fresh contacts from club leaders — open vs full, where you meet, and
-            how to reach them. Official District lists can go stale; this list
-            only shows listings after admin approval.
+            {feed.listings.length.toLocaleString()} clubs from the District
+            Recreation Club Contacts list (July 10, 2026), sorted by category
+            then name. Search or jump a category. Club leaders can still submit
+            an update below if a contact has changed.
           </p>
         </div>
       </div>
@@ -182,15 +207,42 @@ export function ClubLeaderDirectory() {
         </div>
       </div>
 
+      <div className="club-leader-filters" aria-label="Club categories">
+        <button
+          type="button"
+          className={`btn btn-sm ${categoryFilter === "all" ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setCategoryFilter("all")}
+        >
+          All categories
+        </button>
+        {CLUB_LISTING_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className={`btn btn-sm ${categoryFilter === c ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setCategoryFilter(c)}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
       {filtered.length === 0 ? (
         <div className="empty-state about-panel">
-          No approved club listings yet
-          {filter !== "all" ? " in this filter" : ""}. Leaders: use the form
-          below to submit your club for review.
+          No clubs match this search
+          {filter !== "all" ? " in this filter" : ""}. Try another category, or
+          leaders can submit a listing below.
         </div>
       ) : (
+        <>
+        <p className="panel-hint" style={{ margin: 0 }}>
+          Showing {pageSafe * PAGE_SIZE + 1}–
+          {Math.min((pageSafe + 1) * PAGE_SIZE, filtered.length)} of{" "}
+          {filtered.length.toLocaleString()}
+          {categoryFilter !== "all" ? ` in ${categoryFilter}` : ""}.
+        </p>
         <div className="club-leader-grid">
-          {filtered.map((l) => (
+          {pageItems.map((l) => (
             <article key={l.id} className="about-panel club-leader-card">
               <div className="club-leader-card-top">
                 <span className="pill">{l.category}</span>
@@ -246,6 +298,30 @@ export function ClubLeaderDirectory() {
             </article>
           ))}
         </div>
+        {pageCount > 1 ? (
+          <div className="club-leader-filters">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={pageSafe <= 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              Previous
+            </button>
+            <span className="panel-hint" style={{ margin: 0 }}>
+              Page {pageSafe + 1} of {pageCount}
+            </span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={pageSafe >= pageCount - 1}
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
+        </>
       )}
 
       <form
