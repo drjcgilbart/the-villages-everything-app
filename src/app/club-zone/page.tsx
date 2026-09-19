@@ -6,6 +6,11 @@ import { DonateMascot } from "@/components/DonateMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
+import { clubCategoryCounts, loadClubListingsAsync } from "@/lib/clubListings";
+import {
+  CLUB_CATEGORY_ICONS,
+  clubCategoryHref,
+} from "@/lib/clubPaths";
 import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
@@ -20,6 +25,9 @@ export default async function ClubZonePage() {
   const topic = getTopic("club-zone");
   const { posts, videos, photos } = await getTopicContentAsync("club-zone");
   const hasRelated = posts.length + videos.length + photos.length > 0;
+  const clubData = await loadClubListingsAsync();
+  const categories = clubCategoryCounts(clubData);
+  const clubTotal = categories.reduce((n, row) => n + row.count, 0);
 
   return (
     <>
@@ -53,6 +61,46 @@ export default async function ClubZonePage() {
 
       <section className="section" id="leader-directory">
         <div className="shell">
+          <div className="section-head">
+            <div>
+              <h2>Club directory</h2>
+              <p>
+                {clubTotal.toLocaleString()} clubs from the District Recreation
+                list. Pick a category, then a club. Star any group to save it in
+                My Space.
+              </p>
+            </div>
+          </div>
+          <form className="club-search-form" action="/club-zone/search" method="get">
+            <label className="rc-field club-search-field">
+              <span>Search all clubs</span>
+              <input
+                className="rc-search"
+                name="q"
+                placeholder="Name, rec center, leader…"
+              />
+            </label>
+            <button type="submit" className="btn btn-primary btn-sm">
+              Search
+            </button>
+          </form>
+          <div className="club-cat-grid">
+            {categories.map((row) => (
+              <Link
+                key={row.category}
+                href={clubCategoryHref(row.category)}
+                className="about-panel club-cat-card"
+              >
+                <span className="club-cat-icon" aria-hidden>
+                  {CLUB_CATEGORY_ICONS[row.category]}
+                </span>
+                <strong>{row.category}</strong>
+                <span className="panel-hint">
+                  {row.count.toLocaleString()} club{row.count === 1 ? "" : "s"}
+                </span>
+              </Link>
+            ))}
+          </div>
           <ClubLeaderDirectory />
         </div>
       </section>
@@ -64,8 +112,7 @@ export default async function ClubZonePage() {
               <h2>Popular clubs &amp; how to join the fun</h2>
               <p>
                 A curated starter set of high-interest club types. The full
-                District list is in the directory above — search, filter by
-                category, and star favorites to My Space.
+                District list is in the directory above.
               </p>
             </div>
           </div>

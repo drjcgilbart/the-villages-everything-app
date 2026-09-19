@@ -150,6 +150,54 @@ export function listApprovedClubs(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export function getApprovedClubById(
+  id: string,
+  data: ClubListingsData = loadClubListings()
+): ClubListing | null {
+  const key = String(id || "").trim();
+  if (!key) return null;
+  return (
+    data.listings.find((l) => l.status === "approved" && l.id === key) || null
+  );
+}
+
+export function listApprovedClubsByCategory(
+  category: ClubListingCategory,
+  data: ClubListingsData = loadClubListings()
+): ClubListing[] {
+  return listApprovedClubs(data).filter((l) => l.category === category);
+}
+
+export function searchApprovedClubs(
+  query: string,
+  data: ClubListingsData = loadClubListings()
+): ClubListing[] {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return [];
+  return listApprovedClubs(data).filter((l) => {
+    return (
+      l.name.toLowerCase().includes(q) ||
+      l.location.toLowerCase().includes(q) ||
+      l.leaderName.toLowerCase().includes(q) ||
+      l.category.toLowerCase().includes(q)
+    );
+  });
+}
+
+export function clubCategoryCounts(
+  data: ClubListingsData = loadClubListings()
+): { category: ClubListingCategory; count: number }[] {
+  const counts = new Map<ClubListingCategory, number>();
+  for (const cat of CLUB_LISTING_CATEGORIES) counts.set(cat, 0);
+  for (const l of listApprovedClubs(data)) {
+    counts.set(l.category, (counts.get(l.category) || 0) + 1);
+  }
+  return CLUB_LISTING_CATEGORIES.map((category) => ({
+    category,
+    count: counts.get(category) || 0,
+  })).filter((row) => row.count > 0);
+}
+
 export function listPendingClubs(
   data: ClubListingsData = loadClubListings()
 ): ClubListing[] {

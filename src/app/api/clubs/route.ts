@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import {
+  clubCategoryCounts,
+  getApprovedClubById,
   listApprovedClubs,
+  listApprovedClubsByCategory,
   loadClubListingsAsync,
+  searchApprovedClubs,
   submitClubListing,
 } from "@/lib/clubListings";
+import {
+  clubCategoryFromSlug,
+  clubCategorySlug,
+  summarizeClub,
+} from "@/lib/clubPaths";
 import {
   CLUB_LISTING_CATEGORIES,
   CLUB_MEMBERSHIP_STATUSES,
@@ -13,20 +22,77 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Public: approved club directory + form metadata */
-export async function GET() {
+/** Public: category index, filtered lists, or a single listing. */
+export async function GET(req: Request) {
   try {
     const data = await loadClubListingsAsync();
     const approved = listApprovedClubs(data);
-    return NextResponse.json({
-      listings: approved,
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id")?.trim() || "";
+    const idsRaw = url.searchParams.get("ids") || "";
+    const categorySlug = url.searchParams.get("category")?.trim() || "";
+    const q = url.searchParams.get("q")?.trim() || "";
+
+    if (id) {
+      const listing = getApprovedClubById(id, data);
+      if (!listing) {
+        return NextResponse.json({ error: "Club not found" }, { status: 404 });
+      }
+      return NextResponse.json({ listing });
+    }
+
+    if (idsRaw) {
+      const wanted = new Set(
+        idsRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 80)
+      );
+      return NextResponse.json({
+        listings: approved
+          .filter((l) => wanted.has(l.id))
+          .map(summarizeClub),
+      });
+    }
+
+    const meta = {
       categories: CLUB_LISTING_CATEGORIES,
-      membershipStatuses: CLUB_MEMBERSHIP_STATUSES.map((id) => ({
-        id,
-        label: membershipLabel(id),
+      membershipStatuses: CLUB_MEMBERSHIP_STATUSES.map((statusId) => ({
+        id: statusId,
+        label: membershipLabel(statusId),
       })),
       pendingCount: data.listings.filter((l) => l.status === "pending").length,
       updatedAt: data.updatedAt,
+      listingCount: approved.length,
+    };
+
+    if (q) {
+      return NextResponse.json({
+        ...meta,
+        query: q,
+        listings: searchApprovedClubs(q, data).map(summarizeClub),
+      });
+    }
+
+    if (categorySlug) {
+      const category = clubCategoryFromSlug(categorySlug);
+      if (!category) {
+        return NextResponse.json({ error: "Unknown category" }, { status: 404 });
+      }
+      return NextResponse.json({
+        ...meta,
+        category,
+        listings: listApprovedClubsByCategory(category, data).map(summarizeClub),
+      });
+    }
+
+    return NextResponse.json({
+      ...meta,
+      categoryCounts: clubCategoryCounts(data).map((row) => ({
+        ...row,
+        slug: clubCategorySlug(row.category),
+      })),
     });
   } catch (err) {
     return NextResponse.json(

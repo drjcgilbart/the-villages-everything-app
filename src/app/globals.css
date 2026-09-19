@@ -12479,6 +12479,98 @@ body.theme-music-open .mascot-quip-popup {
   color: var(--palm-deep);
 }
 
+.club-search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: flex-end;
+  margin: 0 0 1.1rem;
+}
+.club-search-form .club-search-field {
+  flex: 1 1 16rem;
+}
+.club-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.club-cat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.95rem 1rem 1rem;
+  min-height: 7.5rem;
+}
+.club-cat-card:hover {
+  border-color: var(--palm);
+}
+.club-cat-icon {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+.club-cat-card strong {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+.club-row-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.club-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.club-row .dining-fav-icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 1rem;
+  position: static;
+}
+.club-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+.club-row-main strong {
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+.club-row-main span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+.club-row-main:hover strong {
+  color: var(--palm-deep);
+}
+.club-detail-panel {
+  position: relative;
+}
+.club-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
 /* -- Club leader directory -- */
 .club-leader-dir {
   display: flex;

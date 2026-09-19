@@ -13,6 +13,7 @@ import { grantSiteOwnerFullAccess } from "@/lib/siteOwnerAccess";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import { getMemberById, hydrateYardSale, toPublicMember } from "@/lib/yardSale";
 import { POPULAR_CLUBS } from "@/lib/clubs";
+import { listApprovedClubs, loadClubListingsAsync } from "@/lib/clubListings";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,11 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.favoriteClubIds) {
-    const allowed = new Set(POPULAR_CLUBS.map((c) => c.id));
+    const listings = listApprovedClubs(await loadClubListingsAsync());
+    const allowed = new Set([
+      ...POPULAR_CLUBS.map((c) => c.id),
+      ...listings.map((l) => l.id),
+    ]);
     const ids = body.favoriteClubIds.filter((id) => allowed.has(id));
     updateMemberSpace(member.id, { favoriteClubIds: ids });
   }

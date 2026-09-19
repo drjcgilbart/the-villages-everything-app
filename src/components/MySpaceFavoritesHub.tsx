@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { POPULAR_CLUBS } from "@/lib/clubs";
+import { clubDetailHref, type ClubListSummary } from "@/lib/clubPaths";
 import {
   readDiningFavorites,
   toggleDiningFavorite,
@@ -74,6 +75,7 @@ export function MySpaceFavoritesHub() {
     diningIds: [],
   });
   const [diningCatalog, setDiningCatalog] = useState<DiningListItem[]>([]);
+  const [clubCatalog, setClubCatalog] = useState<ClubListSummary[]>([]);
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(() => {
@@ -91,6 +93,35 @@ export function MySpaceFavoritesHub() {
       window.removeEventListener("storage", onChange);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const leftoverClubIds = snap.clubIds.filter(
+      (id) => !POPULAR_CLUBS.some((c) => c.id === id)
+    );
+    if (!leftoverClubIds.length) {
+      setClubCatalog([]);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/clubs?ids=${encodeURIComponent(leftoverClubIds.join(","))}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.listings)) {
+          setClubCatalog(data.listings);
+        }
+      } catch {
+        /* offline */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [snap.clubIds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,13 +177,35 @@ export function MySpaceFavoritesHub() {
     [snap.recIds]
   );
 
-  const clubs = useMemo(
-    () =>
-      snap.clubIds
-        .map((id) => POPULAR_CLUBS.find((c) => c.id === id))
-        .filter((c): c is NonNullable<typeof c> => Boolean(c)),
-    [snap.clubIds]
-  );
+  const clubs = useMemo(() => {
+    return snap.clubIds
+      .map((id) => {
+        const popular = POPULAR_CLUBS.find((c) => c.id === id);
+        if (popular) {
+          return {
+            id: popular.id,
+            name: popular.name,
+            href: "/club-zone#clubs",
+            category: popular.category,
+            meta: popular.areaHint,
+            blurb: popular.blurb,
+            image: popular.image,
+          };
+        }
+        const listing = clubCatalog.find((c) => c.id === id);
+        if (!listing) return null;
+        return {
+          id: listing.id,
+          name: listing.name,
+          href: clubDetailHref(listing),
+          category: listing.category,
+          meta: listing.location,
+          blurb: undefined as string | undefined,
+          image: undefined as string | undefined,
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  }, [snap.clubIds, clubCatalog]);
 
   const restaurants = useMemo(
     () =>
@@ -454,23 +507,27 @@ export function MySpaceFavoritesHub() {
             <div className="ms-fav-grid">
               {clubs.map((c) => (
                 <article key={c.id} className="about-panel ms-fav-card">
-                  <Link href="/club-zone" className="ms-fav-thumb-link">
-                    <Image
-                      src={c.image}
-                      alt=""
-                      width={320}
-                      height={320}
-                      className="ms-fav-thumb"
-                    />
-                  </Link>
+                  {c.image ? (
+                    <Link href={c.href} className="ms-fav-thumb-link">
+                      <Image
+                        src={c.image}
+                        alt=""
+                        width={320}
+                        height={320}
+                        className="ms-fav-thumb"
+                      />
+                    </Link>
+                  ) : null}
                   <div className="ms-fav-card-body">
                     <span className="pill">{c.category} · ★</span>
-                    <h4 style={{ margin: "0.4rem 0 0.25rem" }}>{c.name}</h4>
-                    <p className="ms-fav-meta">{c.areaHint}</p>
-                    <p className="ms-fav-blurb">{c.blurb}</p>
+                    <h4 style={{ margin: "0.4rem 0 0.25rem" }}>
+                      <Link href={c.href}>{c.name}</Link>
+                    </h4>
+                    <p className="ms-fav-meta">{c.meta}</p>
+                    {c.blurb ? <p className="ms-fav-blurb">{c.blurb}</p> : null}
                     <div className="ms-fav-actions">
-                      <Link href="/club-zone" className="btn btn-ghost btn-sm">
-                        Clubs
+                      <Link href={c.href} className="btn btn-ghost btn-sm">
+                        Open
                       </Link>
                       <button
                         type="button"
