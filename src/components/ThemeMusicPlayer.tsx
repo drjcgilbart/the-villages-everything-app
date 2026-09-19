@@ -137,7 +137,6 @@ export function ThemeMusicPlayer() {
       eng.setVolume(volume);
       await eng.start();
       setPlaying(true);
-      setOpen(true);
     } catch {
       setError("Could not start audio — try Play again.");
       setPlaying(false);
