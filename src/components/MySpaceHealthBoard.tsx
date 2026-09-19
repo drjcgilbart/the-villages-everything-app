@@ -20,6 +20,7 @@ import {
   type DayRecap,
 } from "@/lib/healthDayRecap";
 import { runHealthDayRecap } from "@/lib/runHealthDayRecap";
+import { PocketNoteCard } from "@/components/PocketNoteCard";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -159,6 +160,7 @@ export type HealthState = {
   sleeps: SleepLog[];
   progressPhotos: ProgressPhoto[];
   dayRecaps: DayRecap[];
+  pocketNote: string;
 };
 
 const EXERCISE_PRESETS = [
@@ -285,6 +287,7 @@ function defaultState(): HealthState {
     sleeps: [],
     progressPhotos: [],
     dayRecaps: [],
+    pocketNote: "",
   };
 }
 
@@ -631,6 +634,7 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
       SAMPLE_HEALTH.progressPhotos as ProgressPhoto[]
     ),
     dayRecaps: sanitizeDayRecaps(r.dayRecaps),
+    pocketNote: String(r.pocketNote || "").slice(0, 800),
   };
 }
 
@@ -894,6 +898,8 @@ export function MySpaceHealthBoard() {
   const [photoCaption, setPhotoCaption] = useState("");
   const [photoWeight, setPhotoWeight] = useState("");
   const [photoName, setPhotoName] = useState("");
+  const [pocketDraft, setPocketDraft] = useState("");
+  const [pocketSaved, setPocketSaved] = useState<string | null>(null);
   const [journalTitle, setJournalTitle] = useState("");
   const [journalMood, setJournalMood] = useState("");
   const [journalBody, setJournalBody] = useState("");
@@ -953,6 +959,12 @@ export function MySpaceHealthBoard() {
     if (!mealTime) setMealTime(nowTimeEastern());
     if (!sleepDate) setSleepDate(today);
   }, [today, mealDate, mealTime, sleepDate]);
+
+  useEffect(() => {
+    if (ready && !pocketDraft && state.pocketNote) {
+      setPocketDraft(state.pocketNote);
+    }
+  }, [ready, state.pocketNote, pocketDraft]);
 
   useEffect(() => {
     const todayJ = state.journals.find((j) => j.date === today);
@@ -1567,6 +1579,20 @@ export function MySpaceHealthBoard() {
               <span> — {quote.author}</span>
             </p>
           </div>
+
+          <PocketNoteCard
+            heading="Pocket note"
+            hint="Med reminder, appointment, or “call the dermatologist” — saved to this My Space login."
+            placeholder="e.g. Refill BP med Thursday · bloodwork Friday 9:15"
+            value={pocketDraft}
+            onChange={setPocketDraft}
+            onSave={() => {
+              persist({ ...state, pocketNote: pocketDraft.trim().slice(0, 800) });
+              setPocketSaved("Saved to your account");
+              window.setTimeout(() => setPocketSaved(null), 2200);
+            }}
+            savedLabel={pocketSaved}
+          />
 
           <div className="ms-stat-row">
             <div className="ms-stat">

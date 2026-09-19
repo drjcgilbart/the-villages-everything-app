@@ -12412,7 +12412,13 @@ body.theme-music-open .mascot-quip-popup {
   color: var(--muted);
   font-size: 0.92rem;
 }
-.wealth-hub { display: flex; flex-direction: column; gap: 1rem; }
+.wealth-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  max-width: 100%;
+}
 .wealth-muted {
   color: var(--muted);
   font-size: 0.9rem;
@@ -12420,11 +12426,18 @@ body.theme-music-open .mascot-quip-popup {
 }
 .wealth-tools-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.85rem;
 }
-@media (max-width: 900px) {
-  .wealth-tools-grid { grid-template-columns: 1fr; }
+@media (min-width: 720px) {
+  .wealth-tools-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1100px) {
+  .wealth-tools-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .wealth-tool-head {
   display: flex;
@@ -12465,8 +12478,13 @@ body.theme-music-open .mascot-quip-popup {
 }
 .wealth-field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.65rem;
+}
+@media (min-width: 560px) {
+  .wealth-field-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 .wealth-field-row label {
   display: flex;
@@ -12475,14 +12493,124 @@ body.theme-music-open .mascot-quip-popup {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
+  min-width: 0;
 }
-.wealth-field-row input {
+.wealth-field-row input,
+.wealth-full-input,
+.wealth-amt-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.5rem 0.65rem;
   font: inherit;
   font-weight: 500;
   color: var(--ink);
+}
+.wealth-amt-input {
+  width: 7rem;
+  flex: 0 0 7rem;
+}
+.wealth-tool-card {
+  min-width: 0;
+}
+.wealth-subhead {
+  margin: 0.85rem 0 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--palm-deep);
+}
+.wealth-inline-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.55rem;
+}
+.wealth-inline-add .wealth-full-input {
+  flex: 1 1 8rem;
+}
+.wealth-line-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+.wealth-line-row .wealth-full-input {
+  flex: 1 1 9rem;
+}
+.wealth-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0;
+}
+.wealth-chip {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wealth-hit-list,
+.wealth-date-list {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.wealth-hit-list li,
+.wealth-date-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.wealth-date-list li em {
+  display: block;
+  font-style: normal;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.wealth-date-list li em.is-due {
+  color: #9a3a2e;
+  font-weight: 700;
+}
+.wealth-check-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+.wealth-check-row .wealth-check {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .wealth-tool-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .wealth-tool-actions .btn,
+  .wealth-inline-add .btn,
+  .wealth-line-row .btn {
+    width: 100%;
+  }
+  .wealth-amt-input {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .wealth-check-row {
+    flex-direction: column;
+  }
 }
 .wealth-cashflow {
   margin: 0.75rem 0 0;
@@ -12533,14 +12661,20 @@ body.theme-music-open .mascot-quip-popup {
   font-family: var(--font-display), Georgia, serif;
   color: var(--palm-deep);
 }
-.wealth-note-card textarea {
+.wealth-note-card textarea,
+.pocket-note-card textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0.35rem 0 0.55rem;
   border-radius: 12px;
   border: 1px solid var(--line);
   padding: 0.65rem 0.75rem;
   font: inherit;
   resize: vertical;
+}
+.pocket-note-card {
+  min-width: 0;
 }
 .wealth-saved {
   font-size: 0.88rem;

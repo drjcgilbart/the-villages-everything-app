@@ -33,6 +33,7 @@ import {
   normalizeTicker,
   type TickerQuote,
 } from "@/lib/markets";
+import { PocketNoteCard } from "@/components/PocketNoteCard";
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
@@ -74,6 +75,8 @@ export function MySpaceInvestmentsBoard() {
   const [qErr, setQErr] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, Omit<FinHolding, "id">>>({});
   const [edit, setEdit] = useState<{ acct: string; hold: string } | null>(null);
+  const [pocketDraft, setPocketDraft] = useState("");
+  const [pocketSaved, setPocketSaved] = useState<string | null>(null);
 
   const accounts = value.accounts;
   const watchlist = value.watchlist;
@@ -115,6 +118,12 @@ export function MySpaceInvestmentsBoard() {
       setQErr(e instanceof Error ? e.message : "Quotes unavailable");
     }
   }, [symbols]);
+
+  useEffect(() => {
+    if (ready && !pocketDraft && value.pocketNote) {
+      setPocketDraft(value.pocketNote);
+    }
+  }, [ready, value.pocketNote, pocketDraft]);
 
   useEffect(() => {
     if (!ready) return;
@@ -161,6 +170,7 @@ export function MySpaceInvestmentsBoard() {
       holdings,
       accounts: accountsNext,
       watchlist: next.watchlist ?? watchlist,
+      pocketNote: (next.pocketNote ?? value.pocketNote ?? "").slice(0, 800),
     });
   }
 
@@ -326,6 +336,21 @@ export function MySpaceInvestmentsBoard() {
           Clear finance data
         </button>
       </div>
+
+      <PocketNoteCard
+        heading="Pocket note"
+        hint="RMD due date, insurance renewal, “call the CPA” — saved to this My Space login."
+        placeholder="e.g. Property tax due Nov · Medicare Open Enrollment Oct 15"
+        value={pocketDraft}
+        onChange={setPocketDraft}
+        onSave={() => {
+          persist({ pocketNote: pocketDraft.trim().slice(0, 800) });
+          setPocketSaved("Saved to your account");
+          window.setTimeout(() => setPocketSaved(null), 2200);
+        }}
+        savedLabel={pocketSaved}
+        saving={saving}
+      />
 
       <MarketCharts compact withRanges />
 

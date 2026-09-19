@@ -436,6 +436,7 @@ export type PortfolioBoard = {
   holdings: unknown[];
   accounts: FinAccount[];
   watchlist: string[];
+  pocketNote: string;
 };
 
 export type MemberBoards = {
@@ -596,7 +597,7 @@ export function clearedBoards(): MemberBoards {
     },
     pets: { activePetId: "", pets: [], completions: {} },
     calendar: { tasks: [] },
-    portfolio: { holdings: [], accounts: [], watchlist: [] },
+    portfolio: { holdings: [], accounts: [], watchlist: [], pocketNote: "" },
     weather: {
       activeId: "loc-home",
       locations: [
@@ -1529,6 +1530,7 @@ export function sanitizeBoard(
         holdings?: unknown;
         accounts?: unknown;
         watchlist?: unknown;
+        pocketNote?: unknown;
       };
       if (
         !Array.isArray(blob.accounts) &&
@@ -1607,7 +1609,12 @@ export function sanitizeBoard(
             .filter(Boolean)
             .slice(0, 40)
         : sampleBoards().portfolio.watchlist;
-      return { holdings, accounts, watchlist };
+      return {
+        holdings,
+        accounts,
+        watchlist,
+        pocketNote: clip(blob.pocketNote, 800),
+      };
     }
   }
 }

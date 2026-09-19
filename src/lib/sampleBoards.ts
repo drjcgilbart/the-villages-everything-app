@@ -580,6 +580,7 @@ export function sampleBoards(): MemberBoards {
       ],
     },
     portfolio: {
+      pocketNote: "",
       holdings: [],
       accounts: [
         {
