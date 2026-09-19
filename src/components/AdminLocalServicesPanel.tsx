@@ -25,6 +25,7 @@ type EditFields = {
   description: string;
   village: string;
   serviceArea: string;
+  address: string;
   phone: string;
   email: string;
   website: string;
@@ -32,6 +33,24 @@ type EditFields = {
   adminNote: string;
   villagerOwned: boolean;
 };
+
+function emptyFields(): EditFields {
+  return {
+    businessName: "",
+    contactName: "",
+    category: "Other",
+    description: "",
+    village: "",
+    serviceArea: "",
+    address: "",
+    phone: "",
+    email: "",
+    website: "",
+    photos: [],
+    adminNote: "",
+    villagerOwned: false,
+  };
+}
 
 export function AdminLocalServicesPanel() {
   const [data, setData] = useState<Payload | null>(null);
@@ -41,11 +60,17 @@ export function AdminLocalServicesPanel() {
   );
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
+    null
+  );
   const [photoErr, setPhotoErr] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [edit, setEdit] = useState<EditFields | null>(null);
+  const [add, setAdd] = useState<EditFields>(emptyFields());
+  const addFormRef = useRef<HTMLFormElement>(null);
+  const addNameRef = useRef<HTMLInputElement>(null);
   const addPhotoInputRef = useRef<HTMLInputElement>(null);
+  const newPhotoInputRef = useRef<HTMLInputElement>(null);
   const replacePhotoInputRef = useRef<HTMLInputElement>(null);
   const replaceIndexRef = useRef<number | null>(null);
 
@@ -80,13 +105,16 @@ export function AdminLocalServicesPanel() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed");
-      setMsg(json.message || "OK");
+      setMsg({ kind: "ok", text: json.message || "OK" });
       setEditingId(null);
       setEdit(null);
       setPhotoErr(null);
       await load();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Failed");
+      setMsg({
+        kind: "err",
+        text: e instanceof Error ? e.message : "Failed",
+      });
     } finally {
       setBusy(false);
     }
@@ -102,6 +130,7 @@ export function AdminLocalServicesPanel() {
       description: l.description,
       village: l.village || "",
       serviceArea: l.serviceArea || "",
+      address: l.address || "",
       phone: l.phone || "",
       email: l.email || "",
       website: l.website || "",
@@ -198,6 +227,7 @@ export function AdminLocalServicesPanel() {
       description: edit.description,
       village: edit.village || "",
       serviceArea: edit.serviceArea || "",
+      address: edit.address || "",
       phone: edit.phone || "",
       email: edit.email || "",
       website: edit.website || "",
@@ -205,6 +235,78 @@ export function AdminLocalServicesPanel() {
       adminNote: edit.adminNote || "",
       villagerOwned: edit.villagerOwned,
     });
+  }
+
+  async function onAddNewPhotos(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const room = MAX_PHOTOS - add.photos.length;
+    if (room <= 0) {
+      setPhotoErr("Maximum 3 photos (1 main + 2 extras).");
+      return;
+    }
+    setUploading(true);
+    setPhotoErr(null);
+    try {
+      const batch = Array.from(files).slice(0, room);
+      const urls: string[] = [];
+      for (const file of batch) {
+        urls.push(await uploadPhoto(file));
+      }
+      setAdd((p) => ({
+        ...p,
+        photos: [...p.photos, ...urls].slice(0, MAX_PHOTOS),
+      }));
+    } catch (e) {
+      setPhotoErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function saveNew(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    setPhotoErr(null);
+    try {
+      const res = await fetch("/api/local-services/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          businessName: add.businessName,
+          contactName: add.contactName,
+          category: add.category,
+          description: add.description,
+          village: add.village || "",
+          serviceArea: add.serviceArea || "",
+          address: add.address || "",
+          phone: add.phone || "",
+          email: add.email || "",
+          website: add.website || "",
+          photos: add.photos,
+          adminNote: add.adminNote || "",
+          villagerOwned: add.villagerOwned,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not add listing");
+      setMsg({
+        kind: "ok",
+        text: json.message || "Listing is live on Local Pros.",
+      });
+      setAdd(emptyFields());
+      setTab("approved");
+      setOwnerFilter("all");
+      await load();
+    } catch (err) {
+      setMsg({
+        kind: "err",
+        text: err instanceof Error ? err.message : "Could not add listing",
+      });
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (!data) {
@@ -233,9 +335,264 @@ export function AdminLocalServicesPanel() {
         Moderate the combined <strong>Local Pros</strong> directory. Use the
         Villager badge toggle when an owner moves in or out of The Villages.
         Public form updates replace the live listing when you approve them.
-        Each listing supports 1 main photo + up to 2 extras.
+        Each listing supports 1 main photo + up to 2 extras. Add someone
+        yourself below — that listing goes live immediately.
       </p>
-      {msg ? <div className="msg msg-ok">{msg}</div> : null}
+      {msg ? <div className={`msg msg-${msg.kind}`}>{msg.text}</div> : null}
+
+      <form
+        ref={addFormRef}
+        id="local-pros-add-form"
+        className="about-panel"
+        style={{ marginBottom: "1.25rem" }}
+        onSubmit={saveNew}
+      >
+        <h2 style={{ marginTop: 0 }}>Add a Local Pro</h2>
+        <p className="panel-hint" style={{ marginTop: 0 }}>
+          Goes live on Local Pros as soon as you save. Include at least a
+          phone, email, or website. Contact name defaults to the business name
+          if you leave it blank.
+        </p>
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="lp-add-name">Business name</label>
+            <input
+              id="lp-add-name"
+              ref={addNameRef}
+              required
+              value={add.businessName}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, businessName: e.target.value }))
+              }
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="lp-add-contact">Contact name</label>
+            <input
+              id="lp-add-contact"
+              value={add.contactName}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, contactName: e.target.value }))
+              }
+              placeholder="Defaults to business name"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="lp-add-category">Category</label>
+            <select
+              id="lp-add-category"
+              value={add.category || "Other"}
+              onChange={(e) =>
+                setAdd((p) => ({
+                  ...p,
+                  category: e.target.value as LocalServiceListing["category"],
+                }))
+              }
+            >
+              {LOCAL_PROS_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="lp-add-village">Village</label>
+            <input
+              id="lp-add-village"
+              value={add.village}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, village: e.target.value }))
+              }
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="lp-add-area">Service area / cities</label>
+            <input
+              id="lp-add-area"
+              value={add.serviceArea}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, serviceArea: e.target.value }))
+              }
+              placeholder="Lady Lake, Wildwood…"
+            />
+          </div>
+          <div className="field field-full">
+            <label htmlFor="lp-add-address">Street address</label>
+            <input
+              id="lp-add-address"
+              value={add.address}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, address: e.target.value }))
+              }
+            />
+          </div>
+          <div className="field field-full">
+            <label htmlFor="lp-add-desc">Description (optional)</label>
+            <textarea
+              id="lp-add-desc"
+              rows={3}
+              value={add.description}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, description: e.target.value }))
+              }
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="lp-add-phone">Phone</label>
+            <input
+              id="lp-add-phone"
+              value={add.phone}
+              onChange={(e) => setAdd((p) => ({ ...p, phone: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="lp-add-email">Email</label>
+            <input
+              id="lp-add-email"
+              value={add.email}
+              onChange={(e) => setAdd((p) => ({ ...p, email: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="lp-add-web">Website</label>
+            <input
+              id="lp-add-web"
+              value={add.website}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, website: e.target.value }))
+              }
+            />
+          </div>
+          <div className="field field-full">
+            <label>Photos (main + up to 2 extras)</label>
+            <p className="panel-hint" style={{ marginTop: 0 }}>
+              First photo is the card main image. {add.photos.length}/{MAX_PHOTOS}{" "}
+              photos.
+            </p>
+            {photoErr && !edit ? (
+              <div className="msg msg-err">{photoErr}</div>
+            ) : null}
+            {uploading ? (
+              <p className="panel-hint">Uploading photo…</p>
+            ) : null}
+            {add.photos.length > 0 ? (
+              <div className="local-svc-admin-edit-photos">
+                {add.photos.map((url, i) => (
+                  <div key={`${url}-${i}`} className="local-svc-admin-edit-photo">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={i === 0 ? "Main photo" : `Extra photo ${i}`}
+                    />
+                    <span className="local-svc-form-photo-badge">
+                      {i === 0 ? "Main" : `Extra ${i}`}
+                    </span>
+                    <div className="local-svc-admin-edit-photo-actions">
+                      {i > 0 ? (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          disabled={busy || uploading}
+                          onClick={() =>
+                            setAdd((p) => {
+                              const next = [...p.photos];
+                              const [picked] = next.splice(i, 1);
+                              next.unshift(picked);
+                              return { ...p, photos: next };
+                            })
+                          }
+                        >
+                          Make main
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={busy || uploading}
+                        onClick={() =>
+                          setAdd((p) => ({
+                            ...p,
+                            photos: p.photos.filter((_, idx) => idx !== i),
+                          }))
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="panel-hint">No photos yet.</p>
+            )}
+            <div className="hero-actions" style={{ marginTop: "0.65rem" }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={busy || uploading || add.photos.length >= MAX_PHOTOS}
+                onClick={() => newPhotoInputRef.current?.click()}
+              >
+                {add.photos.length === 0 ? "Add photo" : "Add another photo"}
+              </button>
+            </div>
+            <input
+              ref={newPhotoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp"
+              multiple
+              className="local-svc-sr-only"
+              tabIndex={-1}
+              onChange={(e) => {
+                onAddNewPhotos(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </div>
+          <div className="field field-full">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={add.villagerOwned}
+                onChange={(e) =>
+                  setAdd((p) => ({ ...p, villagerOwned: e.target.checked }))
+                }
+              />
+              Villager badge — owner lives in The Villages
+            </label>
+          </div>
+          <div className="field field-full">
+            <label htmlFor="lp-add-note">Admin note (internal)</label>
+            <input
+              id="lp-add-note"
+              value={add.adminNote}
+              onChange={(e) =>
+                setAdd((p) => ({ ...p, adminNote: e.target.value }))
+              }
+            />
+          </div>
+          <div className="hero-actions field-full">
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm"
+              disabled={busy || uploading}
+            >
+              {busy ? "Saving…" : "Add listing"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={busy || uploading}
+              onClick={() => {
+                setAdd(emptyFields());
+                setPhotoErr(null);
+              }}
+            >
+              Clear form
+            </button>
+          </div>
+        </div>
+      </form>
 
       <div className="hero-actions" style={{ marginBottom: "0.65rem" }}>
         <button
@@ -392,6 +749,17 @@ export function AdminLocalServicesPanel() {
                           )
                         }
                         placeholder="Lady Lake, Wildwood…"
+                      />
+                    </div>
+                    <div className="field field-full">
+                      <label>Street address</label>
+                      <input
+                        value={edit.address}
+                        onChange={(e) =>
+                          setEdit((p) =>
+                            p ? { ...p, address: e.target.value } : p
+                          )
+                        }
                       />
                     </div>
                     <div className="field field-full">

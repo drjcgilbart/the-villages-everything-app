@@ -392,6 +392,81 @@ export async function submitLocalService(input: {
   return listing;
 }
 
+/** Admin: add a listing that goes live immediately (no pending queue). */
+export async function createLocalServiceAsAdmin(input: {
+  businessName: string;
+  contactName?: string;
+  category?: string;
+  description?: string;
+  village?: string;
+  serviceArea?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  mapsUrl?: string;
+  photoUrl?: string;
+  extraPhotos?: string[];
+  photos?: string[];
+  adminNote?: string;
+  villagerOwned?: boolean;
+}): Promise<LocalServiceListing> {
+  const data = await loadLocalServicesAsync();
+  const businessName = cleanText(input.businessName, 100, "Business name", 2);
+  const contactRaw = String(input.contactName || "").trim();
+  const contactName = contactRaw
+    ? cleanText(input.contactName, 80, "Contact name", 2)
+    : businessName;
+  const descRaw = String(input.description || "")
+    .trim()
+    .replace(/\s+/g, " ");
+  if (descRaw.length > 800) throw new Error("Description is too long");
+  const category = parseCategory(input.category, "area");
+  const village = optionalText(input.village, 80);
+  const serviceArea = optionalText(input.serviceArea, 120);
+  const address = optionalText(input.address, 200);
+  const email = optionalText(input.email, 120);
+  const phone = optionalText(input.phone, 40);
+  const website = normalizeUrl(optionalText(input.website, 200));
+  const mapsUrl = normalizeUrl(optionalText(input.mapsUrl, 400), "Maps link");
+  const { photoUrl, extraPhotos } = parsePhotos(input);
+  const adminNote = optionalText(input.adminNote, 400);
+
+  if (!email && !phone && !website) {
+    throw new Error("Please include at least one of: email, phone, or website");
+  }
+
+  const now = new Date().toISOString();
+  const listing: LocalServiceListing = {
+    id: uid("svc"),
+    scope: "area",
+    businessName,
+    contactName,
+    category,
+    description: descRaw,
+    village,
+    serviceArea,
+    address,
+    phone,
+    email,
+    website,
+    mapsUrl,
+    photoUrl,
+    extraPhotos,
+    submittedByName: "Admin",
+    villagerOwned: Boolean(input.villagerOwned),
+    status: "approved",
+    createdAt: now,
+    updatedAt: now,
+    approvedAt: now,
+    adminNote,
+  };
+
+  data.listings.unshift(listing);
+  await saveLocalServicesAsync(data);
+  return listing;
+}
+
 export async function setLocalServiceStatus(
   id: string,
   status: LocalServiceModStatus
@@ -492,7 +567,7 @@ export async function updateLocalService(
       : cur.contactName;
   const description =
     input.description !== undefined
-      ? cleanText(input.description, 800, "Description", 10)
+      ? cleanText(input.description, 800, "Description", 0)
       : cur.description;
   const scope = listingScope(cur);
   const category =

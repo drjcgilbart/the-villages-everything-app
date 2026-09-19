@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import {
+  createLocalServiceAsAdmin,
   deleteLocalService,
   loadLocalServicesAsync,
   setLocalServiceStatus,
@@ -31,6 +32,33 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const action = String(body.action || "").toLowerCase();
+
+    if (action === "create") {
+      const listing = await createLocalServiceAsAdmin({
+        businessName: body.businessName,
+        contactName: body.contactName,
+        category: body.category,
+        description: body.description,
+        village: body.village,
+        serviceArea: body.serviceArea,
+        address: body.address,
+        phone: body.phone,
+        email: body.email,
+        website: body.website,
+        mapsUrl: body.mapsUrl,
+        photoUrl: body.photoUrl,
+        extraPhotos: body.extraPhotos,
+        photos: body.photos,
+        adminNote: body.adminNote,
+        villagerOwned: Boolean(body.villagerOwned),
+      });
+      return NextResponse.json({
+        ok: true,
+        listing,
+        message: `${listing.businessName} is now live on Local Pros.`,
+      });
+    }
+
     const id = String(body.id || "").trim();
     if (!id) throw new Error("id is required");
 
