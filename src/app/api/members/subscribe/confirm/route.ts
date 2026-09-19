@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionMember } from "@/lib/memberAuth";
-import { getStripe, stripeConfigured } from "@/lib/stripe";
-import { updateMemberSpace } from "@/lib/memberSpace";
-import {
-  normalizePlan,
-  planFromStripePriceId,
-  type HubPlanId,
-} from "@/lib/membershipTiers";
+import { fulfillPaidMembershipSession } from "@/lib/memberStripe";
+import { updateMemberSpaceAsync } from "@/lib/memberSpace";
+import { stripeConfigured } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 /** After Stripe Checkout success, verify session and set membership tier. */
 export async function POST(req: NextRequest) {
@@ -22,7 +19,7 @@ export async function POST(req: NextRequest) {
     !stripeConfigured() &&
     process.env.VERCEL_ENV !== "production"
   ) {
-    updateMemberSpace(member.id, { plan: "cart_path_regular" });
+    await updateMemberSpaceAsync(member.id, { plan: "cart_path_regular" });
     return NextResponse.json({
       ok: true,
       plan: "cart_path_regular",
@@ -40,45 +37,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "sessionId required" }, { status: 400 });
   }
 
-  const stripe = getStripe()!;
-  const session = await stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ["line_items.data.price"],
-  });
-  const metaMember = session.metadata?.memberId || session.client_reference_id;
-  if (metaMember !== member.id) {
-    return NextResponse.json({ error: "Session does not match member" }, { status: 403 });
+  try {
+    const result = await fulfillPaidMembershipSession(sessionId, {
+      requireMemberId: member.id,
+    });
+    return NextResponse.json({
+      ok: true,
+      plan: result.plan,
+      planLabel: result.planLabel,
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Could not apply membership";
+    const status =
+      message.includes("doesn’t match") || message.includes("doesn't match")
+        ? 403
+        : 400;
+    return NextResponse.json({ error: message }, { status });
   }
-  if (session.payment_status !== "paid" && session.status !== "complete") {
-    return NextResponse.json({ error: "Payment not complete" }, { status: 400 });
-  }
-
-  let plan: HubPlanId = normalizePlan(session.metadata?.plan || "cart_path_regular");
-  const priceId =
-    session.line_items?.data?.[0]?.price &&
-    typeof session.line_items.data[0].price === "object"
-      ? session.line_items.data[0].price.id
-      : null;
-  if (priceId) {
-    plan = planFromStripePriceId(priceId);
-  }
-  if (session.metadata?.plan) {
-    plan = normalizePlan(session.metadata.plan);
-  }
-
-  const subId =
-    typeof session.subscription === "string"
-      ? session.subscription
-      : session.subscription?.id;
-  const custId =
-    typeof session.customer === "string"
-      ? session.customer
-      : session.customer?.id;
-
-  updateMemberSpace(member.id, {
-    plan,
-    stripeSubscriptionId: subId,
-    stripeCustomerId: custId,
-  });
-
-  return NextResponse.json({ ok: true, plan });
 }

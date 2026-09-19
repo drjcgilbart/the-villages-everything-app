@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ensureDurableHydrated } from "@/lib/dataFs";
 import { getSessionMember } from "@/lib/memberAuth";
 import { getStripe, siteBaseUrl, stripeConfigured } from "@/lib/stripe";
-import { getMemberSpace, updateMemberSpace } from "@/lib/memberSpace";
+import { getMemberSpace, updateMemberSpaceAsync } from "@/lib/memberSpace";
 import {
   getTier,
   normalizePlan,
@@ -41,6 +42,7 @@ export const dynamic = "force-dynamic";
  * Without those, Checkout uses $3 / $5 / $10 per year from the membership ladder.
  */
 export async function POST(req: NextRequest) {
+  await ensureDurableHydrated();
   const member = await getSessionMember();
   if (!member) {
     return NextResponse.json({ error: "Please sign in first" }, { status: 401 });
@@ -77,7 +79,7 @@ export async function POST(req: NextRequest) {
 
   if (!stripeConfigured()) {
     if (process.env.HUB_MEMBER_DEV_UNLOCK === "true") {
-      updateMemberSpace(member.id, { plan: requested });
+      await updateMemberSpaceAsync(member.id, { plan: requested });
       return NextResponse.json({
         url: `${siteBaseUrl()}/my-space?welcome=1`,
         mode: "dev_unlock",
@@ -122,7 +124,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (session.customer && typeof session.customer === "string") {
-    updateMemberSpace(member.id, {
+    await updateMemberSpaceAsync(member.id, {
       stripeCustomerId: session.customer,
     });
   }

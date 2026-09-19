@@ -188,8 +188,29 @@ export function MySpaceDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       })
-        .then(() => load())
-        .then(() => setNote("Welcome — your membership tier is unlocked."));
+        .then(async (res) => {
+          const data = (await res.json().catch(() => ({}))) as {
+            ok?: boolean;
+            planLabel?: string;
+            error?: string;
+          };
+          if (!res.ok || !data.ok) {
+            throw new Error(data.error || "Could not unlock the paid plan");
+          }
+          await load();
+          setNote(
+            data.planLabel
+              ? `Welcome — ${data.planLabel} is unlocked.`
+              : "Welcome — your membership tier is unlocked."
+          );
+        })
+        .catch((err) => {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Paid, but the plan did not save. Ask the host to set it in Admin → Members."
+          );
+        });
     }
     if (params.get("welcome") === "1") {
       setNote("Welcome — your My Space tier is ready.");
