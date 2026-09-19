@@ -12,12 +12,13 @@ import {
   resourceKindLabel,
   telHref,
   WEALTH_HUB,
-  WEALTH_LOCAL,
   WEALTH_MONEY_PATH,
   WEALTH_OFFICIAL,
   WEALTH_SCAM_TIPS,
   WEALTH_SNAPSHOT,
+  type WealthResource,
 } from "@/lib/wealthResources";
+import { loadWealthLocalAsync } from "@/lib/wealthLocalStore";
 import { getTopicContentAsync } from "@/lib/topicContent";
 import { getTopic } from "@/lib/topics";
 
@@ -31,7 +32,7 @@ export const metadata = {
 function ResourceCard({
   r,
 }: {
-  r: (typeof WEALTH_LOCAL)[number] | (typeof WEALTH_OFFICIAL)[number];
+  r: WealthResource;
 }) {
   return (
     <article className={`about-panel wealth-resource-card accent-${r.accent}`}>
@@ -96,6 +97,7 @@ export default async function WealthPage() {
   const topic = getTopic("wealth");
   const { posts, videos, photos } = await getTopicContentAsync("wealth");
   const hasRelated = posts.length + videos.length + photos.length > 0;
+  const localPlaces = (await loadWealthLocalAsync()).places;
 
   return (
     <>
@@ -176,7 +178,7 @@ export default async function WealthPage() {
             </div>
           </div>
           <div className="wealth-resource-grid">
-            {WEALTH_LOCAL.map((r) => (
+            {localPlaces.map((r) => (
               <ResourceCard key={r.id} r={r} />
             ))}
           </div>

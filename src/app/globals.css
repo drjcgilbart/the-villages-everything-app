@@ -12676,6 +12676,45 @@ body.theme-music-open .mascot-quip-popup {
 .pocket-note-card {
   min-width: 0;
 }
+
+.admin-wealth-form {
+  margin-bottom: 1.25rem;
+}
+.admin-wealth-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem 0.85rem;
+}
+.admin-wealth-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 0;
+}
+.admin-wealth-grid input,
+.admin-wealth-grid select,
+.admin-wealth-grid textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+}
+@media (min-width: 720px) {
+  .admin-wealth-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-wealth-span {
+    grid-column: 1 / -1;
+  }
+}
 .wealth-saved {
   font-size: 0.88rem;
   font-weight: 600;

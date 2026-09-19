@@ -14,6 +14,7 @@ import { AdminPendingPanel } from "@/components/AdminPendingPanel";
 import { AdminRealEstatePanel } from "@/components/AdminRealEstatePanel";
 import { AdminSafetyPanel } from "@/components/AdminSafetyPanel";
 import { AdminSiteGatePanel } from "@/components/AdminSiteGatePanel";
+import { AdminWealthPanel } from "@/components/AdminWealthPanel";
 import { AdminYardSalePanel } from "@/components/AdminYardSalePanel";
 import type { PendingTab } from "@/lib/pendingApprovals";
 
@@ -28,6 +29,7 @@ type PortalTab =
   | "pickleball"
   | "clubs"
   | "localsvc"
+  | "wealth"
   | "forums"
   | "safety"
   | "access";
@@ -320,6 +322,13 @@ export function AdminPortal() {
           </button>
           <button
             type="button"
+            className={tab === "wealth" ? "active" : ""}
+            onClick={() => setTab("wealth")}
+          >
+            Wealth
+          </button>
+          <button
+            type="button"
             className={tab === "forums" ? "active" : ""}
             onClick={() => setTab("forums")}
           >
@@ -353,6 +362,7 @@ export function AdminPortal() {
         {tab === "pickleball" && <AdminPickleballPanel />}
         {tab === "clubs" && <AdminClubsPanel />}
         {tab === "localsvc" && <AdminLocalServicesPanel />}
+        {tab === "wealth" && <AdminWealthPanel />}
         {tab === "forums" && <AdminForumPanel />}
         {tab === "safety" && <AdminSafetyPanel />}
         {tab === "access" && <AdminSiteGatePanel />}

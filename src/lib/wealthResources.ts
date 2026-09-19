@@ -14,6 +14,28 @@ export type WealthResourceKind =
   | "insurance"
   | "local";
 
+export type WealthAccent = "palm" | "coral" | "gold" | "sky" | "lilac";
+
+export const WEALTH_RESOURCE_KINDS: { id: WealthResourceKind; label: string }[] =
+  [
+    { id: "bank", label: "Bank" },
+    { id: "credit-union", label: "Credit union" },
+    { id: "insurance", label: "Insurance" },
+    { id: "local", label: "Local" },
+    { id: "tax", label: "Tax" },
+    { id: "government", label: "Official" },
+    { id: "education", label: "Learn" },
+    { id: "scam", label: "Scam watch" },
+  ];
+
+export const WEALTH_ACCENTS: WealthAccent[] = [
+  "palm",
+  "coral",
+  "gold",
+  "sky",
+  "lilac",
+];
+
 export type WealthResource = {
   id: string;
   name: string;
@@ -26,7 +48,7 @@ export type WealthResource = {
   hours?: string;
   href?: string;
   mapsQuery?: string;
-  accent: "palm" | "coral" | "gold" | "sky" | "lilac";
+  accent: WealthAccent;
 };
 
 export const WEALTH_HUB = {

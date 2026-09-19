@@ -27,6 +27,7 @@ import {
   WEALTH_LOCAL,
   WEALTH_OFFICIAL,
   WEALTH_SCAM_TIPS,
+  type WealthResource,
 } from "@/lib/wealthResources";
 import {
   isValidTickerShape,
@@ -77,6 +78,9 @@ export function MySpaceInvestmentsBoard() {
   const [edit, setEdit] = useState<{ acct: string; hold: string } | null>(null);
   const [pocketDraft, setPocketDraft] = useState("");
   const [pocketSaved, setPocketSaved] = useState<string | null>(null);
+  const [localPlaces, setLocalPlaces] = useState<WealthResource[]>(
+    WEALTH_LOCAL as WealthResource[]
+  );
 
   const accounts = value.accounts;
   const watchlist = value.watchlist;
@@ -118,6 +122,15 @@ export function MySpaceInvestmentsBoard() {
       setQErr(e instanceof Error ? e.message : "Quotes unavailable");
     }
   }, [symbols]);
+
+  useEffect(() => {
+    fetch("/api/wealth/places", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { places?: WealthResource[] }) => {
+        if (Array.isArray(j.places) && j.places.length) setLocalPlaces(j.places);
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (ready && !pocketDraft && value.pocketNote) {
@@ -922,7 +935,7 @@ export function MySpaceInvestmentsBoard() {
         </div>
         <h4>Local banks &amp; official desks</h4>
         <div className="hero-actions">
-          {WEALTH_LOCAL.slice(0, 6).map((b) =>
+          {localPlaces.slice(0, 6).map((b) =>
             b.href ? (
               <a key={b.id} className="btn btn-ghost btn-sm" href={b.href} target="_blank" rel="noopener noreferrer">
                 {b.name}

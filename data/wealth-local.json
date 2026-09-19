@@ -1,0 +1,91 @@
+{
+  "places": [
+    {
+      "id": "midflorida",
+      "name": "MidFlorida Credit Union",
+      "kind": "credit-union",
+      "emoji": "🏦",
+      "blurb": "Regional credit union with a strong Central Florida footprint — branches and ATMs many Villagers already use for checking, savings, and everyday banking.",
+      "city": "Multiple locations · The Villages area",
+      "phone": "(866) 913-3733",
+      "href": "https://www.midflorida.com/",
+      "mapsQuery": "MidFlorida Credit Union The Villages FL",
+      "accent": "palm"
+    },
+    {
+      "id": "southstate",
+      "name": "SouthState Bank",
+      "kind": "bank",
+      "emoji": "🏧",
+      "blurb": "Regional bank with Villages-area presence — useful if you prefer full-service branch banking close to the cart path.",
+      "city": "The Villages / nearby",
+      "href": "https://www.southstatebank.com/",
+      "mapsQuery": "SouthState Bank The Villages FL",
+      "accent": "sky"
+    },
+    {
+      "id": "wells-fargo-tv",
+      "name": "Wells Fargo (local branches)",
+      "kind": "bank",
+      "emoji": "🏛️",
+      "blurb": "National bank with branches around The Villages corridor — convenient if your accounts already live there.",
+      "city": "The Villages / Lady Lake / nearby",
+      "href": "https://www.wellsfargo.com/locator/",
+      "mapsQuery": "Wells Fargo The Villages FL",
+      "accent": "gold"
+    },
+    {
+      "id": "bank-of-america-tv",
+      "name": "Bank of America (local branches)",
+      "kind": "bank",
+      "emoji": "💳",
+      "blurb": "Another national option with area branches and ATMs — map the closest one before you need a notary or a cashier’s check.",
+      "city": "The Villages area",
+      "href": "https://locators.bankofamerica.com/",
+      "mapsQuery": "Bank of America The Villages FL",
+      "accent": "coral"
+    },
+    {
+      "id": "seacoast",
+      "name": "Seacoast Bank",
+      "kind": "bank",
+      "emoji": "🌊",
+      "blurb": "Florida community bank with branches around The Villages — local flavor for checking, savings, and everyday banking.",
+      "city": "The Villages / nearby",
+      "href": "https://www.seacoastbank.com/",
+      "mapsQuery": "Seacoast Bank The Villages FL",
+      "accent": "sky"
+    },
+    {
+      "id": "pnc",
+      "name": "PNC Bank",
+      "kind": "bank",
+      "emoji": "🧡",
+      "blurb": "National bank with Villages-area branches and ATMs — handy if your accounts already live in the PNC ecosystem.",
+      "city": "The Villages area",
+      "href": "https://www.pnc.com/en/personal-banking/banking/branch-locator.html",
+      "mapsQuery": "PNC Bank The Villages FL",
+      "accent": "coral"
+    },
+    {
+      "id": "publix-banking",
+      "name": "In-store banking & ATMs",
+      "kind": "local",
+      "emoji": "🛒",
+      "blurb": "Publix and shopping plazas near squares often host ATMs and partner banking kiosks — handy when you only need cash for the farmers market.",
+      "city": "Near town squares & plazas",
+      "mapsQuery": "ATM near The Villages FL",
+      "accent": "lilac"
+    },
+    {
+      "id": "insurance-shop",
+      "name": "Florida homeowners / auto insurance",
+      "kind": "insurance",
+      "emoji": "🏠",
+      "blurb": "Insurance is a Florida sport. Compare quotes annually; Citizens and private carriers both matter. Your agent (or a trusted neighbor referral) is the move.",
+      "href": "https://www.floir.com/",
+      "accent": "gold"
+    }
+  ],
+  "updatedAt": null
+}
