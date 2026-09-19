@@ -256,7 +256,7 @@ function shortTradeLabel(c: string) {
     "Landscaping & Lawn": "Lawn",
     "Cleaning & Organizing": "Cleaning",
     "Golf Cart & Auto": "Carts",
-    "Health & Wellness": "Wellness",
+    "Health & Wellness": "Health & Wellness",
     Pets: "Pets",
     "Tech & Computers": "Tech",
     "Music & Lessons": "Lessons",
