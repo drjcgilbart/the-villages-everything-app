@@ -5,8 +5,11 @@ import { REC_CENTERS } from "./recCenters";
 import { POPULAR_CLUBS } from "./clubs";
 import { GOLF_COURSES } from "./golfClubTypes";
 import { PICKLEBALL_COURTS } from "./pickleballTypes";
-import { loadDining } from "./dining";
-import { listApprovedServices } from "./localServices";
+import { loadClubListingsAsync, listApprovedClubs } from "./clubListings";
+import { clubDetailHref } from "./clubPaths";
+import { ensureDurableHydrated } from "./dataFs";
+import { loadDining, loadDiningAsync } from "./dining";
+import { listApprovedServices, loadLocalServicesAsync } from "./localServices";
 import { getVisibleThreads, getCategoryById } from "./forum";
 import { getApprovedListings } from "./yardSale";
 import { getPosts } from "./content";
@@ -185,6 +188,20 @@ function collect(): Raw[] {
     });
   }
 
+  try {
+    for (const c of listApprovedClubs()) {
+      add({
+        title: c.name,
+        href: clubDetailHref(c),
+        snippet: `${c.category}${c.location ? ` · ${c.location}` : ""}`,
+        section: "Clubs",
+        extra: `${c.leaderName || ""} ${c.email || ""} ${c.description || ""}`,
+      });
+    }
+  } catch {
+    /* club directory optional */
+  }
+
   for (const name of GOLF_COURSES) {
     if (!name || name.toLowerCase().includes("other")) continue;
     add({
@@ -277,6 +294,21 @@ function collect(): Raw[] {
 
   cached = { at: Date.now(), rows: out };
   return out;
+}
+
+/** Hydrate Redis/Blob then search so new listings appear without a manual reindex. */
+export async function searchSiteAsync(
+  query: string,
+  limit = 20
+): Promise<SiteHit[]> {
+  await ensureDurableHydrated();
+  await Promise.all([
+    loadDiningAsync().catch(() => undefined),
+    loadLocalServicesAsync().catch(() => undefined),
+    loadClubListingsAsync().catch(() => undefined),
+  ]);
+  cached = null;
+  return searchSite(query, limit);
 }
 
 export function searchSite(query: string, limit = 20): SiteHit[] {

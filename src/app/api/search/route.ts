@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
-import { searchSite } from "@/lib/siteSearch";
+import { searchSiteAsync } from "@/lib/siteSearch";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,6 +13,6 @@ export async function GET(req: Request) {
   if (q.length < 2) {
     return NextResponse.json({ query: q, hits: [], empty: true });
   }
-  const hits = searchSite(q, 20);
+  const hits = await searchSiteAsync(q, 20);
   return NextResponse.json({ query: q, hits, empty: hits.length === 0 });
 }

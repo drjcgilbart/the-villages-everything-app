@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { searchSite } from "@/lib/siteSearch";
+import { searchSiteAsync } from "@/lib/siteSearch";
 import { SiteSearch } from "@/components/SiteSearch";
 import Link from "next/link";
 
@@ -15,7 +15,7 @@ export default async function SearchPage({
 }) {
   const { q = "" } = await searchParams;
   const query = String(q || "").trim();
-  const hits = query.length >= 2 ? searchSite(query, 40) : [];
+  const hits = query.length >= 2 ? await searchSiteAsync(query, 40) : [];
 
   return (
     <div className="shell page-narrow">
@@ -26,7 +26,7 @@ export default async function SearchPage({
         <p className="panel-hint">
           {hits.length
             ? `${hits.length} match${hits.length === 1 ? "" : "es"} for “${query}”.`
-            : `Nothing on this website matched “${query}”. Use Search X or Search the internet in the box above.`}
+            : `Nothing on this website matched “${query}”.`}
         </p>
       ) : (
         <p className="panel-hint">Type a village, restaurant, rec center, club, or topic.</p>
