@@ -310,7 +310,8 @@ export async function upsertRestaurant(
   input: Partial<Restaurant> & {
     name: string;
     cuisine: Cuisine;
-    description: string;
+    description?: string;
+    cuisineOther?: string;
   }
 ) {
   const data = await loadDiningAsync();
@@ -325,6 +326,12 @@ export async function upsertRestaurant(
       name: String(input.name).trim().slice(0, 120),
       slug: input.slug ? slugify(input.slug) : prev.slug,
       cuisine: input.cuisine || prev.cuisine,
+      cuisineOther:
+        (input.cuisine || prev.cuisine) === "Other"
+          ? String(input.cuisineOther ?? prev.cuisineOther ?? "")
+              .trim()
+              .slice(0, 60) || undefined
+          : undefined,
       tags: Array.isArray(input.tags) ? input.tags : prev.tags,
       area: String(input.area ?? prev.area ?? "").slice(0, 80),
       address: input.address !== undefined ? String(input.address).slice(0, 160) : prev.address,
@@ -348,13 +355,17 @@ export async function upsertRestaurant(
       name,
       slug,
       cuisine: input.cuisine,
+      cuisineOther:
+        input.cuisine === "Other"
+          ? String(input.cuisineOther || "").trim().slice(0, 60) || undefined
+          : undefined,
       tags: Array.isArray(input.tags) ? input.tags : [],
       area: String(input.area || "The Villages").slice(0, 80),
       address: input.address ? String(input.address).slice(0, 160) : undefined,
       phone: input.phone ? String(input.phone).slice(0, 40) : undefined,
       website: input.website ? String(input.website).slice(0, 200) : undefined,
       priceRange: (input.priceRange || "$$") as PriceRange,
-      description: String(input.description).slice(0, 2000),
+      description: String(input.description ?? "").slice(0, 2000),
       specialties: Array.isArray(input.specialties) ? input.specialties : [],
       imageUrl: input.imageUrl || undefined,
       featured: !!input.featured,
@@ -392,6 +403,7 @@ export async function submitRestaurantSuggestion(input: {
   description?: string;
   specialties?: string[] | string;
   tags?: string[] | string;
+  cuisineOther?: string;
   suggestedBy: string;
   suggestedByEmail?: string;
   note?: string;
@@ -404,11 +416,11 @@ export async function submitRestaurantSuggestion(input: {
   if (suggestedBy.length < 2) throw new Error("Please enter your name");
 
   const description = String(input.description || "").trim().slice(0, 2000);
-  if (description.length < 10) {
-    throw new Error(
-      "Add a short description so we know why this spot belongs in the guide"
-    );
-  }
+  const cuisine = normalizeCuisine(input.cuisine);
+  const cuisineOther =
+    cuisine === "Other"
+      ? String(input.cuisineOther || "").trim().slice(0, 60) || undefined
+      : undefined;
 
   // Soft dedupe against live list and pending suggestions
   const nameKey = name.toLowerCase();
@@ -437,7 +449,8 @@ export async function submitRestaurantSuggestion(input: {
   const suggestion: RestaurantSuggestion = {
     id: uid("sug"),
     name,
-    cuisine: normalizeCuisine(input.cuisine),
+    cuisine,
+    cuisineOther,
     tags: splitList(input.tags).slice(0, 12),
     area: String(input.area || "The Villages").trim().slice(0, 80) || "The Villages",
     address: input.address
@@ -512,6 +525,7 @@ export async function approveRestaurantSuggestion(id: string): Promise<{
       name: sug.name,
       slug,
       cuisine: sug.cuisine,
+      cuisineOther: sug.cuisineOther,
       tags: sug.tags || [],
       area: sug.area || "The Villages",
       address: sug.address,

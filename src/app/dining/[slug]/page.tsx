@@ -14,7 +14,7 @@ import {
   loadDiningAsync,
   topByCuisine,
 } from "@/lib/dining";
-import { cuisineArtPath } from "@/lib/diningTypes";
+import { cuisineArtPath, cuisineLabel } from "@/lib/diningTypes";
 import { formatDate, paragraphs } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +56,9 @@ export default async function RestaurantPage({
       <div className="article-hero">
         <div className="shell">
           <div className="card-meta">
-            <span className="pill pill-cuisine">{restaurant.cuisine}</span>
+            <span className="pill pill-cuisine">
+              {cuisineLabel(restaurant.cuisine, restaurant.cuisineOther)}
+            </span>
             <span>{restaurant.priceRange}</span>
             <span>{restaurant.area}</span>
             {myRank != null && (
@@ -136,7 +138,8 @@ export default async function RestaurantPage({
               <h2>Details</h2>
               <ul className="restaurant-details-list">
                 <li>
-                  <strong>Cuisine</strong> {restaurant.cuisine}
+                  <strong>Cuisine</strong>{" "}
+                  {cuisineLabel(restaurant.cuisine, restaurant.cuisineOther)}
                 </li>
                 <li>
                   <strong>Area</strong> {restaurant.area}

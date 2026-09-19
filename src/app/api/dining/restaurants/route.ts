@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       name: body.name,
       slug: body.slug,
       cuisine,
+      cuisineOther: body.cuisineOther,
       tags,
       area: body.area,
       address: body.address,

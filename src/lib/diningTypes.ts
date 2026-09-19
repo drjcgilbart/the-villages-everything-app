@@ -21,6 +21,8 @@ export const CUISINES = [
   "Southern",
   "Coffee/Tea/Beverages",
   "Ice Cream & Sweet Treats",
+  "Delicatessen",
+  "Other",
 ] as const;
 
 export type Cuisine = (typeof CUISINES)[number];
@@ -51,7 +53,10 @@ const CUISINE_ALIASES: Record<string, Cuisine> = {
   sweets: "Ice Cream & Sweet Treats",
   "frozen yogurt": "Ice Cream & Sweet Treats",
   "ice cream & sweet treats": "Ice Cream & Sweet Treats",
-  other: FALLBACK_CUISINE,
+  deli: "Delicatessen",
+  delicatessen: "Delicatessen",
+  "deli-catessen": "Delicatessen",
+  other: "Other",
 };
 
 export function isCuisine(value: string): value is Cuisine {
@@ -103,7 +108,17 @@ export const CUISINE_ART: Record<Cuisine, string> = {
   Southern: "/graphics/cuisines/southern-v2.jpg", // wild turkey
   "Coffee/Tea/Beverages": "/graphics/cuisines/coffee-tea-v2.jpg", // snowy egret
   "Ice Cream & Sweet Treats": "/graphics/cuisines/sweets-v2.jpg", // key deer
+  Delicatessen: "/graphics/cuisines/deli-v2.jpg", // opossum
+  Other: "/graphics/cuisines/other-v2.jpg", // raccoon
 };
+
+/** Label for cards — Other plus the neighbor's suggested type when present. */
+export function cuisineLabel(cuisine: string, cuisineOther?: string | null) {
+  const key = normalizeCuisine(cuisine);
+  const extra = String(cuisineOther || "").trim();
+  if (key === "Other" && extra) return `Other · ${extra}`;
+  return key;
+}
 
 export function cuisineArtPath(cuisine: string): string {
   const key = normalizeCuisine(cuisine);
@@ -118,6 +133,8 @@ export type Restaurant = {
   name: string;
   slug: string;
   cuisine: Cuisine;
+  /** When cuisine is Other, the neighbor's suggested type. */
+  cuisineOther?: string;
   /** Secondary tags e.g. pizza, early-bird, outdoor */
   tags: string[];
   area: string;
@@ -174,6 +191,8 @@ export type RestaurantSuggestion = {
   id: string;
   name: string;
   cuisine: Cuisine;
+  /** When cuisine is Other, the neighbor's suggested type. */
+  cuisineOther?: string;
   tags: string[];
   area: string;
   address?: string;

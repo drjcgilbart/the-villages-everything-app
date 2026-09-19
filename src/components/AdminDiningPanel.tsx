@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CUISINES,
   PRICE_RANGES,
+  cuisineLabel,
   type Cuisine,
   type Interview,
   type PriceRange,
@@ -21,6 +22,7 @@ type RestForm = {
   name: string;
   slug: string;
   cuisine: Cuisine;
+  cuisineOther: string;
   tags: string;
   area: string;
   address: string;
@@ -49,6 +51,7 @@ const emptyRest: RestForm = {
   name: "",
   slug: "",
   cuisine: "American",
+  cuisineOther: "",
   tags: "",
   area: "",
   address: "",
@@ -286,6 +289,7 @@ export function AdminDiningPanel() {
       name: r.name,
       slug: r.slug,
       cuisine: r.cuisine,
+      cuisineOther: r.cuisineOther || "",
       tags: (r.tags || []).join(", "),
       area: r.area || "",
       address: r.address || "",
@@ -513,7 +517,9 @@ export function AdminDiningPanel() {
                 <article key={s.id} className="about-panel admin-list-item">
                   <div className="card-meta">
                     <span className="pill">{s.status}</span>
-                    <span className="pill pill-cuisine">{s.cuisine}</span>
+                    <span className="pill pill-cuisine">
+                      {cuisineLabel(s.cuisine, s.cuisineOther)}
+                    </span>
                     <span>{s.priceRange}</span>
                     <span>{s.area}</span>
                     <time dateTime={s.createdAt}>
@@ -666,6 +672,21 @@ export function AdminDiningPanel() {
                 </select>
               </div>
             </div>
+            {restForm.cuisine === "Other" ? (
+              <div className="field">
+                <label>Other cuisine (suggested)</label>
+                <input
+                  value={restForm.cuisineOther}
+                  onChange={(e) =>
+                    setRestForm((f) => ({
+                      ...f,
+                      cuisineOther: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Ethiopian, Peruvian, fusion…"
+                />
+              </div>
+            ) : null}
             <div className="form-row">
               <div className="field">
                 <label>Area</label>
@@ -700,13 +721,12 @@ export function AdminDiningPanel() {
               </div>
             </div>
             <div className="field">
-              <label>Description</label>
+              <label>Description (optional)</label>
               <textarea
                 value={restForm.description}
                 onChange={(e) =>
                   setRestForm((f) => ({ ...f, description: e.target.value }))
                 }
-                required
               />
             </div>
             <div className="form-row">
@@ -761,7 +781,7 @@ export function AdminDiningPanel() {
                 <div>
                   <strong>{r.name}</strong>
                   <span>
-                    {r.cuisine} · {r.priceRange} · {r.stats.averageRating || "—"}★ (
+                    {cuisineLabel(r.cuisine, r.cuisineOther)} · {r.priceRange} · {r.stats.averageRating || "—"}★ (
                     {r.stats.reviewCount}) · {r.area}
                   </span>
                 </div>

@@ -44,6 +44,7 @@ export async function POST(req: Request) {
       const suggestion = await submitRestaurantSuggestion({
         name: body.name,
         cuisine: body.cuisine,
+        cuisineOther: body.cuisineOther,
         area: body.area,
         address: body.address,
         phone: body.phone,
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
         details: {
           restaurant: suggestion.name,
           cuisine: suggestion.cuisine,
+          cuisineOther: suggestion.cuisineOther,
           area: suggestion.area,
           address: suggestion.address,
           phone: suggestion.phone,

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Restaurant, RestaurantStats } from "@/lib/diningTypes";
-import { cuisineArtPath } from "@/lib/diningTypes";
+import { cuisineArtPath, cuisineLabel } from "@/lib/diningTypes";
 import { DiningFavoriteButton } from "@/components/DiningFavoriteButton";
 import { StarRating } from "@/components/StarRating";
 
@@ -38,7 +38,9 @@ export function RestaurantCard({
           <div>
             <h3>{restaurant.name}</h3>
             <p className="restaurant-meta">
-              <span className="pill pill-cuisine">{restaurant.cuisine}</span>
+              <span className="pill pill-cuisine">
+                {cuisineLabel(restaurant.cuisine, restaurant.cuisineOther)}
+              </span>
               <span>{restaurant.priceRange}</span>
               <span>{restaurant.area}</span>
             </p>

@@ -21,7 +21,7 @@ import {
   toggleDiningFavorite,
   writeDiningFavorites,
 } from "@/lib/diningFavorites";
-import { cuisineArtPath, type Restaurant } from "@/lib/diningTypes";
+import { cuisineArtPath, cuisineLabel, type Restaurant } from "@/lib/diningTypes";
 import { getRecCenter } from "@/lib/recCenters";
 import {
   readRecFavorites,
@@ -58,6 +58,7 @@ type DiningListItem = Pick<
   | "name"
   | "slug"
   | "cuisine"
+  | "cuisineOther"
   | "area"
   | "priceRange"
   | "description"
@@ -160,6 +161,7 @@ export function MySpaceFavoritesHub({
                   name: r.name,
                   slug: r.slug,
                   cuisine: r.cuisine,
+                  cuisineOther: r.cuisineOther,
                   area: r.area,
                   priceRange: r.priceRange,
                   description: r.description,
@@ -406,7 +408,7 @@ export function MySpaceFavoritesHub({
                         key={r.id}
                         href={`/dining/${r.slug}`}
                         title={r.name}
-                        subtitle={`${r.cuisine} · ${r.area}`}
+                        subtitle={`${cuisineLabel(r.cuisine, r.cuisineOther)} · ${r.area}`}
                         image={r.imageUrl || cuisineArtPath(r.cuisine)}
                       />
                     ))}
@@ -644,7 +646,7 @@ export function MySpaceFavoritesHub({
                   <article key={r.id} className="about-panel ms-fav-card">
                     <div className="ms-fav-card-body">
                       <span className="pill">
-                        {r.cuisine} · ★
+                        {cuisineLabel(r.cuisine, r.cuisineOther)} · ★
                       </span>
                       <h4 style={{ margin: "0.4rem 0 0.25rem" }}>
                         <Link href={`/dining/${r.slug}`}>{r.name}</Link>

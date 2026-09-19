@@ -175,6 +175,9 @@ function mapCuisine(raw: string, amenity?: string): Cuisine {
   if (/\bice.?cream|gelato|frozen yogurt|froyo|dessert|sweet treat/.test(t)) {
     return "Ice Cream & Sweet Treats";
   }
+  if (/\bdeli\b|delicatessen|pastrami|corned beef/.test(t)) {
+    return "Delicatessen";
+  }
   if (/\bbakery|pastry|donut/.test(t)) return "Bakery";
   if (/\bcoffee|tea|cafe|café|espresso|beverage/.test(t) || amenity === "cafe") {
     return "Coffee/Tea/Beverages";

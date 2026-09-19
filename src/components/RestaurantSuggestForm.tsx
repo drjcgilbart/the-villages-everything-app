@@ -15,6 +15,7 @@ export function RestaurantSuggestForm() {
   const [specialties, setSpecialties] = useState("");
   const [suggestedBy, setSuggestedBy] = useState("");
   const [suggestedByEmail, setSuggestedByEmail] = useState("");
+  const [cuisineOther, setCuisineOther] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export function RestaurantSuggestForm() {
           action: "submit",
           name,
           cuisine,
+          cuisineOther: cuisine === "Other" ? cuisineOther : "",
           area,
           address,
           phone,
@@ -59,6 +61,7 @@ export function RestaurantSuggestForm() {
       setSpecialties("");
       setNote("");
       setCuisine("American");
+      setCuisineOther("");
       setPriceRange("$$");
       setArea("The Villages");
     } catch (err) {
@@ -105,6 +108,21 @@ export function RestaurantSuggestForm() {
         </div>
       </div>
 
+      {cuisine === "Other" ? (
+        <div className="field">
+          <label htmlFor="sug-cuisine-other">
+            What cuisine should we call it?
+          </label>
+          <input
+            id="sug-cuisine-other"
+            value={cuisineOther}
+            onChange={(e) => setCuisineOther(e.target.value)}
+            maxLength={60}
+            placeholder="e.g. Ethiopian, Peruvian, fusion…"
+          />
+        </div>
+      ) : null}
+
       <div className="form-row">
         <div className="field">
           <label htmlFor="sug-area">Area</label>
@@ -133,12 +151,11 @@ export function RestaurantSuggestForm() {
       </div>
 
       <div className="field">
-        <label htmlFor="sug-desc">Why list it? / short description</label>
+        <label htmlFor="sug-desc">Why list it? / short description (optional)</label>
         <textarea
           id="sug-desc"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          required
           maxLength={2000}
           rows={3}
           placeholder="What should neighbors know — vibe, early-bird energy, must-order…"
