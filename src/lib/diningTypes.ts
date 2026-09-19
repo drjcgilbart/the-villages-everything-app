@@ -1,40 +1,95 @@
 export const CUISINES = [
-  "American",
-  "Italian",
-  "Mexican",
+  "Mediterranean",
   "Asian",
+  "American",
+  "Indian",
+  "Greek",
+  "Burgers",
+  "Pizza",
   "Seafood",
-  "BBQ",
+  "Mexican",
+  "Italian",
+  "Barbecue",
+  "Caribbean",
+  "Bakery",
+  "Fast food",
   "Breakfast",
   "Steakhouse",
-  "Mediterranean",
-  "Other",
+  "Cuban",
+  "Latin American",
+  "Irish",
+  "Southern",
 ] as const;
 
 export type Cuisine = (typeof CUISINES)[number];
+
+const FALLBACK_CUISINE: Cuisine = "American";
+export const FALLBACK_CUISINE_ART = "/graphics/cuisines/other-v2.jpg";
+
+const CUISINE_ALIASES: Record<string, Cuisine> = {
+  bbq: "Barbecue",
+  barbeque: "Barbecue",
+  "bar-b-q": "Barbecue",
+  "bar-b-que": "Barbecue",
+  "fast-food": "Fast food",
+  fastfood: "Fast food",
+  "latin-american": "Latin American",
+  latin: "Latin American",
+  other: FALLBACK_CUISINE,
+};
+
+export function isCuisine(value: string): value is Cuisine {
+  return (CUISINES as readonly string[]).includes(value);
+}
+
+export function cuisineSlug(cuisine: string): string {
+  return String(cuisine || "")
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function normalizeCuisine(raw: unknown): Cuisine {
+  const c = String(raw || "").trim();
+  if (isCuisine(c)) return c;
+  const key = c.toLowerCase();
+  if (CUISINE_ALIASES[key]) return CUISINE_ALIASES[key];
+  const match = CUISINES.find((item) => item.toLowerCase() === key);
+  return match || FALLBACK_CUISINE;
+}
 
 /**
  * Whimsical card art for each cuisine (under /public/graphics/cuisines).
  * Each card features a different cute Florida creature as the waiter.
  */
 export const CUISINE_ART: Record<Cuisine, string> = {
-  American: "/graphics/cuisines/american-v2.jpg", // brown pelican
-  Italian: "/graphics/cuisines/italian-v2.jpg", // manatee
-  Mexican: "/graphics/cuisines/mexican-v2.jpg", // armadillo
+  Mediterranean: "/graphics/cuisines/mediterranean-v2.jpg", // white ibis
   Asian: "/graphics/cuisines/asian-v2.jpg", // sea turtle
+  American: "/graphics/cuisines/american-v2.jpg", // brown pelican
+  Indian: "/graphics/cuisines/indian-v2.jpg", // flamingo
+  Greek: "/graphics/cuisines/greek-v2.jpg", // sandhill crane
+  Burgers: "/graphics/cuisines/burgers-v2.jpg", // river otter
+  Pizza: "/graphics/cuisines/pizza-v2.jpg", // gopher tortoise
   Seafood: "/graphics/cuisines/seafood-v2.jpg", // bottlenose dolphin
-  BBQ: "/graphics/cuisines/bbq-v2.jpg", // alligator
+  Mexican: "/graphics/cuisines/mexican-v2.jpg", // armadillo
+  Italian: "/graphics/cuisines/italian-v2.jpg", // manatee
+  Barbecue: "/graphics/cuisines/bbq-v2.jpg", // alligator
+  Caribbean: "/graphics/cuisines/caribbean-v2.jpg", // monk parakeet
+  Bakery: "/graphics/cuisines/bakery-v2.jpg", // Florida scrub jay
+  "Fast food": "/graphics/cuisines/fast-food-v2.jpg", // gray fox
   Breakfast: "/graphics/cuisines/breakfast-v2.jpg", // roseate spoonbill
   Steakhouse: "/graphics/cuisines/steakhouse-v2.jpg", // Florida black bear
-  Mediterranean: "/graphics/cuisines/mediterranean-v2.jpg", // white ibis
-  Other: "/graphics/cuisines/other-v2.jpg", // raccoon
+  Cuban: "/graphics/cuisines/cuban-v2.jpg", // Cuban tree frog
+  "Latin American": "/graphics/cuisines/latin-american-v2.jpg", // green iguana
+  Irish: "/graphics/cuisines/irish-v2.jpg", // great blue heron
+  Southern: "/graphics/cuisines/southern-v2.jpg", // wild turkey
 };
 
 export function cuisineArtPath(cuisine: string): string {
-  if ((CUISINES as readonly string[]).includes(cuisine)) {
-    return CUISINE_ART[cuisine as Cuisine];
-  }
-  return CUISINE_ART.Other;
+  const key = normalizeCuisine(cuisine);
+  return CUISINE_ART[key] || FALLBACK_CUISINE_ART;
 }
 
 export const PRICE_RANGES = ["$", "$$", "$$$", "$$$$"] as const;

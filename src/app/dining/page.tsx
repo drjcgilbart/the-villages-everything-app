@@ -8,7 +8,6 @@ import { RestaurantSuggestForm } from "@/components/RestaurantSuggestForm";
 import { StarRating } from "@/components/StarRating";
 import {
   allCuisineLeaders,
-  cuisinesWithRestaurants,
   diningSummary,
   getInterviews,
   loadDining,
@@ -17,7 +16,7 @@ import {
   withStats,
 } from "@/lib/dining";
 import { formatDate } from "@/lib/format";
-import { CUISINE_ART } from "@/lib/diningTypes";
+import { CUISINES, CUISINE_ART, cuisineSlug } from "@/lib/diningTypes";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -31,7 +30,6 @@ export default function DiningPage() {
   const summary = diningSummary();
   // Include unrated spots so jump anchors always exist for listed cuisines
   const cuisineLeaders = allCuisineLeaders(8, 0);
-  const jumpCuisines = cuisinesWithRestaurants();
   const topOverall = overallLeaders(5, 1);
   const interviews = getInterviews({ featuredOnly: false }).slice(0, 4);
   const recent = recentReviews(6);
@@ -88,10 +86,10 @@ export default function DiningPage() {
         <div className="shell">
           <div className="dining-jump">
             <span className="dining-jump-label">Jump to cuisine</span>
-            {jumpCuisines.map((c) => (
+            {CUISINES.map((c) => (
               <a
                 key={c}
-                href={`#cuisine-${c.toLowerCase()}`}
+                href={`#cuisine-${cuisineSlug(c)}`}
                 className="dining-chip"
               >
                 {c}
@@ -157,7 +155,7 @@ export default function DiningPage() {
               {cuisineLeaders.map(({ cuisine, leaders }) => (
                 <div
                   key={cuisine}
-                  id={`cuisine-${cuisine.toLowerCase()}`}
+                  id={`cuisine-${cuisineSlug(cuisine)}`}
                   className="cuisine-board about-panel dining-anchor-target"
                 >
                   <div className="cuisine-board-art">
@@ -175,6 +173,14 @@ export default function DiningPage() {
                       {leaders.length} spot{leaders.length === 1 ? "" : "s"}
                     </span>
                   </div>
+                  {leaders.length === 0 ? (
+                    <p className="leader-unrated" style={{ padding: "0 1rem 1rem" }}>
+                      No spots listed yet.{" "}
+                      <Link href="#suggest" className="text-link">
+                        Suggest a spot
+                      </Link>
+                    </p>
+                  ) : (
                   <ol className="cuisine-leader-list">
                     {leaders.map((r) => (
                       <li key={r.id} className="cuisine-leader-row">
@@ -212,6 +218,7 @@ export default function DiningPage() {
                       </li>
                     ))}
                   </ol>
+                  )}
                 </div>
               ))}
             </div>

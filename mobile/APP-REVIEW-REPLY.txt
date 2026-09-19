@@ -1,87 +1,52 @@
-THE VILLAGES EVERYTHING APP — App Review reply (Guideline 2.1 Information Needed)
-Copy everything below the line into:
-1) App Store Connect → the rejection Resolution Center reply
-2) App Review Information → Notes (keep for future submissions)
-
-Fill in the two demo-account lines before you send.
+THE VILLAGES EVERYTHING APP — App Review reply (Guideline 2.1)
+Paste EVERYTHING below the line into:
+1) App Store Connect → Reply to App Review  (must stay under 4000 characters)
+2) App Review Information → Notes  (same text; Save)
 
 --------------------------------------------------------------------------------
-
 Hello App Review,
 
-This is a new individual developer account. Below is the information you requested, plus a screen recording from a physical iPhone.
+New individual developer account. Requested details plus a physical-iPhone screen recording are attached.
 
 1) SCREEN RECORDING
-Attached. Recorded on a physical iPhone running the latest iOS. It starts at app launch and shows:
-
-- Launch splash, then the live home page (village / dining / rec-center companion)
-- Public browsing: Dining, Rec Centers, Calendar
-- Account registration (Request membership) and sign-in
-- User-generated content: Community Forums and a yard-sale or dining review
-- Report and Block on a forum post
-- Account deletion: My Space → Membership tiers → Delete my account
+Attached. Recorded on a physical iPhone (latest iOS). Starts at app launch and shows: splash then home; Dining, Rec Centers, Calendar; Request membership and sign-in; Community Forums; Report and Block; account deletion (My Space → Plans → Delete my account).
 
 2) PURPOSE AND AUDIENCE
-The Villages Everything App is a free community companion for residents and neighbors of The Villages, Florida (an active-adult community). It solves the problem of scattered local information by putting village directories, dining ratings, rec centers, town squares, calendar, golf/pickleball tools, moderated yard sale, and a private “My Space” dashboard in one place.
+Free unofficial companion for residents and visitors of The Villages, Florida (active-adult community): village directories, dining ratings, rec centers, town squares, calendar, golf/pickleball, moderated yard sale, and private My Space. Built by resident Jonathan Gilbart. Adults only; not for children. Not affiliated with The Villages operators.
 
-It is not affiliated with The Villages® operators or developers. Built by a resident (Jonathan Gilbart) for neighbors. Target audience: adults living in or visiting The Villages, Florida. Not directed at children.
-
-Public website (same content the iOS app displays): https://www.thevillageseverythingapp.com
+Site: https://www.thevillageseverythingapp.com
 Privacy: https://www.thevillageseverythingapp.com/privacy
-Safety (report / block / delete account): https://www.thevillageseverythingapp.com/safety
+Safety: https://www.thevillageseverythingapp.com/safety
 Support: jonathan@thevillageseverythingapp.com
 
-3) HOW TO ACCESS MAIN FEATURES
-The iOS app is a native shell (splash, icon, safe area) that opens the live website.
+3) HOW TO ACCESS FEATURES
+Native shell (splash, icon, safe area) opening the live site. No beta password.
 
-No site-wide beta password is required.
+Public, no account: Home, Dining, Rec Centers, Town Squares, My Village, Calendar, Golf, Pickleball, Local Pros, Real Estate, Forums (read).
 
-Public features (no account): Home, Dining, Rec Centers, Town Squares, My Village directory, Calendar, Golf Zone, Pickleball, Local Pros, Real Estate, Forums (read).
+Free membership: My Space → Request membership (name, email, password 8+). Pending members can sign in; yard-sale posts wait for admin approval.
 
-Optional free membership (Porch Waver):
-- In the app tap My Space or Request membership
-- Register with name, email, password (8+ characters)
-- Pending members can sign in; posting yard-sale listings waits for admin approval
-- Reviewer demo account is already approved (no purchase needed)
-
-Demo account (approved, free Porch Waver — please do not delete this one):
+Demo account (approved — please do not delete):
 Email: reviewer@thevillageseverythingapp.com
-Password: [SET THIS ON THE LIVE SITE, THEN PASTE IT HERE]
+Password: Sunshine
 
-Account deletion (Guideline 5.1.1v):
-Sign in → My Space → Membership tiers tab → scroll to “Delete my account” → type DELETE → Permanently delete account.
-That removes membership, private My Space boards, and the session. Public posts remain as “Deleted neighbor.” Yard-sale listings are taken down.
+Delete account (5.1.1v): Sign in → My Space → Plans tab → Delete my account → type DELETE → Permanently delete account. Removes membership, private boards, and session. Public posts stay as “Deleted neighbor.” Yard-sale listings come down.
 
-User-generated content:
-- Community Forums (posts/replies)
-- Dining reviews
-- Community Yard Sale listings (admin-approved before they go live)
-- Best of the Month and Local Pros submissions (admin-approved)
+UGC: Forums, dining reviews, admin-approved yard sale, Best of the Month, Local Pros.
 
-Report and Block:
-- Report is on forum posts, yard-sale listings, and dining reviews (no sign-in required to report)
-- Block requires sign-in; blocked neighbors’ posts stay hidden for that member
-- Reports email the host and appear in Admin → Safety; we hide/remove violating content, usually within 24 hours
+Report: on forum posts, yard-sale listings, and dining reviews (no sign-in required).
+Block: requires sign-in; blocked neighbors stay hidden. Reports go to Admin → Safety; we remove violating content, usually within 24 hours.
 
-Paid Hub membership ($3 / $5 / $10 per year; Porch Waver is $0) and optional tips are sold only on the website in Safari, not inside the iOS app. The store app does not offer In-App Purchase. Reviewers do not need to pay. All public directories and the free Porch Waver account work without payment.
+Paid plans ($3 / $5 / $10 per year) and tips are sold only on the website in Safari, not in the iOS app. No In-App Purchase. Reviewers do not need to pay.
 
 4) EXTERNAL SERVICES
-- Hosting: Vercel (thevillageseverythingapp.com)
-- Durable storage: Redis and/or Vercel Blob for membership and community data
-- Payments (website only, not in the iOS binary): Stripe Checkout for optional Hub membership and “Buy me a cup of Joe” tips. We do not store card numbers.
-- Maps / weather / real-estate / YouTube: linked or embedded third-party sources the user chooses to open
-- Email: Resend or SendGrid for admin notifications (reports, membership requests)
-- No advertising SDK, no IDFA, no third-party ads, no AI service required for core features
-
-Encryption: standard HTTPS only (ITSAppUsesNonExemptEncryption = false).
+Hosting: Vercel. Storage: Redis and/or Vercel Blob. Payments (website only): Stripe Checkout; we do not store cards. Maps, weather, real estate, YouTube: user-chosen links/embeds. Email: Resend or SendGrid for admin notices. No ads SDK, no IDFA, no AI required for core features. Encryption: standard HTTPS only (ITSAppUsesNonExemptEncryption = false).
 
 5) REGIONAL DIFFERENCES
-The app functions the same in all App Store regions. Content is about The Villages, Florida, USA, in English. There are no geo-locked features, no region-specific SKUs, and no other-language builds.
+Same in all App Store regions. English. Content is The Villages, Florida, USA. No geo-locks or region SKUs.
 
 6) REGULATED INDUSTRY / THIRD-PARTY MATERIAL
-Not a highly regulated industry. We are not a bank, broker, medical provider, gambling operator, or licensed real-estate brokerage.
-
-Original site graphics were created for this project. YouTube embeds and outbound links to Golf The Villages, weather, maps, and similar public resources are attributed to those sites. The Villages® name is used geographically to describe the community; the app is independent and not affiliated with The Villages operators. Trademark disclaimer is on the site (About / footer).
+Not a bank, broker, medical provider, gambling operator, or licensed brokerage. Original graphics. Third-party links/embeds are attributed. “The Villages” is used geographically; independent; disclaimer on About/footer.
 
 Thank you,
 Jonathan Gilbart

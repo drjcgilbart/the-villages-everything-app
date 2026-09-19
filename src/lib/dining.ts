@@ -12,7 +12,7 @@ import type {
   RestaurantStats,
   Review,
 } from "./diningTypes";
-import { CUISINES, PRICE_RANGES } from "./diningTypes";
+import { CUISINES, PRICE_RANGES, normalizeCuisine } from "./diningTypes";
 
 const DINING_FILE = "dining.json";
 
@@ -107,10 +107,14 @@ export function loadDining(): DiningData {
   const raw = readJsonFile<DiningData>(DINING_FILE);
   if (!raw) return seedData();
   return {
-    restaurants: Array.isArray(raw.restaurants) ? raw.restaurants : [],
+    restaurants: Array.isArray(raw.restaurants)
+      ? raw.restaurants.map((r) => ({ ...r, cuisine: normalizeCuisine(r.cuisine) }))
+      : [],
     reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
     interviews: Array.isArray(raw.interviews) ? raw.interviews : [],
-    suggestions: Array.isArray(raw.suggestions) ? raw.suggestions : [],
+    suggestions: Array.isArray(raw.suggestions)
+      ? raw.suggestions.map((s) => ({ ...s, cuisine: normalizeCuisine(s.cuisine) }))
+      : [],
     updatedAt: raw.updatedAt || null,
   };
 }
@@ -207,7 +211,7 @@ export function allCuisineLeaders(limit = 5, minReviews = 0) {
   return CUISINES.map((cuisine) => ({
     cuisine,
     leaders: topByCuisine(cuisine, limit, minReviews),
-  })).filter((block) => block.leaders.length > 0);
+  }));
 }
 
 /** Cuisines that currently have at least one restaurant listed. */
@@ -317,10 +321,7 @@ export function deleteRestaurant(id: string) {
   return saveDining(data);
 }
 
-function normalizeCuisine(raw: unknown): Cuisine {
-  const c = String(raw || "").trim();
-  return CUISINES.includes(c as Cuisine) ? (c as Cuisine) : "Other";
-}
+
 
 function normalizePrice(raw: unknown): PriceRange {
   const p = String(raw || "").trim();

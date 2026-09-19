@@ -6,8 +6,8 @@ import {
   upsertRestaurant,
   withStats,
 } from "@/lib/dining";
-import type { Cuisine, PriceRange } from "@/lib/diningTypes";
-import { CUISINES, PRICE_RANGES } from "@/lib/diningTypes";
+import type { PriceRange } from "@/lib/diningTypes";
+import { PRICE_RANGES, normalizeCuisine } from "@/lib/diningTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   }
   try {
     const body = await req.json();
-    const cuisine = CUISINES.includes(body.cuisine) ? (body.cuisine as Cuisine) : "Other";
+    const cuisine = normalizeCuisine(body.cuisine);
     const priceRange = PRICE_RANGES.includes(body.priceRange)
       ? (body.priceRange as PriceRange)
       : "$$";
