@@ -315,7 +315,7 @@ export function AdminPortal() {
             className={tab === "localsvc" ? "active" : ""}
             onClick={() => setTab("localsvc")}
           >
-            Local services
+            Local Pros
             {(tabCounts.localsvc || 0) > 0 ? (
               <span className="admin-tab-badge">{tabCounts.localsvc}</span>
             ) : null}

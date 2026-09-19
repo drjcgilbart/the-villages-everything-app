@@ -21,7 +21,7 @@ const TAB_LABEL: Record<PendingTab, string> = {
   golf: "Golf",
   pickleball: "Pickleball",
   clubs: "Clubs",
-  localsvc: "Local services",
+  localsvc: "Local Pros",
 };
 
 export function AdminPendingPanel({
