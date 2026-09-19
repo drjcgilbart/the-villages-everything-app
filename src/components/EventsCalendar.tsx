@@ -1,7 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CalendarEvent } from "@/lib/calendarEventsTypes";
+import {
+  CAL_THEME_LEGEND,
+  calendarThemeForEvents,
+  calendarThemeFromText,
+} from "@/lib/calendarThemes";
 
 type Feed = {
   year: number;
@@ -55,26 +61,45 @@ function EventCard({
   e: CalendarEvent;
   isPast?: boolean;
 }) {
+  const theme = calendarThemeFromText(
+    `${e.venue || ""} ${e.location || ""} ${e.sourceLabel || ""}`
+  );
   return (
-    <article className={`cal-event-card${isPast ? " is-past" : ""}`}>
-      <div className="cal-event-card-top">
-        <span className="pill cal-pill-cat">{e.category}</span>
-        {e.timeLabel ? (
-          <span className="cal-event-time">{e.timeLabel}</span>
-        ) : null}
+    <article
+      className={`cal-event-card theme-${theme.id}${isPast ? " is-past" : ""}`}
+    >
+      <div className="cal-event-media">
+        <Image
+          src={theme.photo}
+          alt=""
+          width={120}
+          height={90}
+          className="cal-event-thumb"
+        />
+        <span className="cal-event-emoji-badge" aria-hidden>
+          {theme.emoji}
+        </span>
       </div>
-      <h4>{e.title}</h4>
-      {e.venue ? <p className="cal-event-venue">{e.venue}</p> : null}
-      {e.description ? (
-        <p className="cal-event-desc">{e.description}</p>
-      ) : null}
-      <div className="cal-event-foot">
-        <span className="cal-event-source">{e.sourceLabel}</span>
-        {e.url ? (
-          <a href={e.url} target="_blank" rel="noopener noreferrer">
-            Details →
-          </a>
+      <div className="cal-event-body">
+        <div className="cal-event-card-top">
+          <span className="pill cal-pill-cat">{theme.label}</span>
+          {e.timeLabel ? (
+            <span className="cal-event-time">{e.timeLabel}</span>
+          ) : null}
+        </div>
+        <h4>{e.title}</h4>
+        {e.venue ? <p className="cal-event-venue">{e.venue}</p> : null}
+        {e.description ? (
+          <p className="cal-event-desc">{e.description}</p>
         ) : null}
+        <div className="cal-event-foot">
+          <span className="cal-event-source">{e.sourceLabel}</span>
+          {e.url ? (
+            <a href={e.url} target="_blank" rel="noopener noreferrer">
+              Details →
+            </a>
+          ) : null}
+        </div>
       </div>
     </article>
   );
@@ -162,46 +187,73 @@ export function EventsCalendar() {
   }
 
   const cells = buildGrid(year, month);
-  const dayEvents = (feed.events || []).filter((e) => e.date === selected);
+  const eventsByDate: Record<string, CalendarEvent[]> = {};
+  for (const e of feed.events || []) {
+    (eventsByDate[e.date] ||= []).push(e);
+  }
+  const dayEvents = eventsByDate[selected || ""] || [];
   const upcoming = feed.upcoming || [];
   const past = (feed.past || []).slice().reverse();
 
   return (
     <div className="events-cal">
-      <div className="events-cal-toolbar">
-        <div className="events-cal-nav">
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => shiftMonth(-1)}
-          >
-            ← Prev
-          </button>
-          <h2 className="events-cal-month">{monthLabel(year, month)}</h2>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => shiftMonth(1)}
-          >
-            Next →
-          </button>
-        </div>
-        <div className="events-cal-meta">
-          <span>
+      <div className="events-cal-festive">
+        <Image
+          src="/graphics/mascot-calendar.jpg"
+          alt=""
+          width={88}
+          height={88}
+          className="events-cal-mascot"
+        />
+        <div className="events-cal-festive-copy">
+          <span className="kicker">Cart-path nights</span>
+          <div className="events-cal-nav">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => shiftMonth(-1)}
+            >
+              ← Prev
+            </button>
+            <h2 className="events-cal-month">{monthLabel(year, month)}</h2>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => shiftMonth(1)}
+            >
+              Next →
+            </button>
+          </div>
+          <p className="events-cal-meta-line">
             {feed.eventCount} events in snapshot
             {feed.updatedAt
               ? ` · updated ${new Date(feed.updatedAt).toLocaleString()}`
               : ""}
-          </span>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={refreshing}
-            onClick={forceRefresh}
-          >
-            {refreshing ? "Refreshing…" : "Refresh listings"}
-          </button>
+            {" · "}
+            <button
+              type="button"
+              className="text-link"
+              disabled={refreshing}
+              onClick={forceRefresh}
+              style={{
+                background: "none",
+                border: 0,
+                padding: 0,
+                font: "inherit",
+                cursor: refreshing ? "wait" : "pointer",
+              }}
+            >
+              {refreshing ? "Refreshing…" : "Refresh listings"}
+            </button>
+          </p>
         </div>
+        <Image
+          src="/graphics/theme-calendar.jpg"
+          alt=""
+          width={220}
+          height={120}
+          className="events-cal-banner"
+        />
       </div>
 
       {feed.lastError ? (
@@ -214,18 +266,29 @@ export function EventsCalendar() {
       <div className="events-cal-layout">
         <div className="about-panel events-cal-grid-wrap">
           <div className="events-cal-weekdays">
-            {WEEKDAYS.map((d) => (
-              <div key={d} className="events-cal-wd">
+            {WEEKDAYS.map((d, i) => (
+              <div
+                key={d}
+                className={`events-cal-wd${i === 0 || i === 6 ? " is-weekend" : ""}`}
+              >
                 {d}
               </div>
             ))}
           </div>
           <div className="events-cal-grid">
             {cells.map((cell, i) => {
+              const weekend = i % 7 === 0 || i % 7 === 6;
               if (!cell) {
-                return <div key={`e-${i}`} className="events-cal-cell is-empty" />;
+                return (
+                  <div
+                    key={`e-${i}`}
+                    className={`events-cal-cell is-empty${weekend ? " is-weekend" : ""}`}
+                  />
+                );
               }
-              const count = feed.byDate[cell.key] || 0;
+              const dayEv = eventsByDate[cell.key] || [];
+              const count = dayEv.length || feed.byDate[cell.key] || 0;
+              const theme = calendarThemeForEvents(dayEv);
               const isToday = cell.key === feed.todayKey;
               const isSelected = cell.key === selected;
               const isPast = cell.key < feed.todayKey;
@@ -233,50 +296,47 @@ export function EventsCalendar() {
                 <button
                   key={cell.key}
                   type="button"
-                  className={`events-cal-cell${isToday ? " is-today" : ""}${
-                    isSelected ? " is-selected" : ""
-                  }${isPast ? " is-past" : ""}${count ? " has-events" : ""}`}
+                  className={`events-cal-cell theme-${theme.id}${
+                    isToday ? " is-today" : ""
+                  }${isSelected ? " is-selected" : ""}${
+                    isPast ? " is-past" : ""
+                  }${count ? " has-events" : ""}${weekend ? " is-weekend" : ""}`}
                   onClick={() => setSelected(cell.key)}
                 >
+                  {isToday ? (
+                    <span className="events-cal-star" aria-hidden>
+                      ★
+                    </span>
+                  ) : null}
                   <span className="events-cal-daynum">{cell.day}</span>
                   {count > 0 ? (
-                    <span className="events-cal-dots" aria-label={`${count} events`}>
-                      {Math.min(count, 3) === 1 && <i />}
-                      {Math.min(count, 3) === 2 && (
-                        <>
-                          <i />
-                          <i />
-                        </>
-                      )}
-                      {Math.min(count, 3) >= 3 && (
-                        <>
-                          <i />
-                          <i />
-                          <i />
-                        </>
-                      )}
-                      {count > 3 ? (
-                        <em className="events-cal-more">+{count - 3}</em>
-                      ) : null}
+                    <span
+                      className="events-cal-mark"
+                      aria-label={`${count} events`}
+                    >
+                      <span className="events-cal-emoji" aria-hidden>
+                        {theme.emoji}
+                      </span>
+                      <span className="events-cal-count">{count}</span>
                     </span>
-                  ) : (
-                    <span className="events-cal-dots is-none" />
-                  )}
+                  ) : null}
                 </button>
               );
             })}
           </div>
-          <p className="events-cal-legend">
-            <span className="events-cal-legend-item">
-              <i className="is-today-swatch" /> Today
-            </span>
-            <span className="events-cal-legend-item">
-              <i className="is-dot-swatch" /> Has events
-            </span>
-            <span className="events-cal-legend-item is-muted">
-              Past days this month stay visible
-            </span>
-          </p>
+          <ul className="events-cal-legend" aria-label="Calendar colors">
+            <li>
+              <span className="events-cal-star-swatch" aria-hidden>
+                ★
+              </span>{" "}
+              Today
+            </li>
+            {CAL_THEME_LEGEND.filter((t) => t.id !== "show").map((t) => (
+              <li key={t.id} className={`theme-${t.id}`}>
+                <i /> {t.emoji} {t.label}
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="events-cal-day-panel about-panel">
@@ -315,20 +375,27 @@ export function EventsCalendar() {
             <p className="cal-muted">No upcoming events in this month view.</p>
           ) : (
             <ul className="cal-agenda">
-              {upcoming.slice(0, 24).map((e) => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    className="cal-agenda-btn"
-                    onClick={() => setSelected(e.date)}
-                  >
-                    <strong>{formatDayHeading(e.date)}</strong>
-                    <span>{e.timeLabel || "All day-ish"}</span>
-                    <em>{e.title}</em>
-                    {e.venue ? <small>{e.venue}</small> : null}
-                  </button>
-                </li>
-              ))}
+              {upcoming.slice(0, 24).map((e) => {
+                const theme = calendarThemeFromText(
+                  `${e.venue || ""} ${e.location || ""} ${e.sourceLabel || ""}`
+                );
+                return (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      className={`cal-agenda-btn theme-${theme.id}`}
+                      onClick={() => setSelected(e.date)}
+                    >
+                      <strong>
+                        {theme.emoji} {formatDayHeading(e.date)}
+                      </strong>
+                      <span>{e.timeLabel || "All day-ish"}</span>
+                      <em>{e.title}</em>
+                      {e.venue ? <small>{e.venue}</small> : null}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -341,20 +408,27 @@ export function EventsCalendar() {
             </p>
           ) : (
             <ul className="cal-agenda cal-agenda-past">
-              {past.slice(0, 18).map((e) => (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    className="cal-agenda-btn"
-                    onClick={() => setSelected(e.date)}
-                  >
-                    <strong>{formatDayHeading(e.date)}</strong>
-                    <span>{e.timeLabel || ""}</span>
-                    <em>{e.title}</em>
-                    {e.venue ? <small>{e.venue}</small> : null}
-                  </button>
-                </li>
-              ))}
+              {past.slice(0, 18).map((e) => {
+                const theme = calendarThemeFromText(
+                  `${e.venue || ""} ${e.location || ""} ${e.sourceLabel || ""}`
+                );
+                return (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      className={`cal-agenda-btn theme-${theme.id}`}
+                      onClick={() => setSelected(e.date)}
+                    >
+                      <strong>
+                        {theme.emoji} {formatDayHeading(e.date)}
+                      </strong>
+                      <span>{e.timeLabel || ""}</span>
+                      <em>{e.title}</em>
+                      {e.venue ? <small>{e.venue}</small> : null}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
