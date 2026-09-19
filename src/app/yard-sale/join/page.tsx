@@ -1,6 +1,6 @@
 import { MemberJoinForm } from "@/components/MemberJoinForm";
 
-export const metadata = { title: "Join Yard Sale Members" };
+export const metadata = { title: "Request membership" };
 
 export default async function YardSaleJoinPage({
   searchParams,
@@ -19,12 +19,12 @@ export default async function YardSaleJoinPage({
           <h1>
             {householdToken
               ? "Join this household"
-              : "Become a Yard Sale member"}
+              : "Become a member"}
           </h1>
           <p>
             {householdToken
               ? "Create your own login. Your My Space boards stay on your account — they are not shared with the paying neighbor."
-              : "Request membership to post items for sale or free. The site admin reviews each request before you can list."}
+              : "Request membership to use My Space, favorites, and the rest of the Hub. The site admin reviews each request before your account is approved."}
           </p>
         </div>
       </div>

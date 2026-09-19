@@ -55,7 +55,7 @@ export function MemberJoinForm(props: { householdToken?: string }) {
         kind: "ok",
         text:
           data.message ||
-          "Request submitted! You can sign in with this password. Posting listings still needs admin approval.",
+          "Request submitted! You can sign in with this password. Admin still reviews the request before the full member tools unlock.",
       });
       setPassword("");
       if (data.householdJoined) {
@@ -112,7 +112,7 @@ export function MemberJoinForm(props: { householdToken?: string }) {
           />
         </div>
         <div className="field">
-          <label>Phone (optional — buyers may use this)</label>
+          <label>Phone (optional)</label>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} />
         </div>
         <div className="field">
