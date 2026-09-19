@@ -800,7 +800,7 @@ export const MAIN_TOPICS: {
     matchPrefixes: ["/golf-cart-hero"],
     blurb:
       "Mario Kart energy on the cart paths — pick a square, a cart, and a Florida critter, then race.",
-    image: "/graphics/theme-golf-cart-hero.png",
+    image: "/graphics/theme-golf-cart-hero-v2.png",
   },
   {
     href: "/calendar",
