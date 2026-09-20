@@ -6,6 +6,13 @@ import { GolfClubHub } from "@/components/GolfClubHub";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
+import { golfBadgesForName } from "@/lib/golfBadges";
+import { publicGolfFeed } from "@/lib/golfClub";
+import {
+  FOURSOME_SECTIONS,
+  GOLF_COURSES,
+  GOLF_COURSE_WRITE_IN,
+} from "@/lib/golfClubTypes";
 import {
   GOLF_ART,
   GOLF_FEATURE_CARDS,
@@ -28,6 +35,17 @@ export default async function GolfZonePage() {
   const topic = getTopic("golf-zone");
   const { posts, videos, photos } = await getTopicContentAsync("golf-zone");
   const hasRelated = posts.length + videos.length + photos.length > 0;
+  const golfFeed = await publicGolfFeed();
+  const badgeNames = new Set<string>();
+  for (const r of golfFeed.handicapLeaders) badgeNames.add(r.playerName);
+  for (const r of golfFeed.courseLeaders) badgeNames.add(r.playerName);
+  for (const r of golfFeed.recentRounds) badgeNames.add(r.playerName);
+  for (const a of golfFeed.aces) badgeNames.add(a.playerName);
+  const playerBadges: Record<string, ReturnType<typeof golfBadgesForName>> = {};
+  for (const name of badgeNames) {
+    const badges = golfBadgesForName(name);
+    if (badges.length) playerBadges[name] = badges;
+  }
 
   return (
     <>
@@ -187,7 +205,14 @@ export default async function GolfZonePage() {
               birdie-caliber round · double gold ring ≈ eagle-caliber round.
             </p>
           </div>
-          <GolfClubHub />
+          <GolfClubHub
+            initialFeed={{
+              ...golfFeed,
+              playerBadges,
+              courses: GOLF_COURSES.filter((c) => c !== GOLF_COURSE_WRITE_IN),
+              sections: FOURSOME_SECTIONS,
+            }}
+          />
         </div>
       </section>
 

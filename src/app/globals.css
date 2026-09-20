@@ -11281,6 +11281,21 @@ body.theme-music-open .mascot-quip-popup {
     white-space: nowrap;
   }
 
+  .nav-close-hint {
+    max-width: min(16rem, calc(100vw - 5.5rem));
+    align-items: flex-start;
+  }
+
+  .nav-close-hint .nav-first-hint-text {
+    white-space: normal;
+    line-height: 1.2;
+    font-size: 0.78rem;
+  }
+
+  .hub-header.hub-menu-open .hub-header-top > .site-search {
+    display: none;
+  }
+
   .hub-mobile-nav-backdrop {
     display: block;
     position: fixed;
@@ -11353,19 +11368,33 @@ body.theme-music-open .mascot-quip-popup {
     top: 100%;
     left: 0;
     right: 0;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
     background: rgba(255, 248, 238, 0.98);
     border-bottom: 1px solid var(--line);
     padding: 0.55rem 0.75rem 0.9rem;
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
     max-height: min(72dvh, calc(100dvh - 100%));
+    overflow-x: hidden;
     overflow-y: auto;
     z-index: 40;
     box-shadow: 0 16px 32px rgba(28, 36, 48, 0.16);
   }
 
-  .main-nav.hub-mobile-nav.open {
+  .site-header.hub-menu-open {
+    overflow-x: hidden;
+  }
+
+  .site-header.hub-menu-open .main-nav.hub-mobile-nav.open {
     display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   .hub-mobile-intro {
@@ -11379,9 +11408,13 @@ body.theme-music-open .mascot-quip-popup {
   /* Always 3 columns on phones so the full menu fits one screen */
   .hub-mobile-links {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.3rem;
     padding: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   .hub-mobile-links a,
@@ -11400,10 +11433,13 @@ body.theme-music-open .mascot-quip-popup {
     font-size: 0.68rem;
     line-height: 1.15;
     color: var(--muted);
+    min-width: 0;
     min-height: 3.05rem;
+    max-width: 100%;
     white-space: normal;
     hyphens: auto;
     overflow-wrap: anywhere;
+    flex: none;
   }
 
   .hub-mobile-links .hub-topic-icon {

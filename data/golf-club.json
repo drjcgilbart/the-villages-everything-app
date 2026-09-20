@@ -1,0 +1,28 @@
+{
+  "rounds": [],
+  "foursomes": [],
+  "aces": [
+    {
+      "id": "ace-mtq74ovd-81ecad",
+      "playerName": "Marilyn",
+      "course": "Red Fox",
+      "hole": 1,
+      "playDate": "2026-09-06",
+      "story": "Marilyn from The Village of Richmond scores her first ever hole-in-one on the Red Fox Executive Course.",
+      "photoUrl": "/api/media/mtq74omu-ace-Hole-in-one_for_Marilyn_from_Richmond_at_Red_Fox_9-6-26.jpg",
+      "status": "approved",
+      "createdAt": "2026-09-06T19:19:54.601Z"
+    },
+    {
+      "id": "ace-mtdhc328-b22813",
+      "playerName": "Julia Morgan",
+      "course": "Belle Aire",
+      "hole": 1,
+      "playDate": "2026-08-28",
+      "photoUrl": "/api/media/mtdhc2rl-ace-Hole-in-one_for_Julia_Morgan_at_Bellaire_8-28-26.jpg",
+      "status": "approved",
+      "createdAt": "2026-08-28T21:44:35.456Z"
+    }
+  ],
+  "updatedAt": "2026-09-06T19:52:01.773Z"
+}

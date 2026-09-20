@@ -25,7 +25,7 @@ import { GOLF_ART } from "@/lib/golfResources";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 import { prepareUploadImageFile } from "@/lib/browserImage";
 
-type Feed = {
+export type GolfHubFeed = {
   handicapLeaders: GolfHandicapLeader[];
   courseLeaders: GolfCourseLeader[];
   recentRounds: GolfRound[];
@@ -117,8 +117,12 @@ function CourseWriteIn({
   );
 }
 
-export function GolfClubHub() {
-  const [feed, setFeed] = useState<Feed | null>(null);
+export function GolfClubHub({
+  initialFeed = null,
+}: {
+  initialFeed?: GolfHubFeed | null;
+}) {
+  const [feed, setFeed] = useState<GolfHubFeed | null>(initialFeed);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -165,7 +169,7 @@ export function GolfClubHub() {
       const res = await fetch("/api/golf", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not load");
-      setFeed(data);
+      setFeed(data as GolfHubFeed);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load");

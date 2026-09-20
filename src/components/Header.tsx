@@ -296,7 +296,9 @@ export function Header({
           >
             Pages {pillsVisible ? "▴" : "▾"}
           </button>
-          <div className={`nav-toggle-wrap${showMenuHint ? " is-hinting" : ""}`}>
+          <div
+            className={`nav-toggle-wrap${showMenuHint || open ? " is-hinting" : ""}`}
+          >
             <button
               type="button"
               className={`nav-toggle${open ? " is-open" : ""}`}
@@ -315,6 +317,15 @@ export function Header({
                   ←
                 </span>
                 <span className="nav-first-hint-text">CLICK HERE FIRST!</span>
+              </p>
+            ) : open ? (
+              <p className="nav-first-hint nav-close-hint">
+                <span className="nav-first-hint-arrow" aria-hidden="true">
+                  ←
+                </span>
+                <span className="nav-first-hint-text">
+                  Press Here to Close Hamburger Menu
+                </span>
               </p>
             ) : null}
           </div>
@@ -355,17 +366,6 @@ export function Header({
           className={`main-nav hub-mobile-nav ${open ? "open" : ""}`}
           aria-label="Main"
         >
-          <div className="hub-mobile-nav-head">
-            <p className="hub-mobile-intro">Where to first, cart pilot?</p>
-            <button
-              type="button"
-              className="hub-mobile-close"
-              onClick={() => setOpen(false)}
-            >
-              Close menu
-            </button>
-          </div>
-          <SiteSearch compact />
           <div className="hub-mobile-links hub-mobile-main-topics">
             {MAIN_TOPICS.map((item) =>
               topicLink(item, { onClick: () => setOpen(false) })
