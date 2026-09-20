@@ -2777,15 +2777,67 @@ a.my-space-link-card:hover {
 }
 
 /* My Space · daily dashboard (weather-app port) */
+.ms-dash-nav-wrap {
+  margin: 0 0 1.25rem;
+}
+
+.ms-dash-nav-label-row {
+  margin: 0 0 0.45rem;
+}
+
+.ms-dash-nav-label {
+  margin: 0;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--palm-deep);
+}
+
+.ms-dash-nav-hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.ms-dash-nav-current {
+  display: none;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(232, 184, 74, 0.22);
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.ms-dash-nav-change {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--palm-deep);
+}
+
 .ms-dash-nav {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin: 0 0 1.25rem;
+  margin: 0;
   padding: 0.35rem;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: rgba(255, 253, 249, 0.9);
+}
+
+.ms-board-anchor {
+  scroll-margin-top: 8.5rem;
 }
 
 .ms-dash-nav-btn {
@@ -2820,6 +2872,16 @@ a.my-space-link-card:hover {
 
 .ms-dash-nav-icon {
   font-size: 1.05rem;
+}
+
+@media (max-width: 860px) {
+  .ms-dash-nav-wrap.is-collapsed .ms-dash-nav {
+    display: none;
+  }
+
+  .ms-dash-nav-wrap.is-collapsed .ms-dash-nav-current {
+    display: flex;
+  }
 }
 
 .ms-hub-group {
@@ -11363,9 +11425,9 @@ body.theme-music-open .mascot-quip-popup {
 
   .main-nav.hub-mobile-nav {
     display: none;
-    position: absolute;
-    /* Below the whole header so the hamburger stays tappable */
-    top: 100%;
+    position: fixed;
+    /* Sit just below the sticky header — not clipped by header overflow */
+    top: var(--hub-header-h, 9rem);
     left: 0;
     right: 0;
     width: 100%;
@@ -11377,15 +11439,12 @@ body.theme-music-open .mascot-quip-popup {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
-    max-height: min(72dvh, calc(100dvh - 100%));
+    max-height: calc(100dvh - var(--hub-header-h, 9rem));
     overflow-x: hidden;
     overflow-y: auto;
-    z-index: 40;
+    overscroll-behavior: contain;
+    z-index: 45;
     box-shadow: 0 16px 32px rgba(28, 36, 48, 0.16);
-  }
-
-  .site-header.hub-menu-open {
-    overflow-x: hidden;
   }
 
   .site-header.hub-menu-open .main-nav.hub-mobile-nav.open {

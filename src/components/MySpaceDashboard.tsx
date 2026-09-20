@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MySpaceInvestmentsBoard } from "@/components/MySpaceInvestmentsBoard";
 import {
   MySpaceCalendarBoard,
@@ -140,7 +140,19 @@ export function MySpaceDashboard() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [tab, setTab] = useState<DashTab>("home");
+  const [toolsOpen, setToolsOpen] = useState(true);
+  const skipBoardScroll = useRef(true);
   const [inNativeApp, setInNativeApp] = useState(false);
+
+  useEffect(() => {
+    if (skipBoardScroll.current || toolsOpen) return;
+    const id = window.setTimeout(() => {
+      document
+        .getElementById("ms-board")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [tab, toolsOpen]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -436,6 +448,18 @@ export function MySpaceDashboard() {
     ];
 
   const onPlans = tab === "membership";
+  const currentTool = tabs.find((t) => t.id === tab) || tabs[0];
+
+  function goToTab(id: DashTab) {
+    setTab(id);
+    const collapse =
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 860px)").matches;
+    if (collapse) {
+      skipBoardScroll.current = false;
+      setToolsOpen(false);
+    }
+  }
 
   return (
     <div className="my-space" id="ms-top">
@@ -610,29 +634,52 @@ export function MySpaceDashboard() {
       </div>
       )}
 
-      <nav className="ms-dash-nav" aria-label="My Space dashboard">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`ms-dash-nav-btn ${tab === t.id ? "active" : ""} ${locked(t.boardId) ? "is-locked" : ""}`}
-            onClick={() => setTab(t.id)}
-            aria-selected={tab === t.id}
-          >
-            <span className="ms-dash-nav-icon" aria-hidden>
-              {t.icon}
-            </span>
-            <span>{t.label}</span>
-          </button>
-        ))}
-      </nav>
+      <div className={`ms-dash-nav-wrap${toolsOpen ? "" : " is-collapsed"}`}>
+        <div className="ms-dash-nav-label-row">
+          <p className="ms-dash-nav-label">My Space tools</p>
+          <p className="ms-dash-nav-hint">
+            Private boards for this login — not the Hub pages in the top menu.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="ms-dash-nav-current"
+          onClick={() => setToolsOpen(true)}
+          aria-expanded={toolsOpen}
+        >
+          <span>
+            Now viewing:{" "}
+            <strong>
+              {currentTool.icon} {currentTool.label}
+            </strong>
+          </span>
+          <span className="ms-dash-nav-change">Show My Space tools ▾</span>
+        </button>
+        <nav className="ms-dash-nav" aria-label="My Space tools">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`ms-dash-nav-btn ${tab === t.id ? "active" : ""} ${locked(t.boardId) ? "is-locked" : ""}`}
+              onClick={() => goToTab(t.id)}
+              aria-selected={tab === t.id}
+            >
+              <span className="ms-dash-nav-icon" aria-hidden>
+                {t.icon}
+              </span>
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
 
+      <div id="ms-board" className="ms-board-anchor">
       {tab === "home" && (
         <section className="my-space-block">
           <p style={{ color: "var(--muted)", marginTop: 0 }}>
             {visitor
-              ? "Use the tabs above for Weather, Health, Pets, and the rest. Sign in to open your boards — public Hub pages stay free."
-              : "Use the tabs above to open Weather, Health, Pets, and your other boards. Plan details live on Plans."}
+              ? "Use My Space tools above for Weather, Health, Pets, and the rest. Sign in to open your boards — public Hub pages stay free."
+              : "Use My Space tools above to open Weather, Health, Pets, and your other boards. Plan details live on Plans."}
           </p>
           {locked("weather") ? <MySpaceWeatherStrip /> : null}
           {!visitor && planRank < 3 ? (
@@ -648,7 +695,7 @@ export function MySpaceDashboard() {
                   font: "inherit",
                   cursor: "pointer",
                 }}
-                onClick={() => setTab("membership")}
+                onClick={() => goToTab("membership")}
               >
                 See Plans
               </button>
@@ -826,7 +873,7 @@ export function MySpaceDashboard() {
       )}
 
       {tab === "favorites" && (
-        <section className="my-space-block" data-privacy-block="Favorites">
+        <section id="ms-favorites" className="my-space-block" data-privacy-block="Favorites">
           <h3 className="my-space-block-title">Favorites</h3>
           <MySpacePrivacySection
             board="favorites"
@@ -1164,6 +1211,7 @@ export function MySpaceDashboard() {
         </div>
       </section>
       )}
+      </div>
 
       <p className="mkt-disclaimer">
         Plans:{" "}

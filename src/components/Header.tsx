@@ -86,6 +86,7 @@ export function Header({
   );
   const [hovering, setHovering] = useState(false);
   const scrolledAwayRef = useRef(isGamePage);
+  const headerRef = useRef<HTMLElement>(null);
 
   const autoVisible = isGamePage ? hovering : !scrolledAway;
   const pillsVisible =
@@ -106,6 +107,25 @@ export function Header({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node) return;
+    const sync = () => {
+      node.style.setProperty(
+        "--hub-header-h",
+        `${Math.round(node.getBoundingClientRect().height)}px`
+      );
+    };
+    sync();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
+    ro?.observe(node);
+    window.addEventListener("resize", sync);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", sync);
+    };
+  }, [open, pillsVisible, native, pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -219,6 +239,7 @@ export function Header({
 
   return (
     <header
+      ref={headerRef}
       className={`site-header hub-header${pillsVisible ? "" : " pills-collapsed"}${
         isGamePage && pillsVisible ? " pills-overlay" : ""
       }${open ? " hub-menu-open" : ""}`}
