@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { CalendarHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { EventsCalendar } from "@/components/EventsCalendar";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -36,6 +37,9 @@ export default async function CalendarPage() {
               <a href="#events-calendar" className="btn btn-primary">
                 Open calendar
               </a>
+              <a href="#my-calendar" className="btn btn-ghost">
+                My dates
+              </a>
               <Link href="/town-squares" className="btn btn-ghost">
                 Town Squares
               </Link>
@@ -58,6 +62,8 @@ export default async function CalendarPage() {
           />
         </div>
       </div>
+
+      <CalendarHubMemberTools />
 
       <section className="section" id="events-calendar">
         <div className="shell">

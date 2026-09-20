@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { EntertainmentHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PostCard } from "@/components/PostCard";
@@ -69,6 +70,9 @@ export default async function TownSquaresPage() {
               <a href="#squares" className="btn btn-ghost">
                 The squares
               </a>
+              <a href="#my-nights" className="btn btn-ghost">
+                My nights
+              </a>
             </div>
           </div>
           <PageHeroMascot
@@ -77,6 +81,8 @@ export default async function TownSquaresPage() {
           />
         </div>
       </div>
+
+      <EntertainmentHubMemberTools />
 
       <section className="section" id="whats-on-section" style={{ paddingBottom: 0 }}>
         <div className="shell">

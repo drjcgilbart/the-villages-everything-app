@@ -3031,7 +3031,8 @@ button.ms-home-card:hover {
   gap: 0.15rem;
 }
 
-.golf-member-tools {
+.golf-member-tools,
+.hub-member-tools {
   scroll-margin-top: 8.5rem;
 }
 

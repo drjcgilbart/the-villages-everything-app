@@ -59,6 +59,13 @@ export const PICKLEBALL_FEATURE_CARDS = [
     blurb: "DUPR, Pickleballers clubs, rec calendar, and the court diagram.",
     image: PICKLEBALL_ART.kitchen,
   },
+  {
+    id: "my-pickleball",
+    href: "#my-pickleball",
+    title: "My pickleball",
+    blurb: "DUPR log and matches on this phone. Unlocks with Lanai Legend — same Pickleball page.",
+    image: PICKLEBALL_ART.leaderboard,
+  },
 ] as const;
 
 export const PICKLEBALL_SNAPSHOT = [

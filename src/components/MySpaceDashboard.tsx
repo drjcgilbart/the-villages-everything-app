@@ -3,22 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MySpaceInvestmentsBoard } from "@/components/MySpaceInvestmentsBoard";
 import {
-  MySpaceCalendarBoard,
-  MySpaceHealthLog,
   MySpacePetSchedule,
   MySpaceRoyaltyLounge,
 } from "@/components/MySpaceModules";
 import {
-  MySpaceEntertainmentBoard,
   MySpaceFoodBoard,
   MySpaceMaintenanceBoard,
   MySpaceMemoriesBoard,
-  MySpaceNewsBoard,
-  MySpacePickleballLogBoard,
 } from "@/components/MySpaceNextBoards";
 import { GlassDoorPreview } from "@/components/GlassDoorPreview";
+import { MY_SPACE_HUB_JUMPS } from "@/lib/hubMemberBridges";
 import { MySpaceWeatherBoard } from "@/components/MySpaceWeatherBoard";
 import { MySpaceWeatherStrip } from "@/components/MySpaceWeatherStrip";
 import { MySpaceFavoritesHub } from "@/components/MySpaceFavoritesHub";
@@ -232,12 +227,31 @@ export function MySpaceDashboard() {
       setNote("Square Royalty is unlocked for one month. Poke every board. Subscribe if you want to keep it.");
     }
     const tabParam = (params.get("tab") || "").toLowerCase();
-    if (
-      tabParam === "golf" ||
-      tabParam === "golfLog" ||
-      window.location.hash === "#ms-golf-log"
-    ) {
-      window.location.replace("/golf-zone#my-scorecard");
+    const hubJumpByParam: Record<string, string> = {
+      golf: "golfLog",
+      golflog: "golfLog",
+      pickleball: "pickleballLog",
+      pickleballlog: "pickleballLog",
+      health: "health",
+      investments: "investments",
+      wealth: "investments",
+      news: "news",
+      calendar: "calendar",
+      entertainment: "entertainment",
+    };
+    const hubJumpByHash: Record<string, string> = {
+      "#ms-golf-log": "golfLog",
+      "#ms-pb-log": "pickleballLog",
+      "#ms-health": "health",
+      "#ms-markets": "investments",
+      "#ms-news": "news",
+      "#ms-calendar": "calendar",
+      "#ms-entertainment": "entertainment",
+    };
+    const jumpKey =
+      hubJumpByParam[tabParam] || hubJumpByHash[window.location.hash];
+    if (jumpKey && MY_SPACE_HUB_JUMPS[jumpKey]) {
+      window.location.replace(MY_SPACE_HUB_JUMPS[jumpKey] as string);
       return;
     }
     if (
@@ -460,8 +474,9 @@ export function MySpaceDashboard() {
   const currentTool = tabs.find((t) => t.id === tab) || tabs[0];
 
   function goToTab(id: DashTab) {
-    if (id === "golfLog") {
-      router.push("/golf-zone#my-scorecard");
+    const jump = MY_SPACE_HUB_JUMPS[id];
+    if (jump) {
+      router.push(jump);
       return;
     }
     setTab(id);
@@ -921,61 +936,39 @@ export function MySpaceDashboard() {
       {tab === "investments" && (
       <section id="ms-markets" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("investments").label}</h3>
-        {!locked("investments") && f?.portfolio ? (
-          <div data-privacy-block="Investments">
-            <MySpacePrivacySection
-              board="portfolio"
-              title={getBoard("investments").label}
-              memberId={member?.id}
-            >
-              {sampleHint}
-              <MySpaceInvestmentsBoard />
-            </MySpacePrivacySection>
-          </div>
-        ) : (
-          glass("investments")
-        )}
+        <p className="panel-hint">
+          Investments live on the Wealth page — public markets plus your board
+          when it is unlocked.
+        </p>
+        <Link href="/wealth#my-investments" className="btn btn-primary btn-sm">
+          Open Wealth
+        </Link>
       </section>
       )}
 
       {tab === "news" && (
       <section id="ms-news" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("news").label}</h3>
-        {!locked("news") && f?.newsPrefs ? (
-          <div data-privacy-block="News people">
-            <MySpacePrivacySection
-              board="news"
-              title={getBoard("news").label}
-              memberId={member?.id}
-            >
-              {sampleHint}
-              <MySpaceNewsBoard />
-            </MySpacePrivacySection>
-          </div>
-        ) : (
-          glass("news")
-        )}
+        <p className="panel-hint">
+          News is one page now — public Local News plus your mix when it is
+          unlocked.
+        </p>
+        <Link href="/news#my-news" className="btn btn-primary btn-sm">
+          Open Local News
+        </Link>
       </section>
       )}
 
       {tab === "health" && (
       <section id="ms-health" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("health").label}</h3>
-        {!locked("health") && f?.healthLog ? (
-          <div data-privacy-block="Health notes">
-            <MySpacePrivacySection
-              board="health"
-              extraBoards={["gym"]}
-              title={getBoard("health").label}
-              memberId={member?.id}
-            >
-              {sampleHint}
-              <MySpaceHealthLog />
-            </MySpacePrivacySection>
-          </div>
-        ) : (
-          glass("health")
-        )}
+        <p className="panel-hint">
+          Health is one page now — hospitals and wellness tools plus your
+          private board when it is unlocked.
+        </p>
+        <Link href="/health#my-health" className="btn btn-primary btn-sm">
+          Open Health
+        </Link>
       </section>
       )}
 
@@ -1022,20 +1015,13 @@ export function MySpaceDashboard() {
       {tab === "entertainment" && (
       <section id="ms-entertainment" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("entertainment").label}</h3>
-        {!locked("entertainment") && f?.entertainmentLog ? (
-          <div data-privacy-block="Entertainment notes">
-            <MySpacePrivacySection
-              board="entertainment"
-              title={getBoard("entertainment").label}
-              memberId={member?.id}
-            >
-              {sampleHint}
-              <MySpaceEntertainmentBoard />
-            </MySpacePrivacySection>
-          </div>
-        ) : (
-          glass("entertainment")
-        )}
+        <p className="panel-hint">
+          Entertainment lives on Town Squares — tonight’s lineup plus your
+          nights-out log when it is unlocked.
+        </p>
+        <Link href="/town-squares#my-nights" className="btn btn-primary btn-sm">
+          Open Town Squares
+        </Link>
       </section>
       )}
 
@@ -1062,20 +1048,13 @@ export function MySpaceDashboard() {
       {tab === "calendar" && (
       <section id="ms-calendar" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("calendar").label}</h3>
-        {!locked("calendar") && f?.calendarBoard ? (
-          <div data-privacy-block="Appointments">
-            <MySpacePrivacySection
-              board="calendar"
-              title={getBoard("calendar").label}
-              memberId={member?.id}
-            >
-              {sampleHint}
-              <MySpaceCalendarBoard />
-            </MySpacePrivacySection>
-          </div>
-        ) : (
-          glass("calendar")
-        )}
+        <p className="panel-hint">
+          Calendar is one page now — public events plus your personal dates when
+          they are unlocked.
+        </p>
+        <Link href="/calendar#my-calendar" className="btn btn-primary btn-sm">
+          Open Calendar
+        </Link>
       </section>
       )}
 
@@ -1115,20 +1094,13 @@ export function MySpaceDashboard() {
       {tab === "pickleballLog" && (
       <section id="ms-pb-log" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("pickleballLog").label}</h3>
-        {!locked("pickleballLog") && f?.pickleballLog ? (
-          <div data-privacy-block="Pickleball log">
-            <MySpacePrivacySection
-              board="pickleballLog"
-              title={getBoard("pickleballLog").label}
-              memberId={member?.id}
-            >
-              {sampleHint}
-              <MySpacePickleballLogBoard />
-            </MySpacePrivacySection>
-          </div>
-        ) : (
-          glass("pickleballLog")
-        )}
+        <p className="panel-hint">
+          Pickleball is one page now — public courts and DUPR plus your log when
+          it is unlocked.
+        </p>
+        <Link href="/pickleball#my-pickleball" className="btn btn-primary btn-sm">
+          Open Pickleball
+        </Link>
       </section>
       )}
 

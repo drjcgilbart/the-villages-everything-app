@@ -139,7 +139,8 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "📈",
     minRank: 1,
     phase: "live",
-    teaser: "Private stock & ETF board with live quotes and totals.",
+    teaser:
+      "Opens the Wealth page — public markets, plus your saved portfolio when Cart Path Regular or higher is on.",
     previewLine: "Watchlist + portfolio totals — saved to your membership.",
   },
   {
@@ -148,7 +149,8 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "📰",
     minRank: 1,
     phase: "live",
-    teaser: "Your headline mix and saved desks — not the public Local News page.",
+    teaser:
+      "Opens Local News — public outlets, plus your saved mix when Cart Path Regular or higher is on.",
     previewLine: "Pick topics once; the Hub fills the rest.",
   },
   {
@@ -157,7 +159,8 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "🎭",
     minRank: 1,
     phase: "live",
-    teaser: "Shows, tickets, and watch-later — your nights, not the public squares.",
+    teaser:
+      "Opens Town Squares — tonight’s lineup, plus your nights-out log when Cart Path Regular or higher is on.",
     previewLine: "Tonight at the square · tickets · watch later",
   },
   {
@@ -166,7 +169,8 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "💚",
     minRank: 2,
     phase: "live",
-    teaser: "Weight, meds, meals, movement, gym, sleep, journal, daily goals.",
+    teaser:
+      "Opens the Health page — hospitals and wellness tools, plus your private board when Lanai Legend or Royalty is on.",
     previewLine: "Meds at 8:00 · water goal · gym log · weigh-in streak",
   },
   {
@@ -213,7 +217,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     minRank: 2,
     phase: "live",
     teaser:
-      "Your sticky notes and personal dates — not the public Calendar of Events.",
+      "Opens the Calendar page — public events, plus your personal dates when Lanai Legend or Royalty is on.",
     previewLine: "Tee time Thursday · grandkids Saturday",
   },
   {
@@ -243,7 +247,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     minRank: 2,
     phase: "live",
     teaser:
-      "Personal DUPR log, matches, and a curated Practice shelf. Public Pickleball on the Hub stays free.",
+      "Opens Pickleball — public courts and DUPR, plus your match log when Lanai Legend or Royalty is on.",
     previewLine: "DUPR · last match · find a game",
   },
   {

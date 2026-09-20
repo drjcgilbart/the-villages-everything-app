@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { HealthHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { HealthHub } from "@/components/HealthHub";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -51,6 +52,9 @@ export default async function HealthPage() {
               <a href="#local-care" className="btn btn-primary">
                 Hospitals &amp; ERs
               </a>
+              <a href="#my-health" className="btn btn-ghost">
+                My health
+              </a>
               <a href="#wellness-tools" className="btn btn-ghost">
                 Wellness tools
               </a>
@@ -95,6 +99,8 @@ export default async function HealthPage() {
           <p className="health-disclaimer">{HEALTH_HUB.disclaimer}</p>
         </div>
       </section>
+
+      <HealthHubMemberTools />
 
       {/* Snapshot */}
       <section className="section" id="snapshot">

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { PickleballHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PickleballHub } from "@/components/PickleballHub";
@@ -47,6 +48,9 @@ export default async function PickleballPage() {
               </a>
               <a href="#courts" className="btn btn-ghost">
                 Courts
+              </a>
+              <a href="#my-pickleball" className="btn btn-ghost">
+                My pickleball
               </a>
               <a href="#resources" className="btn btn-ghost">
                 Official links
@@ -96,6 +100,8 @@ export default async function PickleballPage() {
           </div>
         </div>
       </section>
+
+      <PickleballHubMemberTools />
 
       <section className="section" id="pickleball-club">
         <div className="shell">

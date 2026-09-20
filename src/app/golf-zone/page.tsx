@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
-import { GolfHubMemberTools } from "@/components/GolfHubMemberTools";
+import { GolfHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { GolfClubHub } from "@/components/GolfClubHub";
 import { PhotoCard } from "@/components/PhotoCard";

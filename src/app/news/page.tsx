@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NewsHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import {
   NEWS_BEATS,
@@ -40,6 +41,9 @@ export default function NewsPage() {
               <a href="#beats" className="btn btn-ghost">
                 By topic
               </a>
+              <a href="#my-news" className="btn btn-ghost">
+                My news
+              </a>
             </div>
           </div>
           <PageHeroMascot
@@ -48,6 +52,8 @@ export default function NewsPage() {
           />
         </div>
       </div>
+
+      <NewsHubMemberTools />
 
       <section className="section" id="creators">
         <div className="shell">

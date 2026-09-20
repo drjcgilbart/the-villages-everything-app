@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { WealthHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { MarketCharts } from "@/components/MarketCharts";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -116,6 +117,9 @@ export default async function WealthPage() {
               <a href="#portfolio" className="btn btn-ghost">
                 My portfolio
               </a>
+              <a href="#my-investments" className="btn btn-ghost">
+                My investments
+              </a>
               <a href="#local-money" className="btn btn-ghost">
                 Local banks
               </a>
@@ -158,6 +162,8 @@ export default async function WealthPage() {
           </div>
         </div>
       </section>
+
+      <WealthHubMemberTools />
 
       {/* Existing market + portfolio tools */}
       <MarketCharts />

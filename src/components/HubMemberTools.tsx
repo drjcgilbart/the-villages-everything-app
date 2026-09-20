@@ -1,34 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { MySpaceGolfLogBoard } from "@/components/MySpaceGolfLogBoard";
+import { useEffect, useState, type ReactNode } from "react";
+import { MySpacePrivacySection } from "@/components/MySpacePrivacySection";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import { getBoard, unlockCtaLabel } from "@/lib/mySpaceProduct";
-import { HUB_TIERS, type HubPlanId } from "@/lib/membershipTiers";
+import { HUB_TIERS, type FeatureKey, type HubPlanId } from "@/lib/membershipTiers";
+import type { HubMemberSlot } from "@/lib/hubMemberBridges";
 
 type SpaceJson = {
   member?: { id?: string; status?: string };
   space?: {
     planLabel?: string;
-    planRank?: number;
-    features?: { golfLog?: boolean };
+    features?: Partial<Record<FeatureKey, boolean>>;
   };
 };
 
-export function GolfHubMemberTools() {
+export function HubMemberTools({
+  slot,
+  children,
+}: {
+  slot: HubMemberSlot;
+  children: ReactNode;
+}) {
   const [status, setStatus] = useState<"loading" | "visitor" | "locked" | "open">(
     "loading"
   );
   const [planLabel, setPlanLabel] = useState("Porch Waver");
   const [approved, setApproved] = useState(false);
+  const [memberId, setMemberId] = useState<string | null>(null);
   const [native, setNative] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
-  const board = getBoard("golfLog");
-  const need = HUB_TIERS.find((t) => t.rank === board.minRank) || HUB_TIERS[2];
+  const board = getBoard(slot.boardId);
+  const need = HUB_TIERS.find((t) => t.rank === board.minRank) || HUB_TIERS[1];
   const cta = unlockCtaLabel(board.minRank);
+  const hash = `#${slot.sectionId}`;
+  const loginHref = `/yard-sale/login?next=${encodeURIComponent(slot.loginPath)}`;
 
   useEffect(() => {
     setNative(isNativeAppShell());
@@ -43,7 +52,8 @@ export function GolfHubMemberTools() {
         if (!res.ok || cancelled) return;
         setPlanLabel(json.space?.planLabel || "Porch Waver");
         setApproved(json.member?.status === "approved");
-        setStatus(json.space?.features?.golfLog ? "open" : "locked");
+        setMemberId(json.member?.id ? String(json.member.id) : null);
+        setStatus(json.space?.features?.[slot.feature] ? "open" : "locked");
       })
       .catch(() => {
         if (!cancelled) setStatus("visitor");
@@ -51,19 +61,19 @@ export function GolfHubMemberTools() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [slot.feature]);
 
   useEffect(() => {
     if (status === "loading") return;
     if (typeof window === "undefined") return;
-    if (window.location.hash !== "#my-scorecard") return;
+    if (window.location.hash !== hash) return;
     const id = window.setTimeout(() => {
       document
-        .getElementById("my-scorecard")
+        .getElementById(slot.sectionId)
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 80);
     return () => window.clearTimeout(id);
-  }, [status]);
+  }, [status, hash, slot.sectionId]);
 
   async function startSubscribe(tierId: HubPlanId) {
     setBusy(true);
@@ -86,52 +96,52 @@ export function GolfHubMemberTools() {
   }
 
   return (
-    <section className="section golf-member-tools" id="my-scorecard">
+    <section className="section hub-member-tools" id={slot.sectionId}>
       <div className="shell">
         <div className="section-head">
           <div>
-            <h2>Your live scorecard</h2>
-            <p>
-              Hole-by-hole scores on this phone. Maps, the Leader Board, and
-              holes-in-one below stay free for everyone.
-            </p>
+            <h2>{slot.heading}</h2>
+            <p>{slot.blurb}</p>
           </div>
         </div>
 
         {status === "loading" ? (
           <p className="panel-hint">Checking your membership…</p>
         ) : status === "open" ? (
-          <MySpaceGolfLogBoard />
+          <MySpacePrivacySection
+            board={slot.privacyBoard}
+            extraBoards={slot.extraBoards}
+            title={slot.heading}
+            memberId={memberId}
+          >
+            {children}
+          </MySpacePrivacySection>
         ) : (
           <div className="about-panel golf-scorecard-invite">
-            <span className="pill">Lanai Legend+</span>
+            <span className="pill">{need.shortLabel}+</span>
             <h3 style={{ margin: "0.4rem 0 0.35rem" }}>
-              {board.icon} Keep score here after you unlock
+              {board.icon} {slot.inviteLead}
             </h3>
             <p>
-              One Golf page for everyone. The trail, maps, and aces stay free.
-              The live scorecard, tee times, and round history unlock with{" "}
-              <strong>{need.label}</strong> (or Square Royalty).
+              {slot.publicStay} <strong>{need.label}</strong>
+              {need.rank < 3 ? " (or higher)." : "."}
             </p>
             {status === "locked" ? (
               <p className="panel-hint">
                 You’re on <strong>{planLabel}</strong>. {cta} to use the real
-                scorecard on this same page — not a second Golf button.
+                tools on this same page — not a second button.
               </p>
             ) : (
               <p className="panel-hint">
-                Sign in as a neighbor first. Porch Waver still gets public Golf.
-                Paid plans add the scorecard right here.
+                Sign in as a neighbor first. Porch Waver still gets the public
+                page. Paid plans add the extra tools right here.
               </p>
             )}
             {note ? <p className="pf-form-error">{note}</p> : null}
             <div className="hero-actions">
               {status === "visitor" ? (
                 <>
-                  <Link
-                    href="/yard-sale/login?next=/golf-zone%23my-scorecard"
-                    className="btn btn-primary btn-sm"
-                  >
+                  <Link href={loginHref} className="btn btn-primary btn-sm">
                     Sign in
                   </Link>
                   <Link href="/yard-sale/join" className="btn btn-ghost btn-sm">
