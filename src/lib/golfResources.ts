@@ -94,6 +94,14 @@ export const GOLF_FEATURE_CARDS = [
     image: GOLF_ART.cartPath,
     badge: GOLF_ART.badgeLeader,
   },
+  {
+    id: "my-scorecard",
+    href: "#my-scorecard",
+    title: "My scorecard",
+    blurb: "Keep hole-by-hole scores on this phone. Unlocks with Lanai Legend — same Golf page, not a second button.",
+    image: GOLF_ART.executiveTrail,
+    badge: GOLF_ART.badgeLeader,
+  },
 ] as const;
 
 export const GOLF_LINK_GROUPS: GolfLinkGroup[] = [

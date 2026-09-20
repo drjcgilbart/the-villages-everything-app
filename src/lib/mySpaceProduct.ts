@@ -233,7 +233,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     minRank: 2,
     phase: "live",
     teaser:
-      "Personal scorecard, tee times, history, and a curated Practice shelf. Public Golf on the Hub stays free.",
+      "Opens the Golf page — public trail and leaderboard, plus your live scorecard when Lanai Legend or Royalty is on.",
     previewLine: "Last round · upcoming tee time · find a foursome",
   },
   {

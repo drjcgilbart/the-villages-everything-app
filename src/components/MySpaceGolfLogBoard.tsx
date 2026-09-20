@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   GOLF_COURSES,
@@ -250,11 +249,8 @@ export function MySpaceGolfLogBoard() {
       <p className="ms-module-lead">Golf in The Villages</p>
       <p className="panel-hint">
         Built for the cart cup-holder: one hole at a time, big + / −, and you can type any
-        course name if it isn&apos;t in the list. Public{" "}
-        <Link href="/golf-zone" className="text-link">
-          Golf hub
-        </Link>{" "}
-        stays free.
+        course name if it isn&apos;t in the list. The Leader Board, foursomes, and aces
+        stay on this same Golf page.
       </p>
       {error ? <p className="pf-form-error">{error}</p> : null}
       {saving ? <p className="panel-hint">Saving to your account…</p> : null}

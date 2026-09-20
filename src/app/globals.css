@@ -3031,6 +3031,14 @@ button.ms-home-card:hover {
   gap: 0.15rem;
 }
 
+.golf-member-tools {
+  scroll-margin-top: 8.5rem;
+}
+
+.golf-scorecard-invite h3 {
+  font-family: var(--font-display), Georgia, serif;
+}
+
 .ms-golf-live {
   background:
     linear-gradient(180deg, rgba(31, 107, 74, 0.08), rgba(255, 248, 238, 0.4) 7rem),

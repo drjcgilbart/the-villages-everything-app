@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
+import { GolfHubMemberTools } from "@/components/GolfHubMemberTools";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { GolfClubHub } from "@/components/GolfClubHub";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -67,6 +68,9 @@ export default async function GolfZonePage() {
               <a href="#aces" className="btn btn-ghost">
                 Holes in One
               </a>
+              <a href="#my-scorecard" className="btn btn-ghost">
+                My scorecard
+              </a>
               <a href="#resources" className="btn btn-ghost">
                 Resources
               </a>
@@ -124,6 +128,8 @@ export default async function GolfZonePage() {
           </div>
         </div>
       </section>
+
+      <GolfHubMemberTools />
 
       <section className="section" id="golf-club">
         <div className="shell">

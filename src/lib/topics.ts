@@ -207,6 +207,10 @@ export const TOPICS: TopicDef[] = [
         title: "Maps & fees",
         body: "Official course maps, trail-pass portals, and FAQs linked below.",
       },
+      {
+        title: "Your scorecard",
+        body: "Lanai Legend and Royalty keep hole-by-hole scores on this same Golf page.",
+      },
     ],
     quote:
       "In The Villages, the golf cart isn’t transportation. It’s a personality type.",

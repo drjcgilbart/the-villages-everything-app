@@ -218,7 +218,7 @@ export const FEATURE_META: Record<
   },
   golfLog: {
     title: "Golf",
-    teaser: "Scorecard, tee times, and a curated Practice shelf. Public Golf stays free.",
+    teaser: "Scorecard, tee times, and history on the Golf page. Public Golf stays free.",
     anchor: "ms-golf-log",
   },
   pickleballLog: {

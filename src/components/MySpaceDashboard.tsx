@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MySpaceInvestmentsBoard } from "@/components/MySpaceInvestmentsBoard";
 import {
@@ -12,7 +13,6 @@ import {
 import {
   MySpaceEntertainmentBoard,
   MySpaceFoodBoard,
-  MySpaceGolfLogBoard,
   MySpaceMaintenanceBoard,
   MySpaceMemoriesBoard,
   MySpaceNewsBoard,
@@ -143,6 +143,7 @@ export function MySpaceDashboard() {
   const [toolsOpen, setToolsOpen] = useState(true);
   const skipBoardScroll = useRef(true);
   const [inNativeApp, setInNativeApp] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (skipBoardScroll.current || toolsOpen) return;
@@ -231,6 +232,14 @@ export function MySpaceDashboard() {
       setNote("Square Royalty is unlocked for one month. Poke every board. Subscribe if you want to keep it.");
     }
     const tabParam = (params.get("tab") || "").toLowerCase();
+    if (
+      tabParam === "golf" ||
+      tabParam === "golfLog" ||
+      window.location.hash === "#ms-golf-log"
+    ) {
+      window.location.replace("/golf-zone#my-scorecard");
+      return;
+    }
     if (
       tabParam === "plans" ||
       tabParam === "membership" ||
@@ -451,6 +460,10 @@ export function MySpaceDashboard() {
   const currentTool = tabs.find((t) => t.id === tab) || tabs[0];
 
   function goToTab(id: DashTab) {
+    if (id === "golfLog") {
+      router.push("/golf-zone#my-scorecard");
+      return;
+    }
     setTab(id);
     const collapse =
       typeof window !== "undefined" &&
@@ -1089,20 +1102,13 @@ export function MySpaceDashboard() {
       {tab === "golfLog" && (
       <section id="ms-golf-log" className="my-space-block">
         <h3 className="my-space-block-title">{getBoard("golfLog").label}</h3>
-        {!locked("golfLog") && f?.golfLog ? (
-          <div data-privacy-block="Golf log">
-            <MySpacePrivacySection
-              board="golfLog"
-              title={getBoard("golfLog").label}
-              memberId={member?.id}
-            >
-              {sampleHint}
-              <MySpaceGolfLogBoard />
-            </MySpacePrivacySection>
-          </div>
-        ) : (
-          glass("golfLog")
-        )}
+        <p className="panel-hint">
+          Golf is one page now — public Hub plus your scorecard when it is
+          unlocked.
+        </p>
+        <Link href="/golf-zone#my-scorecard" className="btn btn-primary btn-sm">
+          Open Golf
+        </Link>
       </section>
       )}
 
