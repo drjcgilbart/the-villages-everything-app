@@ -12136,10 +12136,11 @@ body.theme-music-open .mascot-quip-popup {
   border: 1px solid var(--line);
   background: #fff;
   border-radius: 999px;
-  padding: 0.4rem 0.7rem;
+  padding: 0.45rem 0.75rem;
   font-size: 0.88rem;
   cursor: pointer;
   font-weight: 600;
+  min-height: 2.4rem;
 }
 
 .health-mood-btn.is-on {
@@ -12271,6 +12272,219 @@ body.theme-music-open .mascot-quip-popup {
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--palm-deep);
+}
+
+.health-tool-card {
+  min-width: 0;
+}
+
+.health-tool-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--palm-deep);
+}
+
+.health-streak {
+  margin: 0.5rem 0 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--palm-deep);
+}
+
+.health-full-input,
+.health-select,
+.health-min-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+  background: #fff;
+}
+
+.health-select {
+  cursor: pointer;
+}
+
+.health-min-input {
+  width: 4.5rem;
+  flex: 0 0 4.5rem;
+}
+
+.health-inline-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.health-inline-add .health-full-input {
+  flex: 1 1 10rem;
+}
+
+.health-glass-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0.7rem;
+}
+
+.health-glass {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.health-glass.is-full {
+  background: rgba(58, 166, 201, 0.18);
+  border-color: rgba(58, 166, 201, 0.5);
+  color: #0b6f8a;
+}
+
+.health-week-strip,
+.health-week-bars {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.health-week-strip li,
+.health-week-bars li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.health-week-dow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.health-week-mark {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.health-week-strip li.is-today .health-week-mark,
+.health-week-bars li.is-today .health-week-bar-track {
+  border-color: rgba(31, 107, 74, 0.45);
+  box-shadow: 0 0 0 2px rgba(31, 107, 74, 0.12);
+}
+
+.health-week-bar-track {
+  width: 0.7rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  background: rgba(28, 36, 48, 0.08);
+  border: 1px solid transparent;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.health-week-bar-fill {
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3aa6c9, #1f6b4a);
+  min-height: 0;
+}
+
+.health-week-card h3 {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.health-week-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.health-week-stats div {
+  background: rgba(31, 107, 74, 0.06);
+  border-radius: 12px;
+  padding: 0.65rem 0.7rem;
+  min-width: 0;
+}
+
+.health-week-stats strong {
+  display: block;
+  font-size: 1.15rem;
+  color: var(--palm-deep);
+}
+
+.health-week-stats strong span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.health-week-stats div > span {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.health-move-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.health-move-remove {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  width: 1.7rem;
+  height: 1.7rem;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+@media (max-width: 700px) {
+  .health-week-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .health-glass {
+    width: 2.45rem;
+    height: 2.45rem;
+  }
 }
 
 /* -- Wealth hub -- */

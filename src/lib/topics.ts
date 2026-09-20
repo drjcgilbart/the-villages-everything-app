@@ -68,7 +68,7 @@ export const TOPICS: TopicDef[] = [
       },
       {
         title: "Wellness tools",
-        body: "Daily mood, water, steps, and tiny wins stored on your device only.",
+        body: "Daily mood, water, steps, and tiny wins — with a week of history, stored on your device only.",
       },
       {
         title: "Move like a villager",

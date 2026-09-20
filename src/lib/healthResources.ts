@@ -262,6 +262,9 @@ export const DAILY_MOVES = [
   { id: "stairs", label: "Take the long way at the rec center", emoji: "🏟️", minutes: 8 },
   { id: "square", label: "Evening square stroll (no shopping required)", emoji: "🎶", minutes: 20 },
   { id: "breathe", label: "Four slow breaths before the group chat", emoji: "🌬️", minutes: 2 },
+  { id: "pool", label: "Rec-center pool or a few easy laps", emoji: "🏊", minutes: 15 },
+  { id: "neighbor", label: "Wave, call, or check on a neighbor", emoji: "👋", minutes: 3 },
+  { id: "lanai", label: "Sit on the lanai with no screen", emoji: "🌴", minutes: 5 },
 ] as const;
 
 export const STRETCHES = [
@@ -281,14 +284,51 @@ export const STRETCHES = [
     name: "Seated ankle alphabet",
     body: "Sit and draw the alphabet with each foot. Airport energy, living-room convenience.",
   },
+  {
+    name: "Golf-cart neck look",
+    body: "Slowly turn your head to look over each shoulder, like checking for a silent cart. Pause, then center.",
+  },
+  {
+    name: "Chair sit-to-stand",
+    body: "From a sturdy chair, stand up and sit down slowly five times. Use the arms if you need them — form over speed.",
+  },
+  {
+    name: "Open-chest doorway",
+    body: "Forearm on a door frame, gentle turn away until the chest opens. Soft knees. Breathe like you mean it.",
+  },
 ] as const;
 
 export const MOOD_OPTIONS = [
-  { id: "great", label: "Great", emoji: "🌟" },
-  { id: "good", label: "Pretty good", emoji: "😊" },
-  { id: "okay", label: "Okay", emoji: "😐" },
-  { id: "low", label: "Low energy", emoji: "😴" },
-  { id: "ouch", label: "Oof day", emoji: "🤒" },
+  {
+    id: "great",
+    label: "Great",
+    emoji: "🌟",
+    hint: "Keep that porch energy — no need to turn it into a project.",
+  },
+  {
+    id: "good",
+    label: "Pretty good",
+    emoji: "😊",
+    hint: "Pretty good is a perfectly respectable Florida forecast.",
+  },
+  {
+    id: "okay",
+    label: "Okay",
+    emoji: "😐",
+    hint: "Okay still counts. Water and a short walk help more than a pep talk.",
+  },
+  {
+    id: "low",
+    label: "Low energy",
+    emoji: "😴",
+    hint: "Low-energy days get extra grace. Sit, sip, skip the heroics.",
+  },
+  {
+    id: "ouch",
+    label: "Oof day",
+    emoji: "🤒",
+    hint: "Oof days: rest, call a neighbor, and if it’s serious, 911 is still the move.",
+  },
 ] as const;
 
 export function mapsUrl(query: string) {
