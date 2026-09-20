@@ -86,15 +86,17 @@ export default async function DiningPage() {
         <div className="shell">
           <div className="dining-jump">
             <span className="dining-jump-label">Jump to cuisine</span>
-            {CUISINES.map((c) => (
-              <a
-                key={c}
-                href={`#cuisine-${cuisineSlug(c)}`}
-                className="dining-chip"
-              >
-                {c}
-              </a>
-            ))}
+            {[...CUISINES]
+              .sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }))
+              .map((c) => (
+                <a
+                  key={c}
+                  href={`#cuisine-${cuisineSlug(c)}`}
+                  className="dining-chip"
+                >
+                  {c}
+                </a>
+              ))}
             <a href="#all-restaurants" className="dining-chip">
               All spots
             </a>

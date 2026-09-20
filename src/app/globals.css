@@ -7155,18 +7155,25 @@ a.ts-square-card:hover .ts-square-card-img {
   font-size: 1.25rem;
 }
 
+.nav-toggle-wrap {
+  display: none;
+}
+
 .nav-toggle {
   display: none;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  position: relative;
+  z-index: 46;
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
   background: white;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 5px;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .nav-toggle span {
@@ -7175,6 +7182,54 @@ a.ts-square-card:hover .ts-square-card-img {
   height: 2px;
   background: var(--ink);
   border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-toggle.is-open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.nav-toggle.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.nav-toggle.is-open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.nav-first-hint {
+  display: none;
+}
+
+.hub-mobile-nav-backdrop {
+  display: none;
+}
+
+@keyframes nav-toggle-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(232, 184, 74, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(232, 184, 74, 0.12);
+  }
+}
+
+@keyframes nav-first-hint-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-toggle-wrap.is-hinting .nav-toggle,
+  .nav-first-hint {
+    animation: none;
+  }
 }
 
 /* Hero */
@@ -11173,8 +11228,90 @@ body.theme-music-open .mascot-quip-popup {
     opacity: 0.22;
   }
 
+  .nav-toggle-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    position: relative;
+    z-index: 46;
+  }
+
+  .hub-header.hub-menu-open .hub-header-top {
+    position: relative;
+    z-index: 46;
+  }
+
   .nav-toggle {
     display: flex;
+  }
+
+  .nav-toggle-wrap.is-hinting .nav-toggle {
+    border-color: #8a5a00;
+    background: #fff8e4;
+    box-shadow: 0 0 0 3px rgba(232, 184, 74, 0.45);
+    animation: nav-toggle-pulse 1.6s ease-out infinite;
+  }
+
+  .nav-first-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    margin: 0;
+    padding: 0.42rem 0.75rem 0.42rem 0.55rem;
+    border-radius: 999px;
+    background: #1f6b4a;
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.84rem;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    box-shadow: 0 8px 18px rgba(31, 107, 74, 0.28);
+    animation: nav-first-hint-nudge 1.2s ease-in-out infinite;
+  }
+
+  .nav-first-hint-arrow {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .nav-first-hint-text {
+    white-space: nowrap;
+  }
+
+  .hub-mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 38;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(18, 24, 20, 0.42);
+    cursor: pointer;
+  }
+
+  .hub-mobile-nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0 0 0.35rem;
+  }
+
+  .hub-mobile-close {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 999px;
+    padding: 0.38rem 0.75rem;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--ink);
+    cursor: pointer;
   }
 
   /* Keep utility bar visible once at top — do not hide or re-list under the hub menu */
@@ -11212,18 +11349,19 @@ body.theme-music-open .mascot-quip-popup {
   .main-nav.hub-mobile-nav {
     display: none;
     position: absolute;
-    /* Sit below utility bar + brand row */
-    top: 118px;
+    /* Below the whole header so the hamburger stays tappable */
+    top: 100%;
     left: 0;
     right: 0;
     background: rgba(255, 248, 238, 0.98);
     border-bottom: 1px solid var(--line);
-    padding: 0.55rem 0.75rem 0.75rem;
+    padding: 0.55rem 0.75rem 0.9rem;
     flex-direction: column;
     align-items: stretch;
-    max-height: calc(100vh - 118px);
+    max-height: min(72dvh, calc(100dvh - 100%));
     overflow-y: auto;
     z-index: 40;
+    box-shadow: 0 16px 32px rgba(28, 36, 48, 0.16);
   }
 
   .main-nav.hub-mobile-nav.open {
@@ -11232,7 +11370,7 @@ body.theme-music-open .mascot-quip-popup {
 
   .hub-mobile-intro {
     display: block;
-    margin: 0 0 0.45rem;
+    margin: 0;
     font-weight: 700;
     font-size: 0.92rem;
     font-family: var(--font-display), Georgia, serif;

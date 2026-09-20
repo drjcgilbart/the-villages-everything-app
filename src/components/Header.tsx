@@ -95,9 +95,31 @@ export function Header({
     setPagesOverride(pillsVisible ? "closed" : "open");
   }
 
+  function toggleMobileMenu() {
+    setOpen((v) => !v);
+  }
+
   useEffect(() => {
     setNative(isNativeAppShell());
   }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   useEffect(() => {
     setPagesOverride(null);
@@ -177,6 +199,7 @@ export function Header({
     ...UTILITY_NAV,
     native ? NATIVE_MEMBERSHIP : WEB_MEMBERSHIP,
   ];
+  const showMenuHint = native && pathname === "/" && !open;
 
   function topicLink(item: (typeof MAIN_TOPICS)[number], opts?: { onClick?: () => void }) {
     return (
@@ -198,7 +221,7 @@ export function Header({
     <header
       className={`site-header hub-header${pillsVisible ? "" : " pills-collapsed"}${
         isGamePage && pillsVisible ? " pills-overlay" : ""
-      }`}
+      }${open ? " hub-menu-open" : ""}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
@@ -273,17 +296,28 @@ export function Header({
           >
             Pages {pillsVisible ? "▴" : "▾"}
           </button>
-          <button
-            type="button"
-            className="nav-toggle"
-            aria-expanded={open}
-            aria-label="Open menu"
-            onClick={() => setOpen((v) => !v)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
+          <div className={`nav-toggle-wrap${showMenuHint ? " is-hinting" : ""}`}>
+            <button
+              type="button"
+              className={`nav-toggle${open ? " is-open" : ""}`}
+              aria-expanded={open}
+              aria-controls="hub-mobile-nav"
+              aria-label={open ? "Close menu" : "Open menu"}
+              onClick={toggleMobileMenu}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            {showMenuHint ? (
+              <p className="nav-first-hint">
+                <span className="nav-first-hint-arrow" aria-hidden="true">
+                  ←
+                </span>
+                <span className="nav-first-hint-text">CLICK HERE FIRST!</span>
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {/* Desktop: three wrapping rows so pills never clip */}
@@ -307,11 +341,30 @@ export function Header({
           )}
         </nav>
 
+        {open ? (
+          <button
+            type="button"
+            className="hub-mobile-nav-backdrop"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          />
+        ) : null}
+
         <nav
+          id="hub-mobile-nav"
           className={`main-nav hub-mobile-nav ${open ? "open" : ""}`}
           aria-label="Main"
         >
-          <p className="hub-mobile-intro">Where to first, cart pilot?</p>
+          <div className="hub-mobile-nav-head">
+            <p className="hub-mobile-intro">Where to first, cart pilot?</p>
+            <button
+              type="button"
+              className="hub-mobile-close"
+              onClick={() => setOpen(false)}
+            >
+              Close menu
+            </button>
+          </div>
           <SiteSearch compact />
           <div className="hub-mobile-links hub-mobile-main-topics">
             {MAIN_TOPICS.map((item) =>
