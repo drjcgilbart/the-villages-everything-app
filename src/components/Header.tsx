@@ -85,8 +85,11 @@ export function Header({
     null
   );
   const [hovering, setHovering] = useState(false);
+  const [chromeHidden, setChromeHidden] = useState(false);
   const scrolledAwayRef = useRef(isGamePage);
   const headerRef = useRef<HTMLElement>(null);
+  const lastYRef = useRef(0);
+  const chromeHiddenRef = useRef(false);
 
   const autoVisible = isGamePage ? hovering : !scrolledAway;
   const pillsVisible =
@@ -106,6 +109,8 @@ export function Header({
 
   useEffect(() => {
     setOpen(false);
+    setChromeHidden(false);
+    chromeHiddenRef.current = false;
   }, [pathname]);
 
   useEffect(() => {
@@ -125,7 +130,43 @@ export function Header({
       ro?.disconnect();
       window.removeEventListener("resize", sync);
     };
-  }, [open, pillsVisible, native, pathname]);
+  }, [open, pillsVisible, native, pathname, chromeHidden]);
+
+  useEffect(() => {
+    if (open) {
+      setChromeHidden(false);
+      chromeHiddenRef.current = false;
+      return;
+    }
+    lastYRef.current =
+      window.scrollY || document.documentElement.scrollTop || 0;
+    let frame = 0;
+    let lockUntil = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        const delta = y - lastYRef.current;
+        lastYRef.current = y;
+        if (Date.now() < lockUntil) return;
+        let next = chromeHiddenRef.current;
+        if (y < 20) next = false;
+        else if (delta > 6) next = true;
+        else if (delta < -6) next = false;
+        if (next !== chromeHiddenRef.current) {
+          chromeHiddenRef.current = next;
+          setChromeHidden(next);
+          lockUntil = Date.now() + 280;
+        }
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [open, pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -242,7 +283,7 @@ export function Header({
       ref={headerRef}
       className={`site-header hub-header${pillsVisible ? "" : " pills-collapsed"}${
         isGamePage && pillsVisible ? " pills-overlay" : ""
-      }${open ? " hub-menu-open" : ""}`}
+      }${open ? " hub-menu-open" : ""}${chromeHidden && !open ? " hub-chrome-hidden" : ""}`}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >

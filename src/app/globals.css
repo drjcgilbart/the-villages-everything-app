@@ -11661,6 +11661,11 @@ body.theme-music-open .mascot-quip-popup {
     display: none;
   }
 
+  .hub-header.hub-chrome-hidden .nav-toggle-wrap,
+  .hub-header.hub-chrome-hidden .hub-header-top > .site-search {
+    display: none;
+  }
+
   .hub-mobile-nav-backdrop {
     display: block;
     position: fixed;
