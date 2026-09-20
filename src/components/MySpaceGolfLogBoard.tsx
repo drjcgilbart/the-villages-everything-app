@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   GOLF_COURSES,
   GOLF_HUB,
   golfTrailPageUrl,
   type GolfCourse,
 } from "@/lib/entertainmentCatalog";
+import { GOLF_ART } from "@/lib/golfResources";
 import { GolfScorecardButton } from "@/components/GolfScorecardButton";
 import {
   emptyBoards,
@@ -17,6 +18,13 @@ import {
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { MySpaceGolfPractice } from "@/components/MySpaceGolfPractice";
+
+const OTHER_COURSE_ID = "__other__";
+const COURSE_GROUPS: { kind: GolfCourse["kind"]; label: string }[] = [
+  { kind: "championship", label: "Championship / country club" },
+  { kind: "executive", label: "Executive trail" },
+  { kind: "pitch-putt", label: "Pitch & putt" },
+];
 
 const KINDS = [
   { id: "all", label: "All" },
@@ -63,6 +71,24 @@ function defaultPar(kind: string, holes: 9 | 18) {
   }
   return Array(holes).fill(3) as number[];
 }
+function vsParClass(score: number | "", holePar: number) {
+  if (score === "") return "is-empty";
+  const d = Number(score) - holePar;
+  if (d <= -2) return "is-eagle";
+  if (d === -1) return "is-birdie";
+  if (d === 0) return "is-par";
+  if (d === 1) return "is-bogey";
+  return "is-dbl";
+}
+function vsParLabel(score: number | "", holePar: number) {
+  if (score === "") return "Tap + to start at par";
+  const d = Number(score) - holePar;
+  if (d <= -2) return d <= -3 ? "Albatross!" : "Eagle";
+  if (d === -1) return "Birdie";
+  if (d === 0) return "Par";
+  if (d === 1) return "Bogey";
+  return `+${d}`;
+}
 function grossOf(scores: (number | "")[]) {
   return scores.reduce<number>((s, n) => s + (typeof n === "number" ? n : 0), 0);
 }
@@ -105,7 +131,10 @@ export function MySpaceGolfLogBoard() {
   const [tab, setTab] = useState("scorecard");
   const [date, setDate] = useState(today());
   const [courseId, setCourseId] = useState("");
+  const [courseCustom, setCourseCustom] = useState("");
   const [holes, setHoles] = useState<9 | 18>(9);
+  const [holeAt, setHoleAt] = useState(0);
+  const [par, setPar] = useState<number[]>(() => defaultPar("executive", 9));
   const [notes, setNotes] = useState("");
   const [players, setPlayers] = useState<GolfPlayerCard[]>(() => emptyPlayers(9));
   const [kind, setKind] = useState<(typeof KINDS)[number]["id"]>("all");
@@ -116,7 +145,10 @@ export function MySpaceGolfLogBoard() {
   const [copied, setCopied] = useState("");
 
   const course = GOLF_COURSES.find((c) => c.id === courseId);
-  const par = defaultPar(course?.kind || "executive", holes);
+  const customCourse = courseId === OTHER_COURSE_ID;
+  const courseName = customCourse
+    ? courseCustom.trim() || "Custom course"
+    : course?.name || "";
 
   const favs = useMemo(() => new Set(value.favoriteCourseIds || []), [value.favoriteCourseIds]);
   const courses = useMemo(() => {
@@ -138,16 +170,31 @@ export function MySpaceGolfLogBoard() {
     setPlayers((prev) => {
       const next = prev.map((p) => ({ ...p, scores: [...p.scores] }));
       const cur = next[pi].scores[hi];
-      const n = (typeof cur === "number" ? cur : par[hi] || 3) + d;
-      next[pi].scores[hi] = Math.max(1, Math.min(20, n));
+      const holePar = par[hi] || 3;
+      if (cur === "") {
+        next[pi].scores[hi] = d > 0 ? holePar : Math.max(1, holePar - 1);
+      } else {
+        const n = (typeof cur === "number" ? cur : holePar) + d;
+        next[pi].scores[hi] = Math.max(1, Math.min(15, n));
+      }
+      return next;
+    });
+  }
+  function setHoleScore(pi: number, hi: number, n: number) {
+    setPlayers((prev) => {
+      const next = prev.map((p) => ({ ...p, scores: [...p.scores] }));
+      next[pi].scores[hi] = Math.max(1, Math.min(15, n));
       return next;
     });
   }
   function setPlayer(i: number, patch: Partial<GolfPlayerCard>) {
     setPlayers((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   }
-  function applyHoles(h: 9 | 18) {
+  function applyHoles(h: 9 | 18, kindHint?: string) {
     setHoles(h);
+    setHoleAt((n) => Math.min(n, h - 1));
+    const k = kindHint || course?.kind || "executive";
+    setPar(defaultPar(k, h));
     setPlayers((prev) =>
       prev.map((p) => {
         const scores = p.scores.slice(0, h);
@@ -156,11 +203,31 @@ export function MySpaceGolfLogBoard() {
       })
     );
   }
+  function cyclePar(hi: number) {
+    setPar((prev) => {
+      const next = [...prev];
+      const cur = next[hi] || 3;
+      next[hi] = cur >= 5 ? 3 : cur + 1;
+      return next;
+    });
+  }
   function playHere(c: GolfCourse) {
     setCourseId(c.id);
-    applyHoles(c.holes >= 18 ? 18 : 9);
+    setCourseCustom("");
+    applyHoles(c.holes >= 18 ? 18 : 9, c.kind);
+    setHoleAt(0);
     setTab("scorecard");
   }
+  useEffect(() => {
+    if (!ready) return;
+    if (!value.myName) return;
+    setPlayers((prev) => {
+      if (prev[0].name.trim()) return prev;
+      return prev.map((p, i) =>
+        i === 0 ? { ...p, name: value.myName, hdcp: value.myHdcp || p.hdcp } : p
+      );
+    });
+  }, [ready, value.myName, value.myHdcp]);
   function flash(msg: string) {
     setCopied(msg);
     window.setTimeout(() => setCopied(""), 2000);
@@ -182,8 +249,8 @@ export function MySpaceGolfLogBoard() {
     <div className="ms-ent-board">
       <p className="ms-module-lead">Golf in The Villages</p>
       <p className="panel-hint">
-        Keep a card for up to four players on 9 or 18 holes. Tap + / − per hole — no tiny
-        scorecard pencils required. Practice holds short tips and a few tools. Public{" "}
+        Built for the cart cup-holder: one hole at a time, big + / −, and you can type any
+        course name if it isn&apos;t in the list. Public{" "}
         <Link href="/golf-zone" className="text-link">
           Golf hub
         </Link>{" "}
@@ -207,124 +274,252 @@ export function MySpaceGolfLogBoard() {
       </div>
 
       {tab === "scorecard" && (
-        <div className="about-panel ms-module ms-golf-print">
+        <div className="about-panel ms-module ms-golf-print ms-golf-live">
+          <div className="ms-golf-hero">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={GOLF_ART.executiveTrail} alt="" width={120} height={90} />
+            <div>
+              <p className="ms-golf-kicker">On the cart</p>
+              <h4>Live scorecard</h4>
+              <p>
+                One hole at a time. Giant buttons. Type your own course if the
+                shop isn&apos;t in the list.
+              </p>
+            </div>
+          </div>
+
           <div className="form-grid ms-module-form">
             <div className="field">
-              <label>Date</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <label htmlFor="ms-golf-date">Date</label>
+              <input
+                id="ms-golf-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
             </div>
             <div className="field">
-              <label>Course</label>
+              <label htmlFor="ms-golf-course">Course</label>
               <select
+                id="ms-golf-course"
                 value={courseId}
                 onChange={(e) => {
                   const id = e.target.value;
                   setCourseId(id);
+                  if (id === OTHER_COURSE_ID) {
+                    setPar(defaultPar("executive", holes));
+                    return;
+                  }
                   const c = GOLF_COURSES.find((x) => x.id === id);
-                  if (c) applyHoles(c.holes >= 18 ? 18 : 9);
+                  if (c) applyHoles(c.holes >= 18 ? 18 : 9, c.kind);
                 }}
               >
                 <option value="">Pick a Villages course</option>
-                {GOLF_COURSES.filter((c) => c.kind !== "practice" && c.kind !== "putting").map(
-                  (c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.code ? ` · ${c.code}` : ""} · {kindLabel(c.kind)}
-                    </option>
-                  )
-                )}
+                <option value={OTHER_COURSE_ID}>Other / not listed — type the name</option>
+                {COURSE_GROUPS.map((g) => (
+                  <optgroup key={g.kind} label={g.label}>
+                    {GOLF_COURSES.filter((c) => c.kind === g.kind).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                        {c.code ? ` · ${c.code}` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
+          {customCourse ? (
+            <div className="field">
+              <label htmlFor="ms-golf-course-custom">Course name</label>
+              <input
+                id="ms-golf-course-custom"
+                value={courseCustom}
+                onChange={(e) => setCourseCustom(e.target.value.slice(0, 80))}
+                placeholder="Type any course — even outside The Villages"
+                autoComplete="off"
+                maxLength={80}
+              />
+            </div>
+          ) : (
+            <p className="panel-hint" style={{ marginTop: "0.35rem" }}>
+              Don&apos;t see it? Choose <strong>Other / not listed</strong> and type the name.
+            </p>
+          )}
+
           <div className="ms-photo-chips" style={{ margin: "0.65rem 0" }}>
             <button
               type="button"
               className={`ms-photo-chip${holes === 9 ? " is-on" : ""}`}
-              onClick={() => applyHoles(9)}
+              onClick={() => applyHoles(9, course?.kind)}
             >
               9 holes
             </button>
             <button
               type="button"
               className={`ms-photo-chip${holes === 18 ? " is-on" : ""}`}
-              onClick={() => applyHoles(18)}
+              onClick={() => applyHoles(18, course?.kind)}
             >
               18 holes
             </button>
+            {course ? <GolfScorecardButton course={course} /> : null}
           </div>
-          <div className="ms-golf-scroll">
-            <table className="ms-golf-card">
-              <thead>
-                <tr>
-                  <th>Hole</th>
-                  {par.map((_, i) => (
-                    <th key={i}>{i + 1}</th>
-                  ))}
-                  <th>Out</th>
-                </tr>
-                <tr>
-                  <th>Par</th>
-                  {par.map((p, i) => (
-                    <td key={i}>{p}</td>
-                  ))}
-                  <td>{par.reduce((s, n) => s + n, 0)}</td>
-                </tr>
-              </thead>
-              <tbody>
-                {players.map((pl, pi) => {
-                  const g = grossOf(pl.scores);
-                  return (
-                    <tr key={pi}>
-                      <th>
-                        <input
-                          value={pl.name}
-                          placeholder={pi === 0 ? "Your name" : `Player ${pi + 1}`}
-                          onChange={(e) => setPlayer(pi, { name: e.target.value.slice(0, 40) })}
-                        />
-                        <input
-                          value={pl.hdcp}
-                          placeholder="Hdcp"
-                          onChange={(e) => setPlayer(pi, { hdcp: e.target.value.slice(0, 8) })}
-                        />
-                      </th>
-                      {pl.scores.map((s, hi) => (
-                        <td key={hi}>
-                          <div className="ms-score-pm">
-                            <button type="button" onClick={() => bump(pi, hi, -1)}>
-                              −
-                            </button>
-                            <strong>{s === "" ? "—" : s}</strong>
-                            <button type="button" onClick={() => bump(pi, hi, 1)}>
-                              +
-                            </button>
-                          </div>
-                        </td>
-                      ))}
-                      <td>
-                        <strong>{g || "—"}</strong>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+          <div className="ms-golf-players">
+            {players.map((pl, pi) => (
+              <div key={pi} className="ms-golf-player-edit">
+                <input
+                  value={pl.name}
+                  placeholder={pi === 0 ? "Your name" : `Player ${pi + 1}`}
+                  onChange={(e) => setPlayer(pi, { name: e.target.value.slice(0, 40) })}
+                  aria-label={pi === 0 ? "Your name" : `Player ${pi + 1} name`}
+                />
+                <input
+                  value={pl.hdcp}
+                  placeholder="Hdcp"
+                  inputMode="decimal"
+                  onChange={(e) => setPlayer(pi, { hdcp: e.target.value.slice(0, 8) })}
+                  aria-label={`${pi === 0 ? "Your" : `Player ${pi + 1}`} handicap`}
+                />
+              </div>
+            ))}
           </div>
-          <div className="ms-stat-row" style={{ marginTop: "0.75rem" }}>
-            {namedPlayers.map((pl) => {
+
+          <div className="ms-golf-hole-stage">
+            <div className="ms-golf-hole-nav">
+              <button
+                type="button"
+                className="ms-golf-hole-step"
+                onClick={() => setHoleAt((n) => Math.max(0, n - 1))}
+                disabled={holeAt === 0}
+                aria-label="Previous hole"
+              >
+                ←
+              </button>
+              <div className="ms-golf-hole-now">
+                <span>Hole</span>
+                <strong>{holeAt + 1}</strong>
+                <button
+                  type="button"
+                  className="ms-golf-par-pill"
+                  onClick={() => cyclePar(holeAt)}
+                  title="Tap to cycle par 3, 4, or 5"
+                >
+                  Par {par[holeAt] || 3}
+                </button>
+              </div>
+              <button
+                type="button"
+                className="ms-golf-hole-step"
+                onClick={() => setHoleAt((n) => Math.min(holes - 1, n + 1))}
+                disabled={holeAt === holes - 1}
+                aria-label="Next hole"
+              >
+                →
+              </button>
+            </div>
+
+            <div className="ms-golf-pads">
+              {players.map((pl, pi) => {
+                if (pi > 0 && !pl.name.trim()) return null;
+                const s = pl.scores[holeAt];
+                const holePar = par[holeAt] || 3;
+                const label = pl.name.trim() || (pi === 0 ? "You" : `Player ${pi + 1}`);
+                return (
+                  <div
+                    key={pi}
+                    className={`ms-golf-pad ${vsParClass(s, holePar)}`}
+                  >
+                    <span className="ms-golf-pad-name">{label}</span>
+                    <div className="ms-golf-pad-row">
+                      <button
+                        type="button"
+                        className="ms-golf-bump"
+                        onClick={() => bump(pi, holeAt, -1)}
+                        aria-label={`Lower ${label} score`}
+                      >
+                        −
+                      </button>
+                      <button
+                        type="button"
+                        className="ms-golf-score"
+                        onClick={() => setHoleScore(pi, holeAt, holePar)}
+                        aria-label={`Set ${label} to par`}
+                      >
+                        {s === "" ? "—" : s}
+                      </button>
+                      <button
+                        type="button"
+                        className="ms-golf-bump"
+                        onClick={() => bump(pi, holeAt, 1)}
+                        aria-label={`Raise ${label} score`}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <em className="ms-golf-pad-vs">{vsParLabel(s, holePar)}</em>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="ms-golf-strip" role="tablist" aria-label="Jump to hole">
+            {par.map((_, i) => {
+              const filled = players.some(
+                (p, pi) => (pi === 0 || p.name.trim()) && p.scores[i] !== ""
+              );
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`ms-golf-dot${i === holeAt ? " is-on" : ""}${filled ? " is-done" : ""}`}
+                  onClick={() => setHoleAt(i)}
+                  aria-label={`Hole ${i + 1}`}
+                  aria-current={i === holeAt ? "true" : undefined}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="ms-stat-row" style={{ marginTop: "0.85rem" }}>
+            {(namedPlayers.length ? namedPlayers : players.slice(0, 1)).map((pl, i) => {
               const g = grossOf(pl.scores);
               const n = netOf(g, pl.hdcp, holes);
+              const thru = pl.scores.filter((s) => s !== "").length;
+              const toPar =
+                thru === 0
+                  ? null
+                  : g -
+                    par
+                      .slice(0, holes)
+                      .reduce((sum, p, hi) => sum + (pl.scores[hi] === "" ? 0 : p), 0);
               return (
-                <div key={pl.name} className="ms-stat">
-                  <span>{pl.name}</span>
-                  <strong>Gross {g || "—"}</strong>
-                  <em>{n == null ? "Add hdcp for net" : `Net ${n}`}</em>
+                <div key={`${pl.name || "you"}-${i}`} className="ms-stat">
+                  <span>{pl.name.trim() || "You"}</span>
+                  <strong>
+                    {g || "—"}
+                    {toPar == null
+                      ? ""
+                      : toPar === 0
+                        ? " · E"
+                        : ` · ${toPar > 0 ? "+" : ""}${toPar}`}
+                  </strong>
+                  <em>
+                    {thru ? `Thru ${thru}` : "Not started"}
+                    {n == null ? "" : ` · net ${n}`}
+                  </em>
                 </div>
               );
             })}
           </div>
-          <div className="field">
-            <label>Round notes</label>
+
+          <div className="field" style={{ marginTop: "0.75rem" }}>
+            <label htmlFor="ms-golf-notes">Round notes</label>
             <input
+              id="ms-golf-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Cart path only · breakfast ball on 3 · beer on 19"
@@ -335,7 +530,11 @@ export function MySpaceGolfLogBoard() {
               type="button"
               className="btn btn-primary btn-sm"
               onClick={() => {
-                const cname = course?.name || "Villages course";
+                if (customCourse && !courseCustom.trim()) {
+                  flash("Type the course name first");
+                  return;
+                }
+                const cname = courseName || "Villages course";
                 const used = players.filter((p) => p.name.trim() || p.scores.some((s) => s !== ""));
                 if (!used.length) return;
                 persist({
@@ -347,7 +546,7 @@ export function MySpaceGolfLogBoard() {
                       id: uid("rd"),
                       date,
                       course: cname,
-                      courseId,
+                      courseId: customCourse ? OTHER_COURSE_ID : courseId,
                       holes,
                       scores: used[0].scores,
                       par,
@@ -366,13 +565,16 @@ export function MySpaceGolfLogBoard() {
               type="button"
               className="btn btn-ghost btn-sm"
               onClick={() => {
-                const lines = namedPlayers.map((pl) => {
-                  const g = grossOf(pl.scores);
-                  const n = netOf(g, pl.hdcp, holes);
-                  return `${pl.name}: ${pl.scores.map((s) => s || "—").join(" ")} · gross ${g}${n == null ? "" : ` · net ${n}`}`;
-                });
+                const lines = (namedPlayers.length ? namedPlayers : players.slice(0, 1)).map(
+                  (pl) => {
+                    const g = grossOf(pl.scores);
+                    const n = netOf(g, pl.hdcp, holes);
+                    const who = pl.name.trim() || "You";
+                    return `${who}: ${pl.scores.map((s) => s || "—").join(" ")} · gross ${g}${n == null ? "" : ` · net ${n}`}`;
+                  }
+                );
                 copy(
-                  [`${course?.name || "Round"} ${date} · ${holes} holes`, notes, ...lines]
+                  [`${courseName || "Round"} ${date} · ${holes} holes`, notes, ...lines]
                     .filter(Boolean)
                     .join("\n")
                 );
@@ -391,11 +593,58 @@ export function MySpaceGolfLogBoard() {
                 setPlayers(emptyPlayers(holes, value.myName, value.myHdcp));
                 setNotes("");
                 setDate(today());
+                setHoleAt(0);
+                setPar(defaultPar(course?.kind || "executive", holes));
               }}
             >
               New round
             </button>
           </div>
+
+          <details className="ms-golf-full">
+            <summary>Full card</summary>
+            <div className="ms-golf-scroll">
+              <table className="ms-golf-card">
+                <thead>
+                  <tr>
+                    <th>Hole</th>
+                    {par.map((_, i) => (
+                      <th key={i}>{i + 1}</th>
+                    ))}
+                    <th>Out</th>
+                  </tr>
+                  <tr>
+                    <th>Par</th>
+                    {par.map((p, i) => (
+                      <td key={i}>{p}</td>
+                    ))}
+                    <td>{par.reduce((s, n) => s + n, 0)}</td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {players.map((pl, pi) => {
+                    if (pi > 0 && !pl.name.trim() && !pl.scores.some((s) => s !== "")) {
+                      return null;
+                    }
+                    const g = grossOf(pl.scores);
+                    return (
+                      <tr key={pi}>
+                        <th>{pl.name.trim() || (pi === 0 ? "You" : `P${pi + 1}`)}</th>
+                        {pl.scores.map((s, hi) => (
+                          <td key={hi} className={vsParClass(s, par[hi] || 3)}>
+                            {s === "" ? "—" : s}
+                          </td>
+                        ))}
+                        <td>
+                          <strong>{g || "—"}</strong>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </details>
         </div>
       )}
 
