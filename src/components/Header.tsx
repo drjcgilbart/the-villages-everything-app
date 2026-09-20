@@ -219,7 +219,7 @@ export function Header({
     ...UTILITY_NAV,
     native ? NATIVE_MEMBERSHIP : WEB_MEMBERSHIP,
   ];
-  const showMenuHint = native && pathname === "/" && !open;
+  const showMenuHint = native && !open;
 
   function topicLink(item: (typeof MAIN_TOPICS)[number], opts?: { onClick?: () => void }) {
     return (
