@@ -28,6 +28,7 @@ import {
   workoutHasNumbers,
 } from "@/lib/gymCatalog";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import { GymExerciseHowTo } from "@/components/GymExerciseHowTo";
 import {
   forgetPhoneMedia,
   GymWorkoutMediaPicker,
@@ -907,8 +908,11 @@ export function MySpaceGymBoard() {
                 return (
                   <article key={i} className="ms-gym-lift ms-gym-lift-live">
                     <div className="ms-gym-lift-title">
-                      <strong>{lift.name || "Exercise"}</strong>
-                      <span>{KIND_LABEL[lift.kind] || lift.kind}</span>
+                      <div>
+                        <strong>{lift.name || "Exercise"}</strong>
+                        <span>{KIND_LABEL[lift.kind] || lift.kind}</span>
+                      </div>
+                      <GymExerciseHowTo name={lift.name} />
                     </div>
                     <div className="field">
                       <label className="visually-hidden">Exercise</label>
@@ -1200,6 +1204,7 @@ export function MySpaceGymBoard() {
                         style={{ marginTop: "0.4rem" }}
                       />
                     ) : null}
+                    <GymExerciseHowTo name={lift.name} />
                   </div>
                   <div className="field">
                     <label>Sets</label>

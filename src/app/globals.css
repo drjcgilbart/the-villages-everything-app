@@ -4717,13 +4717,75 @@ button.ms-home-card:hover {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  align-items: baseline;
+  align-items: flex-start;
+  flex-wrap: wrap;
   margin-bottom: 0.45rem;
 }
 
 .ms-gym-lift-title span {
+  display: block;
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+.ms-gym-howto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ms-gym-video-btn,
+.ms-gym-stills-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #1f6b4a;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ms-gym-stills-btn {
+  background: #fff;
+  color: var(--palm-deep);
+}
+
+.ms-gym-stills {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.ms-gym-stills img {
+  width: 100%;
+  height: 7.5rem;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #eee;
+}
+
+.ms-gym-stills ol {
+  grid-column: 1 / -1;
+  margin: 0.2rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+
+.ms-gym-stills .panel-hint {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 
 .ms-gym-set-live {
