@@ -41,8 +41,10 @@ export function VillagesWeatherTrackers({
 }) {
   const [extra, setExtra] = useState<FloridaWeatherExtra | null>(null);
   const [stormDesk, setStormDesk] = useState(false);
+  const [mapsReady, setMapsReady] = useState(false);
   const [mapLayer, setMapLayer] = useState<"lightning" | "radar">("lightning");
   const [here, setHere] = useState({ lat, lon, label: "The Villages" });
+  const [mapPin, setMapPin] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
     setHere({ lat, lon, label: "Saved weather location" });
@@ -50,7 +52,13 @@ export function VillagesWeatherTrackers({
 
   useEffect(() => {
     if (!stormDesk) return;
-    if (!navigator.geolocation) return;
+    setMapsReady(true);
+    if (mapPin) return;
+    const fallback = { lat, lon };
+    if (!navigator.geolocation) {
+      setMapPin(fallback);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setHere({
@@ -58,13 +66,14 @@ export function VillagesWeatherTrackers({
           lon: pos.coords.longitude,
           label: "Your location",
         });
+        setMapPin({ lat: pos.coords.latitude, lon: pos.coords.longitude });
       },
       () => {
-        /* keep Villages / saved pin */
+        setMapPin(fallback);
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 }
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 300000 }
     );
-  }, [stormDesk]);
+  }, [stormDesk, lat, lon, mapPin]);
 
   useEffect(() => {
     if (!stormDesk) return;
@@ -178,10 +187,10 @@ export function VillagesWeatherTrackers({
                 : "No thunderstorm warning on the NWS feed right now. Still: if you hear it, clear the course.")}
           </p>
           <p className="panel-hint">
-            Tap for a live lightning map, radar, and power-outage links. 30-30
-            rule: if thunder follows lightning by 30 seconds or less, get
-            inside.
+            30-30 rule: if thunder follows lightning by 30 seconds or less, get
+            inside. Wait 30 minutes after the last boom.
           </p>
+          <span className="ms-wx-card-cta">Open live map →</span>
         </button>
 
         <article
@@ -292,14 +301,15 @@ export function VillagesWeatherTrackers({
         ) : null}
       </div>
 
-      {stormDesk && typeof document !== "undefined"
+      {mapsReady && mapPin && typeof document !== "undefined"
         ? createPortal(
             <div
-              className="ms-gym-video-scrim"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="ms-wx-storm-title"
-              onClick={() => setStormDesk(false)}
+              className={stormDesk ? "ms-gym-video-scrim" : "ms-wx-maps-park"}
+              role={stormDesk ? "dialog" : undefined}
+              aria-modal={stormDesk ? true : undefined}
+              aria-hidden={!stormDesk}
+              aria-labelledby={stormDesk ? "ms-wx-storm-title" : undefined}
+              onClick={() => stormDesk && setStormDesk(false)}
             >
               <div
                 className="ms-gym-video-sheet ms-wx-storm-sheet"
@@ -339,16 +349,23 @@ export function VillagesWeatherTrackers({
                   </button>
                 </div>
                 <div className="ms-wx-map-frame">
-                  {mapLayer === "lightning" ? (
-                    <iframe
-                      title="Live lightning map"
-                      src={`https://map.blitzortung.org/index.php?interactive=1#8/${here.lat.toFixed(3)}/${here.lon.toFixed(3)}`}
-                    />
+                  {mapsReady && mapPin ? (
+                    <>
+                      <iframe
+                        title="Live lightning map"
+                        className={mapLayer === "lightning" ? "is-show" : "is-hide"}
+                        src={`https://map.blitzortung.org/index.php?interactive=1#8/${mapPin.lat.toFixed(3)}/${mapPin.lon.toFixed(3)}`}
+                      />
+                      <iframe
+                        title="Live weather radar"
+                        className={mapLayer === "radar" ? "is-show" : "is-hide"}
+                        src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=in&metricTemp=%C2%B0F&metricWind=mph&zoom=8&overlay=radar&product=ecmwf&level=surface&lat=${mapPin.lat.toFixed(3)}&lon=${mapPin.lon.toFixed(3)}&detailLat=${mapPin.lat.toFixed(3)}&detailLon=${mapPin.lon.toFixed(3)}&detail=true&message=true`}
+                      />
+                    </>
                   ) : (
-                    <iframe
-                      title="Live weather radar"
-                      src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=in&metricTemp=%C2%B0F&metricWind=mph&zoom=8&overlay=radar&product=ecmwf&level=surface&lat=${here.lat.toFixed(3)}&lon=${here.lon.toFixed(3)}&detailLat=${here.lat.toFixed(3)}&detailLon=${here.lon.toFixed(3)}&detail=true&message=true`}
-                    />
+                    <p className="panel-hint" style={{ padding: "1rem" }}>
+                      Centering the map…
+                    </p>
                   )}
                 </div>
                 <h4 className="ms-wx-outage-head">Power outages</h4>
