@@ -21,6 +21,7 @@ import {
 } from "@/lib/healthDayRecap";
 import { runHealthDayRecap } from "@/lib/runHealthDayRecap";
 import { PocketNoteCard } from "@/components/PocketNoteCard";
+import { useScrollHide } from "@/lib/useScrollHide";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -869,16 +870,15 @@ export function MySpaceHealthBoard() {
   );
   const autoRecapOnce = useRef(false);
   const [tab, setTab] = useState<HealthTab>("overview");
-  const [healthMenuOpen, setHealthMenuOpen] = useState(true);
+  const healthNav = useScrollHide();
+  const healthMenuOpen = !healthNav.hidden;
   const skipHealthMenuScroll = useRef(true);
-  const healthScrollLock = useRef(0);
-  const healthLastY = useRef(0);
 
   function goToHealthTab(id: HealthTab) {
     setTab(id);
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 860px)").matches) {
       skipHealthMenuScroll.current = false;
-      setHealthMenuOpen(false);
+      healthNav.hide();
     }
   }
 
@@ -888,27 +888,9 @@ export function MySpaceHealthBoard() {
       document
         .getElementById("ms-health-panel")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      healthScrollLock.current = Date.now() + 450;
     }, 50);
     return () => window.clearTimeout(id);
   }, [tab, healthMenuOpen]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    healthLastY.current = window.scrollY || document.documentElement.scrollTop || 0;
-    const onScroll = () => {
-      if (Date.now() < healthScrollLock.current) return;
-      if (!window.matchMedia("(max-width: 860px)").matches) return;
-      const y = window.scrollY || document.documentElement.scrollTop || 0;
-      const delta = y - healthLastY.current;
-      healthLastY.current = y;
-      if (y < 24) setHealthMenuOpen(true);
-      else if (delta < -8) setHealthMenuOpen(true);
-      else if (delta > 8) setHealthMenuOpen(false);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
   const [weightNote, setWeightNote] = useState("");
   const [savingDay, setSavingDay] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -1578,7 +1560,7 @@ export function MySpaceHealthBoard() {
         <button
           type="button"
           className="ms-h-nav-current"
-          onClick={() => setHealthMenuOpen(true)}
+          onClick={() => healthNav.show()}
           aria-expanded={healthMenuOpen}
         >
           <span>
@@ -3600,7 +3582,7 @@ export function MySpaceHealthBoard() {
               className="btn btn-primary"
               onClick={() => {
                 setGoalsSavedOpen(false);
-                setHealthMenuOpen(true);
+                healthNav.show();
                 setTab("overview");
               }}
             >

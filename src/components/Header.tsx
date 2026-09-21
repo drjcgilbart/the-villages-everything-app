@@ -10,6 +10,7 @@ import { PhoneViewToggle } from "@/components/PhoneViewToggle";
 import { MAIN_TOPICS, isMainTopicActive } from "@/lib/topics";
 import { SITE_BRAND } from "@/lib/siteBrand";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
+import { useScrollHide } from "@/lib/useScrollHide";
 import { SiteSearch } from "@/components/SiteSearch";
 
 type UtilityItem = {
@@ -85,11 +86,11 @@ export function Header({
     null
   );
   const [hovering, setHovering] = useState(false);
-  const [chromeHidden, setChromeHidden] = useState(false);
   const scrolledAwayRef = useRef(isGamePage);
   const headerRef = useRef<HTMLElement>(null);
-  const lastYRef = useRef(0);
-  const chromeHiddenRef = useRef(false);
+  const { hidden: chromeHidden, show: showChrome } = useScrollHide({
+    enabled: !open,
+  });
 
   const autoVisible = isGamePage ? hovering : !scrolledAway;
   const pillsVisible =
@@ -109,9 +110,8 @@ export function Header({
 
   useEffect(() => {
     setOpen(false);
-    setChromeHidden(false);
-    chromeHiddenRef.current = false;
-  }, [pathname]);
+    showChrome();
+  }, [pathname, showChrome]);
 
   useEffect(() => {
     const node = headerRef.current;
@@ -131,42 +131,6 @@ export function Header({
       window.removeEventListener("resize", sync);
     };
   }, [open, pillsVisible, native, pathname, chromeHidden]);
-
-  useEffect(() => {
-    if (open) {
-      setChromeHidden(false);
-      chromeHiddenRef.current = false;
-      return;
-    }
-    lastYRef.current =
-      window.scrollY || document.documentElement.scrollTop || 0;
-    let frame = 0;
-    let lockUntil = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        const y = window.scrollY || document.documentElement.scrollTop || 0;
-        const delta = y - lastYRef.current;
-        lastYRef.current = y;
-        if (Date.now() < lockUntil) return;
-        let next = chromeHiddenRef.current;
-        if (y < 20) next = false;
-        else if (delta > 6) next = true;
-        else if (delta < -6) next = false;
-        if (next !== chromeHiddenRef.current) {
-          chromeHiddenRef.current = next;
-          setChromeHidden(next);
-          lockUntil = Date.now() + 280;
-        }
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, [open, pathname]);
 
   useEffect(() => {
     if (!open) return;
