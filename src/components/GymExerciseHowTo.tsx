@@ -6,6 +6,7 @@ import {
   exerciseVideoUrl,
   lookupExerciseDemo,
 } from "@/lib/gymExerciseDemos";
+import { openExternalUrl } from "@/lib/nativeAppShell";
 
 export function GymExerciseHowTo({ name }: { name: string }) {
   const [open, setOpen] = useState(false);
@@ -22,6 +23,10 @@ export function GymExerciseHowTo({ name }: { name: string }) {
         href={video}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={(e) => {
+          e.preventDefault();
+          openExternalUrl(video);
+        }}
       >
         ▶ Video
       </a>

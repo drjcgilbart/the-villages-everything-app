@@ -869,6 +869,46 @@ export function MySpaceHealthBoard() {
   );
   const autoRecapOnce = useRef(false);
   const [tab, setTab] = useState<HealthTab>("overview");
+  const [healthMenuOpen, setHealthMenuOpen] = useState(true);
+  const skipHealthMenuScroll = useRef(true);
+  const healthScrollLock = useRef(0);
+  const healthLastY = useRef(0);
+
+  function goToHealthTab(id: HealthTab) {
+    setTab(id);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 860px)").matches) {
+      skipHealthMenuScroll.current = false;
+      setHealthMenuOpen(false);
+    }
+  }
+
+  useEffect(() => {
+    if (skipHealthMenuScroll.current || healthMenuOpen) return;
+    const id = window.setTimeout(() => {
+      document
+        .getElementById("ms-health-panel")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      healthScrollLock.current = Date.now() + 450;
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [tab, healthMenuOpen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    healthLastY.current = window.scrollY || document.documentElement.scrollTop || 0;
+    const onScroll = () => {
+      if (Date.now() < healthScrollLock.current) return;
+      if (!window.matchMedia("(max-width: 860px)").matches) return;
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      const delta = y - healthLastY.current;
+      healthLastY.current = y;
+      if (y < 24) setHealthMenuOpen(true);
+      else if (delta < -8) setHealthMenuOpen(true);
+      else if (delta > 8) setHealthMenuOpen(false);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const [weightNote, setWeightNote] = useState("");
   const [savingDay, setSavingDay] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -1534,24 +1574,41 @@ export function MySpaceHealthBoard() {
         account (same idea as the desktop Villages dashboard). Not medical advice.
       </p>
 
-      <div className="ms-h-tiles" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`ms-h-tile ${tab === t.id ? "active" : ""}`}
-            onClick={() => setTab(t.id)}
-          >
-            <span aria-hidden="true">{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
+      <div className={`ms-h-nav-wrap${healthMenuOpen ? "" : " is-collapsed"}`}>
+        <button
+          type="button"
+          className="ms-h-nav-current"
+          onClick={() => setHealthMenuOpen(true)}
+          aria-expanded={healthMenuOpen}
+        >
+          <span>
+            Now viewing:{" "}
+            <strong>
+              {(TABS.find((t) => t.id === tab) || { icon: "🎯", label: "Goals" }).icon}{" "}
+              {(TABS.find((t) => t.id === tab) || { label: "Goals" }).label}
+            </strong>
+          </span>
+          <span className="ms-dash-nav-change">Show Health menu ▾</span>
+        </button>
+        <div className="ms-h-tiles" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`ms-h-tile ${tab === t.id ? "active" : ""}`}
+              onClick={() => goToHealthTab(t.id)}
+            >
+              <span aria-hidden="true">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="ms-h-toolbar">
         <span className="ms-h-pill">Tracking</span>
         <span className="panel-hint">Today · {today}</span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTab("goals")}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => goToHealthTab("goals")}>
           Edit goals
         </button>
         <button
@@ -1570,6 +1627,7 @@ export function MySpaceHealthBoard() {
         Follow your own doctor or pharmacist.
       </p>
 
+      <div id="ms-health-panel" className="ms-health-panel">
       {tab === "overview" && (
         <div className="about-panel ms-module">
           <div className="ms-h-quote">
@@ -2837,7 +2895,7 @@ export function MySpaceHealthBoard() {
           <p className="panel-hint">
             Walks, swimming, and minutes belong here. Gym machines, free weights, Fit Clubs, and
             Planet Fitness live in{" "}
-            <button type="button" className="text-link" onClick={() => setTab("gym")}>
+            <button type="button" className="text-link" onClick={() => goToHealthTab("gym")}>
               Gym
             </button>{" "}
             (the next submenu).
@@ -3525,6 +3583,8 @@ export function MySpaceHealthBoard() {
         </div>
       )}
 
+      </div>
+
       {goalsSavedOpen ? (
         <div
           className="ms-h-popup-scrim"
@@ -3540,6 +3600,7 @@ export function MySpaceHealthBoard() {
               className="btn btn-primary"
               onClick={() => {
                 setGoalsSavedOpen(false);
+                setHealthMenuOpen(true);
                 setTab("overview");
               }}
             >
