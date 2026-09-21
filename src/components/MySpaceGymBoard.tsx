@@ -130,6 +130,8 @@ const SUPPLEMENT_PRESETS = [
   "Pre-workout",
   "BCAA",
 ];
+const NEW_GYM = "__new__";
+
 const TABS: { id: GymTab; label: string; icon: string }[] = [
   { id: "today", label: "At the gym", icon: "🏋️" },
   { id: "routines", label: "My routines", icon: "📋" },
@@ -252,6 +254,8 @@ export function MySpaceGymBoard() {
   const [customRoutine, setCustomRoutine] = useState("");
   const [sessionOn, setSessionOn] = useState(false);
   const [editRoutineId, setEditRoutineId] = useState<string | null>(null);
+  const [addingGym, setAddingGym] = useState(false);
+  const [gymBeforeNew, setGymBeforeNew] = useState("");
   const [openDetails, setOpenDetails] = useState<string | null>(null);
   const [placeName, setPlaceName] = useState("");
   const [placeLoc, setPlaceLoc] = useState("");
@@ -511,9 +515,9 @@ export function MySpaceGymBoard() {
     setPlaceNotes("");
   }
 
-  function savePlace() {
+  function savePlace(): string | null {
     const name = placeName.trim();
-    if (!name) return;
+    if (!name) return null;
     const row: GymPlace = {
       id: editPlaceId || uid("gy"),
       name: name.slice(0, 80),
@@ -533,6 +537,18 @@ export function MySpaceGymBoard() {
       homeGymId: value.homeGymId || row.id,
     });
     resetPlace();
+    return row.id;
+  }
+
+  function openNewGymForm() {
+    setGymBeforeNew(gymId || value.homeGymId || "");
+    setAddingGym(true);
+    resetPlace();
+  }
+
+  function cancelNewGymForm() {
+    setAddingGym(false);
+    setGymId(gymBeforeNew);
   }
 
   if (!ready) return <p className="panel-hint">Loading gym…</p>;
@@ -668,8 +684,16 @@ export function MySpaceGymBoard() {
               <div className="field">
                 <label>Gym</label>
                 <select
-                  value={gymId || value.homeGymId || ""}
-                  onChange={(e) => setGymId(e.target.value)}
+                  value={addingGym ? NEW_GYM : gymId || value.homeGymId || ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === NEW_GYM) {
+                      openNewGymForm();
+                      return;
+                    }
+                    setAddingGym(false);
+                    setGymId(v);
+                  }}
                 >
                   <option value="">Choose gym</option>
                   {FIT_CLUBS.map((g) => (
@@ -682,8 +706,118 @@ export function MySpaceGymBoard() {
                       {placeLabel(g)}
                     </option>
                   ))}
+                  <option value={NEW_GYM}>New gym…</option>
                 </select>
               </div>
+              {addingGym ? (
+                <div className="ms-gym-new-place">
+                  <p className="panel-hint">
+                    Add Planet Fitness, a home gym, or any club. Then you’re back on this
+                    workout.
+                  </p>
+                  <div className="ms-h-quick">
+                    {CHAIN_PRESETS.map((c) => (
+                      <button
+                        key={c.chain}
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          setPlaceName(c.name);
+                          setPlaceChain(c.chain === "Home" ? "" : c.chain);
+                          setPlaceKind(c.chain === "Home" ? "home" : "chain");
+                        }}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                  <form
+                    className="form-grid ms-module-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const id = savePlace();
+                      if (!id) return;
+                      setGymId(id);
+                      setAddingGym(false);
+                    }}
+                  >
+                    <div className="field">
+                      <label>Name</label>
+                      <input
+                        value={placeName}
+                        onChange={(e) => setPlaceName(e.target.value)}
+                        placeholder="Planet Fitness"
+                        required
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Location / city</label>
+                      <input
+                        value={placeLoc}
+                        onChange={(e) => setPlaceLoc(e.target.value)}
+                        placeholder="Leesburg"
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Type</label>
+                      <select value={placeKind} onChange={(e) => setPlaceKind(e.target.value)}>
+                        <option value="chain">Chain</option>
+                        <option value="independent">Independent</option>
+                        <option value="home">Home gym</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Chain (if any)</label>
+                      <input
+                        value={placeChain}
+                        onChange={(e) => setPlaceChain(e.target.value)}
+                        placeholder="Planet Fitness"
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Address</label>
+                      <input value={placeAddr} onChange={(e) => setPlaceAddr(e.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Phone</label>
+                      <input value={placePhone} onChange={(e) => setPlacePhone(e.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Hours</label>
+                      <input
+                        value={placeHours}
+                        onChange={(e) => setPlaceHours(e.target.value)}
+                        placeholder="5am–11pm"
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Membership #</label>
+                      <input value={placeMem} onChange={(e) => setPlaceMem(e.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Notes</label>
+                      <input
+                        value={placeNotes}
+                        onChange={(e) => setPlaceNotes(e.target.value)}
+                        placeholder="Towel in the cart"
+                      />
+                    </div>
+                    <div className="hero-actions" style={{ gridColumn: "1 / -1" }}>
+                      <button type="submit" className="btn btn-primary btn-sm">
+                        Save gym and keep going
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={cancelNewGymForm}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : null}
 
               {lifts.map((lift, i) => {
                 const listed = EXERCISE_NAMES.includes(lift.name);

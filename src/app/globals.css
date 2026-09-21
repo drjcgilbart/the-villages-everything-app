@@ -4701,6 +4701,14 @@ button.ms-home-card:hover {
   margin-bottom: 0.75rem;
 }
 
+.ms-gym-new-place {
+  margin: 0.35rem 0 1rem;
+  padding: 0.75rem 0.8rem 0.9rem;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: rgba(31, 107, 74, 0.05);
+}
+
 .ms-gym-lift-live {
   background: linear-gradient(180deg, rgba(31, 107, 74, 0.06), #fff);
 }
