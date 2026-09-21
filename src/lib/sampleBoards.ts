@@ -358,6 +358,7 @@ export function sampleBoards(): MemberBoards {
           notes: "Towel in the cart. Opinions in the locker room. Example — delete me.",
         },
       ],
+      routines: [],
       workouts: [
         {
           id: "ex-gym-wo",
@@ -374,7 +375,7 @@ export function sampleBoards(): MemberBoards {
               name: "Recumbent bike (the thinking person’s cardio)",
               kind: "cardio",
               equipment: "Bike",
-              sets: [{ weight: "", reps: "", seconds: 600 }],
+              sets: [{ weight: "", reps: "", seconds: 600, done: true }],
             },
           ],
         },

@@ -198,7 +198,8 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     icon: "🏋️",
     minRank: 2,
     phase: "live",
-    teaser: "Workouts, Fit Clubs, supplements — now a Health submenu between Exercise and Sleep.",
+    teaser:
+      "At the gym: tap Leg Day or HIIT, check off sets, bump weight without typing. Fit Clubs and supplements too.",
     previewLine: "Today’s workout · home gym · supplements",
   },
   {

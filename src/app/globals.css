@@ -4666,6 +4666,139 @@ button.ms-home-card:hover {
   margin: 0.35rem 0;
 }
 
+.ms-gym-floor h3 {
+  margin: 0.85rem 0 0.4rem;
+}
+
+.ms-gym-routine-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.85rem;
+}
+
+.ms-gym-custom-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0 0 1rem;
+}
+
+.ms-gym-custom-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.ms-gym-live-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.ms-gym-lift-live {
+  background: linear-gradient(180deg, rgba(31, 107, 74, 0.06), #fff);
+}
+
+.ms-gym-lift-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+
+.ms-gym-lift-title span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.ms-gym-set-live {
+  display: grid;
+  grid-template-columns: 3.1rem minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: end;
+  margin: 0.4rem 0;
+  padding: 0.4rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.ms-gym-set-live.is-done {
+  background: rgba(31, 107, 74, 0.14);
+}
+
+.ms-gym-check {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.15rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ms-gym-check.is-on {
+  background: #1f6b4a;
+  color: #fff;
+  border-color: #1f6b4a;
+}
+
+.ms-gym-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.ms-gym-mini select {
+  width: 100%;
+  min-height: 2.8rem;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.ms-gym-nudge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ms-gym-nudge .ms-gym-bump {
+  width: 2.4rem;
+  height: 1.55rem;
+  min-height: 0;
+  border-radius: 8px;
+  font-size: 1.05rem;
+}
+
+@media (max-width: 700px) {
+  .ms-gym-set-live {
+    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+  .ms-gym-check {
+    width: 3.2rem;
+    height: 3.2rem;
+  }
+}
+
 .ms-gym-place-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

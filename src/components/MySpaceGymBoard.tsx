@@ -7,9 +7,24 @@ import {
   type GymLift,
   type GymMediaItem,
   type GymPlace,
+  type GymRoutine,
   type GymSet,
   type GymWorkout,
 } from "@/lib/memberBoardModel";
+import {
+  cloneLifts,
+  emptyGymSet,
+  EXERCISE_KIND,
+  EXERCISE_NAMES,
+  KIND_LABEL,
+  lastUsedFor,
+  nearbyReps,
+  nearbySeconds,
+  nearbyWeights,
+  ROUTINE_PRESETS,
+  sessionProgress,
+  starterLifts,
+} from "@/lib/gymCatalog";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import {
   forgetPhoneMedia,
@@ -18,7 +33,7 @@ import {
   phoneLocalIds,
 } from "@/components/GymWorkoutMedia";
 
-type GymTab = "today" | "gyms" | "history" | "supps";
+type GymTab = "today" | "routines" | "gyms" | "history" | "supps";
 
 const FIT_HOURS = "Mon–Fri 6:30am–8:00pm · Sat–Sun 7:00am–5:00pm";
 const FIT_GEAR =
@@ -97,111 +112,6 @@ const CHAIN_PRESETS = [
   { chain: "Home", name: "Home gym" },
 ];
 
-const EQUIPMENT: Record<string, string[]> = {
-  machine: [
-    "Leg press",
-    "Chest press",
-    "Shoulder press",
-    "Lat pulldown",
-    "Seated row",
-    "Pec deck",
-    "Leg curl",
-    "Leg extension",
-    "Smith machine",
-    "Assisted pull-up",
-    "Ab crunch machine",
-    "Calf raise machine",
-    "Chest fly machine",
-    "Rear delt fly",
-    "Hack squat",
-    "Hip abduction",
-    "Hip adduction",
-    "Glute kickback",
-    "Seated calf raise",
-    "Assisted dip",
-    "Arm curl machine",
-    "Tricep machine",
-    "Back extension",
-    "Rotary torso",
-  ],
-  free: [
-    "Barbell bench press",
-    "Incline bench press",
-    "Decline bench press",
-    "Squat",
-    "Deadlift",
-    "Overhead press",
-    "Barbell row",
-    "Dumbbell press",
-    "Dumbbell row",
-    "Goblet squat",
-    "Romanian deadlift",
-    "Lunges",
-    "Bulgarian split squat",
-    "Hip thrust",
-    "Dumbbell curl",
-    "Hammer curl",
-    "Preacher curl",
-    "Tricep extension",
-    "Skull crusher",
-    "Lateral raise",
-    "Front raise",
-    "Farmer carry",
-    "Kettlebell swing",
-    "Step-ups",
-    "Shrug",
-  ],
-  cable: [
-    "Cable row",
-    "Face pull",
-    "Tricep pushdown",
-    "Cable fly",
-    "Woodchop",
-    "Cable curl",
-    "Straight-arm pulldown",
-    "Cable crunch",
-    "Pallof press",
-  ],
-  cardio: [
-    "Treadmill",
-    "Elliptical",
-    "Recumbent bike",
-    "Upright bike",
-    "Rower",
-    "Stair climber",
-    "Arc trainer",
-    "Assault bike",
-    "Jump rope",
-    "Battle ropes",
-  ],
-  bodyweight: [
-    "Push-ups",
-    "Sit-ups",
-    "Plank",
-    "Squats (bodyweight)",
-    "Wall sit",
-    "Bird dog",
-    "Pull-ups",
-    "Chin-ups",
-    "Dips",
-    "Hip bridge",
-    "Russian twist",
-    "Burpees",
-    "Mountain climbers",
-  ],
-};
-
-const EXERCISE_NAMES = [...new Set(Object.values(EQUIPMENT).flat())];
-const EXERCISE_KIND = Object.fromEntries(
-  Object.entries(EQUIPMENT).flatMap(([kind, names]) => names.map((n) => [n, kind]))
-) as Record<string, string>;
-const KIND_LABEL: Record<string, string> = {
-  machine: "Machine",
-  free: "Free weights",
-  cable: "Cable",
-  cardio: "Cardio",
-  bodyweight: "Bodyweight",
-};
 const FELT_OPTS = [
   { id: "", label: "—" },
   { id: "great", label: "Great" },
@@ -221,7 +131,8 @@ const SUPPLEMENT_PRESETS = [
   "BCAA",
 ];
 const TABS: { id: GymTab; label: string; icon: string }[] = [
-  { id: "today", label: "Log workout", icon: "🏋️" },
+  { id: "today", label: "At the gym", icon: "🏋️" },
+  { id: "routines", label: "My routines", icon: "📋" },
   { id: "gyms", label: "Fit Clubs & gyms", icon: "📍" },
   { id: "history", label: "History", icon: "📜" },
   { id: "supps", label: "Supplements", icon: "💊" },
@@ -249,7 +160,7 @@ function yesterday(dateStr: string): string {
 }
 
 function emptySet(): GymSet {
-  return { weight: "", reps: "", seconds: "" };
+  return emptyGymSet();
 }
 
 function emptyLift(): GymLift {
@@ -337,6 +248,10 @@ export function MySpaceGymBoard() {
   const [media, setMedia] = useState<GymMediaItem[]>([]);
   const [savedPhoneIds, setSavedPhoneIds] = useState<string[]>([]);
   const [editWorkoutId, setEditWorkoutId] = useState<string | null>(null);
+  const [routineName, setRoutineName] = useState("");
+  const [customRoutine, setCustomRoutine] = useState("");
+  const [sessionOn, setSessionOn] = useState(false);
+  const [editRoutineId, setEditRoutineId] = useState<string | null>(null);
   const [openDetails, setOpenDetails] = useState<string | null>(null);
   const [placeName, setPlaceName] = useState("");
   const [placeLoc, setPlaceLoc] = useState("");
@@ -356,6 +271,7 @@ export function MySpaceGymBoard() {
 
   const gyms = value.gyms || [];
   const workouts = value.workouts || [];
+  const routines = value.routines || [];
   const supplements = value.supplements || [];
   const supplementLogs = value.supplementLogs || [];
   const stats = useMemo(() => computeStats(workouts), [workouts]);
@@ -388,17 +304,38 @@ export function MySpaceGymBoard() {
   }
 
   function patchSet(liftI: number, setI: number, patch: Partial<GymSet>) {
-    setLifts((prev) =>
-      prev.map((l, idx) =>
+    setLifts((prev) => {
+      const next = prev.map((l, idx) =>
         idx === liftI
           ? { ...l, sets: l.sets.map((s, j) => (j === setI ? { ...s, ...patch } : s)) }
           : l
-      )
-    );
+      );
+      if (sessionOn) writeWorkout(next, true);
+      return next;
+    });
+  }
+
+  function applyLastUsed(list: GymLift[]): GymLift[] {
+    return list.map((l) => {
+      const last = lastUsedFor(workouts, l.name);
+      if (!last) return l;
+      return {
+        ...l,
+        sets: l.sets.map((s) => ({
+          ...s,
+          done: Boolean(s.done),
+          weight: s.weight === "" && last.weight ? last.weight : s.weight,
+          reps: s.reps === "" && last.reps ? last.reps : s.reps,
+          seconds: s.seconds === "" && last.seconds ? last.seconds : s.seconds,
+        })),
+      };
+    });
   }
 
   function loadWorkout(w: GymWorkout) {
     setEditWorkoutId(w.id);
+    setSessionOn(true);
+    setRoutineName(w.routineName || "");
     setDate(w.date || today());
     setTime(w.time || "");
     setMinutes(w.durationMin === "" || w.durationMin == null ? "" : String(w.durationMin));
@@ -411,7 +348,7 @@ export function MySpaceGymBoard() {
             name: l.name,
             kind: l.kind || "machine",
             equipment: l.equipment || "",
-            sets: l.sets?.length ? l.sets : [emptySet()],
+            sets: l.sets?.length ? l.sets.map((s) => ({ ...emptySet(), ...s })) : [emptySet()],
           }))
         : [emptyLift()]
     );
@@ -427,6 +364,9 @@ export function MySpaceGymBoard() {
     );
     if (unsaved.length) void forgetPhoneMedia(unsaved);
     setEditWorkoutId(null);
+    setSessionOn(false);
+    setRoutineName("");
+    setCustomRoutine("");
     setDate(today());
     setTime("");
     setMinutes("45");
@@ -438,15 +378,15 @@ export function MySpaceGymBoard() {
     setSavedPhoneIds([]);
   }
 
-  function saveWorkout() {
-    const cleaned: GymLift[] = lifts
+  function writeWorkout(nextLifts: GymLift[], keepOpen: boolean) {
+    const cleaned: GymLift[] = nextLifts
       .map((l) => ({
         ...l,
         name: l.name.trim().slice(0, 80),
         equipment: (l.equipment || "").trim().slice(0, 80),
-        sets: l.sets.filter((s) => s.weight !== "" || s.reps !== "" || s.seconds !== "").slice(0, 20),
+        sets: l.sets.slice(0, 20),
       }))
-      .filter((l) => l.name && l.sets.length);
+      .filter((l) => l.name);
     if (!cleaned.length && !notes.trim() && !media.length) return;
     const selected = allPlaces.find((p) => p.id === (gymId || value.homeGymId));
     const wo: GymWorkout = {
@@ -455,6 +395,7 @@ export function MySpaceGymBoard() {
       time,
       gymId: gymId || value.homeGymId || "",
       gymName: selected ? placeLabel(selected) : "",
+      routineName: routineName.trim().slice(0, 80) || undefined,
       durationMin: (Number(minutes) || "") as number | "",
       felt,
       notes: notes.trim().slice(0, 400),
@@ -475,16 +416,62 @@ export function MySpaceGymBoard() {
       ? workouts.map((w) => (w.id === editWorkoutId ? wo : w))
       : [wo, ...workouts];
     persist({ ...value, workouts: next.slice(0, 80) });
-    setEditWorkoutId(null);
+    if (keepOpen) {
+      setEditWorkoutId(wo.id);
+      return;
+    }
+    resetForm();
+  }
+
+  function saveWorkout() {
+    writeWorkout(lifts, false);
+  }
+
+  function startRoutine(name: string, from?: GymLift[]) {
+    const label = name.trim().slice(0, 80);
+    if (!label) return;
+    const base = from?.length ? cloneLifts(from) : starterLifts(label);
+    const next = applyLastUsed(base.length ? base : [emptyLift()]);
+    setRoutineName(label);
+    setCustomRoutine("");
+    setLifts(next);
+    setSessionOn(true);
     setDate(today());
-    setTime("");
-    setMinutes("45");
-    setFelt("");
-    setNotes("");
-    setGymId(value.homeGymId || "");
-    setLifts([emptyLift()]);
-    setMedia([]);
-    setSavedPhoneIds([]);
+    setGymId(gymId || value.homeGymId || "");
+    const selected = allPlaces.find((p) => p.id === (gymId || value.homeGymId));
+    const wo: GymWorkout = {
+      id: uid("wo"),
+      date: today(),
+      time,
+      gymId: gymId || value.homeGymId || "",
+      gymName: selected ? placeLabel(selected) : "",
+      routineName: label,
+      durationMin: (Number(minutes) || "") as number | "",
+      felt,
+      notes: "",
+      exercises: next,
+      media: [],
+    };
+    persist({ ...value, workouts: [wo, ...workouts].slice(0, 80) });
+    setEditWorkoutId(wo.id);
+    setTab("today");
+  }
+
+  function saveRoutineFromLifts(name: string, list: GymLift[]) {
+    const label = name.trim().slice(0, 80);
+    if (!label) return;
+    const exercises = cloneLifts(list.filter((l) => l.name.trim()));
+    if (!exercises.length) return;
+    const row: GymRoutine = {
+      id: editRoutineId || uid("rt"),
+      name: label,
+      exercises,
+    };
+    const next = editRoutineId
+      ? routines.map((r) => (r.id === editRoutineId ? row : r))
+      : [row, ...routines.filter((r) => r.name.toLowerCase() !== label.toLowerCase())];
+    persist({ ...value, routines: next.slice(0, 24) });
+    setEditRoutineId(null);
   }
 
   function deleteWorkout(id: string) {
@@ -553,8 +540,8 @@ export function MySpaceGymBoard() {
   return (
     <div className="ms-health-board">
       <p className="ms-module-lead">
-        Fit Clubs, Planet Fitness, home gym — sets, reps, and supplements. Not coaching; confirm Fit
-        Club hours at the rec desk.
+        Built for the Fit Club floor: pick Leg Day or HIIT, tap a box when a set is done, bump
+        weight or reps without typing. Not coaching — confirm Fit Club hours at the rec desk.
       </p>
       {error ? <p className="pf-form-error">{error}</p> : null}
       {saving ? <p className="panel-hint">Saving to your account…</p> : null}
@@ -583,7 +570,7 @@ export function MySpaceGymBoard() {
       </p>
 
       {tab === "today" && (
-        <div className="about-panel ms-module">
+        <div className="about-panel ms-module ms-gym-floor">
           <div className="ms-stat-row">
             <div className="ms-stat">
               <strong>{stats.last7}</strong>
@@ -594,195 +581,475 @@ export function MySpaceGymBoard() {
               <span>day streak</span>
             </div>
             <div className="ms-stat">
-              <strong>{stats.weekMinutes}</strong>
-              <span>min this week</span>
-            </div>
-            <div className="ms-stat">
-              <strong>{stats.last30}</strong>
-              <span>days / 30</span>
+              <strong>{sessionOn ? `${sessionProgress(lifts).done}/${sessionProgress(lifts).total}` : stats.weekMinutes}</strong>
+              <span>{sessionOn ? "sets done" : "min this week"}</span>
             </div>
           </div>
-          <p className="panel-hint">
-            {home ? (
-              <>
-                Home gym: <strong>{home.name}</strong>.{" "}
-              </>
-            ) : (
-              "Pick a home gym under Fit Clubs & gyms — Planet Fitness or a Villages Fit Club. "
-            )}
-            Fit Clubs are small rec-center rooms; Planet Fitness and other clubs are the full-size
-            option.
-          </p>
 
-          <h3>{editWorkoutId ? "Edit workout" : "Log a gym session"}</h3>
-          <form
-            className="form-grid ms-module-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveWorkout();
-            }}
-          >
-            <div className="field">
-              <label>Gym</label>
-              <select
-                value={gymId || value.homeGymId || ""}
-                onChange={(e) => setGymId(e.target.value)}
-              >
-                <option value="">Choose gym</option>
-                {FIT_CLUBS.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-                {gyms.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {placeLabel(g)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Date</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label>Time</label>
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Minutes</label>
-              <input
-                type="number"
-                min={1}
-                max={300}
-                value={minutes}
-                onChange={(e) => setMinutes(e.target.value)}
-                placeholder="45"
-              />
-            </div>
-            <div className="field">
-              <label>How it felt</label>
-              <select value={felt} onChange={(e) => setFelt(e.target.value)}>
-                {FELT_OPTS.map((o) => (
-                  <option key={o.id || "none"} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </form>
-
-          {lifts.map((lift, i) => {
-            const listed = EXERCISE_NAMES.includes(lift.name);
-            return (
-            <article key={i} className="ms-gym-lift">
-              <div className="form-grid ms-module-form">
-                <div className="field">
-                  <label>Exercise</label>
-                  <select
-                    value={listed ? lift.name : "__custom__"}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "__custom__") {
-                        patchLift(i, { name: "" });
-                        return;
-                      }
-                      patchLift(i, { name: v, kind: EXERCISE_KIND[v] || lift.kind });
-                    }}
-                  >
-                    {EXERCISE_NAMES.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                    <option value="__custom__">Custom…</option>
-                  </select>
-                  {!listed ? (
-                    <input
-                      value={lift.name}
-                      onChange={(e) => patchLift(i, { name: e.target.value })}
-                      placeholder="Type a custom exercise"
-                      style={{ marginTop: "0.4rem" }}
-                    />
-                  ) : null}
-                </div>
-                <div className="field">
-                  <label>Type</label>
-                  <select
-                    value={lift.kind}
-                    onChange={(e) => patchLift(i, { kind: e.target.value })}
-                  >
-                    {Object.entries(KIND_LABEL).map(([k, lab]) => (
-                      <option key={k} value={k}>
-                        {lab}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Machine / bar</label>
-                  <input
-                    value={lift.equipment}
-                    onChange={(e) => patchLift(i, { equipment: e.target.value })}
-                    placeholder="optional"
-                  />
-                </div>
-              </div>
-              <p className="panel-hint">Each row is one set: weight × reps. Cardio can use seconds instead.</p>
-              {lift.sets.map((s, j) => (
-                <div key={j} className="ms-gym-set">
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    placeholder="lb"
-                    value={s.weight}
-                    onChange={(e) =>
-                      patchSet(i, j, { weight: e.target.value === "" ? "" : Number(e.target.value) })
-                    }
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="reps"
-                    value={s.reps}
-                    onChange={(e) =>
-                      patchSet(i, j, { reps: e.target.value === "" ? "" : Number(e.target.value) })
-                    }
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="sec"
-                    value={s.seconds}
-                    onChange={(e) =>
-                      patchSet(i, j, {
-                        seconds: e.target.value === "" ? "" : Number(e.target.value),
-                      })
-                    }
-                  />
+          {!sessionOn ? (
+            <>
+              <h3>What are you doing today?</h3>
+              <p className="panel-hint">
+                One tap starts the workout. At the machine, tap the box when the set is done.
+                {home ? (
+                  <>
+                    {" "}
+                    Home gym: <strong>{home.name}</strong>.
+                  </>
+                ) : null}
+              </p>
+              <div className="ms-gym-routine-chips">
+                {routines.map((r) => (
                   <button
+                    key={r.id}
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => startRoutine(r.name, r.exercises)}
+                  >
+                    {r.name}
+                  </button>
+                ))}
+                {ROUTINE_PRESETS.filter(
+                  (n) => !routines.some((r) => r.name.toLowerCase() === n.toLowerCase())
+                ).map((n) => (
+                  <button
+                    key={n}
                     type="button"
                     className="btn btn-ghost btn-sm"
-                    aria-label="Remove set"
-                    onClick={() =>
-                      patchLift(i, {
-                        sets: lift.sets.length > 1 ? lift.sets.filter((_, x) => x !== j) : [emptySet()],
-                      })
-                    }
+                    onClick={() => startRoutine(n)}
                   >
-                    ×
+                    {n}
                   </button>
-                </div>
-              ))}
-              <div className="hero-actions">
+                ))}
+              </div>
+              <div className="ms-gym-custom-row">
+                <input
+                  value={customRoutine}
+                  onChange={(e) => setCustomRoutine(e.target.value.slice(0, 80))}
+                  placeholder="Name your own — e.g. Recumbent Sunday"
+                />
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => patchLift(i, { sets: [...lift.sets, emptySet()].slice(0, 20) })}
+                  onClick={() => startRoutine(customRoutine)}
                 >
-                  Add set
+                  Start
                 </button>
+              </div>
+              {todayWos.length ? (
+                <>
+                  <h3>Today already</h3>
+                  {todayWos.map((w) => (
+                    <SessionRow
+                      key={w.id}
+                      w={w}
+                      title={`${w.routineName ? `${w.routineName} · ` : ""}${placeNameById(w.gymId, w.gymName)}`}
+                      sub={`${w.durationMin ? `${w.durationMin} min · ` : ""}${gymVolume(w).sets} sets · ${gymVolume(w).reps} reps${mediaHint(w)}`}
+                      open={openDetails === w.id}
+                      onDetails={() => setOpenDetails(openDetails === w.id ? null : w.id)}
+                      onEdit={() => loadWorkout(w)}
+                      onDelete={() => deleteWorkout(w.id)}
+                    />
+                  ))}
+                </>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <div className="ms-gym-live-head">
+                <div>
+                  <p className="ms-golf-kicker">{routineName || "Workout"}</p>
+                  <h3 style={{ margin: "0.15rem 0 0" }}>Tap a box when the set is done</h3>
+                </div>
+                <button type="button" className="btn btn-primary btn-sm" onClick={saveWorkout}>
+                  Finish
+                </button>
+              </div>
+              <div className="field">
+                <label>Gym</label>
+                <select
+                  value={gymId || value.homeGymId || ""}
+                  onChange={(e) => setGymId(e.target.value)}
+                >
+                  <option value="">Choose gym</option>
+                  {FIT_CLUBS.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                  {gyms.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {placeLabel(g)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {lifts.map((lift, i) => {
+                const listed = EXERCISE_NAMES.includes(lift.name);
+                const last = lastUsedFor(workouts, lift.name);
+                const wCenter = Number(lift.sets[0]?.weight) || last?.weight || 0;
+                const rCenter = Number(lift.sets[0]?.reps) || last?.reps || 0;
+                const sCenter = Number(lift.sets[0]?.seconds) || last?.seconds || 0;
+                const isCardio = lift.kind === "cardio" || lift.sets.some((s) => s.seconds !== "");
+                return (
+                  <article key={i} className="ms-gym-lift ms-gym-lift-live">
+                    <div className="ms-gym-lift-title">
+                      <strong>{lift.name || "Exercise"}</strong>
+                      <span>{KIND_LABEL[lift.kind] || lift.kind}</span>
+                    </div>
+                    <div className="field">
+                      <label className="visually-hidden">Exercise</label>
+                      <select
+                        value={listed ? lift.name : "__custom__"}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "__custom__") {
+                            patchLift(i, { name: "" });
+                            return;
+                          }
+                          patchLift(i, { name: v, kind: EXERCISE_KIND[v] || lift.kind });
+                        }}
+                      >
+                        {EXERCISE_NAMES.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                        <option value="__custom__">Custom…</option>
+                      </select>
+                      {!listed ? (
+                        <input
+                          value={lift.name}
+                          onChange={(e) => patchLift(i, { name: e.target.value })}
+                          placeholder="Type a custom exercise"
+                          style={{ marginTop: "0.4rem" }}
+                        />
+                      ) : null}
+                    </div>
+                    {lift.sets.map((s, j) => (
+                      <div
+                        key={j}
+                        className={`ms-gym-set-live${s.done ? " is-done" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          className={`ms-gym-check${s.done ? " is-on" : ""}`}
+                          aria-pressed={Boolean(s.done)}
+                          aria-label={`Set ${j + 1} ${s.done ? "done" : "not done"}`}
+                          onClick={() => {
+                            const next = lifts.map((l, idx) =>
+                              idx === i
+                                ? {
+                                    ...l,
+                                    sets: l.sets.map((row, k) =>
+                                      k === j ? { ...row, done: !row.done } : row
+                                    ),
+                                  }
+                                : l
+                            );
+                            setLifts(next);
+                            writeWorkout(next, true);
+                          }}
+                        >
+                          {s.done ? "✓" : j + 1}
+                        </button>
+                        {isCardio ? (
+                          <label className="ms-gym-mini">
+                            Sec
+                            <select
+                              value={s.seconds === "" ? "" : String(s.seconds)}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                patchSet(i, j, { seconds: v === "" ? "" : Number(v) });
+                              }}
+                            >
+                              <option value="">—</option>
+                              {nearbySeconds(sCenter || Number(s.seconds) || 30).map((n) => (
+                                <option key={n} value={n}>
+                                  {n}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : (
+                          <>
+                            <label className="ms-gym-mini">
+                              Lb
+                              <select
+                                value={s.weight === "" ? "" : String(s.weight)}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  patchSet(i, j, { weight: v === "" ? "" : Number(v) });
+                                }}
+                              >
+                                <option value="">—</option>
+                                {nearbyWeights(wCenter || Number(s.weight) || 40).map((n) => (
+                                  <option key={n} value={n}>
+                                    {n}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="ms-gym-mini">
+                              Reps
+                              <select
+                                value={s.reps === "" ? "" : String(s.reps)}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  patchSet(i, j, { reps: v === "" ? "" : Number(v) });
+                                }}
+                              >
+                                <option value="">—</option>
+                                {nearbyReps(rCenter || Number(s.reps) || 10).map((n) => (
+                                  <option key={n} value={n}>
+                                    {n}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </>
+                        )}
+                        <div className="ms-gym-nudge">
+                          <button
+                            type="button"
+                            className="ms-gym-bump"
+                            aria-label="Lower"
+                            onClick={() => {
+                              if (isCardio) {
+                                const cur = Number(s.seconds) || 30;
+                                patchSet(i, j, { seconds: Math.max(5, cur - 5) });
+                              } else {
+                                const cur = Number(s.weight) || 0;
+                                patchSet(i, j, { weight: Math.max(0, cur - 5) });
+                              }
+                            }}
+                          >
+                            −
+                          </button>
+                          <button
+                            type="button"
+                            className="ms-gym-bump"
+                            aria-label="Raise"
+                            onClick={() => {
+                              if (isCardio) {
+                                const cur = Number(s.seconds) || 30;
+                                patchSet(i, j, { seconds: cur + 5 });
+                              } else {
+                                const cur = Number(s.weight) || 0;
+                                patchSet(i, j, { weight: cur + 5 });
+                              }
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="hero-actions">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          const last = lift.sets[lift.sets.length - 1] || emptySet();
+                          patchLift(i, {
+                            sets: [...lift.sets, { ...last, done: false }].slice(0, 20),
+                          });
+                        }}
+                      >
+                        Add set
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() =>
+                          setLifts((prev) =>
+                            prev.length > 1 ? prev.filter((_, x) => x !== i) : [emptyLift()]
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+
+              <div className="hero-actions" style={{ margin: "0.75rem 0" }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setLifts((prev) => [...prev, emptyLift()].slice(0, 40))}
+                >
+                  Add exercise
+                </button>
+                {routineName ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => saveRoutineFromLifts(routineName, lifts)}
+                  >
+                    Save as routine
+                  </button>
+                ) : null}
+              </div>
+              <details>
+                <summary>Notes, time, photos</summary>
+                <div className="form-grid ms-module-form" style={{ marginTop: "0.6rem" }}>
+                  <div className="field">
+                    <label>Minutes</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={300}
+                      value={minutes}
+                      onChange={(e) => setMinutes(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>How it felt</label>
+                    <select value={felt} onChange={(e) => setFelt(e.target.value)}>
+                      {FELT_OPTS.map((o) => (
+                        <option key={o.id || "none"} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Notes</label>
+                  <input
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Skipped leg press · recumbent after"
+                  />
+                </div>
+                <GymWorkoutMediaPicker
+                  items={media}
+                  onChange={setMedia}
+                  protectedLocalIds={savedPhoneIds}
+                  disabled={saving}
+                />
+              </details>
+              <div className="hero-actions" style={{ marginTop: "0.75rem" }}>
+                <button type="button" className="btn btn-primary" onClick={saveWorkout}>
+                  Finish workout
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={resetForm}>
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === "routines" && (
+        <div className="about-panel ms-module">
+          <h3>Build a routine once, tap it at the gym</h3>
+          <p className="panel-hint">
+            Name it Leg Day, HIIT, or whatever you actually do. Add the exercises and planned
+            sets. Next time, one tap loads the whole list.
+          </p>
+          <div className="ms-gym-routine-chips">
+            {ROUTINE_PRESETS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setEditRoutineId(null);
+                  setRoutineName(n);
+                  setLifts(applyLastUsed(starterLifts(n)));
+                }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <div className="field">
+            <label>Routine name</label>
+            <input
+              value={routineName}
+              onChange={(e) => setRoutineName(e.target.value.slice(0, 80))}
+              placeholder="Leg Day"
+              list="ms-gym-routine-names"
+            />
+            <datalist id="ms-gym-routine-names">
+              {ROUTINE_PRESETS.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+          </div>
+          {lifts.map((lift, i) => {
+            const listed = EXERCISE_NAMES.includes(lift.name);
+            return (
+              <article key={i} className="ms-gym-lift">
+                <div className="form-grid ms-module-form">
+                  <div className="field">
+                    <label>Exercise</label>
+                    <select
+                      value={listed ? lift.name : "__custom__"}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "__custom__") {
+                          patchLift(i, { name: "" });
+                          return;
+                        }
+                        patchLift(i, { name: v, kind: EXERCISE_KIND[v] || lift.kind });
+                      }}
+                    >
+                      {EXERCISE_NAMES.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                      <option value="__custom__">Custom…</option>
+                    </select>
+                    {!listed ? (
+                      <input
+                        value={lift.name}
+                        onChange={(e) => patchLift(i, { name: e.target.value })}
+                        placeholder="Type a custom exercise"
+                        style={{ marginTop: "0.4rem" }}
+                      />
+                    ) : null}
+                  </div>
+                  <div className="field">
+                    <label>Sets</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={lift.sets.length}
+                      onChange={(e) => {
+                        const n = Math.max(1, Math.min(12, Number(e.target.value) || 1));
+                        const last = lift.sets[0] || emptySet();
+                        patchLift(i, {
+                          sets: Array.from({ length: n }, () => ({ ...last, done: false })),
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Reps (or sec)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={lift.sets[0]?.reps === "" ? lift.sets[0]?.seconds || "" : lift.sets[0]?.reps}
+                      onChange={(e) => {
+                        const n = e.target.value === "" ? "" : Number(e.target.value);
+                        const cardio = lift.kind === "cardio";
+                        patchLift(i, {
+                          sets: lift.sets.map((s) =>
+                            cardio ? { ...s, seconds: n, reps: "" } : { ...s, reps: n }
+                          ),
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
@@ -794,62 +1061,72 @@ export function MySpaceGymBoard() {
                 >
                   Remove exercise
                 </button>
-              </div>
-            </article>
+              </article>
             );
           })}
-
-          <div className="hero-actions" style={{ margin: "0.75rem 0" }}>
+          <div className="hero-actions">
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => setLifts((prev) => [...prev, emptyLift()].slice(0, 40))}
+              onClick={() => setLifts((prev) => [...prev, emptyLift()].slice(0, 20))}
             >
               Add exercise
             </button>
-          </div>
-          <div className="field">
-            <label>Notes</label>
-            <input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Busy at 9am · skipped leg press"
-            />
-          </div>
-          <GymWorkoutMediaPicker
-            items={media}
-            onChange={setMedia}
-            protectedLocalIds={savedPhoneIds}
-            disabled={saving}
-          />
-          <div className="hero-actions" style={{ marginTop: "0.75rem" }}>
-            <button type="button" className="btn btn-primary btn-sm" onClick={saveWorkout}>
-              {editWorkoutId ? "Save changes" : "Save workout"}
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => saveRoutineFromLifts(routineName, lifts)}
+            >
+              {editRoutineId ? "Save routine" : "Save routine"}
             </button>
-            {editWorkoutId ? (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={resetForm}>
-                Cancel
-              </button>
-            ) : null}
           </div>
-
-          <h3>Today</h3>
-          {todayWos.length === 0 ? (
-            <p className="panel-hint">
-              No gym session logged today. Health → Exercise (the previous submenu) is still there for walks and swimming.
-            </p>
+          <h3>Saved routines</h3>
+          {routines.length === 0 ? (
+            <p className="panel-hint">None yet — tap a preset above, tweak it, save.</p>
           ) : (
-            todayWos.map((w) => (
-              <SessionRow
-                key={w.id}
-                w={w}
-                title={placeNameById(w.gymId, w.gymName)}
-                sub={`${w.durationMin ? `${w.durationMin} min · ` : ""}${gymVolume(w).sets} sets · ${gymVolume(w).reps} reps${mediaHint(w)}`}
-                open={openDetails === w.id}
-                onDetails={() => setOpenDetails(openDetails === w.id ? null : w.id)}
-                onEdit={() => loadWorkout(w)}
-                onDelete={() => deleteWorkout(w.id)}
-              />
+            routines.map((r) => (
+              <article key={r.id} className="ms-gym-session">
+                <div className="ms-gym-session-main">
+                  <div>
+                    <strong>{r.name}</strong>
+                    <p className="panel-hint">
+                      {r.exercises.map((e) => e.name).join(" · ") || "No exercises"}
+                    </p>
+                  </div>
+                  <div className="hero-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => startRoutine(r.name, r.exercises)}
+                    >
+                      Start
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        setEditRoutineId(r.id);
+                        setRoutineName(r.name);
+                        setLifts(cloneLifts(r.exercises));
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() =>
+                        persist({
+                          ...value,
+                          routines: routines.filter((x) => x.id !== r.id),
+                        })
+                      }
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </article>
             ))
           )}
         </div>

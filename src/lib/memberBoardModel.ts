@@ -199,8 +199,18 @@ export type FoodBoard = {
   tipPct: number;
 };
 
-export type GymSet = { weight: number | ""; reps: number | ""; seconds: number | "" };
+export type GymSet = {
+  weight: number | "";
+  reps: number | "";
+  seconds: number | "";
+  done?: boolean;
+};
 export type GymLift = { name: string; kind: string; equipment: string; sets: GymSet[] };
+export type GymRoutine = {
+  id: string;
+  name: string;
+  exercises: GymLift[];
+};
 export type GymMediaKind = "photo" | "video";
 export type GymMediaStorage = "account" | "phone";
 export type GymMediaItem = {
@@ -220,6 +230,7 @@ export type GymWorkout = {
   time: string;
   gymId: string;
   gymName: string;
+  routineName?: string;
   durationMin: number | "";
   felt: string;
   notes: string;
@@ -251,6 +262,7 @@ export type GymBoard = {
   homeGymId: string;
   gyms: GymPlace[];
   workouts: GymWorkout[];
+  routines: GymRoutine[];
   supplements: GymSupplement[];
   supplementLogs: { id: string; supplementId: string; name: string; date: string }[];
 };
@@ -537,6 +549,7 @@ export function clearedBoards(): MemberBoards {
       homeGymId: "",
       gyms: [],
       workouts: [],
+      routines: [],
       supplements: [],
       supplementLogs: [],
     },
@@ -1050,6 +1063,7 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
                   weight: s?.weight ?? "",
                   reps: s?.reps ?? "",
                   seconds: s?.seconds ?? "",
+                  done: Boolean(s?.done),
                 }))
               : [],
           }))
@@ -1061,11 +1075,52 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
       time: clip(r.time, 8),
       gymId: clip(r.gymId, 80),
       gymName: clip(r.gymName, 80),
+      routineName: clip(r.routineName, 80) || undefined,
       durationMin: typeof r.durationMin === "number" ? r.durationMin : "",
       felt: clip(r.felt, 20),
       notes: clip(r.notes, 400),
       exercises: lifts,
       media: gymMediaItems(r.media),
+    });
+  }
+  return out;
+}
+
+function gymLifts(raw: unknown): GymLift[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, 20)
+    .map((l) => {
+      const row = l as Partial<GymLift>;
+      return {
+        name: clip(row?.name, 80),
+        kind: clip(row?.kind, 20) || "machine",
+        equipment: clip(row?.equipment, 80),
+        sets: Array.isArray(row?.sets)
+          ? row.sets.slice(0, 20).map((s) => ({
+              weight: s?.weight ?? "",
+              reps: s?.reps ?? "",
+              seconds: s?.seconds ?? "",
+              done: Boolean(s?.done),
+            }))
+          : [],
+      };
+    })
+    .filter((l) => l.name);
+}
+
+function gymRoutines(raw: unknown): GymRoutine[] {
+  if (!Array.isArray(raw)) return [];
+  const out: GymRoutine[] = [];
+  for (const row of raw.slice(0, 24)) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const name = clip(r.name, 80);
+    if (!name) continue;
+    out.push({
+      id: clip(r.id, 40) || uid("rt"),
+      name,
+      exercises: gymLifts(r.exercises),
     });
   }
   return out;
@@ -1144,6 +1199,7 @@ export function sanitizeBoard(
               .slice(0, 40)
           : samples.gyms,
         workouts: Array.isArray(g.workouts) ? gymWorkouts(g.workouts) : samples.workouts,
+        routines: Array.isArray(g.routines) ? gymRoutines(g.routines) : samples.routines || [],
         supplements: Array.isArray(g.supplements)
           ? gymSupps(g.supplements)
           : samples.supplements,
