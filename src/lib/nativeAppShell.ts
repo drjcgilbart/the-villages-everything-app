@@ -14,6 +14,7 @@ export function openExternalUrl(url: string) {
     window.location.assign(url);
     return;
   }
-  const w = window.open(url, "_blank", "noopener,noreferrer");
-  if (!w) window.location.assign(url);
+  // Do not fall back to location.assign. window.open(..., "noopener")
+  // returns null even when the new tab opened, which was wiping Weather.
+  window.open(url, "_blank", "noopener,noreferrer");
 }

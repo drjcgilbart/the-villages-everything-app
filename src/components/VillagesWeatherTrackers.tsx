@@ -1,11 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { VillagesForecast } from "@/lib/weather";
 import { heatBand, uvBand } from "@/lib/weather";
 import type { FloridaWeatherExtra } from "@/lib/weatherFlorida";
-import { openExternalUrl } from "@/lib/nativeAppShell";
+import { isNativeAppShell, openExternalUrl } from "@/lib/nativeAppShell";
+
+function ExtLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      className={className}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => {
+        if (isNativeAppShell()) {
+          e.preventDefault();
+          openExternalUrl(href);
+        }
+      }}
+    >
+      {children}
+    </a>
+  );
+}
 
 function stormHours(data: VillagesForecast) {
   return data.hourly.filter((h) => h.weatherCode >= 95).slice(0, 6);
@@ -375,63 +402,39 @@ export function VillagesWeatherTrackers({
                   the co-op on your bill.
                 </p>
                 <div className="ms-wx-outage-links">
-                  <button
-                    type="button"
+                  <ExtLink
                     className="btn btn-primary btn-sm"
-                    onClick={() =>
-                      openExternalUrl("https://secoenergy.com/storm-center")
-                    }
+                    href="https://secoenergy.com/storm-center"
                   >
                     SECO StormCenter · report / map
-                  </button>
-                  <button
-                    type="button"
+                  </ExtLink>
+                  <ExtLink
                     className="btn btn-ghost btn-sm"
-                    onClick={() =>
-                      openExternalUrl(
-                        "https://www.duke-energy.com/outages/current-outages"
-                      )
-                    }
+                    href="https://www.duke-energy.com/outages/current-outages"
                   >
                     Duke Energy outages
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() =>
-                      openExternalUrl("https://www.wrec.net/outages")
-                    }
-                  >
+                  </ExtLink>
+                  <ExtLink className="btn btn-ghost btn-sm" href="https://www.wrec.net/outages">
                     WREC outages
-                  </button>
+                  </ExtLink>
                   <a className="ms-wx-phone" href="tel:3527933801">
                     SECO phone (352) 793-3801
                   </a>
                 </div>
                 <h4 className="ms-wx-outage-head">Outage news</h4>
                 <div className="ms-wx-outage-links">
-                  <button
-                    type="button"
+                  <ExtLink
                     className="btn btn-ghost btn-sm"
-                    onClick={() =>
-                      openExternalUrl(
-                        "https://www.villages-news.com/?s=power+outage"
-                      )
-                    }
+                    href="https://www.villages-news.com/?s=power+outage"
                   >
                     Villages-News.com
-                  </button>
-                  <button
-                    type="button"
+                  </ExtLink>
+                  <ExtLink
                     className="btn btn-ghost btn-sm"
-                    onClick={() =>
-                      openExternalUrl(
-                        "https://news.google.com/search?q=The+Villages+Florida+power+outage&hl=en-US&gl=US&ceid=US:en"
-                      )
-                    }
+                    href="https://news.google.com/search?q=The+Villages+Florida+power+outage&hl=en-US&gl=US&ceid=US:en"
                   >
                     Google News · local outages
-                  </button>
+                  </ExtLink>
                 </div>
                 <button
                   type="button"
