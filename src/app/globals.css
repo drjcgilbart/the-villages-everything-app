@@ -4734,6 +4734,8 @@ button.ms-home-card:hover {
   gap: 0.35rem;
   align-items: center;
   justify-content: flex-end;
+  width: 100%;
+  max-width: 100%;
 }
 
 .ms-gym-video-btn,
@@ -4761,18 +4763,21 @@ button.ms-home-card:hover {
 
 .ms-gym-stills {
   flex: 1 1 100%;
+  width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-top: 0.35rem;
+  gap: 0.55rem;
+  margin-top: 0.45rem;
 }
 
 .ms-gym-stills img {
   width: 100%;
-  height: 7.5rem;
-  object-fit: cover;
+  height: auto;
+  max-height: 22rem;
+  object-fit: contain;
+  object-position: center;
   border-radius: 12px;
-  background: #eee;
+  background: #f4efe4;
 }
 
 .ms-gym-stills ol {
@@ -4872,6 +4877,12 @@ button.ms-home-card:hover {
   .ms-gym-check {
     width: 3.2rem;
     height: 3.2rem;
+  }
+  .ms-gym-stills {
+    grid-template-columns: 1fr;
+  }
+  .ms-gym-stills img {
+    max-height: 18rem;
   }
 }
 
