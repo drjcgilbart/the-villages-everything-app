@@ -104,6 +104,66 @@ function windDirLabel(deg: number | null | undefined): string {
 
 export { windDirLabel };
 
+export function uvBand(uv: number | null | undefined) {
+  const n = uv == null || !Number.isFinite(uv) ? -1 : Number(uv);
+  if (n < 0) return { level: "—", tip: "UV not in yet.", tone: "ok" as const };
+  if (n < 3)
+    return {
+      level: "Low",
+      tip: "Hat optional. Still Florida — a little shade never hurts.",
+      tone: "ok" as const,
+    };
+  if (n < 6)
+    return {
+      level: "Moderate",
+      tip: "Sunscreen on the cart. Reapply after the pool.",
+      tone: "watch" as const,
+    };
+  if (n < 8)
+    return {
+      level: "High",
+      tip: "Cover up 10am–4pm. Lanai time is a power move.",
+      tone: "warn" as const,
+    };
+  if (n < 11)
+    return {
+      level: "Very high",
+      tip: "Peak sun. Wide brim, sleeves, and extra water on the cart.",
+      tone: "alert" as const,
+    };
+  return {
+    level: "Extreme",
+    tip: "Stay in shade when you can. This is not a tan contest.",
+    tone: "alert" as const,
+  };
+}
+
+export function heatBand(feelsLikeF: number) {
+  if (feelsLikeF >= 105)
+    return {
+      level: "Danger",
+      tip: "Skip heroics. Indoor AC, extra water, no long cart loops.",
+      tone: "alert" as const,
+    };
+  if (feelsLikeF >= 95)
+    return {
+      level: "Caution",
+      tip: "Heat index is doing Florida things. Water in the cup holder.",
+      tone: "warn" as const,
+    };
+  if (feelsLikeF >= 88)
+    return {
+      level: "Warm",
+      tip: "Fine for a round if you sip, not sprint.",
+      tone: "watch" as const,
+    };
+  return {
+    level: "Comfortable",
+    tip: "Nice cart weather by Villages standards.",
+    tone: "ok" as const,
+  };
+}
+
 export type ForecastPlace = {
   latitude?: number;
   longitude?: number;

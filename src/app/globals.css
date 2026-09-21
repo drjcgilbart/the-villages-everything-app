@@ -5940,6 +5940,87 @@ button.ms-home-card:hover {
   color: var(--muted);
 }
 
+.ms-wx-trackers {
+  margin: 0 0 0.85rem;
+}
+
+.ms-wx-tracker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr));
+  gap: 0.65rem;
+}
+
+.ms-wx-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--palm-deep);
+}
+
+.ms-wx-card h4 {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.ms-wx-card h4 span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.ms-wx-card p {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.ms-wx-card.is-watch {
+  border-color: rgba(232, 184, 74, 0.55);
+  background: rgba(232, 184, 74, 0.12);
+}
+
+.ms-wx-card.is-warn,
+.ms-wx-alert.is-storm,
+.ms-wx-alert.is-flood {
+  border-color: rgba(196, 120, 40, 0.55);
+  background: rgba(255, 214, 170, 0.35);
+}
+
+.ms-wx-card.is-alert,
+.ms-wx-alert.is-hurricane,
+.ms-wx-alert.is-heat {
+  border-color: rgba(154, 58, 46, 0.45);
+  background: rgba(253, 232, 228, 0.9);
+}
+
+.ms-wx-alert-list ul,
+.ms-wx-storm-list {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.ms-wx-alert-list li,
+.ms-wx-storm-list li {
+  margin: 0 0 0.45rem;
+}
+
+.ms-wx-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
+.ms-wx-alert em {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .ms-wx-hourly {
   display: flex;
   gap: 0.5rem;

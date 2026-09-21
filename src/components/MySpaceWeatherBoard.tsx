@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VillagesForecast } from "@/lib/weather";
 import { VILLAGES_LAT, VILLAGES_LON, VILLAGES_TZ, windDirLabel } from "@/lib/weather";
+import { VillagesWeatherTrackers } from "@/components/VillagesWeatherTrackers";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_WEATHER_EXTRA } from "@/lib/sampleBoards";
 import { uid } from "@/lib/mySpaceStorage";
@@ -576,6 +577,14 @@ export function MySpaceWeatherBoard() {
             ))}
           </div>
 
+          <VillagesWeatherTrackers
+            data={data}
+            lat={active.latitude}
+            lon={active.longitude}
+            tz={tz}
+            fmtHour={fmtHour}
+          />
+
           <div className="about-panel">
             <div className="ms-panel-head">
               <h4 style={{ margin: 0 }}>Hourly forecast</h4>
@@ -589,6 +598,7 @@ export function MySpaceWeatherBoard() {
                   <strong>{h.tempF}°</strong>
                   <span className="panel-hint">
                     {h.precipProb != null ? `${h.precipProb}%` : "—"}
+                    {h.uvIndex != null ? ` · UV ${h.uvIndex}` : ""}
                   </span>
                 </div>
               ))}

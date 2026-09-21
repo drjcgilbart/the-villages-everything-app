@@ -130,7 +130,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     minRank: 1,
     phase: "live",
     teaser:
-      "Full Villages dashboard: current conditions, hourly, and 7-day forecast.",
+      "Villages dashboard plus UV, storms, hurricane desk, heat caution, and rain windows.",
     previewLine: "The Villages · 84° · partly cloudy · breeze off the ponds",
   },
   {
