@@ -169,6 +169,78 @@ function emptyLift(): GymLift {
   return { name: "Leg press", kind: "machine", equipment: "", sets: [emptySet()] };
 }
 
+function trailNumber(lift: GymLift, setIndex: number, field: "weight" | "reps" | "seconds") {
+  for (let k = setIndex; k >= 0; k--) {
+    const n = Number(lift.sets[k]?.[field]);
+    if (n > 0) return n;
+  }
+  return 0;
+}
+
+function NearbyPick({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: number | "";
+  options: number[];
+  onChange: (n: number | "") => void;
+}) {
+  const [typed, setTyped] = useState(false);
+  const str = value === "" ? "" : String(value);
+  const inList = value !== "" && options.some((n) => n === Number(value));
+  if (typed) {
+    return (
+      <label className="ms-gym-mini">
+        {label}
+        <input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="any"
+          value={str}
+          autoFocus
+          placeholder="e.g. 72.5"
+          onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+          onBlur={() => setTyped(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              setTyped(false);
+            }
+          }}
+        />
+      </label>
+    );
+  }
+  return (
+    <label className="ms-gym-mini">
+      {label}
+      <select
+        value={str}
+        onChange={(e) => {
+          if (e.target.value === "__custom__") {
+            setTyped(true);
+            return;
+          }
+          onChange(e.target.value === "" ? "" : Number(e.target.value));
+        }}
+      >
+        <option value="">—</option>
+        {value !== "" && !inList ? <option value={str}>{str}</option> : null}
+        {options.map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+        <option value="__custom__">Type my own…</option>
+      </select>
+    </label>
+  );
+}
+
 function mediaHint(workout: GymWorkout) {
   const items = workout.media || [];
   if (!items.length) return "";
@@ -822,10 +894,7 @@ export function MySpaceGymBoard() {
               {lifts.map((lift, i) => {
                 const listed = EXERCISE_NAMES.includes(lift.name);
                 const last = lastUsedFor(workouts, lift.name);
-                const wCenter = Number(lift.sets[0]?.weight) || last?.weight || 0;
-                const rCenter = Number(lift.sets[0]?.reps) || last?.reps || 0;
-                const sCenter = Number(lift.sets[0]?.seconds) || last?.seconds || 0;
-                const isCardio = lift.kind === "cardio" || lift.sets.some((s) => s.seconds !== "");
+                const isCardio = lift.kind === "cardio" || lift.sets.some((row) => row.seconds !== "");
                 return (
                   <article key={i} className="ms-gym-lift ms-gym-lift-live">
                     <div className="ms-gym-lift-title">
@@ -889,59 +958,32 @@ export function MySpaceGymBoard() {
                           {s.done ? "✓" : j + 1}
                         </button>
                         {isCardio ? (
-                          <label className="ms-gym-mini">
-                            Sec
-                            <select
-                              value={s.seconds === "" ? "" : String(s.seconds)}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                patchSet(i, j, { seconds: v === "" ? "" : Number(v) });
-                              }}
-                            >
-                              <option value="">—</option>
-                              {nearbySeconds(sCenter || Number(s.seconds) || 30).map((n) => (
-                                <option key={n} value={n}>
-                                  {n}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                          <NearbyPick
+                            label="Sec"
+                            value={s.seconds}
+                            options={nearbySeconds(
+                              trailNumber(lift, j, "seconds") || last?.seconds || 30
+                            )}
+                            onChange={(n) => patchSet(i, j, { seconds: n })}
+                          />
                         ) : (
                           <>
-                            <label className="ms-gym-mini">
-                              Lb
-                              <select
-                                value={s.weight === "" ? "" : String(s.weight)}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  patchSet(i, j, { weight: v === "" ? "" : Number(v) });
-                                }}
-                              >
-                                <option value="">—</option>
-                                {nearbyWeights(wCenter || Number(s.weight) || 40).map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="ms-gym-mini">
-                              Reps
-                              <select
-                                value={s.reps === "" ? "" : String(s.reps)}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  patchSet(i, j, { reps: v === "" ? "" : Number(v) });
-                                }}
-                              >
-                                <option value="">—</option>
-                                {nearbyReps(rCenter || Number(s.reps) || 10).map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            <NearbyPick
+                              label="Lb"
+                              value={s.weight}
+                              options={nearbyWeights(
+                                trailNumber(lift, j, "weight") || last?.weight || 40
+                              )}
+                              onChange={(n) => patchSet(i, j, { weight: n })}
+                            />
+                            <NearbyPick
+                              label="Reps"
+                              value={s.reps}
+                              options={nearbyReps(
+                                trailNumber(lift, j, "reps") || last?.reps || 10
+                              )}
+                              onChange={(n) => patchSet(i, j, { reps: n })}
+                            />
                           </>
                         )}
                         <div className="ms-gym-nudge">

@@ -4772,7 +4772,8 @@ button.ms-home-card:hover {
   min-width: 0;
 }
 
-.ms-gym-mini select {
+.ms-gym-mini select,
+.ms-gym-mini input {
   width: 100%;
   min-height: 2.8rem;
   font: inherit;
@@ -4781,6 +4782,11 @@ button.ms-home-card:hover {
   text-transform: none;
   letter-spacing: 0;
   color: var(--ink);
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.35rem 0.45rem;
+  background: #fff;
 }
 
 .ms-gym-nudge {
