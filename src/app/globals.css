@@ -4792,6 +4792,99 @@ button.ms-home-card:hover {
   color: var(--palm-deep);
 }
 
+.ms-gym-video-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(18, 24, 20, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+
+.ms-gym-video-sheet {
+  width: min(640px, 100%);
+  max-height: min(92dvh, 100%);
+  overflow: auto;
+  background: #fffdf8;
+  border-radius: 18px 18px 0 0;
+  padding: 0.85rem 0.9rem 1.1rem;
+  box-shadow: 0 -12px 32px rgba(28, 36, 48, 0.22);
+}
+
+.ms-gym-video-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.ms-gym-video-bar h3 {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.25rem;
+}
+
+.ms-gym-video-close {
+  flex: 0 0 auto;
+  min-height: 2.6rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ms-gym-video-stage {
+  background: #f4efe4;
+  border-radius: 14px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.ms-gym-video-stage img {
+  width: 100%;
+  height: auto;
+  max-height: min(52dvh, 28rem);
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  margin: 0 auto;
+}
+
+.ms-gym-video-stage .panel-hint {
+  margin: 0.35rem 0.6rem 0.55rem;
+}
+
+.ms-gym-video-steps {
+  margin: 0.75rem 0 0.9rem;
+  padding-left: 1.25rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.ms-gym-video-done {
+  width: 100%;
+  min-height: 2.8rem;
+  margin-top: 0.35rem;
+}
+
+@media (min-width: 720px) {
+  .ms-gym-video-scrim {
+    align-items: center;
+    padding: 1.5rem;
+  }
+  .ms-gym-video-sheet {
+    border-radius: 18px;
+    max-height: 90vh;
+  }
+}
+
 .ms-gym-stills {
   flex: 1 1 100%;
   width: 100%;
