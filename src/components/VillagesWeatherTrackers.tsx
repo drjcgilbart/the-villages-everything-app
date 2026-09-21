@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { VillagesForecast } from "@/lib/weather";
 import { heatBand, uvBand } from "@/lib/weather";
 import type { FloridaWeatherExtra } from "@/lib/weatherFlorida";
+import { openExternalUrl } from "@/lib/nativeAppShell";
 
 function stormHours(data: VillagesForecast) {
   return data.hourly.filter((h) => h.weatherCode >= 95).slice(0, 6);
@@ -38,6 +40,45 @@ export function VillagesWeatherTrackers({
   fmtHour: (iso: string, tz: string) => string;
 }) {
   const [extra, setExtra] = useState<FloridaWeatherExtra | null>(null);
+  const [stormDesk, setStormDesk] = useState(false);
+  const [mapLayer, setMapLayer] = useState<"lightning" | "radar">("lightning");
+  const [here, setHere] = useState({ lat, lon, label: "The Villages" });
+
+  useEffect(() => {
+    setHere({ lat, lon, label: "Saved weather location" });
+  }, [lat, lon]);
+
+  useEffect(() => {
+    if (!stormDesk) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setHere({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          label: "Your location",
+        });
+      },
+      () => {
+        /* keep Villages / saved pin */
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 }
+    );
+  }, [stormDesk]);
+
+  useEffect(() => {
+    if (!stormDesk) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setStormDesk(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [stormDesk]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,10 +156,12 @@ export function VillagesWeatherTrackers({
           )}
         </article>
 
-        <article
-          className={`about-panel ms-wx-card ${
+        <button
+          type="button"
+          className={`about-panel ms-wx-card ms-wx-card-btn ${
             nwsStorms.length || storms.length ? "is-warn" : "is-ok"
           }`}
+          onClick={() => setStormDesk(true)}
         >
           <p className="ms-wx-kicker">Lightning · storms</p>
           <h4>
@@ -135,10 +178,11 @@ export function VillagesWeatherTrackers({
                 : "No thunderstorm warning on the NWS feed right now. Still: if you hear it, clear the course.")}
           </p>
           <p className="panel-hint">
-            30-30 rule: if thunder follows lightning by 30 seconds or less, get
-            inside. Wait 30 minutes after the last boom.
+            Tap for a live lightning map, radar, and power-outage links. 30-30
+            rule: if thunder follows lightning by 30 seconds or less, get
+            inside.
           </p>
-        </article>
+        </button>
 
         <article
           className={`about-panel ms-wx-card ${
@@ -247,6 +291,143 @@ export function VillagesWeatherTrackers({
           </article>
         ) : null}
       </div>
+
+      {stormDesk && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="ms-gym-video-scrim"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ms-wx-storm-title"
+              onClick={() => setStormDesk(false)}
+            >
+              <div
+                className="ms-gym-video-sheet ms-wx-storm-sheet"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="ms-gym-video-bar">
+                  <div>
+                    <p className="ms-wx-kicker">Live nearby</p>
+                    <h3 id="ms-wx-storm-title">Lightning · storms</h3>
+                    <p className="panel-hint" style={{ margin: 0 }}>
+                      Centered on {here.label}. Volunteer lightning network +
+                      radar — not a substitute for NWS warnings.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="ms-gym-video-close"
+                    onClick={() => setStormDesk(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="ms-wx-map-tabs">
+                  <button
+                    type="button"
+                    className={mapLayer === "lightning" ? "is-on" : ""}
+                    onClick={() => setMapLayer("lightning")}
+                  >
+                    Lightning
+                  </button>
+                  <button
+                    type="button"
+                    className={mapLayer === "radar" ? "is-on" : ""}
+                    onClick={() => setMapLayer("radar")}
+                  >
+                    Radar
+                  </button>
+                </div>
+                <div className="ms-wx-map-frame">
+                  {mapLayer === "lightning" ? (
+                    <iframe
+                      title="Live lightning map"
+                      src={`https://map.blitzortung.org/index.php?interactive=1#8/${here.lat.toFixed(3)}/${here.lon.toFixed(3)}`}
+                    />
+                  ) : (
+                    <iframe
+                      title="Live weather radar"
+                      src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=in&metricTemp=%C2%B0F&metricWind=mph&zoom=8&overlay=radar&product=ecmwf&level=surface&lat=${here.lat.toFixed(3)}&lon=${here.lon.toFixed(3)}&detailLat=${here.lat.toFixed(3)}&detailLon=${here.lon.toFixed(3)}&detail=true&message=true`}
+                    />
+                  )}
+                </div>
+                <h4 className="ms-wx-outage-head">Power outages</h4>
+                <p className="panel-hint">
+                  The Villages is mostly SECO Energy, with Duke Energy and
+                  Withlacoochee River Electric in nearby pockets. Report with
+                  the co-op on your bill.
+                </p>
+                <div className="ms-wx-outage-links">
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() =>
+                      openExternalUrl("https://secoenergy.com/storm-center")
+                    }
+                  >
+                    SECO StormCenter · report / map
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() =>
+                      openExternalUrl(
+                        "https://www.duke-energy.com/outages/current-outages"
+                      )
+                    }
+                  >
+                    Duke Energy outages
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() =>
+                      openExternalUrl("https://www.wrec.net/outages")
+                    }
+                  >
+                    WREC outages
+                  </button>
+                  <a className="ms-wx-phone" href="tel:3527933801">
+                    SECO phone (352) 793-3801
+                  </a>
+                </div>
+                <h4 className="ms-wx-outage-head">Outage news</h4>
+                <div className="ms-wx-outage-links">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() =>
+                      openExternalUrl(
+                        "https://www.villages-news.com/?s=power+outage"
+                      )
+                    }
+                  >
+                    Villages-News.com
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() =>
+                      openExternalUrl(
+                        "https://news.google.com/search?q=The+Villages+Florida+power+outage&hl=en-US&gl=US&ceid=US:en"
+                      )
+                    }
+                  >
+                    Google News · local outages
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary ms-gym-video-done"
+                  onClick={() => setStormDesk(false)}
+                >
+                  Done — back to weather
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

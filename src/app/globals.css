@@ -5976,6 +5976,81 @@ button.ms-home-card:hover {
   line-height: 1.4;
 }
 
+.ms-wx-card-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.ms-wx-storm-sheet {
+  max-width: min(720px, 100%);
+}
+
+.ms-wx-map-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 0 0.55rem;
+}
+
+.ms-wx-map-tabs button {
+  flex: 1 1 auto;
+  min-height: 2.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ms-wx-map-tabs button.is-on {
+  background: #1f6b4a;
+  color: #fff;
+  border-color: #1f6b4a;
+}
+
+.ms-wx-map-frame {
+  position: relative;
+  width: 100%;
+  height: min(48dvh, 22rem);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #d9e4dc;
+  margin-bottom: 0.75rem;
+}
+
+.ms-wx-map-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.ms-wx-outage-head {
+  margin: 0.55rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.ms-wx-outage-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.55rem;
+}
+
+.ms-wx-phone {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.4rem;
+  padding: 0.3rem 0.75rem;
+  font-weight: 800;
+  color: var(--palm-deep);
+}
+
 .ms-wx-card.is-watch {
   border-color: rgba(232, 184, 74, 0.55);
   background: rgba(232, 184, 74, 0.12);
