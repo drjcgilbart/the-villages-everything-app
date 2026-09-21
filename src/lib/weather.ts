@@ -322,7 +322,7 @@ export async function fetchVillagesForecast(
   }
 
   const hourly: ForecastHour[] = [];
-  for (let i = startIdx; i < Math.min(startIdx + 24, hourlyTimes.length); i++) {
+  for (let i = startIdx; i < hourlyTimes.length; i++) {
     const wc = Number(data.hourly?.weather_code?.[i] ?? 0);
     hourly.push({
       time: hourlyTimes[i],

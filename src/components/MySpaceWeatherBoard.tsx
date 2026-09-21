@@ -1,8 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { VillagesForecast } from "@/lib/weather";
-import { VILLAGES_LAT, VILLAGES_LON, VILLAGES_TZ, windDirLabel } from "@/lib/weather";
+import type { ForecastDay, VillagesForecast } from "@/lib/weather";
+import {
+  VILLAGES_LAT,
+  VILLAGES_LON,
+  VILLAGES_TZ,
+  heatBand,
+  uvBand,
+  windDirLabel,
+} from "@/lib/weather";
 import { VillagesWeatherTrackers } from "@/components/VillagesWeatherTrackers";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_WEATHER_EXTRA } from "@/lib/sampleBoards";
@@ -127,6 +134,19 @@ function fmtHour(iso: string, tz: string): string {
   }
 }
 
+function dayKey(iso: string, tz: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz || VILLAGES_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
 function fmtDay(iso: string, index: number, tz: string): string {
   if (index === 0) return "Today";
   if (index === 1) return "Tomorrow";
@@ -164,6 +184,7 @@ export function MySpaceWeatherBoard() {
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [searchStatus, setSearchStatus] = useState("");
   const [searching, setSearching] = useState(false);
+  const [openDay, setOpenDay] = useState<string | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function persist(next: WeatherLocState) {
@@ -200,6 +221,12 @@ export function MySpaceWeatherBoard() {
     const id = window.setInterval(() => load(active, true), POLL_MS);
     return () => window.clearInterval(id);
   }, [ready, active?.id, load]);
+
+  useEffect(() => {
+    if (!openDay) return;
+    const el = document.getElementById("ms-wx-day-detail");
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [openDay]);
 
   async function runSearch(q: string) {
     const text = q.trim();
@@ -591,7 +618,7 @@ export function MySpaceWeatherBoard() {
               <span className="panel-hint">Next 24 hours</span>
             </div>
             <div className="ms-wx-hourly">
-              {data.hourly.map((h) => (
+              {data.hourly.slice(0, 24).map((h) => (
                 <div key={h.time} className="ms-wx-hour">
                   <span className="ms-wx-hour-time">{fmtHour(h.time, tz)}</span>
                   <span aria-hidden>{h.emoji}</span>
@@ -611,23 +638,139 @@ export function MySpaceWeatherBoard() {
               <span className="panel-hint">Daily high / low</span>
             </div>
             <ul className="ms-wx-daily">
-              {data.daily.map((d, i) => (
-                <li key={d.date}>
-                  <span className="ms-wx-day-name">{fmtDay(d.date, i, tz)}</span>
-                  <span aria-hidden className="ms-wx-day-emoji">
-                    {d.emoji}
-                  </span>
-                  <span className="ms-wx-day-cond">{d.condition}</span>
-                  <span className="ms-wx-day-temps">
-                    <strong>{d.highF}°</strong>
-                    <span className="panel-hint"> / {d.lowF}°</span>
-                  </span>
-                  <span className="panel-hint">
-                    {d.precipProb != null ? `${d.precipProb}% rain` : ""}
-                  </span>
-                </li>
-              ))}
+              {data.daily.map((d, i) => {
+                const on = openDay === d.date;
+                return (
+                  <li key={d.date} className={on ? "is-open" : ""}>
+                    <button
+                      type="button"
+                      className="ms-wx-day-btn"
+                      aria-expanded={on}
+                      onClick={() => setOpenDay(on ? null : d.date)}
+                    >
+                      <span className="ms-wx-day-name">{fmtDay(d.date, i, tz)}</span>
+                      <span aria-hidden className="ms-wx-day-emoji">
+                        {d.emoji}
+                      </span>
+                      <span className="ms-wx-day-cond">{d.condition}</span>
+                      <span className="ms-wx-day-temps">
+                        <strong>{d.highF}°</strong>
+                        <span className="panel-hint"> / {d.lowF}°</span>
+                      </span>
+                      <span className="panel-hint">
+                        {d.precipProb != null ? `${d.precipProb}% rain` : ""}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
+            {openDay
+              ? (() => {
+                  const d = data.daily.find((x) => x.date === openDay) as ForecastDay | undefined;
+                  if (!d) return null;
+                  const hours = data.hourly.filter((h) => dayKey(h.time, tz) === d.date);
+                  const uv = uvBand(d.uvMax);
+                  const stormy = hours.filter((h) => h.weatherCode >= 95);
+                  const wet = hours.filter((h) => (h.precipProb ?? 0) >= 40);
+                  const peakUv = hours.reduce(
+                    (best, h) =>
+                      (h.uvIndex ?? -1) > (best?.uvIndex ?? -1) ? h : best,
+                    hours[0]
+                  );
+                  const hottest = hours.reduce(
+                    (best, h) => (h.feelsLikeF > (best?.feelsLikeF ?? -99) ? h : best),
+                    hours[0]
+                  );
+                  const heat = heatBand(hottest?.feelsLikeF ?? d.highF);
+                  const idx = data.daily.findIndex((x) => x.date === d.date);
+                  return (
+                    <div className="ms-wx-day-card" id="ms-wx-day-detail">
+                      <div className="ms-wx-day-card-head">
+                        <div>
+                          <p className="ms-wx-kicker">Day details</p>
+                          <h4>
+                            {d.emoji} {fmtDay(d.date, idx, tz)}
+                          </h4>
+                          <p>
+                            {d.condition} · High {d.highF}° / Low {d.lowF}°
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setOpenDay(null)}
+                        >
+                          Close
+                        </button>
+                      </div>
+                      <div className="ms-wx-day-facts">
+                        <div>
+                          <span className="panel-hint">Rain</span>
+                          <strong>
+                            {d.precipProb != null ? `${d.precipProb}%` : "—"}
+                          </strong>
+                          <span>{d.precipIn != null ? `${d.precipIn}" possible` : "Chance of showers"}</span>
+                        </div>
+                        <div>
+                          <span className="panel-hint">UV max</span>
+                          <strong>{d.uvMax != null ? d.uvMax : "—"}</strong>
+                          <span>
+                            {uv.level}
+                            {peakUv?.uvIndex != null
+                              ? ` · around ${fmtHour(peakUv.time, tz)}`
+                              : ""}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="panel-hint">Wind</span>
+                          <strong>
+                            {d.windMaxMph != null ? `${d.windMaxMph} mph` : "—"}
+                          </strong>
+                          <span>Peak gusts in the model</span>
+                        </div>
+                        <div>
+                          <span className="panel-hint">Sun</span>
+                          <strong>{fmtTime(d.sunrise, tz)}</strong>
+                          <span>Set {fmtTime(d.sunset, tz)}</span>
+                        </div>
+                      </div>
+                      <p>{uv.tip}</p>
+                      <p>{heat.tip}</p>
+                      {stormy.length ? (
+                        <p>
+                          Thunder in the mix around {fmtHour(stormy[0].time, tz)}. Cart
+                          to a building, not a tree.
+                        </p>
+                      ) : wet.length ? (
+                        <p>
+                          Showers more likely around {fmtHour(wet[0].time, tz)}. Pack a
+                          poncho if you’re on pickleball.
+                        </p>
+                      ) : (
+                        <p>Looks like a playable outdoor day by Villages standards.</p>
+                      )}
+                      {hours.length ? (
+                        <div className="ms-wx-hourly">
+                          {hours.map((h) => (
+                            <div key={h.time} className="ms-wx-hour">
+                              <span className="ms-wx-hour-time">{fmtHour(h.time, tz)}</span>
+                              <span aria-hidden>{h.emoji}</span>
+                              <strong>{h.tempF}°</strong>
+                              <span className="panel-hint">
+                                {h.precipProb != null ? `${h.precipProb}%` : "—"}
+                                {h.uvIndex != null ? ` · UV ${h.uvIndex}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="panel-hint">Hourly detail is only in for nearer days.</p>
+                      )}
+                    </div>
+                  );
+                })()
+              : null}
           </div>
         </>
       ) : null}
