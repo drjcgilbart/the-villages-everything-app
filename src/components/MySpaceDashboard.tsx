@@ -480,13 +480,7 @@ export function MySpaceDashboard() {
       return;
     }
     setTab(id);
-    const collapse =
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 860px)").matches;
-    if (collapse) {
-      skipBoardScroll.current = false;
-      setToolsOpen(false);
-    }
+    skipBoardScroll.current = false;
   }
 
   return (

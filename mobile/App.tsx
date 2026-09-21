@@ -175,6 +175,10 @@ function Shell() {
       if (!url || url === "about:blank") return true;
       if (isDangerousUrl(url)) return false;
 
+      // Let YouTube play inside the gym Video popup (not a top-level jump).
+      const isTop = (request as { isTopFrame?: boolean }).isTopFrame;
+      if (isTop === false) return true;
+
       if (isExternalAppUrl(url)) {
         openExternal(url);
         return false;

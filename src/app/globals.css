@@ -2879,8 +2879,18 @@ a.my-space-link-card:hover {
     display: none;
   }
 
-  .ms-dash-nav-wrap.is-collapsed .ms-dash-nav-current {
+  .ms-dash-nav-wrap.is-collapsed .ms-dash-nav-current,
+  .ms-h-nav-wrap.is-collapsed .ms-h-nav-current {
     display: flex;
+  }
+
+  .ms-dash-nav-wrap.is-collapsed,
+  .ms-h-nav-wrap.is-collapsed {
+    position: sticky;
+    top: var(--hub-header-h, 4.5rem);
+    z-index: 28;
+    background: rgba(255, 248, 238, 0.96);
+    padding: 0.2rem 0 0.35rem;
   }
 }
 
@@ -3606,6 +3616,14 @@ button.ms-home-card:hover {
 
   .ms-h-nav-wrap.is-collapsed .ms-h-nav-current {
     display: flex;
+  }
+
+  .ms-h-nav-wrap.is-collapsed {
+    position: sticky;
+    top: var(--hub-header-h, 4.5rem);
+    z-index: 28;
+    background: rgba(255, 248, 238, 0.96);
+    padding: 0.2rem 0 0.35rem;
   }
 }
 
@@ -4840,25 +4858,21 @@ button.ms-home-card:hover {
   touch-action: manipulation;
 }
 
-.ms-gym-video-stage {
-  background: #f4efe4;
+.ms-gym-video-frame {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  background: #111;
   border-radius: 14px;
   overflow: hidden;
-  text-align: center;
 }
 
-.ms-gym-video-stage img {
+.ms-gym-video-frame iframe {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  max-height: min(52dvh, 28rem);
-  object-fit: contain;
-  object-position: center;
-  display: block;
-  margin: 0 auto;
-}
-
-.ms-gym-video-stage .panel-hint {
-  margin: 0.35rem 0.6rem 0.55rem;
+  height: 100%;
+  border: 0;
 }
 
 .ms-gym-video-steps {

@@ -8,45 +8,63 @@ import {
 } from "@/lib/gymExerciseDemos";
 
 export function GymExerciseHowTo({ name }: { name: string }) {
-  const [open, setOpen] = useState(false);
-  const [frame, setFrame] = useState(0);
+  const [pics, setPics] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [videoStatus, setVideoStatus] = useState<"idle" | "loading" | "ready" | "missing">(
+    "idle"
+  );
   const demo = lookupExerciseDemo(name);
   const label = demo?.name || name.trim();
   const stills = (demo?.images || []).slice(0, 2);
 
   useEffect(() => {
-    if (!open || stills.length < 2) return;
-    const id = window.setInterval(() => {
-      setFrame((n) => (n + 1) % stills.length);
-    }, 900);
-    return () => window.clearInterval(id);
-  }, [open, stills.length]);
+    if (!videoOpen || !label) return;
+    let cancelled = false;
+    setVideoStatus("loading");
+    setVideoId(null);
+    fetch(`/api/gym/video?q=${encodeURIComponent(label)}`)
+      .then((res) => res.json())
+      .then((j: { id?: string | null }) => {
+        if (cancelled) return;
+        if (j.id) {
+          setVideoId(j.id);
+          setVideoStatus("ready");
+        } else setVideoStatus("missing");
+      })
+      .catch(() => {
+        if (!cancelled) setVideoStatus("missing");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [videoOpen, label]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!videoOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") setVideoOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [videoOpen]);
 
   if (!label) return null;
 
   const popup =
-    open && typeof document !== "undefined"
+    videoOpen && typeof document !== "undefined"
       ? createPortal(
           <div
             className="ms-gym-video-scrim"
             role="dialog"
             aria-modal="true"
             aria-labelledby="ms-gym-video-title"
-            onClick={() => setOpen(false)}
+            onClick={() => setVideoOpen(false)}
           >
             <div
               className="ms-gym-video-sheet"
@@ -57,35 +75,45 @@ export function GymExerciseHowTo({ name }: { name: string }) {
                 <button
                   type="button"
                   className="ms-gym-video-close"
-                  onClick={() => setOpen(false)}
+                  onClick={() => setVideoOpen(false)}
                 >
                   Close
                 </button>
               </div>
-              {stills.length ? (
-                <div className="ms-gym-video-stage">
-                  <img
-                    src={exerciseImageUrl(stills[frame] || stills[0])}
-                    alt={`${label} demonstration`}
+              {videoStatus === "loading" ? (
+                <p className="panel-hint">Loading a form video…</p>
+              ) : null}
+              {videoStatus === "ready" && videoId ? (
+                <div className="ms-gym-video-frame">
+                  <iframe
+                    title={`${label} form video`}
+                    src={`https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                    allowFullScreen
                   />
-                  {stills.length > 1 ? (
-                    <p className="panel-hint">Playing the two demo stills as a loop.</p>
-                  ) : null}
                 </div>
-              ) : (
-                <p className="panel-hint">No demo pictures for this move yet.</p>
-              )}
-              {demo?.steps?.length ? (
-                <ol className="ms-gym-video-steps">
-                  {demo.steps.map((step, i) => (
-                    <li key={i}>{step}</li>
+              ) : null}
+              {videoStatus === "missing" ? (
+                <p className="panel-hint">
+                  Couldn’t load a video in this window. Use Pictures for the
+                  stills, or try again.
+                </p>
+              ) : null}
+              {stills.length && videoStatus !== "ready" ? (
+                <div className="ms-gym-stills">
+                  {stills.map((path) => (
+                    <img
+                      key={path}
+                      src={exerciseImageUrl(path)}
+                      alt={`${label} demonstration`}
+                    />
                   ))}
-                </ol>
+                </div>
               ) : null}
               <button
                 type="button"
                 className="btn btn-primary ms-gym-video-done"
-                onClick={() => setOpen(false)}
+                onClick={() => setVideoOpen(false)}
               >
                 Done — back to workout
               </button>
@@ -100,13 +128,40 @@ export function GymExerciseHowTo({ name }: { name: string }) {
       <button
         type="button"
         className="ms-gym-video-btn"
-        onClick={() => {
-          setFrame(0);
-          setOpen(true);
-        }}
+        onClick={() => setVideoOpen(true)}
       >
         ▶ Video
       </button>
+      {stills.length ? (
+        <button
+          type="button"
+          className="ms-gym-stills-btn"
+          onClick={() => setPics((v) => !v)}
+          aria-expanded={pics}
+        >
+          {pics ? "Hide pictures" : "Pictures"}
+        </button>
+      ) : null}
+      {pics && stills.length ? (
+        <div className="ms-gym-stills">
+          {stills.map((path) => (
+            <img
+              key={path}
+              src={exerciseImageUrl(path)}
+              alt={`${label} demonstration`}
+              width={160}
+              height={160}
+            />
+          ))}
+          {demo?.steps?.length ? (
+            <ol>
+              {demo.steps.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          ) : null}
+        </div>
+      ) : null}
       {popup}
     </div>
   );

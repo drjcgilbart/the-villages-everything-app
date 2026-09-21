@@ -21,7 +21,6 @@ import {
 } from "@/lib/healthDayRecap";
 import { runHealthDayRecap } from "@/lib/runHealthDayRecap";
 import { PocketNoteCard } from "@/components/PocketNoteCard";
-import { useScrollHide } from "@/lib/useScrollHide";
 
 const KEY = "tvea-ms-health-v2";
 
@@ -870,15 +869,14 @@ export function MySpaceHealthBoard() {
   );
   const autoRecapOnce = useRef(false);
   const [tab, setTab] = useState<HealthTab>("overview");
-  const healthNav = useScrollHide();
-  const healthMenuOpen = !healthNav.hidden;
+  const [healthMenuOpen, setHealthMenuOpen] = useState(true);
   const skipHealthMenuScroll = useRef(true);
 
   function goToHealthTab(id: HealthTab) {
     setTab(id);
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 860px)").matches) {
       skipHealthMenuScroll.current = false;
-      healthNav.hide();
+      setHealthMenuOpen(false);
     }
   }
 
@@ -1560,7 +1558,7 @@ export function MySpaceHealthBoard() {
         <button
           type="button"
           className="ms-h-nav-current"
-          onClick={() => healthNav.show()}
+          onClick={() => setHealthMenuOpen(true)}
           aria-expanded={healthMenuOpen}
         >
           <span>
@@ -3582,7 +3580,7 @@ export function MySpaceHealthBoard() {
               className="btn btn-primary"
               onClick={() => {
                 setGoalsSavedOpen(false);
-                healthNav.show();
+                setHealthMenuOpen(true);
                 setTab("overview");
               }}
             >
