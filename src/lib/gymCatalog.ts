@@ -231,25 +231,95 @@ export function cloneLifts(lifts: GymLift[]): GymLift[] {
   }));
 }
 
+function workoutRecency(a: GymWorkout, b: GymWorkout) {
+  const d = String(b.date).localeCompare(String(a.date));
+  if (d) return d;
+  return String(b.id).localeCompare(String(a.id));
+}
+
+function setHasNumbers(s: GymSet) {
+  return s.weight !== "" || s.reps !== "" || s.seconds !== "" || Boolean(s.done);
+}
+
+export function workoutHasNumbers(w: GymWorkout) {
+  return (w.exercises || []).some((l) => (l.sets || []).some(setHasNumbers));
+}
+
+export function lastCompletedForRoutine(
+  workouts: GymWorkout[],
+  routineName: string,
+  excludeId?: string
+): GymWorkout | null {
+  const key = routineName.trim().toLowerCase();
+  if (!key) return null;
+  const sorted = [...workouts].sort(workoutRecency);
+  for (const w of sorted) {
+    if (excludeId && w.id === excludeId) continue;
+    if ((w.routineName || "").trim().toLowerCase() !== key) continue;
+    if (workoutHasNumbers(w)) return w;
+  }
+  return null;
+}
+
+export function lastLiftSnapshot(
+  workouts: GymWorkout[],
+  exerciseName: string,
+  excludeId?: string
+): GymLift | null {
+  const key = exerciseName.trim().toLowerCase();
+  if (!key) return null;
+  const sorted = [...workouts].sort(workoutRecency);
+  for (const w of sorted) {
+    if (excludeId && w.id === excludeId) continue;
+    const lift = (w.exercises || []).find((l) => l.name.trim().toLowerCase() === key);
+    if (!lift?.sets?.some(setHasNumbers)) continue;
+    return {
+      ...lift,
+      sets: lift.sets.map((s) => ({ ...s, done: false })),
+    };
+  }
+  return null;
+}
+
 export function lastUsedFor(
   workouts: GymWorkout[],
   exerciseName: string
 ): { weight: number; reps: number; seconds: number } | null {
-  const key = exerciseName.trim().toLowerCase();
-  if (!key) return null;
-  const sorted = [...workouts].sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  for (const w of sorted) {
-    const lift = (w.exercises || []).find((l) => l.name.trim().toLowerCase() === key);
-    if (!lift) continue;
-    for (let i = lift.sets.length - 1; i >= 0; i--) {
-      const s = lift.sets[i];
-      const weight = Number(s.weight) || 0;
-      const reps = Number(s.reps) || 0;
-      const seconds = Number(s.seconds) || 0;
-      if (weight || reps || seconds) return { weight, reps, seconds };
-    }
+  const snap = lastLiftSnapshot(workouts, exerciseName);
+  if (!snap) return null;
+  let weight = 0;
+  let reps = 0;
+  let seconds = 0;
+  for (let i = snap.sets.length - 1; i >= 0; i--) {
+    const s = snap.sets[i];
+    if (!weight && Number(s.weight)) weight = Number(s.weight);
+    if (!reps && Number(s.reps)) reps = Number(s.reps);
+    if (!seconds && Number(s.seconds)) seconds = Number(s.seconds);
+    if (weight && (reps || seconds)) break;
   }
-  return null;
+  if (!weight && !reps && !seconds) return null;
+  return { weight, reps, seconds };
+}
+
+export function seedLiftsFromHistory(
+  workouts: GymWorkout[],
+  routineName: string,
+  fallback: GymLift[]
+): GymLift[] {
+  const last = lastCompletedForRoutine(workouts, routineName);
+  if (last?.exercises?.length) return cloneLifts(last.exercises);
+  return fallback.map((lift) => {
+    const snap = lastLiftSnapshot(workouts, lift.name);
+    if (snap?.sets?.length) {
+      return {
+        ...lift,
+        kind: snap.kind || lift.kind,
+        equipment: snap.equipment || lift.equipment,
+        sets: snap.sets.map((s) => ({ ...s, done: false })),
+      };
+    }
+    return lift;
+  });
 }
 
 function uniquePos(nums: number[]) {

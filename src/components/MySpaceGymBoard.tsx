@@ -22,8 +22,10 @@ import {
   nearbySeconds,
   nearbyWeights,
   ROUTINE_PRESETS,
+  seedLiftsFromHistory,
   sessionProgress,
   starterLifts,
+  workoutHasNumbers,
 } from "@/lib/gymCatalog";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import {
@@ -391,23 +393,6 @@ export function MySpaceGymBoard() {
     });
   }
 
-  function applyLastUsed(list: GymLift[]): GymLift[] {
-    return list.map((l) => {
-      const last = lastUsedFor(workouts, l.name);
-      if (!last) return l;
-      return {
-        ...l,
-        sets: l.sets.map((s) => ({
-          ...s,
-          done: Boolean(s.done),
-          weight: s.weight === "" && last.weight ? last.weight : s.weight,
-          reps: s.reps === "" && last.reps ? last.reps : s.reps,
-          seconds: s.seconds === "" && last.seconds ? last.seconds : s.seconds,
-        })),
-      };
-    });
-  }
-
   function loadWorkout(w: GymWorkout) {
     setEditWorkoutId(w.id);
     setSessionOn(true);
@@ -491,7 +476,15 @@ export function MySpaceGymBoard() {
     const next = editWorkoutId
       ? workouts.map((w) => (w.id === editWorkoutId ? wo : w))
       : [wo, ...workouts];
-    persist({ ...value, workouts: next.slice(0, 80) });
+    const nextRoutines =
+      !keepOpen && wo.routineName && workoutHasNumbers(wo)
+        ? upsertRoutine(routines, wo.routineName, cloneLifts(cleaned))
+        : routines;
+    persist({
+      ...value,
+      workouts: next.slice(0, 80),
+      routines: nextRoutines.slice(0, 24),
+    });
     if (keepOpen) {
       setEditWorkoutId(wo.id);
       return;
@@ -506,8 +499,12 @@ export function MySpaceGymBoard() {
   function startRoutine(name: string, from?: GymLift[]) {
     const label = name.trim().slice(0, 80);
     if (!label) return;
-    const base = from?.length ? cloneLifts(from) : starterLifts(label);
-    const next = applyLastUsed(base.length ? base : [emptyLift()]);
+    const fallback = from?.length ? cloneLifts(from) : starterLifts(label);
+    const next = seedLiftsFromHistory(
+      workouts,
+      label,
+      fallback.length ? fallback : [emptyLift()]
+    );
     setRoutineName(label);
     setCustomRoutine("");
     setLifts(next);
@@ -531,6 +528,18 @@ export function MySpaceGymBoard() {
     persist({ ...value, workouts: [wo, ...workouts].slice(0, 80) });
     setEditWorkoutId(wo.id);
     setTab("today");
+  }
+
+  function upsertRoutine(list: GymRoutine[], name: string, exercises: GymLift[]): GymRoutine[] {
+    const key = name.trim().toLowerCase();
+    const existing = list.find((r) => r.name.toLowerCase() === key);
+    const row: GymRoutine = {
+      id: existing?.id || uid("rt"),
+      name: name.trim().slice(0, 80),
+      exercises,
+    };
+    if (existing) return list.map((r) => (r.id === existing.id ? row : r));
+    return [row, ...list];
   }
 
   function saveRoutineFromLifts(name: string, list: GymLift[]) {
@@ -1137,7 +1146,7 @@ export function MySpaceGymBoard() {
                 onClick={() => {
                   setEditRoutineId(null);
                   setRoutineName(n);
-                  setLifts(applyLastUsed(starterLifts(n)));
+                  setLifts(seedLiftsFromHistory(workouts, n, starterLifts(n)));
                 }}
               >
                 {n}
