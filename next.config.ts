@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
   },
   // Ship JSON seeds + any bundled uploads with serverless functions
   outputFileTracingIncludes: {
-    "/*": ["./data/**/*"],
+    "/*": ["./data/**/*", "./certs/apple/**/*"],
   },
   // Allow large direct video uploads in Studio (local / Node host)
   experimental: {

@@ -54,6 +54,8 @@ export type TierDef = {
   householdSeats: number;
   /** Optional Stripe price env key suffix, e.g. HUB → STRIPE_PRICE_HUB */
   stripeEnvKey?: string;
+  /** App Store subscription product id. Must match App Store Connect exactly. */
+  appleProductId?: string;
 };
 
 export const HUB_TIERS: TierDef[] = [
@@ -81,6 +83,7 @@ export const HUB_TIERS: TierDef[] = [
     priceUsdPerYear: 3,
     householdSeats: 2,
     stripeEnvKey: "HUB",
+    appleProductId: "cart_path_regular_yearly",
   },
   {
     id: "lanai_legend",
@@ -94,6 +97,7 @@ export const HUB_TIERS: TierDef[] = [
     priceUsdPerYear: 5,
     householdSeats: 3,
     stripeEnvKey: "PLUS",
+    appleProductId: "lanai_legend_yearly",
   },
   {
     id: "square_royalty",
@@ -107,8 +111,22 @@ export const HUB_TIERS: TierDef[] = [
     priceUsdPerYear: 10,
     householdSeats: 4,
     stripeEnvKey: "PATRON",
+    appleProductId: "square_royalty_yearly",
   },
 ];
+
+export const APPLE_BUNDLE_ID = "com.thevillageseverythingapp.app";
+
+export function planFromAppleProductId(productId: string | null | undefined): HubPlanId | null {
+  const id = String(productId || "").trim();
+  if (!id) return null;
+  const tier = HUB_TIERS.find((t) => t.appleProductId === id);
+  return tier ? tier.id : null;
+}
+
+export function appleProductIdForPlan(plan: HubPlanId): string | null {
+  return getTier(plan).appleProductId || null;
+}
 
 /** Minimum tier rank required for each My Space feature */
 export const FEATURE_MIN_RANK: Record<FeatureKey, number> = {

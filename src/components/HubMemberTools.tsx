@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { MySpacePrivacySection } from "@/components/MySpacePrivacySection";
+import { isIosNativeApp, requestAppleSubscription } from "@/lib/appleIapClient";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import { getBoard, unlockCtaLabel } from "@/lib/mySpaceProduct";
 import { HUB_TIERS, type FeatureKey, type HubPlanId } from "@/lib/membershipTiers";
@@ -79,6 +80,14 @@ export function HubMemberTools({
     setBusy(true);
     setNote(null);
     try {
+      if (isIosNativeApp()) {
+        await requestAppleSubscription(tierId);
+        window.location.href = "/my-space?subscribed=1";
+        return;
+      }
+      if (isNativeAppShell()) {
+        throw new Error("Paid plans in the Android app are not on sale yet. The free tools on this phone still work.");
+      }
       const res = await fetch("/api/members/subscribe", {
         method: "POST",
         credentials: "include",
@@ -148,11 +157,10 @@ export function HubMemberTools({
                     Request membership
                   </Link>
                 </>
-              ) : native ? (
+              ) : native && !isIosNativeApp() ? (
                 <p className="panel-hint" style={{ margin: 0 }}>
-                  Membership isn’t sold in the store app. Subscribe at{" "}
-                  <strong>thevillageseverythingapp.com</strong>, then sign in
-                  here.
+                  Paid plans in the Android app are not on sale yet. The free
+                  tools on this phone still work.
                 </p>
               ) : !approved ? (
                 <p className="panel-hint" style={{ margin: 0 }}>
@@ -162,11 +170,11 @@ export function HubMemberTools({
                 <>
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm hide-in-native-app"
+                    className="btn btn-primary btn-sm"
                     disabled={busy}
                     onClick={() => void startSubscribe(need.id)}
                   >
-                    {busy ? "Starting…" : cta}
+                    {busy ? "Starting…" : isIosNativeApp() ? `${cta} with Apple` : cta}
                   </button>
                   <Link href="/my-space?tab=plans" className="btn btn-ghost btn-sm">
                     See plans

@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.thevillageseverythingapp.app",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow camera access so you can take photos for Best of the Month, Support Local, yard sale, and member uploads.",
         "NSPhotoLibraryUsageDescription": "Allow photo library access so you can upload pictures for Best of the Month, Support Local, yard sale, and member content.",
@@ -58,7 +58,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-iap"
     ],
     "extra": {
       "eas": {

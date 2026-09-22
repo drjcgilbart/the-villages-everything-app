@@ -6,6 +6,7 @@ import {
   unlockCtaLabel,
   type BoardId,
 } from "@/lib/mySpaceProduct";
+import { isIosNativeApp } from "@/lib/appleIapClient";
 import { HUB_TIERS, type HubPlanId } from "@/lib/membershipTiers";
 import { SAMPLE_GLASS, SAMPLE_HINT } from "@/lib/sampleBoards";
 
@@ -80,10 +81,10 @@ export function GlassDoorPreview({
               Request membership
             </Link>
           </>
-        ) : nativeApp ? (
+        ) : nativeApp && !isIosNativeApp() ? (
           <p className="panel-hint" style={{ margin: 0 }}>
-            Membership isn’t sold in the store app. Subscribe at{" "}
-            <strong>thevillageseverythingapp.com</strong>, then sign in here.
+            Paid plans in the Android app are not on sale yet. The free tools
+            on this phone still work.
           </p>
         ) : !approved ? (
           <p className="pf-form-error" style={{ margin: 0 }}>
@@ -92,11 +93,11 @@ export function GlassDoorPreview({
         ) : (
           <button
             type="button"
-            className="btn btn-primary btn-sm hide-in-native-app"
+            className="btn btn-primary btn-sm"
             disabled={busy}
             onClick={() => onUnlock?.(need.id)}
           >
-            {busy ? "Starting…" : cta}
+            {busy ? "Starting…" : nativeApp ? `${cta} with Apple` : cta}
           </button>
         )}
       </div>

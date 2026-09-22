@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { isIosNativeApp, requestAppleSubscription, restoreAppleSubscription } from "@/lib/appleIapClient";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   HUB_TIERS,
@@ -34,9 +35,11 @@ export function MembershipPlans() {
   const [busy, setBusy] = useState<HubPlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [native, setNative] = useState(false);
+  const [iosApp, setIosApp] = useState(false);
 
   useEffect(() => {
     setNative(isNativeAppShell());
+    setIosApp(isIosNativeApp());
     fetch("/api/members/space", { cache: "no-store", credentials: "include" })
       .then((res) => {
         if (res.status === 401) {
@@ -87,6 +90,14 @@ export function MembershipPlans() {
     setError(null);
     setBusy(tierId);
     try {
+      if (isIosNativeApp()) {
+        await requestAppleSubscription(tierId);
+        window.location.href = "/my-space?subscribed=1";
+        return;
+      }
+      if (isNativeAppShell()) {
+        throw new Error("Paid plans in the Android app are not on sale yet. The free tools on this phone still work.");
+      }
       const res = await fetch("/api/members/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,10 +133,16 @@ export function MembershipPlans() {
         error={error}
         onStart={() => void startTrial()}
       />
-      {native ? (
+      {iosApp ? (
         <p className="panel-hint">
-          Paid membership isn’t sold in the store app. Subscribe at{" "}
-          <strong>thevillageseverythingapp.com</strong>, then sign in here.
+          On iPhone, paid plans are bought with Apple. If you already paid on
+          the website, sign in and the same tools unlock. You are not charged
+          again.
+        </p>
+      ) : native ? (
+        <p className="panel-hint">
+          Paid plans in the Android app are not on sale yet. The free tools on
+          this phone still work.
         </p>
       ) : null}
       <div className="ms-tier-grid support-plan-grid">
@@ -168,19 +185,21 @@ export function MembershipPlans() {
               ) : null}
               {t.rank > 0 &&
               !included &&
-              !native &&
               signedIn &&
               approved &&
-              space?.householdRole !== "member" ? (
+              space?.householdRole !== "member" &&
+              (!native || iosApp) ? (
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm hide-in-native-app"
+                  className="btn btn-primary btn-sm"
                   disabled={busy != null}
                   onClick={() => startSubscribe(t.id)}
                 >
                   {busy === t.id
                     ? "Starting…"
-                    : `Become ${t.label} · ${formatMembershipPrice(t)}`}
+                    : iosApp
+                      ? `Subscribe with Apple · ${formatMembershipPrice(t)}`
+                      : `Become ${t.label} · ${formatMembershipPrice(t)}`}
                 </button>
               ) : null}
               {t.rank > 0 &&
@@ -210,6 +229,29 @@ export function MembershipPlans() {
           );
         })}
       </div>
+      {iosApp && signedIn ? (
+        <p style={{ marginTop: "0.8rem" }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={busy != null}
+            onClick={() => {
+              setError(null);
+              setBusy("cart_path_regular");
+              void restoreAppleSubscription()
+                .then(() => {
+                  window.location.href = "/my-space?subscribed=1";
+                })
+                .catch((e: unknown) => {
+                  setError(e instanceof Error ? e.message : "Could not restore");
+                  setBusy(null);
+                });
+            }}
+          >
+            Restore Apple purchase
+          </button>
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -22,8 +22,8 @@ type UtilityItem = {
 /**
  * Utility bar (top thin strip): site-wide + personal/member areas.
  * My Space owns member login, favorites, dashboard, and yard-sale seller tools.
- * Membership is one Pages item: Support on the website (plans + tips + checkout),
- * Plans in the store app (Apple/Google: no in-app purchase on /donate).
+ * Membership is one Pages item: Support on the website (plans + tips + Stripe),
+ * Plans in the store app (iPhone buys with Apple; Android has no checkout yet).
  */
 const UTILITY_NAV: UtilityItem[] = [
   { href: "/", label: "Home" },

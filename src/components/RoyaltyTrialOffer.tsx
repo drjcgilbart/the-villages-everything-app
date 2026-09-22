@@ -95,9 +95,8 @@ export function RoyaltyTrialOffer(props: TrialOfferState) {
       )}
       {native ? (
         <p className="panel-hint">
-          The free month works in the app. If you later want to keep it, subscribe
-          at <strong>thevillageseverythingapp.com</strong> (not in the store), then
-          sign in here.
+          The free month works in the app. To keep the paid tools after that
+          month, use Subscribe with Apple on the Plans screen.
         </p>
       ) : null}
     </div>

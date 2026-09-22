@@ -26,6 +26,17 @@ import * as Linking from "expo-linking";
 import * as Network from "expo-network";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
+import {
+  endConnection,
+  finishTransaction,
+  getAvailablePurchases,
+  initConnection,
+  isUserCancelledError,
+  purchaseErrorListener,
+  purchaseUpdatedListener,
+  requestPurchase,
+  type Purchase,
+} from "expo-iap";
 
 /** Live website — same product as the PC browser version */
 const SITE_URL =
@@ -107,6 +118,9 @@ function isExternalAppUrl(url: string): boolean {
 function Shell() {
   const insets = useSafeAreaInsets();
   const webRef = useRef<WebViewRef>(null);
+  const webReady = useRef(false);
+  const pendingToWeb = useRef<unknown[]>([]);
+  const pendingPurchases = useRef<Map<string, Purchase>>(new Map());
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -159,6 +173,70 @@ function Shell() {
     await reload();
     setTimeout(() => setRefreshing(false), 600);
   }, [reload]);
+
+  const injectToWeb = useCallback((detail: unknown) => {
+    const json = JSON.stringify(detail);
+    webRef.current?.injectJavaScript(
+      `window.dispatchEvent(new CustomEvent("vea-apple-purchase",{detail:${json}}));true;`,
+    );
+  }, []);
+
+  const sendToWeb = useCallback(
+    (detail: unknown) => {
+      if (!webReady.current) {
+        pendingToWeb.current.push(detail);
+        return;
+      }
+      injectToWeb(detail);
+    },
+    [injectToWeb],
+  );
+
+  const flushToWeb = useCallback(() => {
+    webReady.current = true;
+    const queued = pendingToWeb.current.splice(0);
+    for (const detail of queued) injectToWeb(detail);
+  }, [injectToWeb]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    let purchaseSub: { remove: () => void } | undefined;
+    let errorSub: { remove: () => void } | undefined;
+    let closed = false;
+    (async () => {
+      try {
+        await initConnection();
+      } catch {
+        return;
+      }
+      if (closed) return;
+      purchaseSub = purchaseUpdatedListener((purchase) => {
+        const token = purchase.purchaseToken || "";
+        const transactionId = purchase.transactionId || purchase.id;
+        if (!token || !transactionId) return;
+        pendingPurchases.current.set(transactionId, purchase);
+        sendToWeb({
+          ok: true,
+          signedTransaction: token,
+          transactionId,
+        });
+      });
+      errorSub = purchaseErrorListener((error) => {
+        sendToWeb({
+          ok: false,
+          error: isUserCancelledError(error)
+            ? "Purchase canceled."
+            : error.message || "Apple purchase failed.",
+        });
+      });
+    })();
+    return () => {
+      closed = true;
+      purchaseSub?.remove();
+      errorSub?.remove();
+      endConnection().catch(() => undefined);
+    };
+  }, [sendToWeb]);
 
   const openExternal = useCallback(async (url: string) => {
     try {
@@ -289,6 +367,7 @@ function Shell() {
           setLoading(false);
           setRefreshing(false);
           hideSplash();
+          flushToWeb();
         }}
         onLoadProgress={({ nativeEvent }: WebViewProgressEvent) => {
           if (nativeEvent.progress > 0.7) hideSplash();
@@ -321,10 +400,81 @@ function Shell() {
         setSupportMultipleWindows={false}
         geolocationEnabled={false}
         startInLoadingState
-        applicationNameForUserAgent=" VillagesEverythingApp/1.1"
+        applicationNameForUserAgent=" VillagesEverythingApp/1.2"
+        injectedJavaScriptBeforeContentLoaded={
+          Platform.OS === "ios" ? "window.VillagesAppleIAP=true;true;" : "true;"
+        }
         onMessage={(event: WebViewMessageEvent) => {
-          if (event.nativeEvent.data === "toggle-chrome") {
+          const raw = event.nativeEvent.data;
+          if (raw === "toggle-chrome") {
             setShowNativeChrome((v) => !v);
+            return;
+          }
+          type AppleMsg = {
+            type?: string;
+            productId?: string;
+            appAccountToken?: string;
+            transactionId?: string;
+          };
+          let msg: AppleMsg | null = null;
+          try {
+            msg = JSON.parse(raw) as AppleMsg;
+          } catch {
+            return;
+          }
+          if (!msg || Platform.OS !== "ios") return;
+          if (msg.type === "apple-finish" && msg.transactionId) {
+            const purchase = pendingPurchases.current.get(msg.transactionId);
+            if (!purchase) return;
+            pendingPurchases.current.delete(msg.transactionId);
+            finishTransaction({ purchase, isConsumable: false }).catch(() => undefined);
+            return;
+          }
+          if (msg.type === "apple-purchase" && msg.productId) {
+            requestPurchase({
+              request: {
+                apple: {
+                  sku: msg.productId,
+                  appAccountToken: msg.appAccountToken,
+                },
+              },
+              type: "subs",
+            }).catch((error: unknown) => {
+              sendToWeb({
+                ok: false,
+                error: error instanceof Error ? error.message : "Apple purchase failed.",
+              });
+            });
+            return;
+          }
+          if (msg.type === "apple-restore") {
+            getAvailablePurchases()
+              .then((list) => {
+                const purchases = (list || []).filter((p) => p.purchaseToken && p.transactionId);
+                if (!purchases.length) {
+                  sendToWeb({
+                    ok: false,
+                    error: "No Apple subscription was found for this Apple ID.",
+                  });
+                  return;
+                }
+                for (const purchase of purchases) {
+                  const transactionId = purchase.transactionId;
+                  if (!transactionId || !purchase.purchaseToken) continue;
+                  pendingPurchases.current.set(transactionId, purchase);
+                }
+                sendToWeb({
+                  ok: true,
+                  signedTransactions: purchases.map((p) => p.purchaseToken).filter(Boolean),
+                  transactionIds: purchases.map((p) => p.transactionId).filter(Boolean),
+                });
+              })
+              .catch((error: unknown) => {
+                sendToWeb({
+                  ok: false,
+                  error: error instanceof Error ? error.message : "Could not restore Apple purchases.",
+                });
+              });
           }
         }}
         injectedJavaScript={`

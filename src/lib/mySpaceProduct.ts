@@ -311,7 +311,7 @@ export const LOCKED_PREVIEW = {
   /** Primary button label pattern: “Unlock with Lanai Legend” */
   ctaPattern: "Unlock with {tier}",
   nativeBilling:
-    "Do not sell memberships inside the iPhone/Android store app. If they already subscribed on the website, the same login unlocks My Space. Otherwise: “Subscribe at thevillageseverythingapp.com, then sign in here.”",
+    "iPhone sells the same yearly plans with Apple In-App Purchase. A website Stripe subscription still unlocks this login. Do not tell people inside the iPhone app that the only way to pay is the website.",
   dataRule:
     "Personal boards belong on the member account (synced PC / iPhone / Android), not only in this browser. Health, pets, meals, and photos are never shown on public Hub pages.",
 } as const;

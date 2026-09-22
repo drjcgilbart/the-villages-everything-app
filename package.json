@@ -10,6 +10,7 @@
     "gch:publish": "npm run publish:web --prefix golf-cart-hero"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.6.1",
     "@vercel/speed-insights": "^2.0.0",

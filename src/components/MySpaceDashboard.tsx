@@ -30,6 +30,7 @@ import {
   type FeatureKey,
   type HubPlanId,
 } from "@/lib/membershipTiers";
+import { isIosNativeApp, requestAppleSubscription, restoreAppleSubscription } from "@/lib/appleIapClient";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   PRODUCT_NAMES,
@@ -138,6 +139,7 @@ export function MySpaceDashboard() {
   const [toolsOpen, setToolsOpen] = useState(true);
   const skipBoardScroll = useRef(true);
   const [inNativeApp, setInNativeApp] = useState(false);
+  const [iosApp, setIosApp] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -186,6 +188,7 @@ export function MySpaceDashboard() {
 
   useEffect(() => {
     setInNativeApp(isNativeAppShell());
+    setIosApp(isIosNativeApp());
     load();
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -340,6 +343,14 @@ export function MySpaceDashboard() {
     setBusy(true);
     setNote(null);
     try {
+      if (isIosNativeApp()) {
+        await requestAppleSubscription(tierId);
+        window.location.href = "/my-space?subscribed=1";
+        return;
+      }
+      if (isNativeAppShell()) {
+        throw new Error("Paid plans in the Android app are not on sale yet. The free tools on this phone still work.");
+      }
       const res = await fetch("/api/members/subscribe", {
         method: "POST",
         credentials: "include",
@@ -502,9 +513,11 @@ export function MySpaceDashboard() {
               ($3/year, 2 logins) → Lanai Legend ($5/year, 3 logins) → Square
               Royalty ($10/year, 4 logins). Each plan keeps everything below
               it. Extra household people get their own password and boards.
-              {inNativeApp
-                ? " Paid plans are bought on thevillageseverythingapp.com, then you sign in here."
-                : ""}
+              {iosApp
+                ? " On iPhone, paid plans are bought with Apple on this page. If you already paid on the website, sign in — you are not charged again."
+                : inNativeApp
+                  ? " Paid plans in the Android app are not on sale yet. The free tools on this phone still work."
+                  : ""}
             </p>
             {visitor ? (
               <p className="hero-actions" style={{ marginBottom: 0 }}>
@@ -808,17 +821,19 @@ export function MySpaceDashboard() {
                   !unlocked &&
                   !visitor &&
                   approved &&
-                  !inNativeApp &&
+                  (!inNativeApp || iosApp) &&
                   space?.household?.role !== "member" && (
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm hide-in-native-app"
+                    className="btn btn-primary btn-sm"
                     disabled={busy}
                     onClick={() => startSubscribe(t.id)}
                   >
                     {busy
                       ? "Starting…"
-                      : `Unlock with ${t.label} · ${formatMembershipPrice(t)}`}
+                      : iosApp
+                        ? `Subscribe with Apple · ${formatMembershipPrice(t)}`
+                        : `Unlock with ${t.label} · ${formatMembershipPrice(t)}`}
                   </button>
                 )}
                 {t.rank > 0 &&
@@ -830,10 +845,10 @@ export function MySpaceDashboard() {
                     upgrade — or leave the household to buy your own plan.
                   </p>
                 )}
-                {t.rank > 0 && !unlocked && !visitor && approved && inNativeApp && (
+                {t.rank > 0 && !unlocked && !visitor && approved && inNativeApp && !iosApp && (
                   <p className="panel-hint" style={{ marginBottom: 0 }}>
-                    Membership isn’t sold in the store app. Subscribe at
-                    thevillageseverythingapp.com, then sign in here.
+                    Paid plans in the Android app are not on sale yet. The free
+                    tools on this phone still work.
                   </p>
                 )}
                 {t.rank > 0 && !unlocked && !visitor && !approved && (
@@ -863,6 +878,29 @@ export function MySpaceDashboard() {
             );
           })}
         </div>
+        {iosApp && !visitor ? (
+          <p style={{ marginTop: "0.8rem" }}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setNote(null);
+                void restoreAppleSubscription()
+                  .then(() => {
+                    window.location.href = "/my-space?subscribed=1";
+                  })
+                  .catch((e: unknown) => {
+                    setNote(e instanceof Error ? e.message : "Could not restore");
+                    setBusy(false);
+                  });
+              }}
+            >
+              Restore Apple purchase
+            </button>
+          </p>
+        ) : null}
         {!visitor && space?.household ? (
           <div style={{ marginTop: "1.1rem" }} data-privacy-block="Household">
             <MySpaceHouseholdPanel

@@ -10,6 +10,7 @@ import { MascotQuipPopup } from "@/components/MascotQuipPopup";
 import { ThemeMusicPlayer } from "@/components/ThemeMusicPlayer";
 import { PwaRegister } from "@/components/PwaRegister";
 import { NativeAppBoot } from "@/components/NativeAppBoot";
+import { ApplePurchaseBridge } from "@/components/ApplePurchaseBridge";
 import { PhoneViewHide } from "@/components/PhoneViewHide";
 import { PrivacyModeRoot } from "@/components/PrivacyModeRoot";
 import { isAdminAuthenticated } from "@/lib/auth";
@@ -70,6 +71,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body id="top" className="min-h-full flex flex-col antialiased">
         <NativeAppBoot />
+        <ApplePurchaseBridge />
         <PrivacyModeRoot isAdmin={isAdmin} />
         <PhoneViewHide>
           <PwaRegister />

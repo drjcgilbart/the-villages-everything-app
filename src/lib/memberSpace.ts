@@ -10,6 +10,7 @@ import {
   householdSeatsForPlan,
   isPaidPlan,
   normalizePlan,
+  planFromAppleProductId,
 } from "./membershipTiers";
 
 const SPACE_FILE = "member-space.json";
@@ -38,6 +39,12 @@ export type MemberSpaceRecord = {
   /** Stripe customer / subscription ids when wired */
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  /** Apple subscription. Product id matches App Store Connect. */
+  appleOriginalTransactionId?: string;
+  appleProductId?: string;
+  appleExpiresAt?: string | null;
+  /** UUID sent to StoreKit so a purchase maps back to this neighbor. */
+  appleAppAccountToken?: string;
   /**
    * Donation badges earned via “Buy me a cup of Joe” tiers
    * (cup_of_joe | fancy_latte | early_bird_brunch | golden_loofah | custom_star_loofah).
@@ -151,6 +158,14 @@ function normalizeRecord(raw: Partial<MemberSpaceRecord> & { plan?: AnyStoredPla
     updatedAt: raw.updatedAt || new Date().toISOString(),
     stripeCustomerId: raw.stripeCustomerId,
     stripeSubscriptionId: raw.stripeSubscriptionId,
+    appleOriginalTransactionId: raw.appleOriginalTransactionId
+      ? String(raw.appleOriginalTransactionId)
+      : undefined,
+    appleProductId: raw.appleProductId ? String(raw.appleProductId) : undefined,
+    appleExpiresAt: raw.appleExpiresAt || null,
+    appleAppAccountToken: raw.appleAppAccountToken
+      ? String(raw.appleAppAccountToken).toLowerCase()
+      : undefined,
     donationBadges,
     goldenLoofah:
       donationBadges.includes("golden_loofah") ||
@@ -248,8 +263,18 @@ export function hasUsedRoyaltyTrial(space: MemberSpaceRecord): boolean {
  * Stripe checkout, a dated Square Royalty year, or an admin-set Cart Path /
  * Lanai standing plan. Trial-only Square Royalty without Stripe is not paid.
  */
+export function appleSubscriptionActive(
+  space: MemberSpaceRecord,
+  now = Date.now()
+): boolean {
+  if (!space.appleOriginalTransactionId || !space.appleExpiresAt) return false;
+  const ends = new Date(space.appleExpiresAt).getTime();
+  return Number.isFinite(ends) && ends > now;
+}
+
 export function hasPaidMembership(space: MemberSpaceRecord): boolean {
   if (space.stripeSubscriptionId) return true;
+  if (appleSubscriptionActive(space)) return true;
   if (
     space.planExpiresAt &&
     new Date(space.planExpiresAt).getTime() > Date.now() &&
@@ -268,9 +293,24 @@ export function standingPlan(space: MemberSpaceRecord): HubPlanId {
     space.planExpiresAt &&
     new Date(space.planExpiresAt).getTime() < Date.now() &&
     plan === "square_royalty" &&
-    !space.stripeSubscriptionId
+    !space.stripeSubscriptionId &&
+    !appleSubscriptionActive(space)
   ) {
     plan = "porch_waver";
+  }
+  if (
+    space.appleExpiresAt &&
+    new Date(space.appleExpiresAt).getTime() < Date.now() &&
+    !space.stripeSubscriptionId
+  ) {
+    const applePlan = planFromAppleProductId(space.appleProductId);
+    const donationStill =
+      plan === "square_royalty" &&
+      !!space.planExpiresAt &&
+      new Date(space.planExpiresAt).getTime() > Date.now();
+    if (applePlan && applePlan === plan && !donationStill) {
+      plan = "porch_waver";
+    }
   }
   return plan;
 }
@@ -465,6 +505,10 @@ export function updateMemberSpace(
       | "spaceTitle"
       | "stripeCustomerId"
       | "stripeSubscriptionId"
+      | "appleOriginalTransactionId"
+      | "appleProductId"
+      | "appleExpiresAt"
+      | "appleAppAccountToken"
       | "donationBadges"
       | "goldenLoofah"
       | "goldenLoofahAt"
@@ -504,6 +548,20 @@ export function updateMemberSpace(
   }
   if (patch.stripeSubscriptionId !== undefined) {
     rec.stripeSubscriptionId = patch.stripeSubscriptionId;
+  }
+  if (patch.appleOriginalTransactionId !== undefined) {
+    rec.appleOriginalTransactionId = patch.appleOriginalTransactionId || undefined;
+  }
+  if (patch.appleProductId !== undefined) {
+    rec.appleProductId = patch.appleProductId || undefined;
+  }
+  if (patch.appleExpiresAt !== undefined) {
+    rec.appleExpiresAt = patch.appleExpiresAt;
+  }
+  if (patch.appleAppAccountToken !== undefined) {
+    rec.appleAppAccountToken = patch.appleAppAccountToken
+      ? String(patch.appleAppAccountToken).toLowerCase()
+      : undefined;
   }
   if (patch.donationBadges) {
     rec.donationBadges = [...new Set(patch.donationBadges.map(String))];
