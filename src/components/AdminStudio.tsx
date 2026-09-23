@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Photo, Post, PostType, SiteContent, Video, VideoSource } from "@/lib/types";
 import { prepareStudioImageFile } from "@/lib/browserImage";
-type Tab = "posts" | "videos" | "photos";
+import { AdminCreatorDesk } from "@/components/AdminCreatorDesk";
+import type { DeskWebsite } from "@/lib/creatorDeskTypes";
+type Tab = "posts" | "videos" | "photos" | "channel";
 
 type PostForm = {
   id: string;
@@ -13,6 +15,8 @@ type PostForm = {
   excerpt: string;
   body: string;
   tags: string;
+  images: PhotoFormImage[];
+  featuredImageId: string;
   featured: boolean;
 };
 
@@ -52,6 +56,8 @@ const emptyPost: PostForm = {
   excerpt: "",
   body: "",
   tags: "",
+  images: [],
+  featuredImageId: "",
   featured: false,
 };
 
@@ -103,6 +109,7 @@ export function AdminStudio() {
   const [photoForm, setPhotoForm] = useState<PhotoForm>(emptyPhoto);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [filling, setFilling] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [ytPulling, setYtPulling] = useState(false);
 
@@ -291,6 +298,15 @@ export function AdminStudio() {
 
   function editPost(p: Post) {
     setTab("posts");
+    const images = Array.isArray(p.images)
+      ? p.images
+          .filter((img) => img?.url)
+          .map((img) => ({
+            id: img.id,
+            url: img.url,
+            caption: img.caption || "",
+          }))
+      : [];
     setPostForm({
       id: p.id,
       type: p.type,
@@ -299,8 +315,28 @@ export function AdminStudio() {
       excerpt: p.excerpt,
       body: p.body,
       tags: (p.tags || []).join(", "),
+      images,
+      featuredImageId:
+        p.featuredImageId && images.some((img) => img.id === p.featuredImageId)
+          ? p.featuredImageId
+          : images[0]?.id || "",
       featured: !!p.featured,
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function useWebsiteDraft(draft: DeskWebsite) {
+    setTab("posts");
+    setPostForm({
+      ...emptyPost,
+      type: "blog",
+      title: draft.title || "",
+      slug: draft.slug || "",
+      excerpt: draft.excerpt || "",
+      body: draft.body || "",
+      tags: (draft.tags || []).join(", "),
+    });
+    flash("ok", "Website draft is in the blog form. Add pictures, then publish.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -430,6 +466,96 @@ export function AdminStudio() {
     }
   }
 
+  async function onUploadPostPhotos(fileList: FileList | null) {
+    if (!fileList?.length) return;
+    setUploading(true);
+    try {
+      const added: PhotoFormImage[] = [];
+      for (const file of Array.from(fileList)) {
+        const ready = await prepareStudioImageFile(file);
+        const fd = new FormData();
+        fd.append("file", ready);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Upload failed: ${file.name}`);
+        added.push({
+          id: `img-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+          url: data.url,
+          caption: "",
+        });
+      }
+      setPostForm((f) => ({
+        ...f,
+        images: [...f.images, ...added],
+        featuredImageId: f.featuredImageId || added[0]?.id || "",
+      }));
+      flash("ok", added.length === 1 ? "Picture uploaded" : `${added.length} pictures uploaded`);
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removePostImage(imageId: string) {
+    setPostForm((f) => {
+      const images = f.images.filter((img) => img.id !== imageId);
+      const body = f.body
+        .split(`[[photo:${imageId}]]`)
+        .join("")
+        .replace(/\n{3,}/g, "\n\n");
+      return {
+        ...f,
+        images,
+        body,
+        featuredImageId: f.featuredImageId === imageId ? images[0]?.id || "" : f.featuredImageId,
+      };
+    });
+  }
+
+  function placePictureInStory(imageId: string) {
+    const token = `[[photo:${imageId}]]`;
+    setPostForm((f) => {
+      if (f.body.includes(token)) return f;
+      const body = f.body.trim() ? `${f.body.trim()}\n\n${token}\n` : `${token}\n`;
+      return { ...f, body };
+    });
+  }
+
+  async function fillFromStory() {
+    if (postForm.body.trim().length < 20) {
+      flash("err", "Write the story in the body first. A sentence or two is enough to start.");
+      return;
+    }
+    setFilling(true);
+    try {
+      const res = await fetch("/api/posts/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: postForm.title, body: postForm.body }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not fill the fields");
+      setPostForm((f) => ({
+        ...f,
+        title: f.title.trim() ? f.title : String(data.title || ""),
+        slug: String(data.slug || ""),
+        excerpt: String(data.excerpt || ""),
+        tags: Array.isArray(data.tags) ? data.tags.join(", ") : f.tags,
+      }));
+      flash(
+        "ok",
+        data.source === "grok"
+          ? "Slug, excerpt, and tags are filled from the story. Change anything that does not sound like you."
+          : "Slug, excerpt, and tags are filled from the story. Grok was not used, so the wording is simple."
+      );
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Could not fill the fields");
+    } finally {
+      setFilling(false);
+    }
+  }
+
   function removePhotoImage(imageId: string) {
     setPhotoForm((f) => {
       const images = f.images.filter((i) => i.id !== imageId);
@@ -488,8 +614,8 @@ export function AdminStudio() {
           <div>
             <h1>Creator Studio</h1>
             <p style={{ margin: 0, color: "var(--muted)" }}>
-              Publish blogs, videos, and photos. Membership approvals and site
-              moderation live in the{" "}
+              Publish blogs, videos, and photos, and write the channel pieces.
+              Only you can open this page. Membership approvals live in the{" "}
               <a href="/admin" className="text-link">
                 Admin Portal
               </a>
@@ -515,6 +641,9 @@ export function AdminStudio() {
           </button>
           <button type="button" className={tab === "videos" ? "active" : ""} onClick={() => setTab("videos")}>
             Videos
+          </button>
+          <button type="button" className={tab === "channel" ? "active" : ""} onClick={() => setTab("channel")}>
+            Channel desk
           </button>
         </div>
 
@@ -580,6 +709,99 @@ export function AdminStudio() {
                   placeholder="Separate paragraphs with a blank line"
                 />
               </div>
+              <div className="admin-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={filling || busy}
+                  onClick={() => void fillFromStory()}
+                >
+                  {filling ? "Reading the story…" : "Fill slug, excerpt, and tags from the story"}
+                </button>
+              </div>
+              <p className="panel-hint" style={{ marginTop: 0 }}>
+                Write the story first, then press that button. It fills the slug, the
+                one-line excerpt, and the tags above. Your title stays as you typed it.
+                You can still edit every field.
+              </p>
+              <div className="field">
+                <label>
+                  Pictures {uploading ? "(uploading…)" : ""} — select one or many
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    void onUploadPostPhotos(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <p className="panel-hint">
+                  The featured picture is the cover on the blog list and at the top of
+                  the post. Place in the story drops that picture where you want it.
+                  Pictures you do not place still show at the end.
+                </p>
+              </div>
+              {postForm.images.length > 0 && (
+                <div className="admin-photo-grid">
+                  {postForm.images.map((img, idx) => {
+                    const isFeatured = img.id === postForm.featuredImageId;
+                    const placed = postForm.body.includes(`[[photo:${img.id}]]`);
+                    return (
+                      <div
+                        key={img.id}
+                        className={`admin-photo-tile ${isFeatured ? "featured" : ""}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.url} alt="" />
+                        <div className="admin-photo-tile-actions">
+                          <label className="admin-photo-feature">
+                            <input
+                              type="radio"
+                              name="featured-post-image"
+                              checked={isFeatured}
+                              onChange={() =>
+                                setPostForm((f) => ({ ...f, featuredImageId: img.id }))
+                              }
+                            />
+                            Cover
+                          </label>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => placePictureInStory(img.id)}
+                          >
+                            {placed ? "In the story" : "Place in the story"}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => removePostImage(img.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          className="admin-photo-caption-input"
+                          placeholder={`Caption for picture ${idx + 1}`}
+                          value={img.caption}
+                          onChange={(e) => {
+                            const caption = e.target.value;
+                            setPostForm((f) => ({
+                              ...f,
+                              images: f.images.map((item) =>
+                                item.id === img.id ? { ...item, caption } : item
+                              ),
+                            }));
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <label className="checkbox-row">
                 <input
                   type="checkbox"
@@ -590,7 +812,7 @@ export function AdminStudio() {
               </label>
               {statusBanner}
               <div className="admin-actions">
-                <button type="submit" className="btn btn-primary" disabled={busy}>
+                <button type="submit" className="btn btn-primary" disabled={busy || uploading || filling}>
                   {busy ? "Saving…" : postForm.id ? "Update post" : "Publish post"}
                 </button>
                 {postForm.id && (
@@ -624,6 +846,10 @@ export function AdminStudio() {
               ))}
             </div>
           </>
+        )}
+
+        {tab === "channel" && (
+          <AdminCreatorDesk onUseWebsite={useWebsiteDraft} />
         )}
 
         {tab === "videos" && (

@@ -313,9 +313,38 @@ export async function getVideoByIdAsync(id: string) {
   return videos.find((v) => v.id === id) || null;
 }
 
+function normalizePostImages(raw: unknown): Photo["images"] {
+  if (!Array.isArray(raw)) return [];
+  const images: Photo["images"] = [];
+  for (const img of raw.slice(0, 12)) {
+    if (!img || typeof img !== "object") continue;
+    const row = img as { id?: string; url?: string; caption?: string };
+    const url = String(row.url || "").trim();
+    if (!url.startsWith("/api/media/")) continue;
+    images.push({
+      id: String(row.id || uid("img")).replace(/[^\w-]/g, "").slice(0, 40) || uid("img"),
+      url: url.slice(0, 240),
+      caption: String(row.caption || "").slice(0, 300),
+    });
+  }
+  return images;
+}
+
+function coverFromImages(images: Photo["images"], featuredImageId?: string) {
+  const featured =
+    (featuredImageId && images.find((img) => img.id === featuredImageId)) || images[0];
+  return {
+    featuredImageId: featured?.id,
+    coverImage: featured?.url,
+  };
+}
+
 export async function upsertPost(input: Partial<Post> & { title: string; body: string; type: Post["type"] }) {
   const content = await loadContentAsync();
   const now = new Date().toISOString();
+  const images = normalizePostImages(input.images);
+  const cover = coverFromImages(images, input.featuredImageId);
+  if (images.length) await persistPhotoMedia(images);
   if (input.id) {
     const idx = content.posts.findIndex((p) => p.id === input.id);
     if (idx < 0) throw new Error("Post not found");
@@ -327,6 +356,9 @@ export async function upsertPost(input: Partial<Post> & { title: string; body: s
       slug: input.slug ? slugify(input.slug) : prev.slug,
       excerpt: String(input.excerpt ?? prev.excerpt ?? "").slice(0, 400),
       body: String(input.body),
+      images,
+      featuredImageId: cover.featuredImageId,
+      coverImage: cover.coverImage,
       tags: Array.isArray(input.tags) ? input.tags : prev.tags,
       type: input.type || prev.type,
     };
@@ -342,7 +374,9 @@ export async function upsertPost(input: Partial<Post> & { title: string; body: s
       slug,
       excerpt: String(input.excerpt || input.body.slice(0, 160)).slice(0, 400),
       body: String(input.body),
-      coverImage: input.coverImage,
+      images,
+      featuredImageId: cover.featuredImageId,
+      coverImage: cover.coverImage,
       publishedAt: input.publishedAt || now,
       tags: Array.isArray(input.tags) ? input.tags : [],
       featured: !!input.featured,

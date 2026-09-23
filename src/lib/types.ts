@@ -7,6 +7,10 @@ export type Post = {
   slug: string;
   excerpt: string;
   body: string;
+  /** Pictures in the story. Place one in the body with [[photo:id]]. */
+  images?: PhotoImage[];
+  /** Which picture is the cover on the blog list. */
+  featuredImageId?: string;
   coverImage?: string;
   publishedAt: string;
   tags: string[];

@@ -22,7 +22,12 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article className="card post-card post-card-graphic">
       <Link href={`/blog/${post.slug}`} className="post-card-art">
-        <Image src={art} alt="" width={640} height={360} className="post-card-img" />
+        {art.startsWith("/api/") || art.startsWith("http") ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={art} alt="" className="post-card-img" />
+        ) : (
+          <Image src={art} alt="" width={640} height={360} className="post-card-img" />
+        )}
       </Link>
       <div className="post-card-body">
         <div className="card-meta">

@@ -9530,6 +9530,31 @@ button.text-link {
   color: #2a3340;
 }
 
+.article-cover,
+.prose-figure {
+  margin: 1rem 0 1.25rem;
+}
+
+.article-cover img,
+.prose-figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  background: #e8dfd2;
+}
+
+.article-cover figcaption,
+.prose-figure figcaption {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.article-photo-end {
+  margin-top: 0.5rem;
+}
+
 /* Page chrome */
 .page-hero {
   padding: 2.5rem 0 1rem;

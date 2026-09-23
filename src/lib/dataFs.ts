@@ -42,6 +42,7 @@ const DURABLE_JSON = new Set([
   "real-estate-youtube.json",
   "channel-youtube.json",
   "photo-journal.json",
+  "creator-desk.json",
   "safety.json",
   "wealth-local.json",
 ]);

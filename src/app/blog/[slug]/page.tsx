@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostBySlugAsync } from "@/lib/content";
-import { formatDate, paragraphs } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { blocksForPost, photosNotInBody } from "@/lib/postDraft";
+import type { PhotoImage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,13 @@ export default async function PostPage({
   const post = await getPostBySlugAsync(slug);
   if (!post) notFound();
 
-  const paras = paragraphs(post.body);
+  const images = Array.isArray(post.images) ? post.images : [];
+  const cover =
+    images.find((img) => img.id === post.featuredImageId) ||
+    (post.coverImage ? images.find((img) => img.url === post.coverImage) : undefined) ||
+    images[0];
+  const blocks = blocksForPost(post.body, images);
+  const trailing = photosNotInBody(post.body, images, cover?.id);
 
   return (
     <article>
@@ -53,13 +61,27 @@ export default async function PostPage({
               ))}
             </div>
           )}
+          {cover?.url && !post.body.includes(`[[photo:${cover.id}]]`) ? (
+            <PostFigure image={cover} cover />
+          ) : null}
         </div>
       </div>
       <div className="section">
         <div className="shell prose">
-          {paras.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
+          {blocks.map((block, i) =>
+            block.kind === "photo" ? (
+              <PostFigure key={`${block.image.id}-${i}`} image={block.image} />
+            ) : (
+              <p key={i}>{block.text}</p>
+            )
+          )}
+          {trailing.length > 0 && (
+            <div className="article-photo-end">
+              {trailing.map((image) => (
+                <PostFigure key={image.id} image={image} />
+              ))}
+            </div>
+          )}
           <p style={{ marginTop: "2rem" }}>
             <Link href={post.type === "vlog" ? "/videos" : "/blog"} className="text-link">
               ← Back to {post.type === "vlog" ? "videos" : "blog"}
@@ -68,5 +90,16 @@ export default async function PostPage({
         </div>
       </div>
     </article>
+  );
+}
+
+function PostFigure({ image, cover }: { image: PhotoImage; cover?: boolean }) {
+  return (
+    <figure className={cover ? "article-cover" : "prose-figure"}>
+      {/* Uploads are served by /api/media, which the image optimizer does not host. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={image.url} alt={image.caption || ""} />
+      {image.caption ? <figcaption>{image.caption}</figcaption> : null}
+    </figure>
   );
 }
