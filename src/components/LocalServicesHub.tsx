@@ -301,7 +301,9 @@ export function LocalServicesHub() {
     );
   }
 
-  const cats = feed.categories;
+  const cats = [...feed.categories].sort((a, b) =>
+    a.localeCompare(b, "en", { sensitivity: "base" })
+  );
 
   return (
     <div className="local-svc-hub">
@@ -531,8 +533,12 @@ export function LocalServicesHub() {
               }
             >
               {(feed.categories.length
-                ? feed.categories
-                : LOCAL_PROS_CATEGORIES
+                ? [...feed.categories].sort((a, b) =>
+                    a.localeCompare(b, "en", { sensitivity: "base" })
+                  )
+                : [...LOCAL_PROS_CATEGORIES].sort((a, b) =>
+                    a.localeCompare(b, "en", { sensitivity: "base" })
+                  )
               ).map((c) => (
                 <option key={c} value={c}>
                   {c}

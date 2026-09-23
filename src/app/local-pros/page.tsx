@@ -29,8 +29,14 @@ export default async function LocalProsPage() {
   const data = await loadLocalServicesAsync();
   const daily = await ensureDailyLeaderboard("all");
   // Live top 5 (updates as votes land); minReviews=0 so boards show even without votes yet
-  const categoryBoards = allCategoryLeaders("all", 5, 0, data);
-  const championCount = daily.champions.length;
+  const trades = [...localProsBoardCategories()].sort(byTradeLabel);
+  const categoryBoards = allCategoryLeaders("all", 5, 0, data).sort((a, b) =>
+    a.category.localeCompare(b.category, "en", { sensitivity: "base" })
+  );
+  const champions = [...daily.champions].sort((a, b) =>
+    a.category.localeCompare(b.category, "en", { sensitivity: "base" })
+  );
+  const championCount = champions.length;
 
   return (
     <>
@@ -94,7 +100,7 @@ export default async function LocalProsPage() {
             </div>
           ) : (
             <div className="local-pros-champ-strip">
-              {daily.champions.map((c) => (
+              {champions.map((c) => (
                 <a
                   key={c.category}
                   href={`#trade-${slugCategory(c.category)}`}
@@ -144,7 +150,7 @@ export default async function LocalProsPage() {
         <div className="shell">
           <div className="dining-jump">
             <span className="dining-jump-label">Jump to trade</span>
-            {localProsBoardCategories().map((c) => (
+            {trades.map((c) => (
               <a
                 key={c}
                 href={`#trade-${slugCategory(c)}`}
@@ -211,6 +217,12 @@ function slugCategory(c: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function byTradeLabel(a: string, b: string) {
+  return shortTradeLabel(a).localeCompare(shortTradeLabel(b), "en", {
+    sensitivity: "base",
+  });
 }
 
 function shortTradeLabel(c: string) {
