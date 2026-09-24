@@ -59,7 +59,8 @@ export function extrasFromBoards(input: {
           endTime: hour.endTime || "",
           location: hour.square,
           notes: hour.specials,
-          href: "/my-space",
+          href: "/my-space?tab=food",
+          source: { board: "food", id: hour.id, repeats: true },
         });
       }
     }
@@ -78,7 +79,8 @@ export function extrasFromBoards(input: {
           title: `${slot} · ${title}`,
           date,
           time: "",
-          href: "/my-space",
+          href: "/my-space?tab=food",
+          source: { board: "food", id: date, extra: slot.toLowerCase() },
         });
       }
     }
@@ -90,13 +92,14 @@ export function extrasFromBoards(input: {
       if (!inRange(workout.date, start, end)) continue;
       push(out, {
         id: `gym:${workout.id}`,
-        kind: "task",
+        kind: "gym",
         title: workout.routineName || workout.gymName || "Gym",
         date: workout.date,
         time: workout.time || "",
         location: workout.gymName,
         notes: workout.notes,
-        href: "/my-space",
+        href: "/health#my-health",
+        source: { board: "gym", id: workout.id },
       });
     }
   }
@@ -115,7 +118,8 @@ export function extrasFromBoards(input: {
         location: assets.get(task.assetId) || "",
         notes: task.notes,
         done: task.done,
-        href: "/my-space",
+        href: "/my-space?tab=maintenance",
+        source: { board: "maintenance", id: task.id },
       });
     }
   }
@@ -133,6 +137,7 @@ export function extrasFromBoards(input: {
         location: round.course,
         notes: round.notes,
         href: "/golf-zone#my-scorecard",
+        source: { board: "golf", id: round.id, extra: "round" },
       });
     }
     for (const note of golf.looking || []) {
@@ -145,6 +150,7 @@ export function extrasFromBoards(input: {
         time: note.time || "",
         notes: note.notes,
         href: "/golf-zone#my-scorecard",
+        source: { board: "golf", id: note.id, extra: "looking" },
       });
     }
   }
@@ -164,6 +170,7 @@ export function extrasFromBoards(input: {
           .filter(Boolean)
           .join(" · "),
         href: "/pickleball#my-pickleball",
+        source: { board: "pickle", id: note.id, extra: "looking" },
       });
     }
   }
@@ -184,6 +191,7 @@ export function extrasFromBoards(input: {
           time,
           notes: text(slot.label, 40) || text(med.schedule, 80),
           href: "/health#my-health",
+          source: { board: "health", id: text(med.id, 40) || name, extra: time, repeats: true },
         });
       }
     }
@@ -199,6 +207,7 @@ export function extrasFromBoards(input: {
       time: text(meal.time, 8),
       notes: text(meal.mealType, 20),
       href: "/health#my-health",
+      source: { board: "health", id: text(meal.id, 40) || date, extra: "meal" },
     });
   }
   for (const exercise of rows(input.health?.exercises)) {
@@ -212,6 +221,7 @@ export function extrasFromBoards(input: {
       time: text(exercise.time, 8),
       notes: exercise.durationMin ? `${exercise.durationMin} min` : "",
       href: "/health#my-health",
+      source: { board: "health", id: text(exercise.id, 40) || date, extra: "exercise" },
     });
   }
 
@@ -229,7 +239,13 @@ export function extrasFromBoards(input: {
           title: `${name} · ${text(event.label, 40) || "Care"}`,
           date: iso,
           time,
-          href: "/my-space",
+          href: "/my-space?tab=pets",
+          source: {
+            board: "pets",
+            id: text(pet.id, 40),
+            extra: text(event.id, 40),
+            repeats: true,
+          },
         });
       }
     }

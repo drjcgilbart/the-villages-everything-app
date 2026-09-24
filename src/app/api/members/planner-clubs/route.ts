@@ -40,6 +40,7 @@ export async function GET(req: Request) {
         location: club.location,
         notes: "Starred club. Confirm the time with the leader — the district list changes.",
         href: `/club-zone/club/${encodeURIComponent(club.id)}`,
+        source: { board: "club" as const, id: club.id, repeats: true },
       });
     }
   }

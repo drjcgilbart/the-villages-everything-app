@@ -16,6 +16,7 @@ import {
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { extrasFromBoards } from "@/lib/plannerExtras";
+import { rememberPlannerReturn } from "@/lib/plannerReturn";
 import {
   CAL_DAYS,
   CAL_HOURS,
@@ -175,6 +176,7 @@ function kindLabel(kind: OverlayEvent["kind"]) {
       pickle: "Pickleball",
       maint: "Maintenance",
       care: "Care",
+      gym: "Gym",
     } as const
   )[kind];
 }
@@ -227,6 +229,8 @@ export function MySpaceCalendarBoard() {
   const [editId, setEditId] = useState<string | null>(null);
   const [detail, setDetail] = useState<OverlayEvent | null>(null);
   const [detailEditing, setDetailEditing] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailBusy, setDetailBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [starredClubs, setStarredClubs] = useState<OverlayEvent[]>([]);
 
@@ -289,6 +293,7 @@ export function MySpaceCalendarBoard() {
           endTime: t.endTime,
           notes: t.notes,
           done: t.done,
+          source: { board: "calendar", id: t.id },
         });
       }
     }
@@ -303,6 +308,7 @@ export function MySpaceCalendarBoard() {
           time: s.time,
           location: s.venue,
           notes: [s.confirmation ? `conf ${s.confirmation}` : "", s.notes].filter(Boolean).join(" · "),
+          source: { board: "entertainment", id: s.id, extra: "show" },
         });
       }
       for (const c of ent.value.clubs) {
@@ -315,6 +321,7 @@ export function MySpaceCalendarBoard() {
             time: o.time,
             location: c.location || c.rec,
             notes: c.notes,
+            source: { board: "entertainment", id: c.id, extra: "club", repeats: true },
           });
         }
       }
@@ -329,6 +336,7 @@ export function MySpaceCalendarBoard() {
             time: w.time,
             location: w.where,
             notes: w.notes,
+            source: { board: "entertainment", id: w.id, extra: "watch" },
           });
         }
         for (const iso of days) {
@@ -343,6 +351,7 @@ export function MySpaceCalendarBoard() {
             time: w.time,
             location: w.where,
             notes: w.notes,
+            source: { board: "entertainment", id: w.id, extra: "watch", repeats: true },
           });
         }
       }
@@ -371,6 +380,7 @@ export function MySpaceCalendarBoard() {
           time: t.time,
           location: t.course,
           notes: t.notes,
+          source: { board: "golf", id: t.id, extra: "tee" },
         });
       }
     }
@@ -387,6 +397,7 @@ export function MySpaceCalendarBoard() {
           notes: [m.partner && `with ${m.partner}`, m.opponent && `vs ${m.opponent}`, m.score]
             .filter(Boolean)
             .join(" · "),
+          source: { board: "pickle", id: m.id, extra: "match" },
         });
       }
     }
@@ -476,12 +487,153 @@ export function MySpaceCalendarBoard() {
 
   function openDetail(event: OverlayEvent) {
     setDetailEditing(false);
+    setDetailError(null);
     setDetail(event);
   }
 
   function closeDetail() {
     setDetail(null);
     setDetailEditing(false);
+    setDetailError(null);
+    setDetailBusy(false);
+  }
+
+  function editDestination(board: string) {
+    if (board === "gym" || board === "health") return "/health#my-health";
+    if (board === "pets") return "/my-space?tab=pets";
+    if (board === "food") return "/my-space?tab=food";
+    if (board === "maintenance") return "/my-space?tab=maintenance";
+    if (board === "golf") return "/golf-zone#my-scorecard";
+    if (board === "pickle") return "/pickleball#my-pickleball";
+    if (board === "entertainment") return "/town-squares#my-nights";
+    if (board === "club" && detail?.href) return detail.href;
+    return "/calendar#my-calendar";
+  }
+
+  async function deleteDetail() {
+    if (!detail?.source) {
+      setDetailError("This item is not saved on a board, so there is nothing to delete.");
+      return;
+    }
+    const src = detail.source;
+    if (
+      src.repeats &&
+      !window.confirm("This repeats. Delete removes it from every day on your planner.")
+    ) {
+      return;
+    }
+    setDetailBusy(true);
+    setDetailError(null);
+    try {
+      if (src.board === "calendar") {
+        const next = value.tasks.filter((task) => task.id !== src.id);
+        if (next.length === value.tasks.length) {
+          throw new Error("That task is no longer on your list.");
+        }
+        persist(next);
+      } else if (src.board === "gym") {
+        if (!gym.ready) throw new Error("The gym log is still loading. Try again.");
+        await gym.save({
+          ...gym.value,
+          workouts: (gym.value.workouts || []).filter((workout) => workout.id !== src.id),
+        });
+      } else if (src.board === "maintenance") {
+        if (!maintenance.ready) throw new Error("Maintenance is still loading. Try again.");
+        await maintenance.save({
+          ...maintenance.value,
+          tasks: (maintenance.value.tasks || []).filter((task) => task.id !== src.id),
+        });
+      } else if (src.board === "food") {
+        if (!food.ready) throw new Error("Food is still loading. Try again.");
+        if (src.extra === "breakfast" || src.extra === "lunch" || src.extra === "dinner") {
+          const meals = { ...(food.value.meals || {}) };
+          const prev = meals[src.id] || { breakfast: "", lunch: "", dinner: "" };
+          meals[src.id] = { ...prev, [src.extra]: "" };
+          await food.save({ ...food.value, meals });
+        } else {
+          await food.save({
+            ...food.value,
+            happyHours: (food.value.happyHours || []).filter((hour) => hour.id !== src.id),
+          });
+        }
+      } else if (src.board === "golf") {
+        if (!golf.ready) throw new Error("Golf is still loading. Try again.");
+        const next = { ...golf.value };
+        if (src.extra === "round") next.rounds = next.rounds.filter((row) => row.id !== src.id);
+        else if (src.extra === "looking") next.looking = next.looking.filter((row) => row.id !== src.id);
+        else next.teeTimes = next.teeTimes.filter((row) => row.id !== src.id);
+        await golf.save(next);
+      } else if (src.board === "pickle") {
+        if (!pickle.ready) throw new Error("Pickleball is still loading. Try again.");
+        const next = { ...pickle.value };
+        if (src.extra === "looking") next.looking = next.looking.filter((row) => row.id !== src.id);
+        else next.matches = next.matches.filter((row) => row.id !== src.id);
+        await pickle.save(next);
+      } else if (src.board === "entertainment") {
+        if (!ent.ready) throw new Error("Entertainment is still loading. Try again.");
+        const next = { ...ent.value };
+        if (src.extra === "club") next.clubs = next.clubs.filter((row) => row.id !== src.id);
+        else if (src.extra === "watch") next.watchLater = next.watchLater.filter((row) => row.id !== src.id);
+        else next.shows = next.shows.filter((row) => row.id !== src.id);
+        await ent.save(next);
+      } else if (src.board === "health") {
+        if (!health.ready) throw new Error("Health is still loading. Try again.");
+        const raw = { ...(health.value || {}) } as Record<string, unknown>;
+        const list = (key: string) =>
+          Array.isArray(raw[key]) ? (raw[key] as { id?: string }[]) : [];
+        if (src.extra === "meal") raw.meals = list("meals").filter((row) => row.id !== src.id);
+        else if (src.extra === "exercise") {
+          raw.exercises = list("exercises").filter((row) => row.id !== src.id);
+        } else {
+          raw.medications = list("medications").map((row) => {
+            if (row.id !== src.id) return row;
+            const med = row as { doseTimes?: { time?: string }[]; active?: boolean };
+            const doseTimes = (med.doseTimes || []).filter((slot) => slot.time !== src.extra);
+            return { ...med, doseTimes, active: doseTimes.length > 0 && med.active !== false };
+          });
+        }
+        await health.save(raw);
+      } else if (src.board === "pets") {
+        if (!pets.ready) throw new Error("Pets are still loading. Try again.");
+        const current = pets.value || {};
+        const list = Array.isArray(current.pets) ? current.pets : [];
+        await pets.save({
+          ...current,
+          pets: list.map((pet) => {
+            const row = pet as {
+              id?: string;
+              walks?: { id?: string }[];
+              feeds?: { id?: string }[];
+            };
+            if (row.id !== src.id) return pet;
+            return {
+              ...row,
+              walks: (row.walks || []).filter((event) => event.id !== src.extra),
+              feeds: (row.feeds || []).filter((event) => event.id !== src.extra),
+            };
+          }),
+        });
+      } else if (src.board === "club") {
+        const res = await fetch("/api/members/space", { cache: "no-store", credentials: "include" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Could not update favorites");
+        const ids = Array.isArray(data.space?.favoriteClubIds)
+          ? (data.space.favoriteClubIds as string[]).filter((id) => id !== src.id)
+          : [];
+        const saved = await fetch("/api/members/space", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ favoriteClubIds: ids }),
+        });
+        if (!saved.ok) throw new Error("Could not remove that starred club");
+        setStarredClubs((prev) => prev.filter((event) => event.source?.id !== src.id));
+      }
+      closeDetail();
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "Could not delete that.");
+      setDetailBusy(false);
+    }
   }
 
   if (!ready) return <p className="panel-hint">Loading calendar board…</p>;
@@ -551,6 +703,7 @@ export function MySpaceCalendarBoard() {
         <li className="kind-golf"><i /> Golf</li>
         <li className="kind-pickle"><i /> Pickleball</li>
         <li className="kind-care"><i /> Care</li>
+        <li className="kind-gym"><i /> Gym</li>
         <li className="kind-square"><i /> Town square</li>
       </ul>
 
@@ -712,6 +865,7 @@ export function MySpaceCalendarBoard() {
                 </p>
                 {detail.location ? <p>{detail.location}</p> : null}
                 {detail.notes ? <p>{detail.notes}</p> : null}
+                {detailError ? <p className="pf-form-error">{detailError}</p> : null}
                 {detailEditing ? (
                   <TaskEditor
                     form={form}
@@ -729,38 +883,48 @@ export function MySpaceCalendarBoard() {
                   />
                 ) : (
                   <div className="hero-actions">
-                    {detail.kind === "task" ? (
-                      <>
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          onClick={() => {
-                            const id = detail.id.split(":")[1];
-                            const task = value.tasks.find((x) => x.id === id);
-                            if (!task) return;
-                            setEditId(task.id);
-                            setForm({ ...task });
-                            setDetailEditing(true);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => {
-                            const id = detail.id.split(":")[1];
-                            persist(value.tasks.filter((x) => x.id !== id));
-                            closeDetail();
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </>
-                    ) : detail.href ? (
-                      <Link href={detail.href} className="btn btn-primary btn-sm" onClick={closeDetail}>
-                        Open
-                      </Link>
+                    {detail.source?.board === "calendar" ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const task = value.tasks.find((row) => row.id === detail.source?.id);
+                          if (!task) {
+                            setDetailError("That task is no longer on your list.");
+                            return;
+                          }
+                          setEditId(task.id);
+                          setForm({ ...task });
+                          setDetailEditing(true);
+                        }}
+                      >
+                        Edit
+                      </button>
+                    ) : detail.source ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          rememberPlannerReturn({
+                            board: detail.source!.board,
+                            id: detail.source!.id,
+                            extra: detail.source!.extra,
+                          });
+                          window.location.assign(editDestination(detail.source!.board));
+                        }}
+                      >
+                        {detail.source.board === "gym" ? "Edit workout" : "Edit"}
+                      </button>
+                    ) : null}
+                    {detail.source ? (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={detailBusy}
+                        onClick={() => void deleteDetail()}
+                      >
+                        {detailBusy ? "Deleting…" : "Delete"}
+                      </button>
                     ) : null}
                   </div>
                 )}

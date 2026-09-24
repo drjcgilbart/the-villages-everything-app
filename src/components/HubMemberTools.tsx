@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { MySpacePrivacySection } from "@/components/MySpacePrivacySection";
+import { PlannerReturnBar } from "@/components/PlannerReturnBar";
 import { isIosNativeApp, requestAppleSubscription } from "@/lib/appleIapClient";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import { getBoard, unlockCtaLabel } from "@/lib/mySpaceProduct";
@@ -114,6 +115,7 @@ export function HubMemberTools({
           </div>
         </div>
 
+        <PlannerReturnBar />
         {status === "loading" ? (
           <p className="panel-hint">Checking your membership…</p>
         ) : status === "open" ? (

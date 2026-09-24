@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { finishPlannerReturn } from "@/lib/plannerReturn";
 import {
   emptyBoards,
   type GymBoard,
@@ -350,6 +351,27 @@ export function MySpaceGymBoard() {
 
   const gyms = value.gyms || [];
   const workouts = value.workouts || [];
+  const openedFromPlanner = useRef(false);
+
+  useEffect(() => {
+    if (!ready || openedFromPlanner.current) return;
+    const raw = sessionStorage.getItem("tvea-planner-edit");
+    if (!raw) return;
+    let parsed: { board?: string; id?: string } | null = null;
+    try {
+      parsed = JSON.parse(raw) as { board?: string; id?: string };
+    } catch {
+      return;
+    }
+    if (parsed?.board !== "gym" || !parsed.id) return;
+    const workout = workouts.find((row) => row.id === parsed?.id);
+    if (!workout) return;
+    openedFromPlanner.current = true;
+    sessionStorage.removeItem("tvea-planner-edit");
+    loadWorkout(workout);
+    // loadWorkout is stable enough for the one handoff from the planner.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, workouts]);
   const routines = value.routines || [];
   const supplements = value.supplements || [];
   const supplementLogs = value.supplementLogs || [];
@@ -491,6 +513,7 @@ export function MySpaceGymBoard() {
       return;
     }
     resetForm();
+    finishPlannerReturn();
   }
 
   function saveWorkout() {
@@ -569,6 +592,7 @@ export function MySpaceGymBoard() {
       setMedia([]);
       setSavedPhoneIds([]);
     }
+    finishPlannerReturn();
   }
 
   function loadPlace(g: GymPlace) {

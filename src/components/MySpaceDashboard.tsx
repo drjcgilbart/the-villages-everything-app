@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PlannerReturnBar } from "@/components/PlannerReturnBar";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -281,6 +282,9 @@ export function MySpaceDashboard() {
     ) {
       setTab("favorites");
     }
+    if (tabParam === "pets" || tabParam === "food" || tabParam === "maintenance") {
+      setTab(tabParam);
+    }
     if (params.get("joined") === "household") {
       setNote("You’re on the household. Your boards stay on this login.");
       setTab("membership");
@@ -496,6 +500,7 @@ export function MySpaceDashboard() {
 
   return (
     <div className="my-space" id="ms-top">
+      <PlannerReturnBar />
       {onPlans ? (
         <div className="page-hero page-hero-graphic ms-plans-page-hero">
           <div className="shell ms-plans-hero-stack">

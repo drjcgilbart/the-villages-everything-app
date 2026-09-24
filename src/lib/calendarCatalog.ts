@@ -141,7 +141,28 @@ export type OverlayKind =
   | "golf"
   | "pickle"
   | "maint"
-  | "care";
+  | "care"
+  | "gym";
+
+/** Where a planner chip is stored, so Edit and Delete change that record. */
+export type PlannerSource = {
+  board:
+    | "calendar"
+    | "gym"
+    | "maintenance"
+    | "food"
+    | "golf"
+    | "pickle"
+    | "health"
+    | "pets"
+    | "entertainment"
+    | "club";
+  id: string;
+  /** Repeats on many days. Deleting removes the whole series. */
+  repeats?: boolean;
+  /** Extra key, such as a meal slot or a pet event id. */
+  extra?: string;
+};
 
 export type OverlayEvent = {
   id: string;
@@ -154,6 +175,7 @@ export type OverlayEvent = {
   notes?: string;
   done?: boolean;
   href?: string;
+  source?: PlannerSource;
 };
 
 function weekIndex(iso: string) {

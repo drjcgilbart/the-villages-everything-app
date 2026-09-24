@@ -3854,6 +3854,25 @@ button.ms-home-card:hover {
 .ms-cal-chip.kind-square { background: #f7e0ea; border-color: #8b3a62; }
 .ms-cal-chip.kind-maint { background: #ece7e0; border-color: #8a7a66; }
 .ms-cal-chip.kind-care { background: #efe4f7; border-color: #7a4e9a; }
+.ms-cal-chip.kind-gym { background: #ffe8d2; border-color: #d4782a; }
+
+.ms-cal-return {
+  position: sticky;
+  top: 0.6rem;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0 auto 0.8rem;
+  max-width: 52rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  background: #1f6b4a;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(31, 107, 74, 0.25);
+}
 
 .ms-cal-pop-scrim {
   position: fixed;
@@ -3918,6 +3937,7 @@ button.ms-home-card:hover {
 .ms-cal-legend .kind-golf i { background: #e3f3e8; border-color: #2f6f3e; }
 .ms-cal-legend .kind-pickle i { background: #fff1c2; border-color: #c9a227; }
 .ms-cal-legend .kind-care i { background: #efe4f7; border-color: #7a4e9a; }
+.ms-cal-legend .kind-gym i { background: #ffe8d2; border-color: #d4782a; }
 .ms-cal-legend .kind-square i { background: #f7e0ea; border-color: #8b3a62; }
 
 .ms-cal-month {
