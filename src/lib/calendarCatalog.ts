@@ -132,7 +132,16 @@ export function fmtCountdown(ms: number) {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
-export type OverlayKind = "task" | "show" | "club" | "watch" | "square" | "golf" | "pickle" | "maint";
+export type OverlayKind =
+  | "task"
+  | "show"
+  | "club"
+  | "watch"
+  | "square"
+  | "golf"
+  | "pickle"
+  | "maint"
+  | "care";
 
 export type OverlayEvent = {
   id: string;
@@ -144,6 +153,7 @@ export type OverlayEvent = {
   location?: string;
   notes?: string;
   done?: boolean;
+  href?: string;
 };
 
 function weekIndex(iso: string) {

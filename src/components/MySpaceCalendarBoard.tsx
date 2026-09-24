@@ -7,11 +7,14 @@ import {
   type CalTask,
   type CalendarBoard,
   type EntertainmentBoard,
+  type FoodBoard,
   type GolfLogBoard,
+  type GymBoard,
+  type MaintenanceBoard,
   type PickleballLogBoard,
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
-import type { CalendarEvent } from "@/lib/calendarEventsTypes";
+import { extrasFromBoards } from "@/lib/plannerExtras";
 import {
   CAL_DAYS,
   CAL_HOURS,
@@ -56,12 +59,13 @@ function kindLabel(kind: OverlayEvent["kind"]) {
     {
       task: "Task",
       show: "Show",
-      club: "Rec club",
+      club: "Club",
       watch: "Watch later",
       square: "Town square",
       golf: "Golf",
       pickle: "Pickleball",
       maint: "Maintenance",
+      care: "Care",
     } as const
   )[kind];
 }
@@ -99,13 +103,22 @@ export function MySpaceCalendarBoard() {
     emptyBoards().pickleballLog,
     true
   );
+  const food = useMemberBoard<FoodBoard>("food", emptyBoards().food, true);
+  const gym = useMemberBoard<GymBoard>("gym", emptyBoards().gym, true);
+  const maintenance = useMemberBoard<MaintenanceBoard>(
+    "maintenance",
+    emptyBoards().maintenance,
+    true
+  );
+  const health = useMemberBoard<Record<string, unknown>>("health", {}, true);
+  const pets = useMemberBoard<{ pets?: unknown[] }>("pets", { pets: [] }, true);
   const [view, setView] = useState<CalView>("week");
   const [anchor, setAnchor] = useState(todayKey());
   const [form, setForm] = useState(emptyTask(todayKey()));
   const [editId, setEditId] = useState<string | null>(null);
   const [detail, setDetail] = useState<OverlayEvent | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [publicEvents, setPublicEvents] = useState<CalendarEvent[]>([]);
+  const [starredClubs, setStarredClubs] = useState<OverlayEvent[]>([]);
 
   const today = todayKey();
   const range = viewRange(anchor, view);
@@ -117,21 +130,21 @@ export function MySpaceCalendarBoard() {
   }, []);
 
   useEffect(() => {
-    const [y, m] = anchor.split("-").map(Number);
     let cancelled = false;
-    fetch(`/api/calendar/events?year=${y}&month=${m}`)
-      .then((r) => r.json())
+    const params = new URLSearchParams({ start: range.start, end: range.end });
+    fetch(`/api/members/planner-clubs?${params}`, { cache: "no-store", credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { events: [] }))
       .then((data) => {
         if (cancelled) return;
-        if (Array.isArray(data.events)) setPublicEvents(data.events as CalendarEvent[]);
+        setStarredClubs(Array.isArray(data.events) ? data.events : []);
       })
       .catch(() => {
-        if (!cancelled) setPublicEvents([]);
+        if (!cancelled) setStarredClubs([]);
       });
     return () => {
       cancelled = true;
     };
-  }, [anchor]);
+  }, [range.start, range.end]);
 
   const overlay = useMemo(() => {
     const out: OverlayEvent[] = [];
@@ -242,7 +255,7 @@ export function MySpaceCalendarBoard() {
           kind: "pickle",
           title: `Pickleball${m.court ? ` · ${m.court}` : ""}`,
           date: m.date,
-          time: "",
+          time: m.time || "",
           location: m.court,
           notes: [m.partner && `with ${m.partner}`, m.opponent && `vs ${m.opponent}`, m.score]
             .filter(Boolean)
@@ -250,20 +263,42 @@ export function MySpaceCalendarBoard() {
         });
       }
     }
-    for (const e of publicEvents) {
-      if (!e.date || e.date < range.start || e.date > range.end) continue;
-      out.push({
-        id: `pub:${e.id}`,
-        kind: "square",
-        title: e.title,
-        date: e.date,
-        time: "",
-        location: e.venue || e.location,
-        notes: e.timeLabel || e.description,
-      });
+    if (food.ready || gym.ready || maintenance.ready || health.ready || pets.ready) {
+      out.push(
+        ...extrasFromBoards({
+          start: range.start,
+          end: range.end,
+          food: food.ready ? food.value : null,
+          gym: gym.ready ? gym.value : null,
+          maintenance: maintenance.ready ? maintenance.value : null,
+          golf: golf.ready ? golf.value : null,
+          pickle: pickle.ready ? pickle.value : null,
+          health: health.ready ? health.value : null,
+          pets: pets.ready ? pets.value : null,
+        })
+      );
+    }
+    for (const club of starredClubs) {
+      if (club.date < range.start || club.date > range.end) continue;
+      out.push(club);
     }
     return out;
-  }, [value.tasks, ent, golf, pickle, publicEvents, range.start, range.end, days, today]);
+  }, [
+    value.tasks,
+    ent,
+    golf,
+    pickle,
+    food,
+    gym,
+    maintenance,
+    health,
+    pets,
+    starredClubs,
+    range.start,
+    range.end,
+    days,
+    today,
+  ]);
 
   const todayTasks = value.tasks.filter((t) => {
     const start = t.startDate || today;
@@ -338,8 +373,8 @@ export function MySpaceCalendarBoard() {
           <span className="kicker">Lanai calendar</span>
           <h4>Your week in sunshine — not a cave</h4>
           <p>
-            Tee times, pickleball, square nights, and sticky notes land here.
-            Click a chip for details. Today gets the gold star.
+            Your tasks, starred clubs, tee times, and other dated picks land here.
+            Town-square nights stay on the month calendar below. Today gets the gold star.
           </p>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -352,23 +387,20 @@ export function MySpaceCalendarBoard() {
         />
       </div>
       <p className="panel-hint">
-        Public Hub calendar stays free:{" "}
-        <Link href="/calendar" className="text-link">
-          Calendar of Events
+        Town-square entertainment stays on the month calendar below. This grid
+        is your own dates. Star a club that has a published meeting time and it
+        shows up here with the place.{" "}
+        <Link href="#events-calendar" className="text-link">
+          Month of town-square nights
         </Link>
-        {" · "}
-        <Link href="/town-squares" className="text-link">
-          Town Squares
-        </Link>
-        . Google is optional — you do not need it.
+        .
       </p>
       {error ? <p className="pf-form-error">{error}</p> : null}
       {saving ? <p className="panel-hint">Saving to your account…</p> : null}
 
       <div className="ms-h-toolbar">
         <span className="ms-h-pill">
-          {overlay.filter((e) => e.kind !== "square" || e.id.startsWith("square:")).length} on
-          calendar · {left} tasks left
+          {overlay.length} on calendar · {left} tasks left
         </span>
         <span className="panel-hint">Private to this login</span>
       </div>
@@ -380,6 +412,7 @@ export function MySpaceCalendarBoard() {
         <li className="kind-watch"><i /> Watch later</li>
         <li className="kind-golf"><i /> Golf</li>
         <li className="kind-pickle"><i /> Pickleball</li>
+        <li className="kind-care"><i /> Care</li>
         <li className="kind-square"><i /> Town square</li>
       </ul>
 
@@ -557,13 +590,17 @@ export function MySpaceCalendarBoard() {
                   Delete
                 </button>
               </>
+            ) : detail.href ? (
+              <Link href={detail.href} className="btn btn-ghost btn-sm" onClick={() => setDetail(null)}>
+                Open
+              </Link>
             ) : (
               <Link
                 href="/my-space"
                 className="btn btn-ghost btn-sm"
                 onClick={() => setDetail(null)}
               >
-                {detail.kind === "show" || detail.kind === "club" || detail.kind === "watch"
+                {detail.kind === "show" || detail.kind === "watch"
                   ? "Open Entertainment"
                   : detail.kind === "golf"
                     ? "Open Golf"
