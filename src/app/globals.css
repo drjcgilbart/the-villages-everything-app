@@ -3346,6 +3346,7 @@ button.ms-home-card:hover {
   .ms-subnav,
   .hero-actions,
   .site-header,
+  .ms-cal-return,
   .site-footer,
   .ms-sample-hint {
     display: none !important;
@@ -3857,21 +3858,34 @@ button.ms-home-card:hover {
 .ms-cal-chip.kind-gym { background: #ffe8d2; border-color: #d4782a; }
 
 .ms-cal-return {
-  position: sticky;
-  top: 0.6rem;
-  z-index: 40;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  margin: 0 auto 0.8rem;
-  max-width: 52rem;
+  width: min(52rem, calc(100% - 1.5rem));
   padding: 0.7rem 0.9rem;
   border-radius: 14px;
   background: #1f6b4a;
   color: #fff;
-  box-shadow: 0 8px 20px rgba(31, 107, 74, 0.25);
+  box-shadow: 0 8px 20px rgba(31, 107, 74, 0.28);
+}
+
+.ms-cal-return-btn {
+  min-height: 2.6rem;
+  padding: 0.4rem 0.95rem;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f6b4a;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .ms-cal-pop-scrim {
