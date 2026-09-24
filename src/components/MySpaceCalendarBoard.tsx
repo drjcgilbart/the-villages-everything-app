@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { createPortal } from "react-dom";
 import {
   emptyBoards,
   type CalTask,
@@ -52,6 +53,114 @@ function emptyTask(date: string): Omit<CalTask, "id"> {
     alarmEnabled: false,
     done: false,
   };
+}
+
+type TaskDraft = Omit<CalTask, "id">;
+
+function TaskEditor({
+  form,
+  setForm,
+  editing,
+  onSave,
+  onCancel,
+}: {
+  form: TaskDraft;
+  setForm: Dispatch<SetStateAction<TaskDraft>>;
+  editing: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <form
+      className="form-grid ms-module-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave();
+      }}
+    >
+      <div className="field">
+        <label>{editing ? "Edit task" : "Add a task"}</label>
+        <input
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          placeholder="e.g. Pickleball at Eisenhower"
+          required
+        />
+      </div>
+      <div className="field">
+        <label>Notes (optional)</label>
+        <input
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          placeholder="Court 3 · bring water"
+        />
+      </div>
+      <div className="field">
+        <label>Start date</label>
+        <input
+          type="date"
+          value={form.startDate}
+          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label>Start time</label>
+        <input
+          type="time"
+          value={form.startTime}
+          onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label>End date</label>
+        <input
+          type="date"
+          value={form.endDate}
+          onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label>End time</label>
+        <input
+          type="time"
+          value={form.endTime}
+          onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label>Timer (minutes)</label>
+        <input
+          type="number"
+          min={1}
+          max={1440}
+          placeholder="e.g. 25"
+          value={form.timerMinutes ?? ""}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              timerMinutes: e.target.value === "" ? null : Number(e.target.value),
+            })
+          }
+        />
+      </div>
+      <label className={form.alarmEnabled ? "on" : ""}>
+        <input
+          type="checkbox"
+          checked={form.alarmEnabled}
+          onChange={(e) => setForm({ ...form, alarmEnabled: e.target.checked })}
+        />
+        Alarm at start time
+      </label>
+      <button type="submit" className="btn btn-primary btn-sm">
+        {editing ? "Save task" : "Add"}
+      </button>
+      {editing ? (
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
+          Cancel
+        </button>
+      ) : null}
+    </form>
+  );
 }
 
 function kindLabel(kind: OverlayEvent["kind"]) {
@@ -117,6 +226,7 @@ export function MySpaceCalendarBoard() {
   const [form, setForm] = useState(emptyTask(todayKey()));
   const [editId, setEditId] = useState<string | null>(null);
   const [detail, setDetail] = useState<OverlayEvent | null>(null);
+  const [detailEditing, setDetailEditing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [starredClubs, setStarredClubs] = useState<OverlayEvent[]>([]);
 
@@ -145,6 +255,23 @@ export function MySpaceCalendarBoard() {
       cancelled = true;
     };
   }, [range.start, range.end]);
+
+  useEffect(() => {
+    if (!detail) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setDetail(null);
+        setDetailEditing(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [detail]);
 
   const overlay = useMemo(() => {
     const out: OverlayEvent[] = [];
@@ -347,6 +474,16 @@ export function MySpaceCalendarBoard() {
     }
   }
 
+  function openDetail(event: OverlayEvent) {
+    setDetailEditing(false);
+    setDetail(event);
+  }
+
+  function closeDetail() {
+    setDetail(null);
+    setDetailEditing(false);
+  }
+
   if (!ready) return <p className="panel-hint">Loading calendar board…</p>;
 
   const cols = view === "month" ? 7 : days.length;
@@ -388,8 +525,9 @@ export function MySpaceCalendarBoard() {
       </div>
       <p className="panel-hint">
         Town-square entertainment stays on the month calendar below. This grid
-        is your own dates. Star a club that has a published meeting time and it
-        shows up here with the place.{" "}
+        is your own dates. Click any colored item and a card opens on this
+        screen. Star a club that has a published meeting time and it shows up
+        here with the place.{" "}
         <Link href="#events-calendar" className="text-link">
           Month of town-square nights
         </Link>
@@ -503,7 +641,7 @@ export function MySpaceCalendarBoard() {
                     key={e.id}
                     type="button"
                     className={`ms-cal-chip kind-${e.kind}`}
-                    onClick={() => setDetail(e)}
+                    onClick={() => openDetail(e)}
                   >
                     {e.title}
                   </button>
@@ -535,7 +673,7 @@ export function MySpaceCalendarBoard() {
                         className={`ms-cal-chip kind-${e.kind}${e.done ? " is-done" : ""}`}
                         onClick={(ev) => {
                           ev.stopPropagation();
-                          setDetail(e);
+                          openDetail(e);
                         }}
                       >
                         {e.time ? `${formatTime(e.time)} · ` : ""}
@@ -550,71 +688,87 @@ export function MySpaceCalendarBoard() {
         </div>
       )}
 
-      {detail ? (
-        <div className="about-panel ms-module">
-          <p className="panel-hint">{kindLabel(detail.kind).toUpperCase()}</p>
-          <h4>{detail.title}</h4>
-          <p>
-            {shortDate(detail.date)}
-            {detail.time ? ` · ${formatTime(detail.time)}` : ""}
-            {detail.endTime ? `–${formatTime(detail.endTime)}` : ""}
-          </p>
-          {detail.location ? <p>📍 {detail.location}</p> : null}
-          {detail.notes ? <p>{detail.notes}</p> : null}
-          <div className="hero-actions">
-            {detail.kind === "task" ? (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => {
-                    const id = detail.id.split(":")[1];
-                    const t = value.tasks.find((x) => x.id === id);
-                    if (!t) return;
-                    setEditId(t.id);
-                    setForm({ ...t });
-                    setDetail(null);
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    const id = detail.id.split(":")[1];
-                    persist(value.tasks.filter((x) => x.id !== id));
-                    setDetail(null);
-                  }}
-                >
-                  Delete
-                </button>
-              </>
-            ) : detail.href ? (
-              <Link href={detail.href} className="btn btn-ghost btn-sm" onClick={() => setDetail(null)}>
-                Open
-              </Link>
-            ) : (
-              <Link
-                href="/my-space"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setDetail(null)}
+      {detail && typeof document !== "undefined"
+        ? createPortal(
+            <div className="ms-cal-pop-scrim" onClick={closeDetail}>
+              <div
+                className="ms-cal-pop"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ms-cal-pop-title"
+                onClick={(e) => e.stopPropagation()}
               >
-                {detail.kind === "show" || detail.kind === "watch"
-                  ? "Open Entertainment"
-                  : detail.kind === "golf"
-                    ? "Open Golf"
-                    : detail.kind === "pickle"
-                      ? "Open Pickleball"
-                      : "Close"}
-              </Link>
-            )}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDetail(null)}>
-              Close
-            </button>
-          </div>
-        </div>
-      ) : null}
+                <div className="ms-cal-pop-bar">
+                  <p className="panel-hint">{kindLabel(detail.kind)}</p>
+                  <button type="button" className="ms-cal-pop-close" onClick={closeDetail}>
+                    Close
+                  </button>
+                </div>
+                <h3 id="ms-cal-pop-title">{detail.title}</h3>
+                <p>
+                  {shortDate(detail.date)}
+                  {detail.time ? ` · ${formatTime(detail.time)}` : ""}
+                  {detail.endTime ? `–${formatTime(detail.endTime)}` : ""}
+                </p>
+                {detail.location ? <p>{detail.location}</p> : null}
+                {detail.notes ? <p>{detail.notes}</p> : null}
+                {detailEditing ? (
+                  <TaskEditor
+                    form={form}
+                    setForm={setForm}
+                    editing
+                    onSave={() => {
+                      saveTask();
+                      closeDetail();
+                    }}
+                    onCancel={() => {
+                      setDetailEditing(false);
+                      setEditId(null);
+                      setForm(emptyTask(anchor));
+                    }}
+                  />
+                ) : (
+                  <div className="hero-actions">
+                    {detail.kind === "task" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => {
+                            const id = detail.id.split(":")[1];
+                            const task = value.tasks.find((x) => x.id === id);
+                            if (!task) return;
+                            setEditId(task.id);
+                            setForm({ ...task });
+                            setDetailEditing(true);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => {
+                            const id = detail.id.split(":")[1];
+                            persist(value.tasks.filter((x) => x.id !== id));
+                            closeDetail();
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : detail.href ? (
+                      <Link href={detail.href} className="btn btn-primary btn-sm" onClick={closeDetail}>
+                        Open
+                      </Link>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       <div className="about-panel ms-module">
         <h4>Today’s tasks</h4>
@@ -717,102 +871,18 @@ export function MySpaceCalendarBoard() {
           </ul>
         )}
 
-        <form
-          className="form-grid ms-module-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            saveTask();
-          }}
-        >
-          <div className="field">
-            <label>{editId ? "Edit task" : "Add a task"}</label>
-            <input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g. Pickleball at Eisenhower"
-              required
-            />
-          </div>
-          <div className="field">
-            <label>Notes (optional)</label>
-            <input
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              placeholder="Court 3 · bring water"
-            />
-          </div>
-          <div className="field">
-            <label>Start date</label>
-            <input
-              type="date"
-              value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            />
-          </div>
-          <div className="field">
-            <label>Start time</label>
-            <input
-              type="time"
-              value={form.startTime}
-              onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-            />
-          </div>
-          <div className="field">
-            <label>End date</label>
-            <input
-              type="date"
-              value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-            />
-          </div>
-          <div className="field">
-            <label>End time</label>
-            <input
-              type="time"
-              value={form.endTime}
-              onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-            />
-          </div>
-          <div className="field">
-            <label>Timer (minutes)</label>
-            <input
-              type="number"
-              min={1}
-              max={1440}
-              placeholder="e.g. 25"
-              value={form.timerMinutes ?? ""}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  timerMinutes: e.target.value === "" ? null : Number(e.target.value),
-                })
-              }
-            />
-          </div>
-          <label className={form.alarmEnabled ? "on" : ""}>
-            <input
-              type="checkbox"
-              checked={form.alarmEnabled}
-              onChange={(e) => setForm({ ...form, alarmEnabled: e.target.checked })}
-            />
-            Alarm at start time
-          </label>
-          <button type="submit" className="btn btn-primary btn-sm">
-            {editId ? "Save task" : "Add"}
-          </button>
-          {editId ? (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                setEditId(null);
-                setForm(emptyTask(anchor));
-              }}
-            >
-              Cancel
-            </button>
-          ) : null}
-        </form>
+        {detailEditing ? null : (
+          <TaskEditor
+            form={form}
+            setForm={setForm}
+            editing={!!editId}
+            onSave={saveTask}
+            onCancel={() => {
+              setEditId(null);
+              setForm(emptyTask(anchor));
+            }}
+          />
+        )}
       </div>
 
       <div className="about-panel ms-module">
