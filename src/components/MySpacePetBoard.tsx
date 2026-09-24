@@ -307,13 +307,35 @@ export function MySpacePetBoard() {
     return asCompletion(state.completions[`${eventId}:${today}`]);
   }
 
-  function setCompletion(eventId: string, patch: Partial<Completion>) {
-    const key = `${eventId}:${today}`;
+  function setCompletion(eventId: string, patch: Partial<Completion>, date = today) {
+    const key = `${eventId}:${date}`;
     const cur = asCompletion(state.completions[key]);
     persist({
       ...state,
       completions: { ...state.completions, [key]: { ...cur, ...patch } },
     });
+  }
+
+  function historyFor(events: PetEvent[]) {
+    const ids = new Set(events.map((event) => event.id));
+    const rows: { date: string; event: PetEvent; completion: Completion }[] = [];
+    for (const [key, raw] of Object.entries(state.completions)) {
+      const done = asCompletion(raw);
+      if (!done.done) continue;
+      const cut = key.lastIndexOf(":");
+      if (cut < 0) continue;
+      const eventId = key.slice(0, cut);
+      if (!ids.has(eventId)) continue;
+      const event = events.find((item) => item.id === eventId);
+      if (!event) continue;
+      rows.push({ date: key.slice(cut + 1), event, completion: done });
+    }
+    rows.sort(
+      (a, b) =>
+        b.date.localeCompare(a.date) ||
+        (b.completion.doneAt || "").localeCompare(a.completion.doneAt || "")
+    );
+    return rows.slice(0, 60);
   }
 
   useEffect(() => {
@@ -750,6 +772,7 @@ export function MySpacePetBoard() {
               }}
               onPatch={(next) => patchPet({ ...pet, walks: next })}
               onCompletion={setCompletion}
+              history={historyFor(pet.walks)}
             />
             <EventColumn
               title="🥣 Feedings"
@@ -774,6 +797,7 @@ export function MySpacePetBoard() {
               }}
               onPatch={(next) => patchPet({ ...pet, feeds: next })}
               onCompletion={setCompletion}
+              history={historyFor(pet.feeds)}
             />
           </div>
 
@@ -881,6 +905,7 @@ function EventColumn({
   onAdd,
   onPatch,
   onCompletion,
+  history,
 }: {
   title: string;
   events: PetEvent[];
@@ -893,7 +918,8 @@ function EventColumn({
   onAddLabel: (v: string) => void;
   onAdd: () => void;
   onPatch: (next: PetEvent[]) => void;
-  onCompletion: (id: string, patch: Partial<Completion>) => void;
+  onCompletion: (id: string, patch: Partial<Completion>, date?: string) => void;
+  history: { date: string; event: PetEvent; completion: Completion }[];
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -913,15 +939,19 @@ function EventColumn({
     onPatch(reorderEvents(events, id, events[j].id));
   }
 
+  const openEvents = events.filter((ev) => !completion(ev.id).done);
+
   return (
     <div className="about-panel ms-module">
       <h3 style={{ marginTop: 0 }}>{title}</h3>
-      {events.length > 1 ? (
+      {openEvents.length > 1 ? (
         <p className="panel-hint">Drag the ⋮⋮ handle to reorder. Arrow keys work on the handle too.</p>
       ) : null}
-      {events.length === 0 ? <p className="panel-hint">No times scheduled yet.</p> : null}
+      {openEvents.length === 0 ? (
+        <p className="panel-hint">Nothing left for today. Checked items are in History.</p>
+      ) : null}
       <div className={`ms-pet-event-list ${draggingId ? "is-reordering" : ""}`}>
-        {events.map((ev) => {
+        {openEvents.map((ev) => {
           const c = completion(ev.id);
           return (
             <div
@@ -1055,6 +1085,48 @@ function EventColumn({
           Add
         </button>
       </form>
+      <details className="ms-pet-history">
+        <summary>History ({history.length})</summary>
+        {history.length === 0 ? (
+          <p className="panel-hint">Checked items land here with the time you checked them.</p>
+        ) : (
+          <ul className="ms-simple-list">
+            {history.map((row) => (
+              <li key={`${row.event.id}:${row.date}`}>
+                <div>
+                  <strong>{row.event.label || "Care"}</strong>
+                  <span className="panel-hint">
+                    {" "}
+                    · {row.date}
+                    {row.event.time ? ` · planned ${formatPetTime(row.event.time)}` : ""}
+                  </span>
+                </div>
+                <input
+                  type="time"
+                  className="ms-inline-time"
+                  value={row.completion.doneAt || row.event.time}
+                  onChange={(e) =>
+                    onCompletion(
+                      row.event.id,
+                      { done: true, doneAt: e.target.value },
+                      row.date
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() =>
+                    onCompletion(row.event.id, { done: false, doneAt: undefined }, row.date)
+                  }
+                >
+                  Undo
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </details>
     </div>
   );
 }

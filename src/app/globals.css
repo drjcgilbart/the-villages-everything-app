@@ -5598,6 +5598,15 @@ button.ms-home-card:hover {
   text-decoration: line-through;
 }
 
+.ms-pet-history {
+  margin-top: 0.85rem;
+}
+
+.ms-pet-history summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
 .ms-pet-event.is-dragging {
   opacity: 0.42;
 }

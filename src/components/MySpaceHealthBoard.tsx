@@ -53,6 +53,8 @@ type Medication = {
   timesPerDay: number;
   doseTimes: DoseTime[];
   alarmEnabled: boolean;
+  alarmSound?: AlarmTone;
+  alarmDurationSec?: number;
   active: boolean;
 };
 
@@ -572,6 +574,8 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
       timesPerDay: Math.max(1, doseTimes.length),
       doseTimes,
       alarmEnabled: m.alarmEnabled !== false,
+      alarmSound: m.alarmSound,
+      alarmDurationSec: m.alarmDurationSec,
       active: m.active !== false,
     };
   });
@@ -956,6 +960,9 @@ export function MySpaceHealthBoard() {
     dosage: "",
     schedule: "",
     notes: "",
+    alarmEnabled: true,
+    alarmSound: "classic" as AlarmTone,
+    alarmDurationSec: 30,
   });
   const [alarmRound, setAlarmRound] = useState<{
     time: string;
@@ -1417,7 +1424,9 @@ export function MySpaceHealthBoard() {
       const key = `round:${d}:${t}`;
       if (!dueNow.length || fired.has(key)) return;
       fired.add(key);
-      playAlarmTone(state.medAlarmSound, state.medAlarmDurationSec || 8);
+      const tone = dueNow[0]?.med.alarmSound || state.medAlarmSound;
+      const seconds = dueNow[0]?.med.alarmDurationSec || state.medAlarmDurationSec || 8;
+      playAlarmTone(tone, seconds);
       setAlarmRound({
         time: t,
         names: dueNow.map((item) => item.med.name),
@@ -1511,6 +1520,9 @@ export function MySpaceHealthBoard() {
       dosage: med.dosage,
       schedule: med.schedule,
       notes: med.notes,
+      alarmEnabled: med.alarmEnabled !== false,
+      alarmSound: med.alarmSound || state.medAlarmSound,
+      alarmDurationSec: med.alarmDurationSec || state.medAlarmDurationSec || 30,
     });
   }
 
@@ -1528,6 +1540,9 @@ export function MySpaceHealthBoard() {
               dosage: editDraft.dosage.trim().slice(0, 120),
               schedule: editDraft.schedule.trim().slice(0, 200),
               notes: editDraft.notes.trim().slice(0, 500),
+              alarmEnabled: editDraft.alarmEnabled,
+              alarmSound: editDraft.alarmSound,
+              alarmDurationSec: clamp(Number(editDraft.alarmDurationSec) || 30, 5, 300),
             }
           : m
       ),
@@ -2008,6 +2023,7 @@ export function MySpaceHealthBoard() {
           ) : (
             todayRounds.map((round) => {
               const remaining = round.slots.filter((s) => !s.log);
+              if (!remaining.length) return null;
               const roundLate =
                 remaining.length > 0 && round.time && round.time !== "none" && now > round.time;
               return (
@@ -2038,7 +2054,7 @@ export function MySpaceHealthBoard() {
                     ) : null}
                   </div>
                   <ul className="ms-simple-list">
-                    {round.slots.map(({ med, dose, log }) => {
+                    {remaining.map(({ med, dose, log }) => {
                       const late = !log && dose.time && now > normalizeMedTime(dose.time);
                       return (
                         <li key={`${med.id}:${dose.id}`} className={late ? "ms-h-late" : ""}>
@@ -2195,6 +2211,46 @@ export function MySpaceHealthBoard() {
                         placeholder="Prescriber, purpose, etc."
                       />
                     </div>
+                    <label className="ms-check">
+                      <input
+                        type="checkbox"
+                        checked={editDraft.alarmEnabled}
+                        onChange={(e) =>
+                          setEditDraft({ ...editDraft, alarmEnabled: e.target.checked })
+                        }
+                      />
+                      Alarm for this medication
+                    </label>
+                    <div className="field">
+                      <label>Alarm sound</label>
+                      <select
+                        value={editDraft.alarmSound}
+                        onChange={(e) =>
+                          setEditDraft({ ...editDraft, alarmSound: e.target.value as AlarmTone })
+                        }
+                      >
+                        <option value="classic">Classic beep (Windows-style)</option>
+                        <option value="chime">Soft chime</option>
+                        <option value="urgent">Urgent alert</option>
+                        <option value="digital">Digital pulse</option>
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Run alarm for (seconds)</label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={300}
+                        step={5}
+                        value={editDraft.alarmDurationSec}
+                        onChange={(e) =>
+                          setEditDraft({
+                            ...editDraft,
+                            alarmDurationSec: clamp(Number(e.target.value) || 30, 5, 300),
+                          })
+                        }
+                      />
+                    </div>
                     <div className="hero-actions">
                       <button type="submit" className="btn btn-primary btn-sm">
                         Save changes
@@ -2224,7 +2280,17 @@ export function MySpaceHealthBoard() {
                   />
                   Alarm for this medication
                 </label>
-                {slots.map((slot) => (
+                {slots
+                  .filter(
+                    (slot) =>
+                      !state.medicationLogs.some(
+                        (l) =>
+                          l.medicationId === med.id &&
+                          l.date === today &&
+                          l.doseTimeId === slot.id
+                      )
+                  )
+                  .map((slot) => (
                   <div key={slot.id} className="ms-h-dose">
                     <input
                       type="checkbox"
@@ -2371,6 +2437,59 @@ export function MySpaceHealthBoard() {
                     Add dose time
                   </button>
                 </form>
+                {slots.some((slot) =>
+                  state.medicationLogs.some(
+                    (l) =>
+                      l.medicationId === med.id && l.date === today && l.doseTimeId === slot.id
+                  )
+                ) ? (
+                  <details className="ms-pet-history">
+                    <summary>Taken today</summary>
+                    <ul className="ms-simple-list">
+                      {slots.map((slot) => {
+                        const log = state.medicationLogs.find(
+                          (l) =>
+                            l.medicationId === med.id &&
+                            l.date === today &&
+                            l.doseTimeId === slot.id
+                        );
+                        if (!log) return null;
+                        return (
+                          <li key={slot.id}>
+                            <div>
+                              <strong>{slot.label || med.name}</strong>
+                              <span className="panel-hint">
+                                {" "}
+                                · planned {formatMedTime(slot.time)}
+                              </span>
+                            </div>
+                            <input
+                              type="time"
+                              className="ms-inline-time"
+                              value={log.time}
+                              onChange={(e) => {
+                                if (!e.target.value) return;
+                                persist({
+                                  ...state,
+                                  medicationLogs: state.medicationLogs.map((row) =>
+                                    row.id === log.id ? { ...row, time: e.target.value } : row
+                                  ),
+                                });
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => markDose(med, slot, false)}
+                            >
+                              Undo
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                ) : null}
                 <div className="hero-actions">
                   <button
                     type="button"
@@ -2395,59 +2514,17 @@ export function MySpaceHealthBoard() {
             );
           })}
 
-          <h3>Medication alarm settings</h3>
-          <div className="form-grid ms-module-form">
-            <div className="field">
-              <label>Alarm sound</label>
-              <select
-                value={state.medAlarmSound}
-                onChange={(e) =>
-                  persist({ ...state, medAlarmSound: e.target.value as AlarmTone })
-                }
-              >
-                <option value="classic">Classic beep (Windows-style)</option>
-                <option value="chime">Soft chime</option>
-                <option value="urgent">Urgent alert</option>
-                <option value="digital">Digital pulse</option>
-              </select>
-            </div>
-            <div className="field">
-              <label>Run alarm for (seconds)</label>
-              <input
-                type="number"
-                min={5}
-                max={300}
-                step={5}
-                value={state.medAlarmDurationSec}
-                onChange={(e) =>
-                  persist({
-                    ...state,
-                    medAlarmDurationSec: clamp(Number(e.target.value) || 30, 5, 300),
-                  })
-                }
-              />
-            </div>
-            <label className="ms-check">
-              <input
-                type="checkbox"
-                checked={state.medAlarmEnabled}
-                onChange={(e) => persist({ ...state, medAlarmEnabled: e.target.checked })}
-              />
-              Run medication alarms
-            </label>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => playAlarmTone(state.medAlarmSound, 2)}
-            >
-              Test alarm
-            </button>
-          </div>
+          <label className="ms-check">
+            <input
+              type="checkbox"
+              checked={state.medAlarmEnabled}
+              onChange={(e) => persist({ ...state, medAlarmEnabled: e.target.checked })}
+            />
+            Run medication alarms
+          </label>
           <p className="panel-hint">
-            Alarms fire only for dose times that are On, not yet taken, and for meds with “Alarm for
-            this medication” checked. Same clock time = one beep that lists every remaining
-            medication in that round (seven breakfast pills at 8:00 AM ring once). Keep this tab
-            open in the browser.
+            Each medicine has its own alarm on the form where you enter it. Alarms fire for dose
+            times that are On and not yet taken. Keep this tab open in the browser.
           </p>
 
           <h3 className="ms-h-add-bar">Add medication</h3>
@@ -2476,6 +2553,8 @@ export function MySpaceHealthBoard() {
                     timesPerDay: n,
                     doseTimes: defaultDoseTimes(n),
                     alarmEnabled: medAlarmOn,
+                    alarmSound: state.medAlarmSound,
+                    alarmDurationSec: state.medAlarmDurationSec || 30,
                     active: true,
                   },
                 ],
@@ -2537,8 +2616,45 @@ export function MySpaceHealthBoard() {
                 checked={medAlarmOn}
                 onChange={(e) => setMedAlarmOn(e.target.checked)}
               />
-              Enable alarms for this medication
+              Alarm for this medication
             </label>
+            <div className="field">
+              <label>Alarm sound</label>
+              <select
+                value={state.medAlarmSound}
+                onChange={(e) =>
+                  persist({ ...state, medAlarmSound: e.target.value as AlarmTone })
+                }
+              >
+                <option value="classic">Classic beep (Windows-style)</option>
+                <option value="chime">Soft chime</option>
+                <option value="urgent">Urgent alert</option>
+                <option value="digital">Digital pulse</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Run alarm for (seconds)</label>
+              <input
+                type="number"
+                min={5}
+                max={300}
+                step={5}
+                value={state.medAlarmDurationSec}
+                onChange={(e) =>
+                  persist({
+                    ...state,
+                    medAlarmDurationSec: clamp(Number(e.target.value) || 30, 5, 300),
+                  })
+                }
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => playAlarmTone(state.medAlarmSound, 2)}
+            >
+              Test alarm
+            </button>
             <button type="submit" className="btn btn-primary btn-sm">
               Save medication
             </button>
@@ -2657,10 +2773,23 @@ export function MySpaceHealthBoard() {
                         <strong>{l.medicationName}</strong>
                         {l.dosage ? ` · ${l.dosage}` : ""}
                         <div className="panel-hint">
-                          Actual {formatMedTime(l.time)}
-                          {l.scheduledTime ? ` · suggested ${formatMedTime(l.scheduledTime)}` : ""}
+                          {l.scheduledTime ? `Planned ${formatMedTime(l.scheduledTime)}` : "No planned time"}
                         </div>
                       </div>
+                      <input
+                        type="time"
+                        className="ms-inline-time"
+                        value={l.time}
+                        onChange={(e) => {
+                          if (!e.target.value) return;
+                          persist({
+                            ...state,
+                            medicationLogs: state.medicationLogs.map((row) =>
+                              row.id === l.id ? { ...row, time: e.target.value } : row
+                            ),
+                          });
+                        }}
+                      />
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
