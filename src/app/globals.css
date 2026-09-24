@@ -3816,6 +3816,15 @@ button.ms-home-card:hover {
   flex-direction: column;
   gap: 0.18rem;
   background: #fffefb;
+  cursor: pointer;
+}
+
+.ms-cal-slot:hover {
+  background: #f4faf6;
+}
+
+.ms-cal-slot.is-now:hover {
+  background: #fff4d6;
 }
 
 .ms-cal-slot.is-now {

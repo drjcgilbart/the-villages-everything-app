@@ -64,12 +64,16 @@ function TaskEditor({
   editing,
   onSave,
   onCancel,
+  showCancel,
+  autoFocusTitle,
 }: {
   form: TaskDraft;
   setForm: Dispatch<SetStateAction<TaskDraft>>;
   editing: boolean;
   onSave: () => void;
   onCancel: () => void;
+  showCancel?: boolean;
+  autoFocusTitle?: boolean;
 }) {
   return (
     <form
@@ -86,6 +90,7 @@ function TaskEditor({
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           placeholder="e.g. Pickleball at Eisenhower"
           required
+          autoFocus={autoFocusTitle}
         />
       </div>
       <div className="field">
@@ -155,7 +160,7 @@ function TaskEditor({
       <button type="submit" className="btn btn-primary btn-sm">
         {editing ? "Save task" : "Add"}
       </button>
-      {editing ? (
+      {editing || showCancel ? (
         <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
           Cancel
         </button>
@@ -231,6 +236,7 @@ export function MySpaceCalendarBoard() {
   const [detailEditing, setDetailEditing] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailBusy, setDetailBusy] = useState(false);
+  const [composer, setComposer] = useState<{ date: string; time: string } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [starredClubs, setStarredClubs] = useState<OverlayEvent[]>([]);
 
@@ -261,13 +267,14 @@ export function MySpaceCalendarBoard() {
   }, [range.start, range.end]);
 
   useEffect(() => {
-    if (!detail) return;
+    if (!detail && !composer) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setDetail(null);
         setDetailEditing(false);
+        setComposer(null);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -275,7 +282,7 @@ export function MySpaceCalendarBoard() {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [detail]);
+  }, [detail, composer]);
 
   const overlay = useMemo(() => {
     const out: OverlayEvent[] = [];
@@ -486,9 +493,29 @@ export function MySpaceCalendarBoard() {
   }
 
   function openDetail(event: OverlayEvent) {
+    setComposer(null);
     setDetailEditing(false);
     setDetailError(null);
     setDetail(event);
+  }
+
+  function openComposer(date: string, time: string) {
+    setDetail(null);
+    setDetailEditing(false);
+    setDetailError(null);
+    setEditId(null);
+    setForm({
+      ...emptyTask(date),
+      startTime: time,
+      endDate: time ? date : "",
+    });
+    setComposer({ date, time });
+  }
+
+  function closeComposer() {
+    setComposer(null);
+    setEditId(null);
+    setForm(emptyTask(anchor));
   }
 
   function closeDetail() {
@@ -677,8 +704,9 @@ export function MySpaceCalendarBoard() {
       </div>
       <p className="panel-hint">
         Town-square entertainment stays on the month calendar below. This grid
-        is your own dates. Click any colored item and a card opens on this
-        screen. Star a club that has a published meeting time and it shows up
+        is your own dates. Click an empty hour to type your own plan. Click a
+        colored item and a card opens on this screen. Star a club that has a
+        published meeting time and it shows up
         here with the place.{" "}
         <Link href="#events-calendar" className="text-link">
           Month of town-square nights
@@ -788,13 +816,21 @@ export function MySpaceCalendarBoard() {
           {days.map((iso) => {
             const allDay = overlay.filter((e) => eventOnDate(e, iso) && !e.time);
             return (
-              <div key={`ad-${iso}`} className="ms-cal-slot ms-cal-allday">
+              <div
+                key={`ad-${iso}`}
+                className="ms-cal-slot ms-cal-allday"
+                title="Add an all-day plan"
+                onClick={() => openComposer(iso, "")}
+              >
                 {allDay.map((e) => (
                   <button
                     key={e.id}
                     type="button"
                     className={`ms-cal-chip kind-${e.kind}`}
-                    onClick={() => openDetail(e)}
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      openDetail(e);
+                    }}
                   >
                     {e.title}
                   </button>
@@ -811,13 +847,8 @@ export function MySpaceCalendarBoard() {
                   <div
                     key={`${iso}-${h}`}
                     className={`ms-cal-slot${iso === today && h === hourNow ? " is-now" : ""}`}
-                    onClick={() => {
-                      setAnchor(iso);
-                      setForm({
-                        ...emptyTask(iso),
-                        startTime: `${String(h).padStart(2, "0")}:00`,
-                      });
-                    }}
+                    title={`Add a plan at ${h > 12 ? h - 12 : h}${h >= 12 ? " PM" : " AM"}`}
+                    onClick={() => openComposer(iso, `${String(h).padStart(2, "0")}:00`)}
                   >
                     {timed.map((e) => (
                       <button
@@ -928,6 +959,45 @@ export function MySpaceCalendarBoard() {
                     ) : null}
                   </div>
                 )}
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {composer && typeof document !== "undefined"
+        ? createPortal(
+            <div className="ms-cal-pop-scrim" onClick={closeComposer}>
+              <div
+                className="ms-cal-pop"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ms-cal-add-title"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="ms-cal-pop-bar">
+                  <p className="panel-hint">Your plan</p>
+                  <button type="button" className="ms-cal-pop-close" onClick={closeComposer}>
+                    Close
+                  </button>
+                </div>
+                <h3 id="ms-cal-add-title">Add to this hour</h3>
+                <p>
+                  {shortDate(composer.date)}
+                  {composer.time ? ` · ${formatTime(composer.time)}` : " · all day"}
+                </p>
+                <TaskEditor
+                  form={form}
+                  setForm={setForm}
+                  editing={false}
+                  showCancel
+                  autoFocusTitle
+                  onSave={() => {
+                    saveTask();
+                    setComposer(null);
+                  }}
+                  onCancel={closeComposer}
+                />
               </div>
             </div>,
             document.body
