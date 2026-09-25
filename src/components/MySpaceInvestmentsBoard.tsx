@@ -76,6 +76,7 @@ export function MySpaceInvestmentsBoard() {
   const [qErr, setQErr] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, Omit<FinHolding, "id">>>({});
   const [edit, setEdit] = useState<{ acct: string; hold: string } | null>(null);
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
   const [pocketDraft, setPocketDraft] = useState("");
   const [pocketSaved, setPocketSaved] = useState<string | null>(null);
   const [localPlaces, setLocalPlaces] = useState<WealthResource[]>(
@@ -148,6 +149,24 @@ export function MySpaceInvestmentsBoard() {
   function q(symbol: string) {
     const t = normalizeTicker(symbol);
     return quotes[t];
+  }
+
+  function commitAccountName(id: string) {
+    const raw = nameDrafts[id];
+    if (raw === undefined) return;
+    const name = raw.trim().slice(0, 80) || "Account";
+    setNameDrafts((drafts) => {
+      const next = { ...drafts };
+      delete next[id];
+      return next;
+    });
+    const current = accounts.find((account) => account.id === id);
+    if (!current || current.name === name) return;
+    persist({
+      accounts: accounts.map((account) =>
+        account.id === id ? { ...account, name } : account
+      ),
+    });
   }
 
   function persist(next: Partial<PortfolioBoard>) {
@@ -586,15 +605,20 @@ export function MySpaceInvestmentsBoard() {
               <div className="field">
                 <label>Account name</label>
                 <input
-                  value={a.name}
+                  value={nameDrafts[a.id] ?? a.name}
                   onChange={(e) =>
-                    persist({
-                      accounts: accounts.map((x) =>
-                        x.id === a.id ? { ...x, name: e.target.value.slice(0, 80) } : x
-                      ),
-                    })
+                    setNameDrafts((drafts) => ({
+                      ...drafts,
+                      [a.id]: e.target.value.slice(0, 80),
+                    }))
                   }
+                  onBlur={() => commitAccountName(a.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                  }}
+                  placeholder="Charles Schwab"
                 />
+                <p className="panel-hint">The name saves when you click outside this box.</p>
               </div>
               <ul className="ms-cal-list">
                 {a.holdings.map((h) => {
