@@ -5607,6 +5607,19 @@ button.ms-home-card:hover {
   font-weight: 800;
 }
 
+.ms-pet-bm {
+  display: flex;
+  margin-top: 0.25rem;
+}
+
+.ms-pet-history textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  font: inherit;
+  min-height: 2.4rem;
+}
+
 .ms-pet-event.is-dragging {
   opacity: 0.42;
 }

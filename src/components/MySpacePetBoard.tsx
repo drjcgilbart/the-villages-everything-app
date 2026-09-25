@@ -22,7 +22,12 @@ type PetEvent = {
   enabled: boolean;
 };
 
-type Completion = { done: boolean; note: string; doneAt?: string };
+type Completion = {
+  done: boolean;
+  note: string;
+  doneAt?: string;
+  bowelMovement?: boolean;
+};
 
 type Pet = {
   id: string;
@@ -157,7 +162,12 @@ function defaults(): PetState {
 
 function asCompletion(v: Completion | boolean | undefined): Completion {
   if (v && typeof v === "object") {
-    return { done: !!v.done, note: String(v.note || ""), doneAt: v.doneAt };
+    return {
+      done: !!v.done,
+      note: String(v.note || ""),
+      doneAt: v.doneAt,
+      bowelMovement: !!v.bowelMovement,
+    };
   }
   return { done: v === true, note: "" };
 }
@@ -773,6 +783,8 @@ export function MySpacePetBoard() {
               onPatch={(next) => patchPet({ ...pet, walks: next })}
               onCompletion={setCompletion}
               history={historyFor(pet.walks)}
+              today={today}
+              trackBowel={pet.species === "dog"}
             />
             <EventColumn
               title="🥣 Feedings"
@@ -798,6 +810,7 @@ export function MySpacePetBoard() {
               onPatch={(next) => patchPet({ ...pet, feeds: next })}
               onCompletion={setCompletion}
               history={historyFor(pet.feeds)}
+              today={today}
             />
           </div>
 
@@ -892,6 +905,85 @@ export function MySpacePetBoard() {
   );
 }
 
+function historyDayLabel(date: string, today: string) {
+  if (date === today) return "Today";
+  const parsed = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function HistoryRows({
+  rows,
+  today,
+  trackBowel,
+  onCompletion,
+}: {
+  rows: { date: string; event: PetEvent; completion: Completion }[];
+  today: string;
+  trackBowel?: boolean;
+  onCompletion: (id: string, patch: Partial<Completion>, date?: string) => void;
+}) {
+  return (
+    <ul className="ms-simple-list">
+      {rows.map((row) => (
+        <li key={`${row.event.id}:${row.date}`}>
+          <div>
+            <strong>{row.event.label || "Care"}</strong>
+            <span className="panel-hint">
+              {" "}
+              · {historyDayLabel(row.date, today)}
+              {row.event.time ? ` · planned ${formatPetTime(row.event.time)}` : ""}
+            </span>
+            {trackBowel ? (
+              <label className="ms-check ms-pet-bm">
+                <input
+                  type="checkbox"
+                  checked={!!row.completion.bowelMovement}
+                  onChange={(e) =>
+                    onCompletion(
+                      row.event.id,
+                      { done: true, bowelMovement: e.target.checked },
+                      row.date
+                    )
+                  }
+                />
+                Bowel movement
+              </label>
+            ) : null}
+            <textarea
+              rows={2}
+              value={row.completion.note}
+              onChange={(e) =>
+                onCompletion(
+                  row.event.id,
+                  { done: true, note: e.target.value.slice(0, 500) },
+                  row.date
+                )
+              }
+              placeholder="Extra notes"
+            />
+          </div>
+          <input
+            type="time"
+            className="ms-inline-time"
+            value={row.completion.doneAt || row.event.time}
+            onChange={(e) =>
+              onCompletion(row.event.id, { done: true, doneAt: e.target.value }, row.date)
+            }
+          />
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => onCompletion(row.event.id, { done: false, doneAt: undefined }, row.date)}
+          >
+            Undo
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function EventColumn({
   title,
   events,
@@ -906,6 +998,8 @@ function EventColumn({
   onPatch,
   onCompletion,
   history,
+  today,
+  trackBowel,
 }: {
   title: string;
   events: PetEvent[];
@@ -920,6 +1014,8 @@ function EventColumn({
   onPatch: (next: PetEvent[]) => void;
   onCompletion: (id: string, patch: Partial<Completion>, date?: string) => void;
   history: { date: string; event: PetEvent; completion: Completion }[];
+  today: string;
+  trackBowel?: boolean;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -940,6 +1036,9 @@ function EventColumn({
   }
 
   const openEvents = events.filter((ev) => !completion(ev.id).done);
+  const [showEarlier, setShowEarlier] = useState(false);
+  const todayHistory = history.filter((row) => row.date === today);
+  const earlierHistory = history.filter((row) => row.date !== today);
 
   return (
     <div className="about-panel ms-module">
@@ -1020,12 +1119,18 @@ function EventColumn({
                   }
                 />
                 <span className="panel-hint">
-                  {c.done
-                    ? `Done · planned ${formatPetTime(ev.time)}`
-                    : ev.enabled
-                      ? "Included in schedule / alarms"
-                      : "Skipped (enable with On)"}
+                  {ev.enabled ? "Included in schedule / alarms" : "Skipped (enable with On)"}
                 </span>
+                {trackBowel ? (
+                  <label className="ms-check ms-pet-bm">
+                    <input
+                      type="checkbox"
+                      checked={!!c.bowelMovement}
+                      onChange={(e) => onCompletion(ev.id, { bowelMovement: e.target.checked })}
+                    />
+                    Bowel movement
+                  </label>
+                ) : null}
               </div>
               <input
                 type="time"
@@ -1086,46 +1191,31 @@ function EventColumn({
         </button>
       </form>
       <details className="ms-pet-history">
-        <summary>History ({history.length})</summary>
-        {history.length === 0 ? (
-          <p className="panel-hint">Checked items land here with the time you checked them.</p>
+        <summary>History · today ({todayHistory.length})</summary>
+        {todayHistory.length === 0 ? (
+          <p className="panel-hint">Nothing checked off today yet.</p>
         ) : (
-          <ul className="ms-simple-list">
-            {history.map((row) => (
-              <li key={`${row.event.id}:${row.date}`}>
-                <div>
-                  <strong>{row.event.label || "Care"}</strong>
-                  <span className="panel-hint">
-                    {" "}
-                    · {row.date}
-                    {row.event.time ? ` · planned ${formatPetTime(row.event.time)}` : ""}
-                  </span>
-                </div>
-                <input
-                  type="time"
-                  className="ms-inline-time"
-                  value={row.completion.doneAt || row.event.time}
-                  onChange={(e) =>
-                    onCompletion(
-                      row.event.id,
-                      { done: true, doneAt: e.target.value },
-                      row.date
-                    )
-                  }
-                />
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() =>
-                    onCompletion(row.event.id, { done: false, doneAt: undefined }, row.date)
-                  }
-                >
-                  Undo
-                </button>
-              </li>
-            ))}
-          </ul>
+          <HistoryRows rows={todayHistory} today={today} trackBowel={trackBowel} onCompletion={onCompletion} />
         )}
+        {earlierHistory.length > 0 ? (
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShowEarlier((open) => !open)}
+            >
+              {showEarlier ? "Hide earlier days" : `Show earlier days (${earlierHistory.length})`}
+            </button>
+            {showEarlier ? (
+              <HistoryRows
+                rows={earlierHistory}
+                today={today}
+                trackBowel={trackBowel}
+                onCompletion={onCompletion}
+              />
+            ) : null}
+          </>
+        ) : null}
       </details>
     </div>
   );
