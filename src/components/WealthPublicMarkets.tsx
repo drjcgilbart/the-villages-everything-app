@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MarketCharts } from "@/components/MarketCharts";
+import { PortfolioTracker } from "@/components/PortfolioTracker";
 
 /**
  * The investments board already shows these indexes with date ranges.
@@ -27,5 +28,12 @@ export function WealthPublicMarkets() {
   }, []);
 
   if (show !== true) return null;
-  return <MarketCharts />;
+  return (
+    <>
+      <MarketCharts />
+      <div data-privacy-block="Investments">
+        <PortfolioTracker />
+      </div>
+    </>
+  );
 }

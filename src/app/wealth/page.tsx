@@ -4,7 +4,6 @@ import { WealthHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { WealthPublicMarkets } from "@/components/WealthPublicMarkets";
 import { PhotoCard } from "@/components/PhotoCard";
-import { PortfolioTracker } from "@/components/PortfolioTracker";
 import { PostCard } from "@/components/PostCard";
 import { VideoCard } from "@/components/VideoCard";
 import { WealthHub } from "@/components/WealthHub";
@@ -167,9 +166,6 @@ export default async function WealthPage() {
 
       {/* Existing market + portfolio tools */}
       <WealthPublicMarkets />
-      <div data-privacy-block="Investments">
-        <PortfolioTracker />
-      </div>
 
       {/* Local banks */}
       <section className="section" id="local-money" style={{ paddingTop: 0 }}>

@@ -74,7 +74,9 @@ export function MySpaceInvestmentsBoard() {
   const [quotes, setQuotes] = useState<Record<string, TickerQuote>>({});
   const [snap, setSnap] = useState<Record<string, TickerQuote>>({});
   const [qErr, setQErr] = useState<string | null>(null);
-  const [form, setForm] = useState<Record<string, Omit<FinHolding, "id">>>({});
+  const [holdDraft, setHoldDraft] = useState(emptyHolding());
+  const [holdAccountId, setHoldAccountId] = useState("");
+  const [newAccountName, setNewAccountName] = useState("");
   const [edit, setEdit] = useState<{ acct: string; hold: string } | null>(null);
   const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
   const [pocketDraft, setPocketDraft] = useState("");
@@ -138,6 +140,11 @@ export function MySpaceInvestmentsBoard() {
       setPocketDraft(value.pocketNote);
     }
   }, [ready, value.pocketNote, pocketDraft]);
+
+  useEffect(() => {
+    if (holdAccountId && accounts.some((account) => account.id === holdAccountId)) return;
+    setHoldAccountId(accounts[0]?.id || "");
+  }, [accounts, holdAccountId]);
 
   useEffect(() => {
     if (!ready) return;
@@ -302,16 +309,19 @@ export function MySpaceInvestmentsBoard() {
   }, [accounts]);
 
   function addAccount() {
+    const name = newAccountName.trim().slice(0, 80) || `Account ${accounts.length + 1}`;
+    const id = uid("acct");
     persist({
-      accounts: [
-        ...accounts,
-        { id: uid("acct"), name: `Account ${accounts.length + 1}`, included: true, holdings: [] },
-      ],
+      accounts: [...accounts, { id, name, included: true, holdings: [] }],
     });
+    setNewAccountName("");
+    setHoldAccountId(id);
   }
 
-  function saveHolding(acctId: string) {
-    const f = form[acctId] || emptyHolding();
+  function saveHolding() {
+    const acctId = holdAccountId;
+    if (!acctId) return;
+    const f = holdDraft;
     const kind = f.kind;
     let symbol = normalizeTicker(f.symbol);
     if (kind === "cash") symbol = "CASH";
@@ -319,23 +329,27 @@ export function MySpaceInvestmentsBoard() {
     if (kind !== "cash" && (!symbol || !isValidTickerShape(symbol))) return;
     const row: FinHolding = {
       ...f,
-      id: edit?.acct === acctId ? edit.hold : uid("fh"),
+      id: edit ? edit.hold : uid("fh"),
       kind,
       symbol,
       shares: Number(f.shares) || 0,
       avgCost: kind === "cash" ? 1 : Number(f.avgCost) || 0,
     };
+    const moving = edit && edit.acct !== acctId;
     persist({
       accounts: accounts.map((a) => {
+        if (moving && a.id === edit.acct) {
+          return { ...a, holdings: a.holdings.filter((h) => h.id !== edit.hold) };
+        }
         if (a.id !== acctId) return a;
         const holdings =
-          edit?.acct === acctId
+          edit && !moving
             ? a.holdings.map((h) => (h.id === edit.hold ? row : h))
             : [...a.holdings, row];
         return { ...a, holdings: holdings.slice(0, 40) };
       }),
     });
-    setForm({ ...form, [acctId]: emptyHolding() });
+    setHoldDraft(emptyHolding());
     setEdit(null);
   }
 
@@ -551,21 +565,34 @@ export function MySpaceInvestmentsBoard() {
       </div>
 
       <div className="about-panel ms-module">
-        <div className="ms-h-toolbar">
-          <h4>Brokerage accounts &amp; holdings</h4>
-          <button type="button" className="btn btn-primary btn-sm" onClick={addAccount}>
-            + Add account
-          </button>
-        </div>
+        <h4>Brokerage accounts</h4>
         <p className="panel-hint">
-          Check accounts to include in totals. Add any stock, ETF, Bitcoin (BTC), or cash — each
-          with its own cost basis and dividend info. This is a notebook, not a trade ticket.
+          Save each brokerage here. Then pick that account in the holding form. This is a notebook,
+          not a trade ticket.
         </p>
+        <form
+          className="form-grid ms-module-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addAccount();
+          }}
+        >
+          <div className="field">
+            <label>New brokerage account</label>
+            <input
+              value={newAccountName}
+              onChange={(e) => setNewAccountName(e.target.value.slice(0, 80))}
+              placeholder="Charles Schwab"
+            />
+          </div>
+          <button type="submit" className="btn btn-primary btn-sm">
+            Save account
+          </button>
+        </form>
         {accounts.length === 0 ? (
           <p className="panel-hint">No accounts yet. Add one to start tracking holdings.</p>
         ) : null}
         {accounts.map((a) => {
-          const f = form[a.id] || emptyHolding();
           let acctVal = 0;
           let acctGl = 0;
           for (const h of a.holdings) {
@@ -640,7 +667,9 @@ export function MySpaceInvestmentsBoard() {
                           className="btn btn-ghost btn-sm"
                           onClick={() => {
                             setEdit({ acct: a.id, hold: h.id });
-                            setForm({ ...form, [a.id]: { ...h } });
+                            setHoldAccountId(a.id);
+                            const { id: _ignored, ...rest } = h;
+                            setHoldDraft(rest);
                           }}
                         >
                           Edit
@@ -665,138 +694,153 @@ export function MySpaceInvestmentsBoard() {
                   );
                 })}
               </ul>
-              <form
-                className="form-grid ms-module-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  saveHolding(a.id);
-                }}
-              >
-                <p className="panel-hint">
-                  {edit?.acct === a.id ? "Edit holding" : `Add holding to ${a.name}`}
-                </p>
-                <div className="field">
-                  <label>Type</label>
-                  <select
-                    value={f.kind}
-                    onChange={(e) => setForm({ ...form, [a.id]: { ...f, kind: e.target.value } })}
-                  >
-                    {HOLDING_KINDS.map((k) => (
-                      <option key={k.id} value={k.id}>
-                        {k.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Symbol</label>
-                  <input
-                    value={f.symbol}
-                    onChange={(e) => setForm({ ...form, [a.id]: { ...f, symbol: e.target.value } })}
-                    placeholder="TSLA, VOO, BTC…"
-                    disabled={f.kind === "cash"}
-                  />
-                </div>
-                <div className="field">
-                  <label>Shares / units / $ cash</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={f.shares || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, [a.id]: { ...f, shares: Number(e.target.value) || 0 } })
-                    }
-                  />
-                </div>
-                <div className="field">
-                  <label>Avg cost / unit ($)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={f.avgCost || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, [a.id]: { ...f, avgCost: Number(e.target.value) || 0 } })
-                    }
-                    placeholder="cost basis"
-                    disabled={f.kind === "cash"}
-                  />
-                </div>
-                <div className="field">
-                  <label>Div / share (per period)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={f.divShare || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, [a.id]: { ...f, divShare: Number(e.target.value) || 0 } })
-                    }
-                    placeholder="e.g. 0.45"
-                  />
-                </div>
-                <div className="field">
-                  <label>Dividend frequency</label>
-                  <select
-                    value={f.divFreq}
-                    onChange={(e) => setForm({ ...form, [a.id]: { ...f, divFreq: e.target.value } })}
-                  >
-                    {DIV_FREQ.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Ex-dividend date</label>
-                  <input
-                    type="date"
-                    value={f.exDiv}
-                    onChange={(e) => setForm({ ...form, [a.id]: { ...f, exDiv: e.target.value } })}
-                  />
-                </div>
-                <div className="field">
-                  <label>Pay date</label>
-                  <input
-                    type="date"
-                    value={f.payDate}
-                    onChange={(e) => setForm({ ...form, [a.id]: { ...f, payDate: e.target.value } })}
-                  />
-                </div>
-                <div className="field">
-                  <label>Total dividends received ($)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={f.divGot || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, [a.id]: { ...f, divGot: Number(e.target.value) || 0 } })
-                    }
-                    placeholder="lifetime"
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary btn-sm">
-                  {edit?.acct === a.id ? "Save holding" : "Add holding"}
-                </button>
-                {edit?.acct === a.id ? (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      setEdit(null);
-                      setForm({ ...form, [a.id]: emptyHolding() });
-                    }}
-                  >
-                    Cancel
-                  </button>
-                ) : null}
-              </form>
             </article>
           );
         })}
+      </div>
+
+      <div className="about-panel ms-module">
+        <h4>{edit ? "Edit holding" : "Add a holding"}</h4>
+        {accounts.length === 0 ? (
+          <p className="panel-hint">Save a brokerage account first. It will show up in this list.</p>
+        ) : (
+          <form
+            className="form-grid ms-module-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveHolding();
+            }}
+          >
+            <div className="field">
+              <label>Account</label>
+              <select value={holdAccountId} onChange={(e) => setHoldAccountId(e.target.value)}>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Type</label>
+              <select
+                value={holdDraft.kind}
+                onChange={(e) => setHoldDraft({ ...holdDraft, kind: e.target.value })}
+              >
+                {HOLDING_KINDS.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Symbol</label>
+              <input
+                value={holdDraft.symbol}
+                onChange={(e) => setHoldDraft({ ...holdDraft, symbol: e.target.value })}
+                placeholder="TSLA, VOO, BTC…"
+                disabled={holdDraft.kind === "cash"}
+              />
+            </div>
+            <div className="field">
+              <label>Shares / units / $ cash</label>
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={holdDraft.shares || ""}
+                onChange={(e) =>
+                  setHoldDraft({ ...holdDraft, shares: Number(e.target.value) || 0 })
+                }
+              />
+            </div>
+            <div className="field">
+              <label>Avg cost / unit ($)</label>
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={holdDraft.avgCost || ""}
+                onChange={(e) =>
+                  setHoldDraft({ ...holdDraft, avgCost: Number(e.target.value) || 0 })
+                }
+                placeholder="cost basis"
+                disabled={holdDraft.kind === "cash"}
+              />
+            </div>
+            <div className="field">
+              <label>Div / share (per period)</label>
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={holdDraft.divShare || ""}
+                onChange={(e) =>
+                  setHoldDraft({ ...holdDraft, divShare: Number(e.target.value) || 0 })
+                }
+                placeholder="e.g. 0.45"
+              />
+            </div>
+            <div className="field">
+              <label>Dividend frequency</label>
+              <select
+                value={holdDraft.divFreq}
+                onChange={(e) => setHoldDraft({ ...holdDraft, divFreq: e.target.value })}
+              >
+                {DIV_FREQ.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Ex-dividend date</label>
+              <input
+                type="date"
+                value={holdDraft.exDiv}
+                onChange={(e) => setHoldDraft({ ...holdDraft, exDiv: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Pay date</label>
+              <input
+                type="date"
+                value={holdDraft.payDate}
+                onChange={(e) => setHoldDraft({ ...holdDraft, payDate: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Total dividends received ($)</label>
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={holdDraft.divGot || ""}
+                onChange={(e) =>
+                  setHoldDraft({ ...holdDraft, divGot: Number(e.target.value) || 0 })
+                }
+                placeholder="lifetime"
+              />
+            </div>
+            <button type="submit" className="btn btn-primary btn-sm">
+              {edit ? "Save holding" : "Add holding"}
+            </button>
+            {edit ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setEdit(null);
+                  setHoldDraft(emptyHolding());
+                }}
+              >
+                Cancel
+              </button>
+            ) : null}
+          </form>
+        )}
       </div>
 
       {stats.featured.length > 0 ? (
