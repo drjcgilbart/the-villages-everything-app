@@ -249,7 +249,13 @@ export function MarketCharts({
     </>
   );
 
-  if (compact) return <div className="ms-mkt-compact">{body}</div>;
+  if (compact) {
+    return (
+      <div className="ms-mkt-compact" id="markets">
+        {body}
+      </div>
+    );
+  }
 
   return (
     <section className="section mkt-section" id="markets" aria-labelledby="mkt-heading">

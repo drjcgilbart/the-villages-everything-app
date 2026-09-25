@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DonateMascot } from "@/components/DonateMascot";
 import { WealthHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
-import { MarketCharts } from "@/components/MarketCharts";
+import { WealthPublicMarkets } from "@/components/WealthPublicMarkets";
 import { PhotoCard } from "@/components/PhotoCard";
 import { PortfolioTracker } from "@/components/PortfolioTracker";
 import { PostCard } from "@/components/PostCard";
@@ -166,7 +166,7 @@ export default async function WealthPage() {
       <WealthHubMemberTools />
 
       {/* Existing market + portfolio tools */}
-      <MarketCharts />
+      <WealthPublicMarkets />
       <div data-privacy-block="Investments">
         <PortfolioTracker />
       </div>
