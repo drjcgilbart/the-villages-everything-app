@@ -114,7 +114,7 @@ export function extrasFromBoards(input: {
         kind: "maint",
         title: task.title,
         date: task.dueDate,
-        time: task.alarmTime || "",
+        time: "",
         location: assets.get(task.assetId) || "",
         notes: task.notes,
         done: task.done,

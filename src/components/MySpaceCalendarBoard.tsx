@@ -732,6 +732,7 @@ export function MySpaceCalendarBoard() {
         <li className="kind-pickle"><i /> Pickleball</li>
         <li className="kind-care"><i /> Care</li>
         <li className="kind-gym"><i /> Gym</li>
+        <li className="kind-maint"><i /> Maintenance</li>
         <li className="kind-square"><i /> Town square</li>
       </ul>
 

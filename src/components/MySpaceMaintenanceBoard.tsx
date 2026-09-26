@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   MAINT_KINDS,
   emptyBoards,
@@ -10,6 +11,19 @@ import {
   type MaintenanceBoard,
 } from "@/lib/memberBoardModel";
 import { useMemberBoard } from "@/components/useMemberBoard";
+import {
+  CAL_DAYS,
+  CAL_HOURS,
+  datesInRange,
+  formatTime,
+  hourOf,
+  shiftAnchor,
+  shortDate,
+  viewRange,
+  viewTitle,
+  weekdayOf,
+  type CalView,
+} from "@/lib/calendarCatalog";
 import {
   CART_SHOPS,
   MAINT_OFFICES,
@@ -208,6 +222,9 @@ export function MySpaceMaintenanceBoard() {
   const [extraTitle, setExtraTitle] = useState("");
   const [extraEvery, setExtraEvery] = useState(6);
   const [extraUnit, setExtraUnit] = useState("months");
+  const [planView, setPlanView] = useState<CalView>("week");
+  const [planAnchor, setPlanAnchor] = useState(todayKey);
+  const [planTaskId, setPlanTaskId] = useState<string | null>(null);
   const addFormRef = useRef<HTMLFormElement>(null);
 
   const assets = value.assets;
@@ -251,6 +268,15 @@ export function MySpaceMaintenanceBoard() {
     if (!showAssetForm) return;
     addFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [showAssetForm]);
+
+  useEffect(() => {
+    if (!planTaskId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPlanTaskId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [planTaskId]);
 
   function changeKind(kind: string) {
     const ids = new Set(maintKindForm(kind).fields.map((f) => f.id));
@@ -401,6 +427,18 @@ export function MySpaceMaintenanceBoard() {
     setJobForm(emptyJob(active?.id || ""));
   }
 
+  function openPlanSlot(iso: string, time: string) {
+    setEditJobId(null);
+    setPlanTaskId(null);
+    setJobForm({
+      ...emptyJob(active?.id || assets[0]?.id || ""),
+      dueDate: iso,
+      alarmTime: time || "08:00",
+      alarmEnabled: true,
+    });
+    document.getElementById("ms-maint-job")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function markDone(t: MaintTask) {
     const asset = assets.find((a) => a.id === t.assetId);
     const finished: MaintTask = {
@@ -428,6 +466,30 @@ export function MySpaceMaintenanceBoard() {
     : [];
   const kindProfile = maintKindForm(assetForm.kind);
   const kindSuggestions = MAINT_SUGGESTIONS[assetForm.kind] || MAINT_SUGGESTIONS.other;
+  const today = todayKey();
+  const planRange = viewRange(planAnchor, planView);
+  const planDays = datesInRange(planRange.start, planRange.end);
+  const planTasks = open.filter((t) => {
+    if (filter === "all") return true;
+    const asset = assets.find((a) => a.id === t.assetId);
+    return asset?.kind === filter;
+  });
+  const datedTasks = planTasks.filter((t) => /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate));
+  const undatedTasks = planTasks.filter((t) => !/^\d{4}-\d{2}-\d{2}$/.test(t.dueDate));
+  const nextDated = [...datedTasks]
+    .filter((t) => t.dueDate >= today)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
+  const visibleCount = datedTasks.filter(
+    (t) => t.dueDate >= planRange.start && t.dueDate <= planRange.end
+  ).length;
+  const hourNow = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(new Date())
+  );
+  const planTask = planTaskId ? value.tasks.find((t) => t.id === planTaskId) || null : null;
   const trackedTitles = new Set(
     editAssetId
       ? value.tasks
@@ -440,7 +502,7 @@ export function MySpaceMaintenanceBoard() {
     <div className="ms-ent-board">
       <p className="ms-module-lead">
         Track the golf cart, the car, the house, and anything else — by date, miles, or both.
-        Repeating jobs drop onto Upcoming automatically.
+        Jobs sit on a maintenance planner here, and the due day also shows on your personal planner.
       </p>
       <p className="panel-hint">
         Neighbor shops stay free on{" "}
@@ -797,100 +859,191 @@ export function MySpaceMaintenanceBoard() {
       ) : null}
 
       <div className="about-panel ms-module">
-        <h4>Upcoming</h4>
-        {open.length === 0 ? (
-          <p className="panel-hint">No upcoming jobs. Add one below, or tap a common job on the item card.</p>
-        ) : (
-          <div className="ms-food-guide">
-            {open.map((t) => {
-              const asset = assets.find((a) => a.id === t.assetId);
-              const status = jobStatus(t, asset);
+        <h4>Maintenance planner</h4>
+        <p className="panel-hint">
+          Only maintenance jobs. Click a chip to mark it done or edit it. Click an empty spot to add a job on that day.
+          The same due day also shows in the all-day row of your personal planner.
+        </p>
+        <div className="ms-h-quick">
+          {(
+            [
+              ["day", "Day"],
+              ["three", "3 day"],
+              ["week", "Week"],
+              ["month", "Month"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`ms-h-range-btn ${planView === id ? "active" : ""}`}
+              onClick={() => setPlanView(id)}
+            >
+              {label}
+            </button>
+          ))}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPlanAnchor(shiftAnchor(planAnchor, planView, -1))}>
+            ‹
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPlanAnchor(today)}>
+            Today
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPlanAnchor(shiftAnchor(planAnchor, planView, 1))}>
+            ›
+          </button>
+          <strong>{viewTitle(planAnchor, planView)}</strong>
+        </div>
+        {visibleCount === 0 && nextDated ? (
+          <p className="panel-hint">
+            Nothing due in this {planView}. Next up is {nextDated.title} on {shortDate(nextDated.dueDate)}.{" "}
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setPlanAnchor(nextDated.dueDate);
+                setPlanView("week");
+              }}
+            >
+              Show that week
+            </button>
+          </p>
+        ) : null}
+        {planView === "month" ? (
+          <div className="ms-cal-month">
+            {CAL_DAYS.map((d) => (
+              <div key={d} className="ms-cal-dow">
+                {d}
+              </div>
+            ))}
+            {planDays.map((iso) => {
+              const inMonth = iso.slice(0, 7) === planAnchor.slice(0, 7);
+              const evs = datedTasks.filter((t) => t.dueDate === iso);
               return (
-                <article key={t.id} className="ms-food-card">
-                  <span className="panel-hint">
-                    {kindMeta(asset?.kind || "other").emoji} {asset?.name || "Item"} ·{" "}
-                    {status === "overdue" ? "OVERDUE" : status === "soon" ? "DUE SOON" : "UPCOMING"}
-                  </span>
-                  <h4>{t.title}</h4>
-                  <p className="panel-hint">{dueLine(t, asset)}</p>
-                  {t.notes ? <p>{t.notes}</p> : null}
-                  {doneId === t.id ? (
-                    <form
-                      className="form-grid ms-module-form"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        markDone(t);
-                      }}
-                    >
-                      <div className="field">
-                        <label>Notes for the log</label>
-                        <input
-                          value={doneNotes}
-                          onChange={(e) => setDoneNotes(e.target.value)}
-                          placeholder="Shop, parts, what you found"
-                        />
-                      </div>
-                      <div className="field">
-                        <label>Cost (optional)</label>
-                        <input
-                          value={doneCost}
-                          onChange={(e) => setDoneCost(e.target.value)}
-                          placeholder="87.50"
-                        />
-                      </div>
-                      <button type="submit" className="btn btn-primary btn-sm">
-                        Save to history
-                      </button>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDoneId(null)}>
-                        Cancel
-                      </button>
-                    </form>
-                  ) : (
-                    <div className="hero-actions">
-                      <button type="button" className="btn btn-primary btn-sm" onClick={() => setDoneId(t.id)}>
-                        Mark done
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() =>
-                          persist({
-                            ...value,
-                            tasks: [nextFrom(t, asset), ...value.tasks].slice(0, 80),
-                          })
-                        }
-                      >
-                        Add next
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => {
-                          setEditJobId(t.id);
-                          setJobForm({ ...t });
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() =>
-                          persist({ ...value, tasks: value.tasks.filter((x) => x.id !== t.id) })
-                        }
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </article>
+                <button
+                  key={iso}
+                  type="button"
+                  className={`ms-cal-mcell ${inMonth ? "" : "out"} ${iso === today ? "is-today" : ""}`}
+                  onClick={() => {
+                    setPlanAnchor(iso);
+                    setPlanView("day");
+                  }}
+                >
+                  <em>{Number(iso.slice(8, 10))}</em>
+                  {evs.slice(0, 3).map((t) => (
+                    <span key={t.id} className={`ms-cal-chip kind-maint${jobStatus(t, assets.find((a) => a.id === t.assetId)) === "overdue" ? " is-overdue" : ""}`}>
+                      {t.title}
+                    </span>
+                  ))}
+                  {evs.length > 3 ? <span className="panel-hint">+{evs.length - 3}</span> : null}
+                </button>
               );
             })}
           </div>
+        ) : (
+          <div className="ms-cal-week" style={{ gridTemplateColumns: `3rem repeat(${planDays.length}, minmax(0, 1fr))` }}>
+            <div className="ms-cal-gutter" />
+            {planDays.map((iso) => (
+              <button
+                key={iso}
+                type="button"
+                className={`ms-cal-head ${iso === today ? "is-today" : ""}`}
+                onClick={() => {
+                  setPlanAnchor(iso);
+                  setPlanView("day");
+                }}
+              >
+                {CAL_DAYS[weekdayOf(iso)]} {Number(iso.slice(8, 10))}
+              </button>
+            ))}
+            <div className="ms-cal-gutter">all</div>
+            {planDays.map((iso) => {
+              const allDay = datedTasks.filter((t) => {
+                if (t.dueDate !== iso) return false;
+                const at = hourOf(t.alarmTime || "");
+                return at == null || !CAL_HOURS.includes(at);
+              });
+              return (
+                <div
+                  key={`ad-${iso}`}
+                  className="ms-cal-slot ms-cal-allday"
+                  onClick={() => openPlanSlot(iso, "")}
+                >
+                  {allDay.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`ms-cal-chip kind-maint${jobStatus(t, assets.find((a) => a.id === t.assetId)) === "overdue" ? " is-overdue" : ""}`}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setPlanTaskId(t.id);
+                      }}
+                    >
+                      {t.title}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+            {CAL_HOURS.map((h) => (
+              <div key={`row-${h}`} style={{ display: "contents" }}>
+                <div className="ms-cal-gutter">
+                  {h > 12 ? h - 12 : h}
+                  {h >= 12 ? "p" : "a"}
+                </div>
+                {planDays.map((iso) => {
+                  const timed = datedTasks.filter((t) => t.dueDate === iso && hourOf(t.alarmTime || "") === h);
+                  return (
+                    <div
+                      key={`${iso}-${h}`}
+                      className={`ms-cal-slot${iso === today && h === hourNow ? " is-now" : ""}`}
+                      onClick={() => openPlanSlot(iso, `${String(h).padStart(2, "0")}:00`)}
+                    >
+                      {timed.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className={`ms-cal-chip kind-maint${jobStatus(t, assets.find((a) => a.id === t.assetId)) === "overdue" ? " is-overdue" : ""}`}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            setPlanTaskId(t.id);
+                          }}
+                        >
+                          {formatTime(t.alarmTime)} · {t.title}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         )}
+        {undatedTasks.length ? (
+          <>
+            <h4>No date yet</h4>
+            <p className="panel-hint">These follow miles or hours, so they stay off the grid until you give them a day.</p>
+            <ul className="ms-cal-list">
+              {undatedTasks.map((t) => {
+                const asset = assets.find((a) => a.id === t.assetId);
+                return (
+                  <li key={t.id}>
+                    <div>
+                      <strong>{t.title}</strong>
+                      <span>{dueLine(t, asset)}</span>
+                    </div>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPlanTaskId(t.id)}>
+                      Open
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        ) : null}
 
         {assets.length ? (
           <form
+            id="ms-maint-job"
             className="form-grid ms-module-form"
             onSubmit={(e) => {
               e.preventDefault();
@@ -1149,6 +1302,119 @@ export function MySpaceMaintenanceBoard() {
           ))}
         </div>
       </div>
+      {planTask && typeof document !== "undefined"
+        ? createPortal(
+            <div className="ms-cal-pop-scrim" onClick={() => setPlanTaskId(null)}>
+              <div
+                className="ms-cal-pop"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ms-maint-pop-title"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="ms-cal-pop-bar">
+                  <p className="panel-hint">
+                    {kindMeta(assets.find((a) => a.id === planTask.assetId)?.kind || "other").emoji}{" "}
+                    {assets.find((a) => a.id === planTask.assetId)?.name || "Item"}
+                  </p>
+                  <button type="button" className="ms-cal-pop-close" onClick={() => setPlanTaskId(null)}>
+                    Close
+                  </button>
+                </div>
+                <h3 id="ms-maint-pop-title">{planTask.title}</h3>
+                <p>{dueLine(planTask, assets.find((a) => a.id === planTask.assetId))}</p>
+                {planTask.notes ? <p>{planTask.notes}</p> : null}
+                {doneId === planTask.id ? (
+                  <form
+                    className="form-grid ms-module-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      markDone(planTask);
+                      setPlanTaskId(null);
+                    }}
+                  >
+                    <div className="field">
+                      <label>Notes for the log</label>
+                      <input
+                        value={doneNotes}
+                        onChange={(e) => setDoneNotes(e.target.value)}
+                        placeholder="Shop, parts, what you found"
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Cost (optional)</label>
+                      <input
+                        value={doneCost}
+                        onChange={(e) => setDoneCost(e.target.value)}
+                        placeholder="87.50"
+                      />
+                    </div>
+                    <button type="submit" className="btn btn-primary btn-sm">
+                      Save to history
+                    </button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDoneId(null)}>
+                      Cancel
+                    </button>
+                  </form>
+                ) : (
+                  <div className="hero-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        setDoneNotes("");
+                        setDoneCost("");
+                        setDoneId(planTask.id);
+                      }}
+                    >
+                      Mark done
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        const asset = assets.find((a) => a.id === planTask.assetId);
+                        persist({
+                          ...value,
+                          tasks: [nextFrom(planTask, asset), ...value.tasks].slice(0, 80),
+                        });
+                        setPlanTaskId(null);
+                      }}
+                    >
+                      Add next
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        setEditJobId(planTask.id);
+                        setJobForm({ ...planTask });
+                        setPlanTaskId(null);
+                        document.getElementById("ms-maint-job")?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        persist({ ...value, tasks: value.tasks.filter((x) => x.id !== planTask.id) });
+                        setPlanTaskId(null);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
