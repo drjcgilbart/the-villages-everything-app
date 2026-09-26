@@ -201,14 +201,15 @@ const STARTERS: Record<string, Starter[]> = {
 };
 
 export function emptyGymSet(): GymSet {
-  return { weight: "", reps: "", seconds: "", done: false };
+  return { weight: "", reps: "", seconds: "", rest: "", done: false };
 }
 
-export function plannedSets(count: number, reps: number, seconds?: number): GymSet[] {
+export function plannedSets(count: number, reps: number, seconds?: number, rest?: number): GymSet[] {
   return Array.from({ length: Math.max(1, count) }, () => ({
     weight: "",
-    reps: seconds ? "" : reps || "",
+    reps: reps || "",
     seconds: seconds || "",
+    rest: rest || "",
     done: false,
   }));
 }

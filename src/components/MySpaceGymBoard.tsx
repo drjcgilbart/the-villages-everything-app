@@ -1027,6 +1027,9 @@ export function MySpaceGymBoard() {
                         >
                           {s.done ? "✓" : j + 1}
                         </button>
+                        {s.rest ? (
+                          <span className="panel-hint">Rest {s.rest} sec</span>
+                        ) : null}
                         {isCardio ? (
                           <NearbyPick
                             label="Sec"
@@ -1353,18 +1356,58 @@ export function MySpaceGymBoard() {
                     />
                   </div>
                   <div className="field">
-                    <label>Reps (or sec)</label>
+                    <label>Reps</label>
                     <input
                       type="number"
                       min={0}
-                      value={lift.sets[0]?.reps === "" ? lift.sets[0]?.seconds || "" : lift.sets[0]?.reps}
+                      value={lift.sets[0]?.reps ?? ""}
                       onChange={(e) => {
                         const n = e.target.value === "" ? "" : Number(e.target.value);
-                        const cardio = lift.kind === "cardio";
                         patchLift(i, {
-                          sets: lift.sets.map((s) =>
-                            cardio ? { ...s, seconds: n, reps: "" } : { ...s, reps: n }
-                          ),
+                          sets: lift.sets.map((s) => ({ ...s, reps: n })),
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Weight (lb)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={lift.sets[0]?.weight ?? ""}
+                      onChange={(e) => {
+                        const n = e.target.value === "" ? "" : Number(e.target.value);
+                        patchLift(i, {
+                          sets: lift.sets.map((s) => ({ ...s, weight: n })),
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Time (sec)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={lift.sets[0]?.seconds ?? ""}
+                      onChange={(e) => {
+                        const n = e.target.value === "" ? "" : Number(e.target.value);
+                        patchLift(i, {
+                          sets: lift.sets.map((s) => ({ ...s, seconds: n })),
+                        });
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Rest (sec)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={lift.sets[0]?.rest ?? ""}
+                      onChange={(e) => {
+                        const n = e.target.value === "" ? "" : Number(e.target.value);
+                        patchLift(i, {
+                          sets: lift.sets.map((s) => ({ ...s, rest: n })),
                         });
                       }}
                     />

@@ -202,7 +202,10 @@ export type FoodBoard = {
 export type GymSet = {
   weight: number | "";
   reps: number | "";
+  /** How long the set itself lasts, in seconds. Planks use this. */
   seconds: number | "";
+  /** Rest after the set, in seconds. */
+  rest?: number | "";
   done?: boolean;
 };
 export type GymLift = { name: string; kind: string; equipment: string; sets: GymSet[] };
