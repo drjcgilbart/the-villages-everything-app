@@ -12,6 +12,7 @@ export type GymVoiceCommand =
   | { type: "reps"; value: number }
   | { type: "time"; value: number }
   | { type: "rest"; value: number }
+  | { type: "stopAlarm" }
   | { type: "stop" }
   | { type: "unknown" };
 
@@ -141,6 +142,22 @@ export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
     const tok = tokens[i];
     if (tok.kind === "word") {
       const next = tokens[i + 1];
+      if (tok.value === "stop" || tok.value === "silence" || tok.value === "cancel") {
+        let j = i + 1;
+        const filler = tokens[j];
+        if (filler?.kind === "word" && (filler.value === "the" || filler.value === "my")) j += 1;
+        const what = tokens[j];
+        if (what?.kind === "word" && (what.value === "alarm" || what.value === "timer" || what.value === "rest")) {
+          commands.push({ type: "stopAlarm" });
+          i = j + 1;
+          continue;
+        }
+      }
+      if (tok.value === "alarm" && next?.kind === "word" && next.value === "off") {
+        commands.push({ type: "stopAlarm" });
+        i += 2;
+        continue;
+      }
       if (tok.value === "next" && next?.kind === "word" && (next.value === "exercise" || next.value === "movement")) {
         commands.push({ type: "next", scope: "exercise" });
         i += 2;
@@ -181,6 +198,20 @@ export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
         i += tok.value === "got" ? 2 : 1;
         continue;
       }
+      if (tok.value === "rest") {
+        let j = i + 1;
+        const filler = tokens[j];
+        if (filler?.kind === "word" && (filler.value === "for" || filler.value === "of")) j += 1;
+        const num = tokens[j];
+        if (num?.kind === "num" && inRange(num.value)) {
+          commands.push({ type: "rest", value: Math.round(num.value) });
+          j += 1;
+          const unit = tokens[j];
+          if (unit?.kind === "word" && (TIME_WORDS.has(unit.value) || unit.value === "rest")) j += 1;
+          i = j;
+          continue;
+        }
+      }
       if (next?.kind === "num" && inRange(next.value)) {
         if (UP_WORDS.has(tok.value)) {
           commands.push({ type: "weightDelta", delta: next.value });
@@ -194,11 +225,6 @@ export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
           i += 2;
           const unit = tokens[i];
           if (unit?.kind === "word" && WEIGHT_WORDS.has(unit.value)) i += 1;
-          continue;
-        }
-        if (tok.value === "rest") {
-          commands.push({ type: "rest", value: Math.round(next.value) });
-          i += 2;
           continue;
         }
         if (REP_WORDS.has(tok.value)) {
@@ -239,6 +265,12 @@ export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
         continue;
       }
       if (TIME_WORDS.has(unit.value)) {
+        const after = tokens[i + 2];
+        if (after?.kind === "word" && after.value === "rest") {
+          commands.push({ type: "rest", value: Math.round(tok.value) });
+          i += 3;
+          continue;
+        }
         commands.push({ type: "time", value: Math.round(tok.value) });
         i += 2;
         continue;
@@ -293,12 +325,22 @@ export function applyGymVoice(
   lifts: GymLift[],
   at: GymVoiceAt,
   command: GymVoiceCommand
-): { lifts: GymLift[]; at: GymVoiceAt; message: string; stop?: boolean } {
+): {
+  lifts: GymLift[];
+  at: GymVoiceAt;
+  message: string;
+  stop?: boolean;
+  restSeconds?: number;
+  stopAlarm?: boolean;
+} {
   if (!lifts.length || command.type === "unknown") {
     return { lifts, at, message: "Didn’t catch a command." };
   }
   if (command.type === "stop") {
     return { lifts, at, message: "Microphone off.", stop: true };
+  }
+  if (command.type === "stopAlarm") {
+    return { lifts, at, message: "Alarm off. Rest timer reset.", stopAlarm: true };
   }
   const cur = clampAt(lifts, at);
   const name = lifts[cur.exercise]?.name || "Exercise";
@@ -375,7 +417,8 @@ export function applyGymVoice(
   return {
     lifts: withSet(lifts, cur, { rest: command.value }),
     at: cur,
-    message: `${name}, set ${cur.set + 1}: rest ${command.value} seconds.`,
+    message: `${name}, set ${cur.set + 1}: resting ${command.value} seconds.`,
+    restSeconds: command.value,
   };
 }
 
@@ -384,21 +427,30 @@ export function applyGymVoiceSequence(
   lifts: GymLift[],
   at: GymVoiceAt,
   commands: GymVoiceCommand[]
-): { lifts: GymLift[]; at: GymVoiceAt; message: string; stop?: boolean } {
-  if (!commands.length) return applyGymVoice(lifts, at, { type: "unknown" });
+): {
+  lifts: GymLift[];
+  at: GymVoiceAt;
+  message: string;
+  stop?: boolean;
+  timer: "stop" | { seconds: number } | null;
+} {
+  if (!commands.length) return { ...applyGymVoice(lifts, at, { type: "unknown" }), timer: null };
   let liftsNow = lifts;
   let atNow = at;
   const notes: string[] = [];
   let stop = false;
+  let timer: "stop" | { seconds: number } | null = null;
   for (const command of commands) {
     const result = applyGymVoice(liftsNow, atNow, command);
     liftsNow = result.lifts;
     atNow = result.at;
     if (result.message) notes.push(result.message);
+    if (result.stopAlarm) timer = "stop";
+    if (result.restSeconds) timer = { seconds: result.restSeconds };
     if (result.stop) {
       stop = true;
       break;
     }
   }
-  return { lifts: liftsNow, at: atNow, message: notes.join(" "), stop };
+  return { lifts: liftsNow, at: atNow, message: notes.join(" "), stop, timer };
 }

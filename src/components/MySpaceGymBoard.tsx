@@ -31,6 +31,7 @@ import {
   workoutHasNumbers,
 } from "@/lib/gymCatalog";
 import { applyGymVoiceSequence, parseGymVoiceSequence, type GymVoiceAt } from "@/lib/gymVoice";
+import { playAlarmTone } from "@/lib/mySpaceStorage";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { GymExerciseHowTo } from "@/components/GymExerciseHowTo";
 import {
@@ -311,6 +312,13 @@ function placeLabel(p: { name: string; location?: string }) {
   return p.location ? `${p.name} — ${p.location}` : p.name;
 }
 
+function fmtRest(seconds: number) {
+  const s = Math.max(0, seconds);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+
 /**
  * Gym lanai — same feature set as My Retirement Reboot Gym
  * (Fit Clubs, Planet Fitness, sets & reps, supplements).
@@ -335,6 +343,8 @@ export function MySpaceGymBoard() {
   const [listening, setListening] = useState(false);
   const [voiceHeard, setVoiceHeard] = useState("");
   const [voiceAt, setVoiceAt] = useState<GymVoiceAt>({ exercise: 0, set: 0 });
+  const [restClock, setRestClock] = useState<{ endsAt: number } | { ringing: true } | null>(null);
+  const [restTick, setRestTick] = useState(0);
   const [editRoutineId, setEditRoutineId] = useState<string | null>(null);
   const [addingGym, setAddingGym] = useState(false);
   const [gymBeforeNew, setGymBeforeNew] = useState("");
@@ -362,6 +372,7 @@ export function MySpaceGymBoard() {
   const liftsRef = useRef(lifts);
   const voiceAtRef = useRef(voiceAt);
   const listeningRef = useRef(false);
+  const restAlarmStop = useRef<(() => void) | null>(null);
   const voiceRecRef = useRef<{
     stop: () => void;
     abort: () => void;
@@ -372,6 +383,43 @@ export function MySpaceGymBoard() {
   } | null>(null);
   liftsRef.current = lifts;
   voiceAtRef.current = voiceAt;
+
+  function silenceRestAlarm() {
+    restAlarmStop.current?.();
+    restAlarmStop.current = null;
+  }
+
+  function resetRestTimer() {
+    silenceRestAlarm();
+    setRestClock(null);
+  }
+
+  function startRestTimer(seconds: number) {
+    const total = Math.max(1, Math.min(600, Math.round(seconds)));
+    silenceRestAlarm();
+    setRestClock({ endsAt: Date.now() + total * 1000 });
+  }
+
+  useEffect(() => {
+    if (!restClock || "ringing" in restClock) return;
+    const id = window.setInterval(() => setRestTick((n) => n + 1), 250);
+    return () => window.clearInterval(id);
+  }, [restClock]);
+
+  useEffect(() => {
+    if (!restClock || "ringing" in restClock) return;
+    if (Date.now() < restClock.endsAt) return;
+    setRestClock({ ringing: true });
+  }, [restClock, restTick]);
+
+  useEffect(() => {
+    if (!restClock || !("ringing" in restClock)) return;
+    silenceRestAlarm();
+    restAlarmStop.current = playAlarmTone("urgent", 180);
+    return () => {
+      silenceRestAlarm();
+    };
+  }, [restClock]);
 
   useEffect(() => {
     if (!ready || openedFromPlanner.current) return;
@@ -525,6 +573,7 @@ export function MySpaceGymBoard() {
     setSavedPhoneIds([]);
     stopGymVoice();
     setVoiceAt({ exercise: 0, set: 0 });
+    resetRestTimer();
   }
 
   function writeWorkout(nextLifts: GymLift[], keepOpen: boolean) {
@@ -694,6 +743,8 @@ export function MySpaceGymBoard() {
         setLifts(result.lifts);
         setVoiceAt(result.at);
         setVoiceHeard(result.message);
+        if (result.timer === "stop") resetRestTimer();
+        else if (result.timer) startRestTimer(result.timer.seconds);
         writeWorkout(result.lifts, true);
         jumpTo(`ms-gym-ex-${result.at.exercise}`);
         if (result.stop) stopGymVoice();
@@ -717,7 +768,7 @@ export function MySpaceGymBoard() {
     voiceRecRef.current = rec;
     listeningRef.current = true;
     setListening(true);
-    setVoiceHeard("Listening. Numbers stay on this set. Say 25 pounds, 15 reps, next set, or stop listening.");
+    setVoiceHeard("Listening. Say rest 90 seconds for a countdown. Say stop alarm when it rings.");
     try {
       rec.start();
     } catch {
@@ -990,9 +1041,34 @@ export function MySpaceGymBoard() {
                 <strong>{listening ? "Microphone on" : "Microphone off"}</strong>
                 <span>
                   {voiceHeard ||
-                    "Tap Start listening. A weight or rep count changes only the set you are on. Say 25 pounds, 15 reps, next set, or stop listening."}
+                    "Tap Start listening. Say rest 90 seconds to start a countdown. Say stop alarm when it rings."}
                 </span>
               </div>
+              {restClock ? (
+                <div
+                  className={`ms-gym-rest${"ringing" in restClock ? " is-ringing" : ""}`}
+                  role="status"
+                >
+                  {"ringing" in restClock ? (
+                    <>
+                      <strong>Rest is over</strong>
+                      <span>Say stop alarm, or tap the button.</span>
+                    </>
+                  ) : (
+                    <>
+                      <strong>
+                        {fmtRest(
+                          Math.max(0, Math.ceil((restClock.endsAt - Date.now()) / 1000))
+                        )}
+                      </strong>
+                      <span>Rest countdown</span>
+                    </>
+                  )}
+                  <button type="button" className="btn btn-primary btn-sm" onClick={resetRestTimer}>
+                    Stop alarm
+                  </button>
+                </div>
+              ) : null}
               <div className="field">
                 <label>Gym</label>
                 <select
