@@ -4835,8 +4835,19 @@ button.ms-home-card:hover {
   margin: 0.85rem 0 0.4rem;
 }
 
-#ms-gym-builder {
+#ms-gym-builder,
+#ms-gym-saved,
+#ms-gym-live {
   scroll-margin-top: 6.5rem;
+}
+
+.about-panel.is-editing-routine {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-panel.is-editing-routine #ms-gym-builder.is-open {
+  order: -1;
 }
 
 .ms-gym-routine-chips {

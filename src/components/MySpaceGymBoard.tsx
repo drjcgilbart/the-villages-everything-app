@@ -457,6 +457,7 @@ export function MySpaceGymBoard() {
     setMedia(existing);
     setSavedPhoneIds(phoneLocalIds(existing));
     setTab("today");
+    jumpTo("ms-gym-live");
   }
 
   function resetForm() {
@@ -569,6 +570,7 @@ export function MySpaceGymBoard() {
     persist({ ...value, workouts: [wo, ...workouts].slice(0, 80) });
     setEditWorkoutId(wo.id);
     setTab("today");
+    jumpTo("ms-gym-live");
   }
 
   function upsertRoutine(list: GymRoutine[], name: string, exercises: GymLift[]): GymRoutine[] {
@@ -583,16 +585,17 @@ export function MySpaceGymBoard() {
     return [row, ...list];
   }
 
+  function jumpTo(id: string) {
+    window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
+
   function openRoutineEditor(routine: GymRoutine) {
     setEditRoutineId(routine.id);
     setRoutineName(routine.name);
     setLifts(cloneLifts(routine.exercises));
-    window.setTimeout(() => {
-      document.getElementById("ms-gym-builder")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
+    jumpTo("ms-gym-builder");
   }
 
   function saveRoutineFromLifts(name: string, list: GymLift[]) {
@@ -610,6 +613,7 @@ export function MySpaceGymBoard() {
       : [row, ...routines.filter((r) => r.name.toLowerCase() !== label.toLowerCase())];
     persist({ ...value, routines: next.slice(0, 24) });
     setEditRoutineId(null);
+    jumpTo("ms-gym-saved");
   }
 
   function deleteWorkout(id: string) {
@@ -807,7 +811,7 @@ export function MySpaceGymBoard() {
             </>
           ) : (
             <>
-              <div className="ms-gym-live-head">
+              <div className="ms-gym-live-head" id="ms-gym-live">
                 <div>
                   <p className="ms-golf-kicker">{routineName || "Workout"}</p>
                   <h3 style={{ margin: "0.15rem 0 0" }}>Tap a box when the set is done</h3>
@@ -1188,8 +1192,8 @@ export function MySpaceGymBoard() {
       )}
 
       {tab === "routines" && (
-        <div className="about-panel ms-module">
-          <h3>Your saved routines</h3>
+        <div className={`about-panel ms-module${editRoutineId ? " is-editing-routine" : ""}`}>
+          <h3 id="ms-gym-saved">Your saved routines</h3>
           <p className="panel-hint">
             Dumbbell Upper Body, Dumbbell Lower Body, and Dumbbell Core are here with the
             routines you already saved. Start loads one at the gym. Edit opens it in the builder
@@ -1246,7 +1250,8 @@ export function MySpaceGymBoard() {
               </article>
             ))
           )}
-          <h3 id="ms-gym-builder">
+          <div id="ms-gym-builder" className={editRoutineId ? "is-open" : undefined}>
+          <h3>
             {editRoutineId ? `Editing ${routineName || "routine"}` : "Build a routine once, tap it at the gym"}
           </h3>
           <p className="panel-hint">
@@ -1275,6 +1280,7 @@ export function MySpaceGymBoard() {
                   setEditRoutineId(null);
                   setRoutineName(n);
                   setLifts(seedLiftsFromHistory(workouts, n, starterLifts(n)));
+                  jumpTo("ms-gym-builder");
                 }}
               >
                 {n}
@@ -1393,6 +1399,7 @@ export function MySpaceGymBoard() {
             >
               {editRoutineId ? "Save routine" : "Save routine"}
             </button>
+          </div>
           </div>
         </div>
       )}
