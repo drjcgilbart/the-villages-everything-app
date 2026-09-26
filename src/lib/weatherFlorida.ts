@@ -34,6 +34,9 @@ export type HurricaneStorm = {
   longitude: number | null;
   milesFromVillages: number | null;
   movement: string;
+  advisoryUrl: string;
+  graphicsUrl: string;
+  discussionUrl: string;
 };
 
 export type AirQuality = {
@@ -90,6 +93,17 @@ function parseNhcCoord(raw: string, kind: "lat" | "lon"): number | null {
   if (kind === "lon" && dir === "E") n = n;
   if (!Number.isFinite(n)) return null;
   return n;
+}
+
+function nhcPage(raw: unknown): string {
+  const s = clip(raw, 200);
+  if (!s.startsWith("https://www.nhc.noaa.gov/")) return "";
+  return s;
+}
+
+function nhcNestedUrl(obj: unknown): string {
+  if (!obj || typeof obj !== "object") return "";
+  return nhcPage((obj as { url?: unknown }).url);
 }
 
 function stormClassLabel(code: string) {
@@ -176,8 +190,14 @@ export async function fetchNhcStorms(): Promise<HurricaneStorm[]> {
   };
   const out: HurricaneStorm[] = [];
   for (const s of data.activeStorms || []) {
-    const lat = parseNhcCoord(String(s.latitude || ""), "lat");
-    const lon = parseNhcCoord(String(s.longitude || ""), "lon");
+    const latNum = Number(s.latitudeNumeric);
+    const lonNum = Number(s.longitudeNumeric);
+    const lat =
+      parseNhcCoord(String(s.latitude || ""), "lat") ??
+      (Number.isFinite(latNum) ? latNum : null);
+    const lon =
+      parseNhcCoord(String(s.longitude || ""), "lon") ??
+      (Number.isFinite(lonNum) ? lonNum : null);
     const wind = Number(s.intensity);
     const dir = Number(s.movementDir);
     const spd = Number(s.movementSpeed);
@@ -197,6 +217,9 @@ export async function fetchNhcStorms(): Promise<HurricaneStorm[]> {
       milesFromVillages:
         lat != null && lon != null ? haversineMi(VILLAGES_LAT, VILLAGES_LON, lat, lon) : null,
       movement: dirLabel || "Movement not listed",
+      advisoryUrl: nhcNestedUrl(s.publicAdvisory),
+      graphicsUrl: nhcNestedUrl(s.forecastGraphics),
+      discussionUrl: nhcNestedUrl(s.forecastDiscussion),
     });
   }
   return out;

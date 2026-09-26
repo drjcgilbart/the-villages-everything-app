@@ -6201,11 +6201,76 @@ button.ms-home-card:hover {
 }
 
 .ms-wx-storm-sheet {
-  max-width: min(720px, 100%);
+  width: min(1080px, 100%);
+  max-width: min(1080px, calc(100vw - 1.25rem));
+  height: min(94dvh, 100%);
+  max-height: 94dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ms-wx-storm-sheet .ms-gym-video-bar,
+.ms-wx-storm-sheet .ms-wx-map-tabs,
+.ms-wx-storm-sheet .ms-wx-cane-facts,
+.ms-wx-storm-sheet .ms-gym-video-done {
+  flex: 0 0 auto;
+}
+
+.ms-wx-cane-main {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.45rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.ms-wx-storm-pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(154, 58, 46, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ms-wx-storm-pick:hover,
+.ms-wx-storm-pick:focus-visible {
+  background: #fff;
+  outline: 2px solid #1f6b4a;
+  outline-offset: 1px;
+}
+
+.ms-wx-cane-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.85rem;
+  margin: 0 0 0.45rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.ms-wx-cane-facts strong {
+  margin-right: 0.25rem;
 }
 
 .ms-wx-map-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   margin: 0 0 0.55rem;
 }
@@ -6230,11 +6295,23 @@ button.ms-home-card:hover {
 .ms-wx-map-frame {
   position: relative;
   width: 100%;
-  height: min(48dvh, 22rem);
+  flex: 1 1 auto;
+  min-height: 12rem;
+  height: auto;
   border-radius: 14px;
   overflow: hidden;
   background: #d9e4dc;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.ms-wx-map-frame.is-radar {
+  min-height: 18rem;
+}
+
+.ms-wx-sheet-rest {
+  flex: 0 1 auto;
+  max-height: 11.5rem;
+  overflow: auto;
 }
 
 .ms-wx-map-frame iframe {

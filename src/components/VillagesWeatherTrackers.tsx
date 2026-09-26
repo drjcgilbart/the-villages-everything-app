@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { VillagesForecast } from "@/lib/weather";
 import { heatBand, uvBand } from "@/lib/weather";
-import type { FloridaWeatherExtra } from "@/lib/weatherFlorida";
+import type { FloridaWeatherExtra, HurricaneStorm } from "@/lib/weatherFlorida";
 import { isNativeAppShell, openExternalUrl } from "@/lib/nativeAppShell";
 
 function ExtLink({
@@ -45,6 +45,51 @@ function rainWindow(data: VillagesForecast) {
   return { next, wet, dry };
 }
 
+type CaneLayer = "satellite" | "radar" | "wind";
+
+function windyMap(lat: number, lon: number, zoom: number, overlay: CaneLayer) {
+  const latS = lat.toFixed(3);
+  const lonS = lon.toFixed(3);
+  const params = new URLSearchParams({
+    type: "map",
+    location: "coordinates",
+    metricRain: "in",
+    metricTemp: "°F",
+    metricWind: "mph",
+    zoom: String(zoom),
+    overlay,
+    product: "ecmwf",
+    level: "surface",
+    lat: latS,
+    lon: lonS,
+    detailLat: latS,
+    detailLon: lonS,
+    detail: "",
+    message: "true",
+    marker: "true",
+    calendar: "now",
+    radarRange: "-1",
+    menu: "",
+    pressure: overlay === "wind" ? "true" : "",
+  });
+  return `https://embed.windy.com/embed.html?${params.toString()}`;
+}
+
+function caneCenter(target: HurricaneStorm | "basin") {
+  if (target === "basin" || target.latitude == null || target.longitude == null) {
+    return { lat: 24, lon: -62, zoom: 4 };
+  }
+  const miles = target.milesFromVillages ?? 2000;
+  const zoom = miles < 400 ? 6 : miles < 1200 ? 5 : 4;
+  return { lat: target.latitude, lon: target.longitude, zoom };
+}
+
+function fmtCoord(lat: number, lon: number) {
+  const ns = lat >= 0 ? "N" : "S";
+  const ew = lon >= 0 ? "E" : "W";
+  return `${Math.abs(lat).toFixed(1)}°${ns}, ${Math.abs(lon).toFixed(1)}°${ew}`;
+}
+
 function uvPeakHour(data: VillagesForecast) {
   let best = data.hourly[0];
   for (const h of data.hourly) {
@@ -68,6 +113,8 @@ export function VillagesWeatherTrackers({
 }) {
   const [extra, setExtra] = useState<FloridaWeatherExtra | null>(null);
   const [stormDesk, setStormDesk] = useState(false);
+  const [cane, setCane] = useState<HurricaneStorm | "basin" | null>(null);
+  const [caneLayer, setCaneLayer] = useState<CaneLayer>("satellite");
   const [mapsReady, setMapsReady] = useState(false);
   const [mapLayer, setMapLayer] = useState<"lightning" | "radar">("lightning");
   const [here, setHere] = useState({ lat, lon, label: "The Villages" });
@@ -102,19 +149,29 @@ export function VillagesWeatherTrackers({
     );
   }, [stormDesk, lat, lon, mapPin]);
 
+  const deskOpen = stormDesk || cane != null;
+
+  function openCane(target: HurricaneStorm | "basin") {
+    setCane(target);
+    const miles = target === "basin" ? 9999 : (target.milesFromVillages ?? 9999);
+    setCaneLayer(miles < 400 ? "radar" : "satellite");
+  }
+
   useEffect(() => {
-    if (!stormDesk) return;
+    if (!deskOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setStormDesk(false);
+      if (e.key !== "Escape") return;
+      setStormDesk(false);
+      setCane(null);
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [stormDesk]);
+  }, [deskOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -225,42 +282,54 @@ export function VillagesWeatherTrackers({
             nwsCane.length || (extra?.storms.length ?? 0) ? "is-alert" : "is-ok"
           }`}
         >
-          <p className="ms-wx-kicker">Hurricane desk</p>
-          {nwsCane[0] ? (
-            <>
-              <h4>{nwsCane[0].event}</h4>
-              <p>{nwsCane[0].headline}</p>
-            </>
-          ) : extra?.storms.length ? (
-            <>
-              <h4>
-                {extra.storms[0].classificationLabel} {extra.storms[0].name}
-              </h4>
-              <p>
-                {extra.storms[0].windMph != null
-                  ? `${extra.storms[0].windMph} mph winds`
-                  : extra.storms[0].classificationLabel}
-                {extra.storms[0].milesFromVillages != null
-                  ? ` · about ${extra.storms[0].milesFromVillages} miles from The Villages`
-                  : ""}
-                . {extra.storms[0].movement}.
-              </p>
-            </>
-          ) : (
-            <>
-              <h4>Atlantic quiet here</h4>
-              <p>
-                No tropical watch or warning on the local NWS feed, and no named
-                storm is flagged as nearby in the NHC list.
-              </p>
-            </>
-          )}
+          <button
+            type="button"
+            className="ms-wx-cane-main"
+            onClick={() => openCane(extra?.storms[0] ?? "basin")}
+          >
+            <p className="ms-wx-kicker">Hurricane desk</p>
+            {nwsCane[0] ? (
+              <>
+                <h4>{nwsCane[0].event}</h4>
+                <p>{nwsCane[0].headline}</p>
+              </>
+            ) : extra?.storms.length ? (
+              <>
+                <h4>
+                  {extra.storms[0].classificationLabel} {extra.storms[0].name}
+                </h4>
+                <p>
+                  {extra.storms[0].windMph != null
+                    ? `${extra.storms[0].windMph} mph winds`
+                    : extra.storms[0].classificationLabel}
+                  {extra.storms[0].milesFromVillages != null
+                    ? ` · about ${extra.storms[0].milesFromVillages} miles from The Villages`
+                    : ""}
+                  . {extra.storms[0].movement}.
+                </p>
+              </>
+            ) : (
+              <>
+                <h4>Atlantic quiet here</h4>
+                <p>
+                  No tropical watch or warning on the local NWS feed, and no named
+                  storm is flagged as nearby in the NHC list.
+                </p>
+              </>
+            )}
+            <span className="ms-wx-card-cta">Open live map →</span>
+          </button>
           {extra?.storms && extra.storms.length > 1 ? (
             <ul className="ms-wx-storm-list">
-              {extra.storms.slice(1, 4).map((s) => (
+              {extra.storms.slice(1).map((s) => (
                 <li key={s.id}>
-                  {s.classificationLabel} {s.name}
-                  {s.milesFromVillages != null ? ` · ${s.milesFromVillages} mi` : ""}
+                  <button type="button" className="ms-wx-storm-pick" onClick={() => openCane(s)}>
+                    <span>
+                      {s.classificationLabel} {s.name}
+                      {s.milesFromVillages != null ? ` · ${s.milesFromVillages} mi` : ""}
+                    </span>
+                    <span aria-hidden="true">→</span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -375,7 +444,7 @@ export function VillagesWeatherTrackers({
                     Radar
                   </button>
                 </div>
-                <div className="ms-wx-map-frame">
+                <div className={`ms-wx-map-frame${mapLayer === "radar" ? " is-radar" : ""}`}>
                   {mapsReady && mapPin ? (
                     <>
                       <iframe
@@ -386,7 +455,7 @@ export function VillagesWeatherTrackers({
                       <iframe
                         title="Live weather radar"
                         className={mapLayer === "radar" ? "is-show" : "is-hide"}
-                        src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=in&metricTemp=%C2%B0F&metricWind=mph&zoom=8&overlay=radar&product=ecmwf&level=surface&lat=${mapPin.lat.toFixed(3)}&lon=${mapPin.lon.toFixed(3)}&detailLat=${mapPin.lat.toFixed(3)}&detailLon=${mapPin.lon.toFixed(3)}&detail=true&message=true`}
+                        src={windyMap(mapPin.lat, mapPin.lon, 8, "radar")}
                       />
                     </>
                   ) : (
@@ -395,6 +464,7 @@ export function VillagesWeatherTrackers({
                     </p>
                   )}
                 </div>
+                <div className="ms-wx-sheet-rest">
                 <h4 className="ms-wx-outage-head">Power outages</h4>
                 <p className="panel-hint">
                   The Villages is mostly SECO Energy, with Duke Energy and
@@ -436,10 +506,172 @@ export function VillagesWeatherTrackers({
                     Google News · local outages
                   </ExtLink>
                 </div>
+                </div>
                 <button
                   type="button"
                   className="btn btn-primary ms-gym-video-done"
                   onClick={() => setStormDesk(false)}
+                >
+                  Done — back to weather
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+      {cane && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="ms-gym-video-scrim"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ms-wx-cane-title"
+              onClick={() => setCane(null)}
+            >
+              <div
+                className="ms-gym-video-sheet ms-wx-storm-sheet"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="ms-gym-video-bar">
+                  <div>
+                    <p className="ms-wx-kicker">Hurricane desk</p>
+                    <h3 id="ms-wx-cane-title">
+                      {cane === "basin"
+                        ? "Hurricane activity"
+                        : `${cane.classificationLabel} ${cane.name}`}
+                    </h3>
+                    <p className="panel-hint" style={{ margin: 0 }}>
+                      {cane === "basin"
+                        ? "Live satellite across the Atlantic. Choose a storm for a closer map."
+                        : "Centered on this storm. Satellite shows the clouds over open water. Radar fills in near the U.S. coast."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="ms-gym-video-close"
+                    onClick={() => setCane(null)}
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="ms-wx-map-tabs is-wrap">
+                  <button
+                    type="button"
+                    className={cane === "basin" ? "is-on" : ""}
+                    onClick={() => openCane("basin")}
+                  >
+                    Atlantic
+                  </button>
+                  {(extra?.storms || []).map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className={cane !== "basin" && cane.id === s.id ? "is-on" : ""}
+                      onClick={() => openCane(s)}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="ms-wx-map-tabs">
+                  <button
+                    type="button"
+                    className={caneLayer === "satellite" ? "is-on" : ""}
+                    onClick={() => setCaneLayer("satellite")}
+                  >
+                    Satellite
+                  </button>
+                  <button
+                    type="button"
+                    className={caneLayer === "radar" ? "is-on" : ""}
+                    onClick={() => setCaneLayer("radar")}
+                  >
+                    Radar
+                  </button>
+                  <button
+                    type="button"
+                    className={caneLayer === "wind" ? "is-on" : ""}
+                    onClick={() => setCaneLayer("wind")}
+                  >
+                    Wind
+                  </button>
+                </div>
+                {cane !== "basin" ? (
+                  <ul className="ms-wx-cane-facts">
+                    <li>
+                      <strong>Winds</strong>{" "}
+                      {cane.windMph != null ? `${cane.windMph} mph` : "not listed"}
+                    </li>
+                    <li>
+                      <strong>Pressure</strong>{" "}
+                      {cane.pressureMb != null ? `${cane.pressureMb} mb` : "not listed"}
+                    </li>
+                    <li>
+                      <strong>Distance</strong>{" "}
+                      {cane.milesFromVillages != null
+                        ? `${cane.milesFromVillages} mi from The Villages`
+                        : "not listed"}
+                    </li>
+                    <li>
+                      <strong>Motion</strong> {cane.movement}
+                    </li>
+                    {cane.latitude != null && cane.longitude != null ? (
+                      <li>
+                        <strong>Position</strong> {fmtCoord(cane.latitude, cane.longitude)}
+                      </li>
+                    ) : null}
+                  </ul>
+                ) : null}
+                <div className="ms-wx-map-frame is-radar">
+                  <iframe
+                    title={
+                      cane === "basin"
+                        ? "Live Atlantic hurricane map"
+                        : `Live map of ${cane.name}`
+                    }
+                    className="is-show"
+                    src={windyMap(
+                      caneCenter(cane).lat,
+                      caneCenter(cane).lon,
+                      caneCenter(cane).zoom,
+                      caneLayer
+                    )}
+                  />
+                </div>
+                <div className="ms-wx-sheet-rest">
+                  <div className="ms-wx-outage-links">
+                    {cane !== "basin" && cane.advisoryUrl ? (
+                      <ExtLink className="btn btn-primary btn-sm" href={cane.advisoryUrl}>
+                        Public advisory
+                      </ExtLink>
+                    ) : null}
+                    {cane !== "basin" && cane.graphicsUrl ? (
+                      <ExtLink className="btn btn-ghost btn-sm" href={cane.graphicsUrl}>
+                        Track and cone
+                      </ExtLink>
+                    ) : null}
+                    {cane !== "basin" && cane.discussionUrl ? (
+                      <ExtLink className="btn btn-ghost btn-sm" href={cane.discussionUrl}>
+                        Forecast discussion
+                      </ExtLink>
+                    ) : null}
+                    <ExtLink className="btn btn-ghost btn-sm" href="https://www.nhc.noaa.gov/">
+                      National Hurricane Center
+                    </ExtLink>
+                    {cane === "basin" ? (
+                      <ExtLink
+                        className="btn btn-ghost btn-sm"
+                        href="https://www.nhc.noaa.gov/gtwo.php"
+                      >
+                        Atlantic outlook
+                      </ExtLink>
+                    ) : null}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary ms-gym-video-done"
+                  onClick={() => setCane(null)}
                 >
                   Done — back to weather
                 </button>
