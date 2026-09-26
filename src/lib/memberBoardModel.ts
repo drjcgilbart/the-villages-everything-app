@@ -208,7 +208,14 @@ export type GymSet = {
   rest?: number | "";
   done?: boolean;
 };
-export type GymLift = { name: string; kind: string; equipment: string; sets: GymSet[] };
+export type GymLift = {
+  name: string;
+  kind: string;
+  equipment: string;
+  sets: GymSet[];
+  /** Extra words after the numbers, such as "per leg" or "each side". */
+  note?: string;
+};
 export type GymRoutine = {
   id: string;
   name: string;
@@ -1063,6 +1070,7 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
             name: clip(l?.name, 80),
             kind: clip(l?.kind, 20) || "machine",
             equipment: clip(l?.equipment, 80),
+            note: clip(l?.note, 40),
             sets: Array.isArray(l?.sets)
               ? l.sets.slice(0, 20).map((s) => ({
                   weight: s?.weight ?? "",
@@ -1102,6 +1110,7 @@ function gymLifts(raw: unknown): GymLift[] {
         name: clip(row?.name, 80),
         kind: clip(row?.kind, 20) || "machine",
         equipment: clip(row?.equipment, 80),
+        note: clip(row?.note, 40),
         sets: Array.isArray(row?.sets)
           ? row.sets.slice(0, 20).map((s) => ({
               weight: s?.weight ?? "",

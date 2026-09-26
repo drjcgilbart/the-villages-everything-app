@@ -1212,6 +1212,7 @@ export function MySpaceGymBoard() {
                         {s.rest ? (
                           <span className="panel-hint">Rest {s.rest} sec</span>
                         ) : null}
+                        {lift.note ? <span className="panel-hint">{lift.note}</span> : null}
                         {isCardio ? (
                           <NearbyPick
                             label="Sec"
@@ -1552,6 +1553,14 @@ export function MySpaceGymBoard() {
                           sets: lift.sets.map((s) => ({ ...s, reps: n })),
                         });
                       }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Note</label>
+                    <input
+                      value={lift.note || ""}
+                      onChange={(e) => patchLift(i, { note: e.target.value.slice(0, 40) })}
+                      placeholder="per leg, per side, each arm"
                     />
                   </div>
                   <div className="field">
