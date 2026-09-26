@@ -1,4 +1,4 @@
-import type { GymLift, GymSet, GymWorkout } from "@/lib/memberBoardModel";
+import type { GymLift, GymRoutine, GymSet, GymWorkout } from "@/lib/memberBoardModel";
 
 export const ROUTINE_PRESETS = [
   "Leg Day",
@@ -211,6 +211,80 @@ export function plannedSets(count: number, reps: number, seconds?: number): GymS
     seconds: seconds || "",
     done: false,
   }));
+}
+
+function planLift(
+  name: string,
+  sets: number,
+  reps: number,
+  seconds?: number,
+  kind = "free"
+): GymLift {
+  return {
+    name,
+    kind,
+    equipment: kind === "bodyweight" ? "" : "dumbbell",
+    sets: plannedSets(sets, reps, seconds),
+  };
+}
+
+const REST = "rest 60–90 sec";
+
+/** Ara's one-hour dumbbell plan. Rep targets are the top of each range. */
+export function dumbbellPlanRoutines(): GymRoutine[] {
+  const rules =
+    "About 1 hour. Light dumbbells you can control. Stop if it hurts sharp. Alternate days and take two full rest days a week; the other easy days are a 30-minute walk or light stretching.";
+  return [
+    {
+      id: "rt-dumbbell-upper",
+      name: "Dumbbell Upper Body",
+      exercises: [
+        planLift(rules, 1, 1, undefined, "bodyweight"),
+        planLift("Warm-up: arm circles and shoulder rolls, 30 sec each", 1, 0, 30, "bodyweight"),
+        planLift(`Dumbbell shoulder press · 10–12 · ${REST}`, 3, 12),
+        planLift(`Bent-over rows · 10–12 · ${REST}`, 3, 12),
+        planLift(`Floor or bench chest press · 10–12 · ${REST}`, 3, 12),
+        planLift(`Bicep curls · 10–12 · ${REST}`, 3, 12),
+        planLift(`Tricep kickbacks · 10–12 · ${REST}`, 3, 12),
+        planLift(`Lateral raises · 10–12 · ${REST}`, 3, 12),
+        planLift(`Hammer curls · 10–12 · ${REST}`, 3, 12),
+        planLift(`Wrist curls · 10–12 · ${REST}`, 3, 12),
+        planLift("Cool-down: gentle stretching, 5 minutes. Shoulders, back, chest, biceps, triceps, and forearms.", 1, 0, 300, "bodyweight"),
+      ],
+    },
+    {
+      id: "rt-dumbbell-lower",
+      name: "Dumbbell Lower Body",
+      exercises: [
+        planLift(rules, 1, 1, undefined, "bodyweight"),
+        planLift("Warm-up: leg swings and bodyweight squats, 30 sec each", 1, 0, 30, "bodyweight"),
+        planLift(`Goblet squats · 10–12 · ${REST}`, 3, 12),
+        planLift(`Romanian deadlifts · 10–12 · ${REST}`, 3, 12),
+        planLift(`Reverse lunges · 10 per leg · ${REST}`, 3, 10),
+        planLift(`Step-ups onto a sturdy chair · 10 per leg · ${REST}`, 3, 10),
+        planLift(`Glute bridges · 12–15 · ${REST}`, 3, 15, undefined, "bodyweight"),
+        planLift(`Calf raises · 15 · ${REST}`, 3, 15),
+        planLift("Cool-down: hip and hamstring stretches, 5 minutes", 1, 0, 300, "bodyweight"),
+      ],
+    },
+    {
+      id: "rt-dumbbell-core",
+      name: "Dumbbell Core",
+      exercises: [
+        planLift(`${rules} The extra round of planks and side planks fills out the hour.`, 1, 1, undefined, "bodyweight"),
+        planLift("Warm-up: cat-cow and dead bug, 10 each", 1, 10, undefined, "bodyweight"),
+        planLift(`Dead bug · 10 per side · ${REST}`, 3, 10, undefined, "bodyweight"),
+        planLift(`Bird dog · 10 per side · ${REST}`, 3, 10, undefined, "bodyweight"),
+        planLift(`Glute bridge · 12 · ${REST}`, 3, 12, undefined, "bodyweight"),
+        planLift(`Plank · 20–30 sec · ${REST}`, 3, 0, 30, "bodyweight"),
+        planLift(`Side plank · 15–20 sec per side · ${REST}`, 3, 0, 20, "bodyweight"),
+        planLift(`Dead bug, round 2 · 10 per side · ${REST}`, 3, 10, undefined, "bodyweight"),
+        planLift(`Plank, round 2 · 20–30 sec · ${REST}`, 3, 0, 30, "bodyweight"),
+        planLift(`Side plank, round 2 · 15–20 sec per side · ${REST}`, 3, 0, 20, "bodyweight"),
+        planLift("Cool-down: child's pose and knee-to-chest, 5 minutes", 1, 0, 300, "bodyweight"),
+      ],
+    },
+  ];
 }
 
 export function starterLifts(routineName: string): GymLift[] {

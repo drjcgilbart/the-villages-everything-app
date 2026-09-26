@@ -25,6 +25,7 @@ import {
   ROUTINE_PRESETS,
   seedLiftsFromHistory,
   sessionProgress,
+  dumbbellPlanRoutines,
   starterLifts,
   workoutHasNumbers,
 } from "@/lib/gymCatalog";
@@ -352,6 +353,7 @@ export function MySpaceGymBoard() {
   const gyms = value.gyms || [];
   const workouts = value.workouts || [];
   const openedFromPlanner = useRef(false);
+  const seededDumbbell = useRef(false);
 
   useEffect(() => {
     if (!ready || openedFromPlanner.current) return;
@@ -372,6 +374,21 @@ export function MySpaceGymBoard() {
     // loadWorkout is stable enough for the one handoff from the planner.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, workouts]);
+
+  useEffect(() => {
+    if (!ready || seededDumbbell.current) return;
+    const have = new Set((value.routines || []).map((r) => r.name.toLowerCase()));
+    const add = dumbbellPlanRoutines().filter((r) => !have.has(r.name.toLowerCase()));
+    seededDumbbell.current = true;
+    if (!add.length) return;
+    persist({
+      ...value,
+      routines: [...add, ...(value.routines || [])].slice(0, 24),
+    });
+    // Seed once when the gym board finishes loading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
   const routines = value.routines || [];
   const supplements = value.supplements || [];
   const supplementLogs = value.supplementLogs || [];
