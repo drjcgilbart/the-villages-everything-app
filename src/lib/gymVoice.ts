@@ -75,38 +75,183 @@ function firstNumber(text: string): number | null {
   return null;
 }
 
-/** Turn one spoken phrase into a gym command. Unknown speech does not change the workout. */
-export function parseGymVoice(raw: string): GymVoiceCommand {
-  const text = String(raw || "")
+const WEIGHT_WORDS = new Set(["weight", "pounds", "pound", "lbs", "lb"]);
+const REP_WORDS = new Set(["reps", "rep"]);
+const TIME_WORDS = new Set(["time", "seconds", "second", "secs", "sec"]);
+const UP_WORDS = new Set(["add", "plus", "increase", "up"]);
+const DOWN_WORDS = new Set(["minus", "decrease", "down", "drop", "less"]);
+
+type VoiceTok = { kind: "num"; value: number } | { kind: "word"; value: string };
+
+function normalizeVoice(raw: string) {
+  return String(raw || "")
     .toLowerCase()
     .replace(/[^a-z0-9.\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!text) return { type: "unknown" };
-  if (
+}
+
+function isStopPhrase(text: string) {
+  return (
     /\b(stop listening|microphone off|mic off|turn off the microphone|turn off microphone|stop microphone|pause listening)\b/.test(
       text
     ) ||
     text === "pause" ||
     text === "stop"
-  ) {
-    return { type: "stop" };
-  }
-  if (/\bnext exercise\b|\bnext movement\b/.test(text)) return { type: "next", scope: "exercise" };
-  if (/\b(next set|next|skip)\b/.test(text)) return { type: "next", scope: "set" };
-  if (/\b(previous|go back|back|last set)\b/.test(text)) return { type: "back" };
-  if (/\b(undo|not done|uncheck)\b/.test(text)) return { type: "undo" };
-  if (/\b(done|check|finished|complete|got it)\b/.test(text)) return { type: "done" };
+  );
+}
 
-  const amount = firstNumber(text);
-  if (amount == null || amount < 0 || amount > 999) return { type: "unknown" };
-  if (/\b(rest)\b/.test(text)) return { type: "rest", value: Math.round(amount) };
-  if (/\b(add|plus|increase|up)\b/.test(text)) return { type: "weightDelta", delta: amount };
-  if (/\b(minus|decrease|down|drop|less)\b/.test(text)) return { type: "weightDelta", delta: -amount };
-  if (/\b(reps|rep)\b/.test(text)) return { type: "reps", value: Math.round(amount) };
-  if (/\b(time|seconds|second|secs|sec)\b/.test(text)) return { type: "time", value: Math.round(amount) };
-  if (/\b(weight|pounds|pound|lbs|lb)\b/.test(text)) return { type: "weight", value: amount };
-  return { type: "unknown" };
+function tokenizeVoice(text: string): VoiceTok[] {
+  const raw = text.split(/\s+/).filter(Boolean);
+  const out: VoiceTok[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    if (TENS[raw[i]] != null && ONES[raw[i + 1]] != null) {
+      out.push({ kind: "num", value: TENS[raw[i]] + ONES[raw[i + 1]] });
+      i += 1;
+      continue;
+    }
+    if (/^\d+(?:\.\d+)?$/.test(raw[i])) {
+      out.push({ kind: "num", value: Number(raw[i]) });
+      continue;
+    }
+    const one = wordsToNumber(raw[i]);
+    if (one != null) {
+      out.push({ kind: "num", value: one });
+      continue;
+    }
+    out.push({ kind: "word", value: raw[i] });
+  }
+  return out;
+}
+
+function inRange(n: number) {
+  return n >= 0 && n <= 999;
+}
+
+/** Turn one spoken phrase into the commands it contains, in order. */
+export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
+  const text = normalizeVoice(raw);
+  if (!text) return [{ type: "unknown" }];
+  if (isStopPhrase(text)) return [{ type: "stop" }];
+
+  const tokens = tokenizeVoice(text);
+  const commands: GymVoiceCommand[] = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const tok = tokens[i];
+    if (tok.kind === "word") {
+      const next = tokens[i + 1];
+      if (tok.value === "next" && next?.kind === "word" && (next.value === "exercise" || next.value === "movement")) {
+        commands.push({ type: "next", scope: "exercise" });
+        i += 2;
+        continue;
+      }
+      if (tok.value === "next" && next?.kind === "word" && next.value === "set") {
+        commands.push({ type: "next", scope: "set" });
+        i += 2;
+        continue;
+      }
+      if (tok.value === "next" || tok.value === "skip") {
+        commands.push({ type: "next", scope: "set" });
+        i += 1;
+        continue;
+      }
+      if (tok.value === "go" && next?.kind === "word" && next.value === "back") {
+        commands.push({ type: "back" });
+        i += 2;
+        continue;
+      }
+      if (tok.value === "last" && next?.kind === "word" && next.value === "set") {
+        commands.push({ type: "back" });
+        i += 2;
+        continue;
+      }
+      if (tok.value === "back" || tok.value === "previous") {
+        commands.push({ type: "back" });
+        i += 1;
+        continue;
+      }
+      if (tok.value === "undo" || tok.value === "uncheck" || (tok.value === "not" && next?.kind === "word" && next.value === "done")) {
+        commands.push({ type: "undo" });
+        i += tok.value === "not" ? 2 : 1;
+        continue;
+      }
+      if (tok.value === "done" || tok.value === "finished" || tok.value === "complete" || (tok.value === "got" && next?.kind === "word" && next.value === "it") || tok.value === "check") {
+        commands.push({ type: "done" });
+        i += tok.value === "got" ? 2 : 1;
+        continue;
+      }
+      if (next?.kind === "num" && inRange(next.value)) {
+        if (UP_WORDS.has(tok.value)) {
+          commands.push({ type: "weightDelta", delta: next.value });
+          i += 2;
+          const unit = tokens[i];
+          if (unit?.kind === "word" && WEIGHT_WORDS.has(unit.value)) i += 1;
+          continue;
+        }
+        if (DOWN_WORDS.has(tok.value)) {
+          commands.push({ type: "weightDelta", delta: -next.value });
+          i += 2;
+          const unit = tokens[i];
+          if (unit?.kind === "word" && WEIGHT_WORDS.has(unit.value)) i += 1;
+          continue;
+        }
+        if (tok.value === "rest") {
+          commands.push({ type: "rest", value: Math.round(next.value) });
+          i += 2;
+          continue;
+        }
+        if (REP_WORDS.has(tok.value)) {
+          commands.push({ type: "reps", value: Math.round(next.value) });
+          i += 2;
+          continue;
+        }
+        if (TIME_WORDS.has(tok.value)) {
+          commands.push({ type: "time", value: Math.round(next.value) });
+          i += 2;
+          continue;
+        }
+        if (WEIGHT_WORDS.has(tok.value)) {
+          commands.push({ type: "weight", value: next.value });
+          i += 2;
+          continue;
+        }
+      }
+      i += 1;
+      continue;
+    }
+
+    const unit = tokens[i + 1];
+    if (unit?.kind === "word" && inRange(tok.value)) {
+      if (WEIGHT_WORDS.has(unit.value)) {
+        commands.push({ type: "weight", value: tok.value });
+        i += 2;
+        continue;
+      }
+      if (REP_WORDS.has(unit.value)) {
+        commands.push({ type: "reps", value: Math.round(tok.value) });
+        i += 2;
+        continue;
+      }
+      if (unit.value === "rest") {
+        commands.push({ type: "rest", value: Math.round(tok.value) });
+        i += 2;
+        continue;
+      }
+      if (TIME_WORDS.has(unit.value)) {
+        commands.push({ type: "time", value: Math.round(tok.value) });
+        i += 2;
+        continue;
+      }
+    }
+    i += 1;
+  }
+  return commands.length ? commands : [{ type: "unknown" }];
+}
+
+/** Turn one spoken phrase into a gym command. Unknown speech does not change the workout. */
+export function parseGymVoice(raw: string): GymVoiceCommand {
+  return parseGymVoiceSequence(raw)[0] || { type: "unknown" };
 }
 
 function clampAt(lifts: GymLift[], at: GymVoiceAt): GymVoiceAt {
@@ -122,14 +267,6 @@ function withSet(lifts: GymLift[], at: GymVoiceAt, patch: Partial<GymSet>): GymL
           ...lift,
           sets: lift.sets.map((set, j) => (j === at.set ? { ...set, ...patch } : set)),
         }
-      : lift
-  );
-}
-
-function withExerciseSets(lifts: GymLift[], exercise: number, patch: Partial<GymSet>): GymLift[] {
-  return lifts.map((lift, i) =>
-    i === exercise
-      ? { ...lift, sets: lift.sets.map((set) => ({ ...set, ...patch })) }
       : lift
   );
 }
@@ -207,37 +344,61 @@ export function applyGymVoice(
   }
   if (command.type === "weight") {
     return {
-      lifts: withExerciseSets(lifts, cur.exercise, { weight: command.value }),
+      lifts: withSet(lifts, cur, { weight: command.value }),
       at: cur,
-      message: `${name} set to ${command.value} pounds.`,
+      message: `${name}, set ${cur.set + 1}: ${command.value} pounds.`,
     };
   }
   if (command.type === "weightDelta") {
     const current = Number(lifts[cur.exercise]?.sets[cur.set]?.weight) || 0;
     const value = Math.max(0, Math.round((current + command.delta) * 10) / 10);
     return {
-      lifts: withExerciseSets(lifts, cur.exercise, { weight: value }),
+      lifts: withSet(lifts, cur, { weight: value }),
       at: cur,
-      message: `${name} set to ${value} pounds.`,
+      message: `${name}, set ${cur.set + 1}: ${value} pounds.`,
     };
   }
   if (command.type === "reps") {
     return {
-      lifts: withExerciseSets(lifts, cur.exercise, { reps: command.value }),
+      lifts: withSet(lifts, cur, { reps: command.value }),
       at: cur,
-      message: `${name} set to ${command.value} reps.`,
+      message: `${name}, set ${cur.set + 1}: ${command.value} reps.`,
     };
   }
   if (command.type === "time") {
     return {
-      lifts: withExerciseSets(lifts, cur.exercise, { seconds: command.value }),
+      lifts: withSet(lifts, cur, { seconds: command.value }),
       at: cur,
-      message: `${name} set to ${command.value} seconds.`,
+      message: `${name}, set ${cur.set + 1}: ${command.value} seconds.`,
     };
   }
   return {
-    lifts: withExerciseSets(lifts, cur.exercise, { rest: command.value }),
+    lifts: withSet(lifts, cur, { rest: command.value }),
     at: cur,
-    message: `${name} rest set to ${command.value} seconds.`,
+    message: `${name}, set ${cur.set + 1}: rest ${command.value} seconds.`,
   };
+}
+
+/** Apply every command in one phrase. Each number stays on the set you are on. */
+export function applyGymVoiceSequence(
+  lifts: GymLift[],
+  at: GymVoiceAt,
+  commands: GymVoiceCommand[]
+): { lifts: GymLift[]; at: GymVoiceAt; message: string; stop?: boolean } {
+  if (!commands.length) return applyGymVoice(lifts, at, { type: "unknown" });
+  let liftsNow = lifts;
+  let atNow = at;
+  const notes: string[] = [];
+  let stop = false;
+  for (const command of commands) {
+    const result = applyGymVoice(liftsNow, atNow, command);
+    liftsNow = result.lifts;
+    atNow = result.at;
+    if (result.message) notes.push(result.message);
+    if (result.stop) {
+      stop = true;
+      break;
+    }
+  }
+  return { lifts: liftsNow, at: atNow, message: notes.join(" "), stop };
 }

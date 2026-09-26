@@ -30,7 +30,7 @@ import {
   starterLifts,
   workoutHasNumbers,
 } from "@/lib/gymCatalog";
-import { applyGymVoice, parseGymVoice, type GymVoiceAt } from "@/lib/gymVoice";
+import { applyGymVoiceSequence, parseGymVoiceSequence, type GymVoiceAt } from "@/lib/gymVoice";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { GymExerciseHowTo } from "@/components/GymExerciseHowTo";
 import {
@@ -682,13 +682,13 @@ export function MySpaceGymBoard() {
         if (!piece?.isFinal) continue;
         const said = String(piece[0]?.transcript || "").trim();
         if (!said) continue;
-        const command = parseGymVoice(said);
-        if (command.type === "stop") {
+        const commands = parseGymVoiceSequence(said);
+        if (commands.some((command) => command.type === "stop")) {
           setVoiceHeard("Microphone off.");
           stopGymVoice();
           return;
         }
-        const result = applyGymVoice(liftsRef.current, voiceAtRef.current, command);
+        const result = applyGymVoiceSequence(liftsRef.current, voiceAtRef.current, commands);
         liftsRef.current = result.lifts;
         voiceAtRef.current = result.at;
         setLifts(result.lifts);
@@ -717,7 +717,7 @@ export function MySpaceGymBoard() {
     voiceRecRef.current = rec;
     listeningRef.current = true;
     setListening(true);
-    setVoiceHeard("Listening. Say done, next, weight 25, rest 90, or stop listening.");
+    setVoiceHeard("Listening. Numbers stay on this set. Say 25 pounds, 15 reps, next set, or stop listening.");
     try {
       rec.start();
     } catch {
@@ -990,7 +990,7 @@ export function MySpaceGymBoard() {
                 <strong>{listening ? "Microphone on" : "Microphone off"}</strong>
                 <span>
                   {voiceHeard ||
-                    "Tap Start listening, then say done, next, weight 25, add 5 pounds, reps 12, time 30, rest 90, or stop listening."}
+                    "Tap Start listening. A weight or rep count changes only the set you are on. Say 25 pounds, 15 reps, next set, or stop listening."}
                 </span>
               </div>
               <div className="field">
