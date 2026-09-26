@@ -116,7 +116,7 @@ export const EXERCISE_NAMES = [...new Set(Object.values(EQUIPMENT).flat())].sort
 
 function rememberableExerciseName(name: string) {
   const label = name.trim();
-  if (!label || label.length > 48) return "";
+  if (label.length < 3 || label.length > 48) return "";
   if (label.includes("·")) return "";
   if (/^(about |warm-up|cool-down|rules:)/i.test(label)) return "";
   return label;

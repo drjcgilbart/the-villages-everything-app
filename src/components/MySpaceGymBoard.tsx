@@ -417,11 +417,10 @@ export function MySpaceGymBoard() {
     () =>
       exerciseChoices([
         ...(value.customExercises || []),
-        ...lifts.map((lift) => lift.name),
         ...routines.flatMap((routine) => routine.exercises.map((exercise) => exercise.name)),
         ...workouts.flatMap((workout) => (workout.exercises || []).map((exercise) => exercise.name)),
       ]),
-    [value.customExercises, lifts, routines, workouts]
+    [value.customExercises, routines, workouts]
   );
   const supplements = value.supplements || [];
   const supplementLogs = value.supplementLogs || [];
@@ -446,7 +445,7 @@ export function MySpaceGymBoard() {
 
   function rememberExercise(name: string) {
     const label = name.trim().slice(0, 48);
-    if (!label || label.includes("·") || /^(about |warm-up|cool-down|rules:)/i.test(label)) return;
+    if (label.length < 3 || label.includes("·") || /^(about |warm-up|cool-down|rules:)/i.test(label)) return;
     const known = new Set(
       [...EXERCISE_NAMES, ...(value.customExercises || [])].map((item) => item.toLowerCase())
     );
@@ -760,7 +759,7 @@ export function MySpaceGymBoard() {
       .map((exercise) => exercise.name.trim().slice(0, 48))
       .filter(
         (name) =>
-          name &&
+          name.length >= 3 &&
           !name.includes("·") &&
           !/^(about |warm-up|cool-down|rules:)/i.test(name) &&
           !known.has(name.toLowerCase())
