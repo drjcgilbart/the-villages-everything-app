@@ -5623,6 +5623,22 @@ button.ms-home-card:hover {
   font-weight: 800;
 }
 
+.ms-dose-rate-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ms-dose-rate-row input[type="number"] {
+  width: 5.2rem;
+}
+
+.ms-dose-rate-row select {
+  width: auto;
+  min-width: 8rem;
+}
+
 .ms-pet-bm {
   display: flex;
   margin-top: 0.25rem;

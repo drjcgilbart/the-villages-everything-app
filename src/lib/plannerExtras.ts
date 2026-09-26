@@ -179,6 +179,8 @@ export function extrasFromBoards(input: {
     if (med.active === false) continue;
     const name = text(med.name, 80);
     if (!name) continue;
+    const period = text(med.dosePeriod, 12);
+    if (period === "week" || period === "month" || period === "other") continue;
     const times = rows(med.doseTimes).filter((slot) => slot.enabled !== false && text(slot.time, 8));
     for (const iso of days) {
       for (const slot of times) {

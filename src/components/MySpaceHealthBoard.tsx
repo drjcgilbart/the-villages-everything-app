@@ -44,6 +44,8 @@ type DoseTime = {
   enabled: boolean;
 };
 
+type DosePeriod = "day" | "week" | "month" | "other";
+
 type Medication = {
   id: string;
   name: string;
@@ -51,6 +53,8 @@ type Medication = {
   schedule: string;
   notes: string;
   timesPerDay: number;
+  dosePeriod?: DosePeriod;
+  dosePeriodOther?: string;
   doseTimes: DoseTime[];
   alarmEnabled: boolean;
   alarmSound?: AlarmTone;
@@ -382,6 +386,81 @@ function quoteForDate(dateStr: string) {
   return QUOTES[hash % QUOTES.length];
 }
 
+function dosePeriodOf(value: unknown): DosePeriod {
+  if (value === "week" || value === "month" || value === "other") return value;
+  return "day";
+}
+
+function isDailyDose(med: { dosePeriod?: DosePeriod }) {
+  return !med.dosePeriod || med.dosePeriod === "day";
+}
+
+function doseRateText(count: number, period: DosePeriod | undefined, other?: string) {
+  const n = Math.max(1, Math.round(count || 1));
+  const unit = n === 1 ? "time" : "times";
+  const every =
+    period === "week"
+      ? "week"
+      : period === "month"
+        ? "month"
+        : period === "other"
+          ? other?.trim() || "other"
+          : "day";
+  return `${n} ${unit} per ${every}`;
+}
+
+function DoseRateFields({
+  count,
+  period,
+  other,
+  onCount,
+  onPeriod,
+  onOther,
+}: {
+  count: number | string;
+  period: DosePeriod;
+  other: string;
+  onCount: (n: number) => void;
+  onPeriod: (period: DosePeriod) => void;
+  onOther: (value: string) => void;
+}) {
+  return (
+    <div className="field">
+      <label>How often</label>
+      <div className="ms-dose-rate-row">
+        <input
+          type="number"
+          min={1}
+          max={24}
+          aria-label="Number of times"
+          value={count}
+          onChange={(e) => onCount(clamp(Number(e.target.value) || 1, 1, 24))}
+        />
+        <span>times per</span>
+        <select
+          aria-label="Time period"
+          value={period}
+          onChange={(e) => onPeriod(dosePeriodOf(e.target.value))}
+        >
+          <option value="day">day</option>
+          <option value="week">week</option>
+          <option value="month">month</option>
+          <option value="other">other</option>
+        </select>
+      </div>
+      {period === "other" ? (
+        <input
+          value={other}
+          onChange={(e) => onOther(e.target.value.slice(0, 40))}
+          placeholder="e.g. every 6 weeks, as needed"
+          aria-label="Your own time period"
+          style={{ marginTop: "0.45rem" }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function defaultDoseTimes(timesPerDay: number): DoseTime[] {
   let n = Math.min(12, Math.max(1, Math.round(timesPerDay || 1)));
   const template = DEFAULT_DOSE_TIMES[n];
@@ -571,7 +650,9 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
       dosage: String(m.dosage || ""),
       schedule: String(m.schedule || ""),
       notes: String(m.notes || ""),
-      timesPerDay: Math.max(1, doseTimes.length),
+      timesPerDay: Math.max(1, Number(m.timesPerDay) || doseTimes.length || 1),
+      dosePeriod: dosePeriodOf(m.dosePeriod),
+      dosePeriodOther: String(m.dosePeriodOther || "").slice(0, 40),
       doseTimes,
       alarmEnabled: m.alarmEnabled !== false,
       alarmSound: m.alarmSound,
@@ -948,6 +1029,8 @@ export function MySpaceHealthBoard() {
   const [medName, setMedName] = useState("");
   const [medDose, setMedDose] = useState("");
   const [medTimes, setMedTimes] = useState("1");
+  const [medPeriod, setMedPeriod] = useState<DosePeriod>("day");
+  const [medPeriodOther, setMedPeriodOther] = useState("");
   const [medSchedule, setMedSchedule] = useState("");
   const [medNotes, setMedNotes] = useState("");
   const [medAlarmOn, setMedAlarmOn] = useState(true);
@@ -963,6 +1046,9 @@ export function MySpaceHealthBoard() {
     alarmEnabled: true,
     alarmSound: "classic" as AlarmTone,
     alarmDurationSec: 30,
+    timesPerDay: 1,
+    dosePeriod: "day" as DosePeriod,
+    dosePeriodOther: "",
   });
   const [alarmRound, setAlarmRound] = useState<{
     time: string;
@@ -1347,7 +1433,7 @@ export function MySpaceHealthBoard() {
     .reduce((s, e) => s + (e.durationMin || 0), 0);
 
   const activeMeds = state.medications.filter((m) => m.active);
-  const todaySlots = activeMeds.flatMap((med) =>
+  const todaySlots = activeMeds.filter(isDailyDose).flatMap((med) =>
     med.doseTimes
       .filter((d) => d.enabled)
       .map((dose) => {
@@ -1374,7 +1460,7 @@ export function MySpaceHealthBoard() {
       const date = dateOffset(today, -i);
       let dayDue = 0;
       let dayTaken = 0;
-      for (const med of activeMeds) {
+      for (const med of activeMeds.filter(isDailyDose)) {
         for (const slot of med.doseTimes.filter((d) => d.enabled)) {
           dayDue += 1;
           if (
@@ -1412,7 +1498,7 @@ export function MySpaceHealthBoard() {
       if (!t) return;
       const dueNow: { med: Medication; dose: DoseTime }[] = [];
       for (const med of state.medications) {
-        if (!med.active || !med.alarmEnabled) continue;
+        if (!med.active || !med.alarmEnabled || !isDailyDose(med)) continue;
         for (const dose of med.doseTimes) {
           if (!dose.enabled || normalizeMedTime(dose.time) !== t) continue;
           const already = state.medicationLogs.some(
@@ -1523,6 +1609,9 @@ export function MySpaceHealthBoard() {
       alarmEnabled: med.alarmEnabled !== false,
       alarmSound: med.alarmSound || state.medAlarmSound,
       alarmDurationSec: med.alarmDurationSec || state.medAlarmDurationSec || 30,
+      timesPerDay: med.timesPerDay || 1,
+      dosePeriod: dosePeriodOf(med.dosePeriod),
+      dosePeriodOther: med.dosePeriodOther || "",
     });
   }
 
@@ -1543,6 +1632,9 @@ export function MySpaceHealthBoard() {
               alarmEnabled: editDraft.alarmEnabled,
               alarmSound: editDraft.alarmSound,
               alarmDurationSec: clamp(Number(editDraft.alarmDurationSec) || 30, 5, 300),
+              timesPerDay: clamp(Number(editDraft.timesPerDay) || 1, 1, 24),
+              dosePeriod: editDraft.dosePeriod,
+              dosePeriodOther: editDraft.dosePeriodOther.trim().slice(0, 40),
             }
           : m
       ),
@@ -2152,16 +2244,20 @@ export function MySpaceHealthBoard() {
                     <strong>{med.name}</strong>
                     <div className="panel-hint">
                       {med.dosage || "Dosage not set"}
+                      {" · "}
+                      {doseRateText(med.timesPerDay, med.dosePeriod, med.dosePeriodOther)}
                       {med.schedule ? ` · ${med.schedule}` : ""}
                       {med.active ? "" : " · inactive"}
                     </div>
                     {med.notes ? <div className="panel-hint">{med.notes}</div> : null}
                   </div>
                   <div className="ms-h-med-actions">
-                    <span>
-                      {takenCount}/{slots.filter((d) => d.enabled).length || med.timesPerDay} doses
-                      today
-                    </span>
+                    {isDailyDose(med) ? (
+                      <span>
+                        {takenCount}/{slots.filter((d) => d.enabled).length || med.timesPerDay} doses
+                        today
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -2195,6 +2291,14 @@ export function MySpaceHealthBoard() {
                         placeholder="e.g. 1,000 IU"
                       />
                     </div>
+                    <DoseRateFields
+                      count={editDraft.timesPerDay}
+                      period={editDraft.dosePeriod}
+                      other={editDraft.dosePeriodOther}
+                      onCount={(n) => setEditDraft({ ...editDraft, timesPerDay: n })}
+                      onPeriod={(dosePeriod) => setEditDraft({ ...editDraft, dosePeriod })}
+                      onOther={(dosePeriodOther) => setEditDraft({ ...editDraft, dosePeriodOther })}
+                    />
                     <div className="field">
                       <label>Schedule notes</label>
                       <input
@@ -2529,9 +2633,9 @@ export function MySpaceHealthBoard() {
 
           <h3 className="ms-h-add-bar">Add medication</h3>
           <p className="panel-hint">
-            Name, dosage, and how many times per day (default dose times are created for you).
-            After you save, use Edit on that medication’s card above to change name, dosage, or
-            notes.
+            Name, dosage, and how often you take it. A daily medicine gets dose times you can
+            check off. Weekly, monthly, or your own period stays on the card for a quick log.
+            After you save, use Edit on that medication’s card to change it.
           </p>
           <form
             className="form-grid ms-module-form"
@@ -2539,7 +2643,8 @@ export function MySpaceHealthBoard() {
               e.preventDefault();
               const name = medName.trim();
               if (!name) return;
-              const n = clamp(Number(medTimes) || 1, 1, 12);
+              const n = clamp(Number(medTimes) || 1, 1, 24);
+              const period = medPeriod;
               persist({
                 ...state,
                 medications: [
@@ -2551,7 +2656,9 @@ export function MySpaceHealthBoard() {
                     schedule: medSchedule.trim().slice(0, 200),
                     notes: medNotes.trim().slice(0, 500),
                     timesPerDay: n,
-                    doseTimes: defaultDoseTimes(n),
+                    dosePeriod: period,
+                    dosePeriodOther: medPeriodOther.trim().slice(0, 40),
+                    doseTimes: period === "day" ? defaultDoseTimes(n) : [],
                     alarmEnabled: medAlarmOn,
                     alarmSound: state.medAlarmSound,
                     alarmDurationSec: state.medAlarmDurationSec || 30,
@@ -2562,6 +2669,8 @@ export function MySpaceHealthBoard() {
               setMedName("");
               setMedDose("");
               setMedTimes("1");
+              setMedPeriod("day");
+              setMedPeriodOther("");
               setMedSchedule("");
               setMedNotes("");
               setMedAlarmOn(true);
@@ -2584,16 +2693,14 @@ export function MySpaceHealthBoard() {
                 placeholder="e.g. 500 mg"
               />
             </div>
-            <div className="field">
-              <label>Times per day</label>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={medTimes}
-                onChange={(e) => setMedTimes(e.target.value)}
-              />
-            </div>
+            <DoseRateFields
+              count={medTimes}
+              period={medPeriod}
+              other={medPeriodOther}
+              onCount={(n) => setMedTimes(String(n))}
+              onPeriod={setMedPeriod}
+              onOther={setMedPeriodOther}
+            />
             <div className="field">
               <label>Schedule notes</label>
               <input
@@ -2670,7 +2777,8 @@ export function MySpaceHealthBoard() {
                       <strong>{m.name}</strong>
                       <span className="panel-hint">
                         {" "}
-                        · {m.dosage || "no dosage"} · {m.doseTimes.length} dose time(s)
+                        · {m.dosage || "no dosage"} ·{" "}
+                        {doseRateText(m.timesPerDay, m.dosePeriod, m.dosePeriodOther)}
                         {m.active ? "" : " · inactive"}
                       </span>
                     </div>
