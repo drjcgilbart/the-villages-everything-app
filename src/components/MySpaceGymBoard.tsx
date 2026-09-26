@@ -1145,7 +1145,10 @@ export function MySpaceGymBoard() {
                   >
                     <div className="ms-gym-lift-title">
                       <div>
-                        <strong>{lift.name || "Exercise"}</strong>
+                        <strong>
+                          {lift.name || "Exercise"}
+                          {lift.round ? ` · Round ${lift.round}` : ""}
+                        </strong>
                         <span>{KIND_LABEL[lift.kind] || lift.kind}</span>
                       </div>
                       <GymExerciseHowTo name={lift.name} />
@@ -1525,6 +1528,25 @@ export function MySpaceGymBoard() {
                       />
                     ) : null}
                     <GymExerciseHowTo name={lift.name} />
+                  </div>
+                  <div className="field">
+                    <label>Round</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={lift.round || ""}
+                      placeholder="1"
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        patchLift(i, {
+                          round:
+                            raw === ""
+                              ? undefined
+                              : Math.max(1, Math.min(12, Math.round(Number(raw) || 1))),
+                        });
+                      }}
+                    />
                   </div>
                   <div className="field">
                     <label>Sets</label>

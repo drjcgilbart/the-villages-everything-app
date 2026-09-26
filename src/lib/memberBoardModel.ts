@@ -213,6 +213,8 @@ export type GymLift = {
   kind: string;
   equipment: string;
   sets: GymSet[];
+  /** Which pass this is when the same exercise appears again, such as 2. */
+  round?: number;
   /** Extra words after the rep count, such as "per leg". */
   note?: string;
   /** Extra words after the time, such as "per side". */
@@ -1072,6 +1074,8 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
             name: clip(l?.name, 80),
             kind: clip(l?.kind, 20) || "machine",
             equipment: clip(l?.equipment, 80),
+            round:
+              Number(l?.round) >= 1 ? Math.min(12, Math.round(Number(l.round))) : undefined,
             note: clip(l?.note, 40),
             timeNote: clip(l?.timeNote, 40),
             sets: Array.isArray(l?.sets)
@@ -1113,6 +1117,8 @@ function gymLifts(raw: unknown): GymLift[] {
         name: clip(row?.name, 80),
         kind: clip(row?.kind, 20) || "machine",
         equipment: clip(row?.equipment, 80),
+        round:
+          Number(row?.round) >= 1 ? Math.min(12, Math.round(Number(row.round))) : undefined,
         note: clip(row?.note, 40),
         timeNote: clip(row?.timeNote, 40),
         sets: Array.isArray(row?.sets)
