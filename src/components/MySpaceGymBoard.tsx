@@ -583,6 +583,18 @@ export function MySpaceGymBoard() {
     return [row, ...list];
   }
 
+  function openRoutineEditor(routine: GymRoutine) {
+    setEditRoutineId(routine.id);
+    setRoutineName(routine.name);
+    setLifts(cloneLifts(routine.exercises));
+    window.setTimeout(() => {
+      document.getElementById("ms-gym-builder")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+  }
+
   function saveRoutineFromLifts(name: string, list: GymLift[]) {
     const label = name.trim().slice(0, 80);
     if (!label) return;
@@ -1197,7 +1209,9 @@ export function MySpaceGymBoard() {
                   <div>
                     <strong>{r.name}</strong>
                     <p className="panel-hint">
-                      {r.exercises.map((e) => e.name).join(" · ") || "No exercises"}
+                      {r.exercises.length
+                        ? `${r.exercises.length} exercises`
+                        : "No exercises"}
                     </p>
                   </div>
                   <div className="hero-actions">
@@ -1211,11 +1225,7 @@ export function MySpaceGymBoard() {
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
-                      onClick={() => {
-                        setEditRoutineId(r.id);
-                        setRoutineName(r.name);
-                        setLifts(cloneLifts(r.exercises));
-                      }}
+                      onClick={() => openRoutineEditor(r)}
                     >
                       Edit
                     </button>
@@ -1236,7 +1246,9 @@ export function MySpaceGymBoard() {
               </article>
             ))
           )}
-          <h3>Build a routine once, tap it at the gym</h3>
+          <h3 id="ms-gym-builder">
+            {editRoutineId ? `Editing ${routineName || "routine"}` : "Build a routine once, tap it at the gym"}
+          </h3>
           <p className="panel-hint">
             Name it Leg Day, HIIT, or whatever you actually do. Add the exercises and planned
             sets. Next time, one tap loads the whole list.
@@ -1247,11 +1259,7 @@ export function MySpaceGymBoard() {
                 key={r.id}
                 type="button"
                 className="btn btn-primary btn-sm"
-                onClick={() => {
-                  setEditRoutineId(r.id);
-                  setRoutineName(r.name);
-                  setLifts(cloneLifts(r.exercises));
-                }}
+                onClick={() => openRoutineEditor(r)}
               >
                 {r.name}
               </button>

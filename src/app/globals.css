@@ -4835,6 +4835,10 @@ button.ms-home-card:hover {
   margin: 0.85rem 0 0.4rem;
 }
 
+#ms-gym-builder {
+  scroll-margin-top: 6.5rem;
+}
+
 .ms-gym-routine-chips {
   display: flex;
   flex-wrap: wrap;
