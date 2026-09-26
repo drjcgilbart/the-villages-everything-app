@@ -17,6 +17,7 @@ import {
   emptyGymSet,
   EXERCISE_KIND,
   EXERCISE_NAMES,
+  exerciseChoices,
   KIND_LABEL,
   lastUsedFor,
   nearbyReps,
@@ -412,6 +413,16 @@ export function MySpaceGymBoard() {
   }, [sessionOn]);
 
   const routines = value.routines || [];
+  const exerciseOptions = useMemo(
+    () =>
+      exerciseChoices([
+        ...(value.customExercises || []),
+        ...lifts.map((lift) => lift.name),
+        ...routines.flatMap((routine) => routine.exercises.map((exercise) => exercise.name)),
+        ...workouts.flatMap((workout) => (workout.exercises || []).map((exercise) => exercise.name)),
+      ]),
+    [value.customExercises, lifts, routines, workouts]
+  );
   const supplements = value.supplements || [];
   const supplementLogs = value.supplementLogs || [];
   const stats = useMemo(() => computeStats(workouts), [workouts]);
@@ -431,6 +442,19 @@ export function MySpaceGymBoard() {
 
   function persist(next: GymBoard) {
     void save(next);
+  }
+
+  function rememberExercise(name: string) {
+    const label = name.trim().slice(0, 48);
+    if (!label || label.includes("·") || /^(about |warm-up|cool-down|rules:)/i.test(label)) return;
+    const known = new Set(
+      [...EXERCISE_NAMES, ...(value.customExercises || [])].map((item) => item.toLowerCase())
+    );
+    if (known.has(label.toLowerCase())) return;
+    persist({
+      ...value,
+      customExercises: [...(value.customExercises || []), label].slice(0, 200),
+    });
   }
 
   function placeNameById(id: string, fallback = ""): string {
@@ -729,7 +753,23 @@ export function MySpaceGymBoard() {
     const next = editRoutineId
       ? routines.map((r) => (r.id === editRoutineId ? row : r))
       : [row, ...routines.filter((r) => r.name.toLowerCase() !== label.toLowerCase())];
-    persist({ ...value, routines: next.slice(0, 24) });
+    const known = new Set(
+      [...EXERCISE_NAMES, ...(value.customExercises || [])].map((item) => item.toLowerCase())
+    );
+    const added = exercises
+      .map((exercise) => exercise.name.trim().slice(0, 48))
+      .filter(
+        (name) =>
+          name &&
+          !name.includes("·") &&
+          !/^(about |warm-up|cool-down|rules:)/i.test(name) &&
+          !known.has(name.toLowerCase())
+      );
+    persist({
+      ...value,
+      routines: next.slice(0, 24),
+      customExercises: [...(value.customExercises || []), ...added].slice(0, 200),
+    });
     setEditRoutineId(null);
     jumpTo("ms-gym-saved");
   }
@@ -1093,7 +1133,9 @@ export function MySpaceGymBoard() {
               ) : null}
 
               {lifts.map((lift, i) => {
-                const listed = EXERCISE_NAMES.includes(lift.name);
+                const listed = exerciseOptions.some(
+                  (name) => name.toLowerCase() === lift.name.trim().toLowerCase()
+                );
                 const last = lastUsedFor(workouts, lift.name);
                 const isCardio = lift.kind === "cardio" || lift.sets.some((row) => row.seconds !== "");
                 return (
@@ -1122,7 +1164,7 @@ export function MySpaceGymBoard() {
                           patchLift(i, { name: v, kind: EXERCISE_KIND[v] || lift.kind });
                         }}
                       >
-                        {EXERCISE_NAMES.map((n) => (
+                        {exerciseOptions.map((n) => (
                           <option key={n} value={n}>
                             {n}
                           </option>
@@ -1133,6 +1175,7 @@ export function MySpaceGymBoard() {
                         <input
                           value={lift.name}
                           onChange={(e) => patchLift(i, { name: e.target.value })}
+                          onBlur={() => rememberExercise(lift.name)}
                           placeholder="Type a custom exercise"
                           style={{ marginTop: "0.4rem" }}
                         />
@@ -1445,7 +1488,9 @@ export function MySpaceGymBoard() {
             </datalist>
           </div>
           {lifts.map((lift, i) => {
-            const listed = EXERCISE_NAMES.includes(lift.name);
+            const listed = exerciseOptions.some(
+              (name) => name.toLowerCase() === lift.name.trim().toLowerCase()
+            );
             return (
               <article key={i} className="ms-gym-lift">
                 <div className="form-grid ms-module-form">
@@ -1462,7 +1507,7 @@ export function MySpaceGymBoard() {
                         patchLift(i, { name: v, kind: EXERCISE_KIND[v] || lift.kind });
                       }}
                     >
-                      {EXERCISE_NAMES.map((n) => (
+                      {exerciseOptions.map((n) => (
                         <option key={n} value={n}>
                           {n}
                         </option>
@@ -1473,6 +1518,7 @@ export function MySpaceGymBoard() {
                       <input
                         value={lift.name}
                         onChange={(e) => patchLift(i, { name: e.target.value })}
+                        onBlur={() => rememberExercise(lift.name)}
                         placeholder="Type a custom exercise"
                         style={{ marginTop: "0.4rem" }}
                       />

@@ -266,6 +266,8 @@ export type GymBoard = {
   gyms: GymPlace[];
   workouts: GymWorkout[];
   routines: GymRoutine[];
+  /** Exercise names you typed, kept so the menu stays alphabetical. */
+  customExercises?: string[];
   supplements: GymSupplement[];
   supplementLogs: { id: string; supplementId: string; name: string; date: string }[];
 };
@@ -1203,6 +1205,9 @@ export function sanitizeBoard(
           : samples.gyms,
         workouts: Array.isArray(g.workouts) ? gymWorkouts(g.workouts) : samples.workouts,
         routines: Array.isArray(g.routines) ? gymRoutines(g.routines) : samples.routines || [],
+        customExercises: Array.isArray(g.customExercises)
+          ? [...new Set(g.customExercises.map((n) => clip(n, 48)).filter(Boolean))].slice(0, 200)
+          : [],
         supplements: Array.isArray(g.supplements)
           ? gymSupps(g.supplements)
           : samples.supplements,

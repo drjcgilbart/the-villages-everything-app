@@ -359,6 +359,7 @@ export function sampleBoards(): MemberBoards {
         },
       ],
       routines: [],
+      customExercises: [],
       workouts: [
         {
           id: "ex-gym-wo",

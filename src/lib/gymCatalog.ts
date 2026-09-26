@@ -110,7 +110,30 @@ export const EQUIPMENT: Record<string, string[]> = {
   ],
 };
 
-export const EXERCISE_NAMES = [...new Set(Object.values(EQUIPMENT).flat())];
+export const EXERCISE_NAMES = [...new Set(Object.values(EQUIPMENT).flat())].sort((a, b) =>
+  a.localeCompare(b, "en", { sensitivity: "base" })
+);
+
+function rememberableExerciseName(name: string) {
+  const label = name.trim();
+  if (!label || label.length > 48) return "";
+  if (label.includes("·")) return "";
+  if (/^(about |warm-up|cool-down|rules:)/i.test(label)) return "";
+  return label;
+}
+
+/** Catalog names plus any exercises you added, in A–Z order. */
+export function exerciseChoices(extra: Iterable<string> = []): string[] {
+  const byKey = new Map<string, string>();
+  for (const name of EXERCISE_NAMES) byKey.set(name.toLowerCase(), name);
+  for (const raw of extra) {
+    const label = rememberableExerciseName(String(raw || ""));
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (!byKey.has(key)) byKey.set(key, label);
+  }
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+}
 export const EXERCISE_KIND = Object.fromEntries(
   Object.entries(EQUIPMENT).flatMap(([kind, names]) => names.map((n) => [n, kind]))
 ) as Record<string, string>;
