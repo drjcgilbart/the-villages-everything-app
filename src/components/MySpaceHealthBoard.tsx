@@ -304,6 +304,87 @@ function dateOffset(dateStr: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+function addMonths(dateStr: string, months: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1 + months, 1));
+  const last = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate();
+  dt.setUTCDate(Math.min(d, last));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** The next day a dose should return to the checklist after it was taken. */
+function nextDueDate(takenOn: string, period: DosePeriod, other?: string): string {
+  if (period === "week") return dateOffset(takenOn, 7);
+  if (period === "month") return addMonths(takenOn, 1);
+  if (period === "other") {
+    const text = String(other || "").toLowerCase();
+    const n = Number(text.match(/(\d+)/)?.[1] || 0);
+    if (/day/.test(text) && n) return dateOffset(takenOn, n);
+    if (/week/.test(text) && n) return dateOffset(takenOn, n * 7);
+    if (/month/.test(text) && n) return addMonths(takenOn, n);
+    if (/other day/.test(text)) return dateOffset(takenOn, 2);
+    return dateOffset(takenOn, 7);
+  }
+  return dateOffset(takenOn, 1);
+}
+
+function latestDoseLog(logs: MedicationLog[], medId: string, doseId: string) {
+  let best: MedicationLog | undefined;
+  for (const log of logs) {
+    if (log.medicationId !== medId || log.doseTimeId !== doseId) continue;
+    if (!best || `${log.date}T${log.time}` > `${best.date}T${best.time}`) best = log;
+  }
+  return best;
+}
+
+function doseIsDue(med: Medication, doseId: string, logs: MedicationLog[], today: string) {
+  const last = latestDoseLog(logs, med.id, doseId);
+  if (!last) return true;
+  if (isDailyDose(med)) return last.date !== today;
+  return today >= nextDueDate(last.date, dosePeriodOf(med.dosePeriod), med.dosePeriodOther);
+}
+
+function soonestReturn(med: Medication, logs: MedicationLog[], today: string): string | null {
+  if (dosesDueToday(med, logs, today).length) return null;
+  const real = (med.doseTimes || []).filter((dose) => dose.enabled);
+  const ids = real.length
+    ? real.map((dose) => dose.id)
+    : Array.from({ length: Math.max(1, med.timesPerDay || 1) }, (_, i) => `interval:${med.id}:${i}`);
+  let soonest = "";
+  for (const id of ids) {
+    const last = latestDoseLog(logs, med.id, id);
+    if (!last) return null;
+    const next = nextDueDate(last.date, dosePeriodOf(med.dosePeriod), med.dosePeriodOther);
+    if (!soonest || next < soonest) soonest = next;
+  }
+  return soonest > today ? soonest : null;
+}
+
+function dosesDueToday(med: Medication, logs: MedicationLog[], today: string): DoseTime[] {
+  const real = (med.doseTimes || []).filter((dose) => dose.enabled);
+  const doses = real.length
+    ? real
+    : Array.from({ length: Math.max(1, med.timesPerDay || 1) }, (_, i) => ({
+        id: `interval:${med.id}:${i}`,
+        time: "",
+        label: doseRateText(med.timesPerDay, med.dosePeriod, med.dosePeriodOther),
+        enabled: true,
+      }));
+  return doses.filter((dose) => doseIsDue(med, dose.id, logs, today));
+}
+
+function roundKey(slot: MedDoseSlot): string {
+  const clock = normalizeMedTime(slot.dose.time);
+  if (clock) return clock;
+  return `rate:${doseRateText(slot.med.timesPerDay, slot.med.dosePeriod, slot.med.dosePeriodOther)}`;
+}
+
+function roundTitle(time: string) {
+  if (time.startsWith("rate:")) return time.slice(5);
+  if (time === "none") return "Unscheduled";
+  return formatMedTime(time);
+}
+
 function fmtShortDate(dateStr: string): string {
   if (!dateStr) return "—";
   return new Date(`${dateStr}T12:00:00`).toLocaleDateString("en-US", {
@@ -335,13 +416,20 @@ type MedDoseSlot = { med: Medication; dose: DoseTime; log?: MedicationLog };
 function groupSlotsByTime(slots: MedDoseSlot[]): { time: string; slots: MedDoseSlot[] }[] {
   const map = new Map<string, MedDoseSlot[]>();
   for (const slot of slots) {
-    const t = normalizeMedTime(slot.dose.time) || "none";
+    const t = roundKey(slot);
     const list = map.get(t) || [];
     list.push(slot);
     map.set(t, list);
   }
   return [...map.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => {
+      const aClock = /^\d{2}:\d{2}$/.test(a);
+      const bClock = /^\d{2}:\d{2}$/.test(b);
+      if (aClock && bClock) return a.localeCompare(b);
+      if (aClock) return -1;
+      if (bClock) return 1;
+      return a.localeCompare(b);
+    })
     .map(([time, grouped]) => ({ time, slots: grouped }));
 }
 
@@ -1433,26 +1521,17 @@ export function MySpaceHealthBoard() {
     .reduce((s, e) => s + (e.durationMin || 0), 0);
 
   const activeMeds = state.medications.filter((m) => m.active);
-  const todaySlots = activeMeds.filter(isDailyDose).flatMap((med) =>
-    med.doseTimes
-      .filter((d) => d.enabled)
-      .map((dose) => {
-        const log = state.medicationLogs.find(
-          (l) => l.medicationId === med.id && l.date === today && l.doseTimeId === dose.id
-        );
-        return { med, dose, log };
-      })
+  const todaySlots = activeMeds.flatMap((med) =>
+    dosesDueToday(med, state.medicationLogs, today).map((dose) => ({ med, dose }))
   );
-  const due = todaySlots.length;
-  const taken = todaySlots.filter((s) => s.log).length;
+  const taken = state.medicationLogs.filter((l) => l.date === today).length;
+  const due = todaySlots.length + taken;
   const now = nowTimeEastern();
   const todayRounds = groupSlotsByTime(todaySlots);
-  const nextUp = [...todaySlots]
-    .filter((s) => !s.log)
-    .sort((a, b) =>
-      normalizeMedTime(a.dose.time).localeCompare(normalizeMedTime(b.dose.time))
-    )[0];
-  const nextRound = todayRounds.find((r) => r.slots.some((s) => !s.log));
+  const nextUp = [...todaySlots].sort((a, b) =>
+    normalizeMedTime(a.dose.time).localeCompare(normalizeMedTime(b.dose.time))
+  )[0];
+  const nextRound = todayRounds[0];
 
   const adherence = useMemo(() => {
     const last7 = [];
@@ -1498,8 +1577,8 @@ export function MySpaceHealthBoard() {
       if (!t) return;
       const dueNow: { med: Medication; dose: DoseTime }[] = [];
       for (const med of state.medications) {
-        if (!med.active || !med.alarmEnabled || !isDailyDose(med)) continue;
-        for (const dose of med.doseTimes) {
+        if (!med.active || !med.alarmEnabled) continue;
+        for (const dose of dosesDueToday(med, state.medicationLogs, d)) {
           if (!dose.enabled || normalizeMedTime(dose.time) !== t) continue;
           const already = state.medicationLogs.some(
             (l) => l.medicationId === med.id && l.date === d && l.doseTimeId === dose.id
@@ -1585,16 +1664,14 @@ export function MySpaceHealthBoard() {
   }
 
   function markRound(time: string, done: boolean) {
-    const t = normalizeMedTime(time);
-    if (!t) return;
     const stamp = nowTimeEastern();
     let logs = [...state.medicationLogs];
     for (const slot of todaySlots) {
-      if (normalizeMedTime(slot.dose.time) !== t) continue;
+      if (roundKey(slot) !== time) continue;
       logs = withDoseMark(logs, slot.med, slot.dose, done, stamp);
     }
     persist({ ...state, medicationLogs: logs });
-    if (done && alarmRound && normalizeMedTime(alarmRound.time) === t) {
+    if (done && alarmRound && alarmRound.time === time) {
       setAlarmRound(null);
     }
   }
@@ -2044,12 +2121,11 @@ export function MySpaceHealthBoard() {
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              disabled={!todaySlots.some((s) => !s.log)}
+              disabled={!todaySlots.length}
               onClick={() => {
                 let logs = [...state.medicationLogs];
                 const t = nowTimeEastern();
                 for (const slot of todaySlots) {
-                  if (slot.log) continue;
                   logs.push({
                     id: uid("mlog"),
                     medicationId: slot.med.id,
@@ -2111,10 +2187,14 @@ export function MySpaceHealthBoard() {
           ) : null}
 
           {todaySlots.length === 0 ? (
-            <p className="panel-hint">No medications on today’s list. Add a med below.</p>
+            <p className="panel-hint">
+              {state.medications.some((m) => m.active)
+                ? "Nothing is due right now. Taken doses are in Taken today and in Dose history."
+                : "Add medications to start checking them off."}
+            </p>
           ) : (
             todayRounds.map((round) => {
-              const remaining = round.slots.filter((s) => !s.log);
+              const remaining = round.slots;
               if (!remaining.length) return null;
               const roundLate =
                 remaining.length > 0 && round.time && round.time !== "none" && now > round.time;
@@ -2123,7 +2203,7 @@ export function MySpaceHealthBoard() {
                   <div className="ms-h-round-head">
                     <div>
                       <strong>
-                        {round.time === "none" ? "Unscheduled" : formatMedTime(round.time)}
+                        {roundTitle(round.time)}
                       </strong>
                       <span className="panel-hint">
                         {" "}
@@ -2147,7 +2227,8 @@ export function MySpaceHealthBoard() {
                   </div>
                   <ul className="ms-simple-list">
                     {remaining.map(({ med, dose, log }) => {
-                      const late = !log && dose.time && now > normalizeMedTime(dose.time);
+                      const clock = normalizeMedTime(dose.time);
+                      const late = Boolean(clock) && now > clock;
                       return (
                         <li key={`${med.id}:${dose.id}`} className={late ? "ms-h-late" : ""}>
                           <label className="ms-check">
@@ -2175,8 +2256,12 @@ export function MySpaceHealthBoard() {
                           </label>
                           <div className="ms-h-times">
                             <span>
-                              Suggested
-                              <strong>{formatMedTime(dose.time)}</strong>
+                              {normalizeMedTime(dose.time) ? "Suggested" : "Schedule"}
+                              <strong>
+                                {normalizeMedTime(dose.time)
+                                  ? formatMedTime(dose.time)
+                                  : doseRateText(med.timesPerDay, med.dosePeriod, med.dosePeriodOther)}
+                              </strong>
                             </span>
                             <label>
                               Actual time
@@ -2198,6 +2283,35 @@ export function MySpaceHealthBoard() {
                 </div>
               );
             })
+          )}
+
+          <h4>Taken today</h4>
+          <p className="panel-hint">
+            Checked-off rounds leave the list above and stay here for today. Dose history below
+            keeps them for good. A weekly dose comes back 7 days after you take it. A monthly dose
+            comes back one month later.
+          </p>
+          {state.medicationLogs.filter((l) => l.date === today).length === 0 ? (
+            <p className="panel-hint">Nothing checked off yet today.</p>
+          ) : (
+            <ul className="ms-simple-list">
+              {state.medicationLogs
+                .filter((l) => l.date === today)
+                .sort((a, b) => b.time.localeCompare(a.time))
+                .map((l) => (
+                  <li key={l.id}>
+                    <div>
+                      <strong>{l.medicationName}</strong>
+                      <span className="panel-hint">
+                        {" "}
+                        · {l.dosage || "no dosage"}
+                        {l.scheduledTime ? ` · planned ${formatMedTime(l.scheduledTime)}` : ""}
+                      </span>
+                    </div>
+                    <span>{formatMedTime(l.time)}</span>
+                  </li>
+                ))}
+            </ul>
           )}
 
           <h4>7-day adherence</h4>
@@ -2246,6 +2360,10 @@ export function MySpaceHealthBoard() {
                       {med.dosage || "Dosage not set"}
                       {" · "}
                       {doseRateText(med.timesPerDay, med.dosePeriod, med.dosePeriodOther)}
+                      {(() => {
+                        const back = soonestReturn(med, state.medicationLogs, today);
+                        return back ? ` · back on the checklist ${fmtShortDate(back)}` : "";
+                      })()}
                       {med.schedule ? ` · ${med.schedule}` : ""}
                       {med.active ? "" : " · inactive"}
                     </div>
