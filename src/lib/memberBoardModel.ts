@@ -1068,6 +1068,7 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
                   weight: s?.weight ?? "",
                   reps: s?.reps ?? "",
                   seconds: s?.seconds ?? "",
+                  rest: s?.rest ?? "",
                   done: Boolean(s?.done),
                 }))
               : [],
@@ -1106,6 +1107,7 @@ function gymLifts(raw: unknown): GymLift[] {
               weight: s?.weight ?? "",
               reps: s?.reps ?? "",
               seconds: s?.seconds ?? "",
+              rest: s?.rest ?? "",
               done: Boolean(s?.done),
             }))
           : [],
