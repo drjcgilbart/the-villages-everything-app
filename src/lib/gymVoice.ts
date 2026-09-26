@@ -15,6 +15,9 @@ export type GymVoiceCommand =
   | { type: "stopAlarm" }
   | { type: "stopBare" }
   | { type: "stop" }
+  | { type: "show"; kind: "video" | "pictures" }
+  | { type: "close"; kind: "video" | "pictures" }
+  | { type: "finish" }
   | { type: "unknown" };
 
 const ONES: Record<string, number> = {
@@ -136,6 +139,34 @@ function inRange(n: number) {
   return n >= 0 && n <= 999;
 }
 
+function skipFillers(tokens: VoiceTok[], index: number) {
+  let j = index;
+  while (j < tokens.length) {
+    const tok = tokens[j];
+    if (tok?.kind !== "word") break;
+    if (!["the", "a", "an", "me", "my", "some", "this"].includes(tok.value)) break;
+    j += 1;
+  }
+  return j;
+}
+
+function mediaKind(word: string): "video" | "pictures" | null {
+  if (word === "video" || word === "videos") return "video";
+  if (
+    word === "picture" ||
+    word === "pictures" ||
+    word === "pic" ||
+    word === "pics" ||
+    word === "photo" ||
+    word === "photos" ||
+    word === "image" ||
+    word === "images"
+  ) {
+    return "pictures";
+  }
+  return null;
+}
+
 /** Turn one spoken phrase into the commands it contains, in order. */
 export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
   const text = normalizeVoice(raw);
@@ -200,6 +231,39 @@ export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
         commands.push({ type: "undo" });
         i += tok.value === "not" ? 2 : 1;
         continue;
+      }
+      if (tok.value === "show" || tok.value === "open" || tok.value === "play") {
+        const what = tokens[skipFillers(tokens, i + 1)];
+        const kind = what?.kind === "word" ? mediaKind(what.value) : null;
+        if (kind) {
+          commands.push({ type: "show", kind });
+          i = tokens.indexOf(what) + 1;
+          continue;
+        }
+      }
+      if (tok.value === "close" || tok.value === "hide") {
+        const what = tokens[skipFillers(tokens, i + 1)];
+        const kind = what?.kind === "word" ? mediaKind(what.value) : null;
+        if (kind) {
+          commands.push({ type: "close", kind });
+          i = tokens.indexOf(what) + 1;
+          continue;
+        }
+        commands.push({ type: "close", kind: "video" });
+        commands.push({ type: "close", kind: "pictures" });
+        i += 1;
+        continue;
+      }
+      if (tok.value === "finish" || tok.value === "finished" || tok.value === "end") {
+        const what = tokens[skipFillers(tokens, i + 1)];
+        if (
+          what?.kind === "word" &&
+          (what.value === "workout" || what.value === "routine" || what.value === "session")
+        ) {
+          commands.push({ type: "finish" });
+          i = tokens.indexOf(what) + 1;
+          continue;
+        }
       }
       if (tok.value === "done" || tok.value === "finished" || tok.value === "complete" || (tok.value === "got" && next?.kind === "word" && next.value === "it") || tok.value === "check") {
         commands.push({ type: "done" });
@@ -349,6 +413,23 @@ export function applyGymVoice(
   }
   if (command.type === "stopAlarm" || command.type === "stopBare") {
     return { lifts, at, message: "Timer stopped.", stopAlarm: true };
+  }
+  if (command.type === "show") {
+    return {
+      lifts,
+      at,
+      message: command.kind === "video" ? "Playing the video." : "Showing the pictures.",
+    };
+  }
+  if (command.type === "close") {
+    return {
+      lifts,
+      at,
+      message: command.kind === "video" ? "Video closed." : "Pictures closed.",
+    };
+  }
+  if (command.type === "finish") {
+    return { lifts, at, message: "Workout finished." };
   }
   const cur = clampAt(lifts, at);
   const name = lifts[cur.exercise]?.name || "Exercise";

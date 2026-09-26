@@ -345,6 +345,9 @@ export function MySpaceGymBoard() {
   const [voiceHeard, setVoiceHeard] = useState("");
   const [voiceAt, setVoiceAt] = useState<GymVoiceAt>({ exercise: 0, set: 0 });
   const [restClock, setRestClock] = useState<{ phase: "count" | "alarm"; endsAt: number } | null>(null);
+  const [demoView, setDemoView] = useState<{ exercise: number; kind: "video" | "pictures" } | null>(
+    null
+  );
   const [restTick, setRestTick] = useState(0);
   const [editRoutineId, setEditRoutineId] = useState<string | null>(null);
   const [addingGym, setAddingGym] = useState(false);
@@ -603,6 +606,7 @@ export function MySpaceGymBoard() {
     setSavedPhoneIds([]);
     stopGymVoice();
     setVoiceAt({ exercise: 0, set: 0 });
+    setDemoView(null);
     resetRestTimer();
   }
 
@@ -767,6 +771,33 @@ export function MySpaceGymBoard() {
           return;
         }
         const commands = parseGymVoiceSequence(said);
+        if (commands.some((command) => command.type === "finish")) {
+          setDemoView(null);
+          setVoiceHeard("Workout finished. Microphone off.");
+          writeWorkout(liftsRef.current, false);
+          return;
+        }
+        const showing = [...commands].reverse().find((command) => command.type === "show");
+        const closing = commands.filter((command) => command.type === "close");
+        if (showing || closing.length) {
+          const exercise = voiceAtRef.current.exercise;
+          if (showing && showing.type === "show") {
+            setDemoView({ exercise, kind: showing.kind });
+            setVoiceHeard(showing.kind === "video" ? "Playing the video." : "Showing the pictures.");
+          }
+          if (closing.length) {
+            setDemoView((prev) =>
+              prev && closing.some((command) => command.type === "close" && command.kind === prev.kind)
+                ? null
+                : prev
+            );
+            if (!showing) setVoiceHeard("Closed.");
+          }
+        }
+        const workoutCommands = commands.filter(
+          (command) => command.type !== "show" && command.type !== "close" && command.type !== "finish"
+        );
+        if (!workoutCommands.length) return;
         if (commands.some((command) => command.type === "stopBare")) {
           if (restClockRef.current) {
             resetRestTimer();
@@ -783,7 +814,7 @@ export function MySpaceGymBoard() {
           stopGymVoice();
           return;
         }
-        const result = applyGymVoiceSequence(liftsRef.current, voiceAtRef.current, commands);
+        const result = applyGymVoiceSequence(liftsRef.current, voiceAtRef.current, workoutCommands);
         liftsRef.current = result.lifts;
         voiceAtRef.current = result.at;
         setLifts(result.lifts);
@@ -1087,7 +1118,7 @@ export function MySpaceGymBoard() {
                 <strong>{listening ? "Microphone on" : "Microphone off"}</strong>
                 <span>
                   {voiceHeard ||
-                    "Tap Start listening. Say rest 90 seconds for a popup countdown. Say stop timer or stop alarm to cancel it."}
+                    "Tap Start listening. Say show video, show pictures, close video, or finish workout."}
                 </span>
               </div>
               {restClock && typeof document !== "undefined"
@@ -1273,7 +1304,17 @@ export function MySpaceGymBoard() {
                         </strong>
                         <span>{KIND_LABEL[lift.kind] || lift.kind}</span>
                       </div>
-                      <GymExerciseHowTo name={lift.name} />
+                      <GymExerciseHowTo
+                        name={lift.name}
+                        videoOpen={demoView?.exercise === i && demoView.kind === "video"}
+                        picturesOpen={demoView?.exercise === i && demoView.kind === "pictures"}
+                        onVideo={(open) =>
+                          setDemoView(open ? { exercise: i, kind: "video" } : null)
+                        }
+                        onPictures={(open) =>
+                          setDemoView(open ? { exercise: i, kind: "pictures" } : null)
+                        }
+                      />
                     </div>
                     <div className="field">
                       <label className="visually-hidden">Exercise</label>
