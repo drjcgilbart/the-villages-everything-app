@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   MAINT_KINDS,
   emptyBoards,
@@ -17,10 +17,13 @@ import {
   MAINT_REPEAT_UNITS,
   MAINT_SUGGESTIONS,
   daysUntil,
+  maintKindForm,
   mapsUrl,
   shiftDate,
   telHref,
   unitLabel,
+  type MaintField,
+  type MaintSuggest,
 } from "@/lib/maintenanceCatalog";
 
 type FilterId = "all" | (typeof MAINT_KINDS)[number]["id"];
@@ -67,6 +70,47 @@ function meterWord(kind: string) {
   return kindMeta(kind).meter || "miles / hours";
 }
 
+function MaintFieldInput({
+  field,
+  assetForm,
+  onChange,
+}: {
+  field: MaintField;
+  assetForm: Omit<MaintAsset, "id">;
+  onChange: (next: Omit<MaintAsset, "id">) => void;
+}) {
+  if (field.id === "meter") {
+    return (
+      <div className="field">
+        <label>{field.label}</label>
+        <input
+          type="number"
+          min={0}
+          value={assetForm.meter ?? ""}
+          placeholder={field.placeholder}
+          onChange={(e) =>
+            onChange({
+              ...assetForm,
+              meter: e.target.value === "" ? null : Number(e.target.value),
+            })
+          }
+        />
+      </div>
+    );
+  }
+  const value = assetForm[field.id];
+  return (
+    <div className="field">
+      <label>{field.label}</label>
+      <input
+        value={value}
+        placeholder={field.placeholder}
+        onChange={(e) => onChange({ ...assetForm, [field.id]: e.target.value })}
+      />
+    </div>
+  );
+}
+
 function jobStatus(t: MaintTask, asset: MaintAsset | undefined) {
   if (t.done) return "done" as const;
   const days = daysUntil(t.dueDate);
@@ -95,6 +139,23 @@ function dueLine(t: MaintTask, asset: MaintAsset | undefined) {
   if (t.repeatEnabled) bits.push(`repeats every ${t.repeatEvery} ${unitLabel(t.repeatUnit, t.repeatEvery)}`);
   if (t.alarmEnabled) bits.push(`alarm ${t.alarmTime || "08:00"}${t.remindDays ? ` · ${t.remindDays}d early` : ""}`);
   return bits.join(" · ") || "No due date yet";
+}
+
+function firstDue(job: { repeatEvery: number; repeatUnit: string }, meter: number | null) {
+  if (job.repeatUnit === "miles" || job.repeatUnit === "hours") {
+    return {
+      dueDate: "",
+      dueMeter: meter != null ? meter + Math.max(1, job.repeatEvery) : null,
+    };
+  }
+  return {
+    dueDate: shiftDate(todayKey(), job.repeatEvery, job.repeatUnit),
+    dueMeter: null,
+  };
+}
+
+function scheduleLine(job: { repeatEvery: number; repeatUnit: string }) {
+  return `Every ${job.repeatEvery} ${unitLabel(job.repeatUnit, job.repeatEvery)}`;
 }
 
 function nextFrom(t: MaintTask, asset: MaintAsset | undefined): MaintTask {
@@ -142,6 +203,12 @@ export function MySpaceMaintenanceBoard() {
   const [doneId, setDoneId] = useState<string | null>(null);
   const [doneNotes, setDoneNotes] = useState("");
   const [doneCost, setDoneCost] = useState("");
+  const [pickedJobs, setPickedJobs] = useState<string[]>([]);
+  const [extraJobs, setExtraJobs] = useState<MaintSuggest[]>([]);
+  const [extraTitle, setExtraTitle] = useState("");
+  const [extraEvery, setExtraEvery] = useState(6);
+  const [extraUnit, setExtraUnit] = useState("months");
+  const addFormRef = useRef<HTMLFormElement>(null);
 
   const assets = value.assets;
   const active = assets.find((a) => a.id === value.activeAssetId) || assets[0] || null;
@@ -165,6 +232,55 @@ export function MySpaceMaintenanceBoard() {
     setEditAssetId(null);
   }
 
+  function resetJobPicks() {
+    setPickedJobs([]);
+    setExtraJobs([]);
+    setExtraTitle("");
+    setExtraEvery(6);
+    setExtraUnit("months");
+  }
+
+  function openAddForm() {
+    setEditAssetId(null);
+    setAssetForm(emptyAsset());
+    resetJobPicks();
+    setShowAssetForm(true);
+  }
+
+  useEffect(() => {
+    if (!showAssetForm) return;
+    addFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [showAssetForm]);
+
+  function changeKind(kind: string) {
+    const ids = new Set(maintKindForm(kind).fields.map((f) => f.id));
+    setAssetForm((prev) => ({
+      ...prev,
+      kind,
+      year: ids.has("year") ? prev.year : "",
+      make: ids.has("make") ? prev.make : "",
+      model: ids.has("model") ? prev.model : "",
+      meter: ids.has("meter") ? prev.meter : null,
+      vendor: ids.has("vendor") ? prev.vendor : "",
+    }));
+    setPickedJobs([]);
+  }
+
+  function addExtraJob() {
+    const title = extraTitle.trim().slice(0, 120);
+    if (!title) return;
+    setExtraJobs((prev) => [
+      ...prev,
+      {
+        title,
+        notes: "",
+        repeatEvery: Math.max(1, Number(extraEvery) || 1),
+        repeatUnit: extraUnit || "months",
+      },
+    ]);
+    setExtraTitle("");
+  }
+
   function saveAsset() {
     const name = assetForm.name.trim();
     if (!name) return;
@@ -179,17 +295,71 @@ export function MySpaceMaintenanceBoard() {
       vendor: assetForm.vendor.trim().slice(0, 80),
       notes: assetForm.notes.trim().slice(0, 400),
     };
+    const suggestions = (MAINT_SUGGESTIONS[row.kind] || MAINT_SUGGESTIONS.other).filter((s) =>
+      pickedJobs.includes(s.title)
+    );
+    const typed = extraTitle.trim();
+    const chosen: MaintSuggest[] = [
+      ...suggestions,
+      ...extraJobs,
+      ...(typed
+        ? [
+            {
+              title: typed.slice(0, 120),
+              notes: "",
+              repeatEvery: Math.max(1, Number(extraEvery) || 1),
+              repeatUnit: extraUnit || "months",
+            },
+          ]
+        : []),
+    ];
+    const already = new Set(
+      value.tasks
+        .filter((t) => t.assetId === row.id)
+        .map((t) => t.title.trim().toLowerCase())
+    );
+    const added: MaintTask[] = [];
+    for (const job of chosen) {
+      const title = job.title.trim().slice(0, 120);
+      if (!title || already.has(title.toLowerCase())) continue;
+      already.add(title.toLowerCase());
+      const due = firstDue(job, row.meter);
+      added.push({
+        ...emptyJob(row.id),
+        id: uid("job"),
+        title,
+        notes: job.notes.slice(0, 800),
+        repeatEvery: Math.max(1, job.repeatEvery || 1),
+        repeatUnit: job.repeatUnit || "months",
+        repeatEnabled: true,
+        autoRepeat: true,
+        ...due,
+      });
+    }
     const assetsNext = editAssetId
       ? assets.map((a) => (a.id === editAssetId ? row : a))
       : [row, ...assets].slice(0, 40);
-    persist({ ...value, assets: assetsNext, activeAssetId: row.id });
+    persist({
+      ...value,
+      assets: assetsNext,
+      activeAssetId: row.id,
+      tasks: [...added, ...value.tasks].slice(0, 80),
+    });
     setShowAssetForm(false);
     setEditAssetId(null);
     setAssetForm(emptyAsset());
+    resetJobPicks();
   }
 
   function addSuggested(s: { title: string; notes: string; repeatEvery: number; repeatUnit: string }) {
     if (!active) return;
+    const exists = value.tasks.some(
+      (t) =>
+        t.assetId === active.id &&
+        !t.done &&
+        t.title.trim().toLowerCase() === s.title.trim().toLowerCase()
+    );
+    if (exists) return;
     persist({
       ...value,
       tasks: [
@@ -256,6 +426,15 @@ export function MySpaceMaintenanceBoard() {
   const suggestions = active
     ? MAINT_SUGGESTIONS[active.kind] || MAINT_SUGGESTIONS.other
     : [];
+  const kindProfile = maintKindForm(assetForm.kind);
+  const kindSuggestions = MAINT_SUGGESTIONS[assetForm.kind] || MAINT_SUGGESTIONS.other;
+  const trackedTitles = new Set(
+    editAssetId
+      ? value.tasks
+          .filter((t) => t.assetId === editAssetId)
+          .map((t) => t.title.trim().toLowerCase())
+      : []
+  );
 
   return (
     <div className="ms-ent-board">
@@ -306,11 +485,7 @@ export function MySpaceMaintenanceBoard() {
         <button
           type="button"
           className="btn btn-primary btn-sm"
-          onClick={() => {
-            setEditAssetId(null);
-            setAssetForm(emptyAsset());
-            setShowAssetForm(true);
-          }}
+          onClick={openAddForm}
         >
           Add item
         </button>
@@ -352,6 +527,8 @@ export function MySpaceMaintenanceBoard() {
 
       {showAssetForm ? (
         <form
+          id="ms-maint-add"
+          ref={addFormRef}
           className="form-grid ms-module-form about-panel ms-module"
           onSubmit={(e) => {
             e.preventDefault();
@@ -359,20 +536,8 @@ export function MySpaceMaintenanceBoard() {
           }}
         >
           <div className="field">
-            <label>{editAssetId ? "Edit this item" : "What are you tracking?"}</label>
-            <input
-              value={assetForm.name}
-              onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })}
-              placeholder="Yamaha cart, the Civic, 3388 Red Oak…"
-              required
-            />
-          </div>
-          <div className="field">
             <label>Type</label>
-            <select
-              value={assetForm.kind}
-              onChange={(e) => setAssetForm({ ...assetForm, kind: e.target.value })}
-            >
+            <select value={assetForm.kind} onChange={(e) => changeKind(e.target.value)}>
               {MAINT_KINDS.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.emoji} {k.label}
@@ -381,59 +546,128 @@ export function MySpaceMaintenanceBoard() {
             </select>
           </div>
           <div className="field">
-            <label>Year (optional)</label>
+            <label>{editAssetId ? "Name" : kindProfile.nameLabel}</label>
             <input
-              value={assetForm.year}
-              onChange={(e) => setAssetForm({ ...assetForm, year: e.target.value })}
-              placeholder="2018"
+              value={assetForm.name}
+              onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })}
+              placeholder={kindProfile.namePlaceholder}
+              required
             />
           </div>
-          <div className="field">
-            <label>Make (optional)</label>
-            <input
-              value={assetForm.make}
-              onChange={(e) => setAssetForm({ ...assetForm, make: e.target.value })}
-              placeholder="Yamaha, Toyota…"
+          <p className="panel-hint" style={{ margin: 0 }}>
+            {kindProfile.blurb}
+          </p>
+          {kindProfile.fields.map((field) => (
+            <MaintFieldInput
+              key={field.id}
+              field={field}
+              assetForm={assetForm}
+              onChange={setAssetForm}
             />
-          </div>
-          <div className="field">
-            <label>Model (optional)</label>
-            <input
-              value={assetForm.model}
-              onChange={(e) => setAssetForm({ ...assetForm, model: e.target.value })}
-              placeholder="Drive2, Camry…"
-            />
-          </div>
-          <div className="field">
-            <label>Current miles / hours (optional)</label>
-            <input
-              type="number"
-              min={0}
-              value={assetForm.meter ?? ""}
-              onChange={(e) =>
-                setAssetForm({
-                  ...assetForm,
-                  meter: e.target.value === "" ? null : Number(e.target.value),
-                })
-              }
-              placeholder="12450"
-            />
-          </div>
-          <div className="field">
-            <label>Shop (optional)</label>
-            <input
-              value={assetForm.vendor}
-              onChange={(e) => setAssetForm({ ...assetForm, vendor: e.target.value })}
-              placeholder="Cart barn, dealer, HVAC guy…"
-            />
-          </div>
-          <div className="field">
-            <label>Notes</label>
-            <input
-              value={assetForm.notes}
-              onChange={(e) => setAssetForm({ ...assetForm, notes: e.target.value })}
-              placeholder="VIN, battery type, filter size…"
-            />
+          ))}
+          <div className="ms-maint-jobs">
+            <div className="ms-maint-jobs-bar">
+              <p className="ms-maint-jobs-title">
+                Jobs to track on this {kindMeta(assetForm.kind).label.toLowerCase()}
+              </p>
+              <div className="hero-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() =>
+                    setPickedJobs(
+                      kindSuggestions.filter((s) => !trackedTitles.has(s.title.toLowerCase())).map((s) => s.title)
+                    )
+                  }
+                >
+                  Check all
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPickedJobs([])}>
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="ms-maint-picks">
+              {kindSuggestions.map((s) => {
+                const tracked = trackedTitles.has(s.title.toLowerCase());
+                const on = tracked || pickedJobs.includes(s.title);
+                return (
+                  <label key={s.title} className={`ms-maint-pick${on ? " is-on" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={tracked}
+                      onChange={(e) =>
+                        setPickedJobs((prev) =>
+                          e.target.checked
+                            ? [...prev, s.title]
+                            : prev.filter((title) => title !== s.title)
+                        )
+                      }
+                    />
+                    <span>
+                      <strong>{s.title}</strong>
+                      <span>
+                        {scheduleLine(s)}
+                        {tracked ? " · Already on this item" : ""}
+                        {s.notes ? ` · ${s.notes}` : ""}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {extraJobs.length ? (
+              <ul className="ms-maint-extra-list">
+                {extraJobs.map((job, index) => (
+                  <li key={`${job.title}-${index}`}>
+                    <span>
+                      <strong>{job.title}</strong>
+                      <span>{scheduleLine(job)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setExtraJobs((prev) => prev.filter((_, i) => i !== index))}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="ms-maint-extra">
+              <div className="field">
+                <label>Add something else</label>
+                <input
+                  value={extraTitle}
+                  onChange={(e) => setExtraTitle(e.target.value)}
+                  placeholder="Termite bond, garage door, boat bottom paint…"
+                />
+              </div>
+              <div className="field">
+                <label>Every</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={extraEvery}
+                  onChange={(e) => setExtraEvery(Number(e.target.value) || 1)}
+                />
+              </div>
+              <div className="field">
+                <label>Interval</label>
+                <select value={extraUnit} onChange={(e) => setExtraUnit(e.target.value)}>
+                  {MAINT_REPEAT_UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={addExtraJob}>
+                Add this job
+              </button>
+            </div>
           </div>
           <button type="submit" className="btn btn-primary btn-sm">
             {editAssetId ? "Save changes" : "Save item"}
@@ -444,6 +678,7 @@ export function MySpaceMaintenanceBoard() {
             onClick={() => {
               setShowAssetForm(false);
               setEditAssetId(null);
+              resetJobPicks();
             }}
           >
             Cancel
@@ -499,16 +734,25 @@ export function MySpaceMaintenanceBoard() {
           ) : null}
           <p className="panel-hint">Common jobs for a {kindMeta(active.kind).label}:</p>
           <div className="ms-h-quick">
-            {suggestions.map((s) => (
-              <button
-                key={s.title}
-                type="button"
-                className="ms-h-range-btn"
-                onClick={() => addSuggested(s)}
-              >
-                {s.title}
-              </button>
-            ))}
+            {suggestions.map((s) => {
+              const onList = value.tasks.some(
+                (t) =>
+                  t.assetId === active.id &&
+                  !t.done &&
+                  t.title.trim().toLowerCase() === s.title.trim().toLowerCase()
+              );
+              return (
+                <button
+                  key={s.title}
+                  type="button"
+                  className="ms-h-range-btn"
+                  disabled={onList}
+                  onClick={() => addSuggested(s)}
+                >
+                  {onList ? `${s.title} · on your list` : s.title}
+                </button>
+              );
+            })}
           </div>
           <div className="hero-actions">
             <button
@@ -526,6 +770,7 @@ export function MySpaceMaintenanceBoard() {
                   vendor: active.vendor,
                   notes: active.notes,
                 });
+                resetJobPicks();
                 setShowAssetForm(true);
               }}
             >

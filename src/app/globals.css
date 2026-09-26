@@ -5895,6 +5895,123 @@ button.ms-home-card:hover {
   width: 100%;
 }
 
+#ms-maint-add {
+  scroll-margin-top: 6.5rem;
+}
+
+.ms-maint-jobs {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ms-maint-jobs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.ms-maint-jobs-title {
+  margin: 0;
+  font-weight: 800;
+}
+
+.ms-maint-picks {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ms-maint-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.ms-maint-pick input {
+  margin-top: 0.2rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+}
+
+.ms-maint-pick strong {
+  display: block;
+}
+
+.ms-maint-pick span span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.ms-maint-pick.is-on {
+  border-color: rgba(31, 107, 74, 0.45);
+  background: rgba(31, 107, 74, 0.06);
+}
+
+.ms-maint-extra-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ms-maint-extra-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ms-maint-extra-list strong {
+  display: block;
+}
+
+.ms-maint-extra-list span span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.ms-maint-extra {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) 5.5rem 8.5rem auto;
+  gap: 0.45rem;
+  align-items: end;
+}
+
+.ms-maint-extra .btn {
+  min-height: 2.7rem;
+}
+
+@media (max-width: 720px) {
+  .ms-maint-extra {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ms-maint-extra .field:first-child,
+  .ms-maint-extra .btn {
+    grid-column: 1 / -1;
+  }
+}
+
 .ms-food-card h4 {
   margin: 0.15rem 0 0.25rem;
 }
