@@ -92,7 +92,10 @@ export function Header({
     enabled: !open,
   });
 
-  const autoVisible = isGamePage ? hovering : !scrolledAway;
+  const onMySpace = pathname === "/my-space" || pathname.startsWith("/my-space/");
+  // My Space tools already cover most of these links, so the row starts closed.
+  // Pages still opens and closes it.
+  const autoVisible = onMySpace ? false : isGamePage ? hovering : !scrolledAway;
   const pillsVisible =
     pagesOverride === "open" || (pagesOverride !== "closed" && autoVisible);
 
