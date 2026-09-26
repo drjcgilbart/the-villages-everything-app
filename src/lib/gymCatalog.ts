@@ -373,7 +373,7 @@ export function lastLiftSnapshot(
     if (!lift?.sets?.some(setHasNumbers)) continue;
     return {
       ...lift,
-      sets: lift.sets.map((s) => ({ ...s, done: false })),
+      sets: lift.sets.map((s) => ({ ...s, rest: "", done: false })),
     };
   }
   return null;
@@ -405,7 +405,12 @@ export function seedLiftsFromHistory(
   fallback: GymLift[]
 ): GymLift[] {
   const last = lastCompletedForRoutine(workouts, routineName);
-  if (last?.exercises?.length) return cloneLifts(last.exercises);
+  if (last?.exercises?.length) {
+    return cloneLifts(last.exercises).map((lift) => ({
+      ...lift,
+      sets: lift.sets.map((s) => ({ ...s, rest: "", done: false })),
+    }));
+  }
   return fallback.map((lift) => {
     const snap = lastLiftSnapshot(workouts, lift.name);
     if (snap?.sets?.length) {
@@ -413,10 +418,13 @@ export function seedLiftsFromHistory(
         ...lift,
         kind: snap.kind || lift.kind,
         equipment: snap.equipment || lift.equipment,
-        sets: snap.sets.map((s) => ({ ...s, done: false })),
+        sets: snap.sets.map((s) => ({ ...s, rest: "", done: false })),
       };
     }
-    return lift;
+    return {
+      ...lift,
+      sets: lift.sets.map((s) => ({ ...s, rest: "" })),
+    };
   });
 }
 

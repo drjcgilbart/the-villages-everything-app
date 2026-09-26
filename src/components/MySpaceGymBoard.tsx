@@ -570,7 +570,9 @@ export function MySpaceGymBoard() {
             name: l.name,
             kind: l.kind || "machine",
             equipment: l.equipment || "",
-            sets: l.sets?.length ? l.sets.map((s) => ({ ...emptySet(), ...s })) : [emptySet()],
+            sets: l.sets?.length
+              ? l.sets.map((s) => ({ ...emptySet(), ...s, rest: "" }))
+              : [emptySet()],
           }))
         : [emptyLift()]
     );
@@ -610,7 +612,7 @@ export function MySpaceGymBoard() {
         ...l,
         name: l.name.trim().slice(0, 80),
         equipment: (l.equipment || "").trim().slice(0, 80),
-        sets: l.sets.slice(0, 20),
+        sets: l.sets.slice(0, 20).map((s) => ({ ...s, rest: "" as const })),
       }))
       .filter((l) => l.name);
     if (!cleaned.length && !notes.trim() && !media.length) return;
@@ -1332,9 +1334,6 @@ export function MySpaceGymBoard() {
                         >
                           {s.done ? "✓" : j + 1}
                         </button>
-                        {s.rest ? (
-                          <span className="panel-hint">Rest {s.rest} sec</span>
-                        ) : null}
                         {lift.note ? <span className="panel-hint">{lift.note}</span> : null}
                         {lift.timeNote ? <span className="panel-hint">{lift.timeNote}</span> : null}
                         {isCardio ? (

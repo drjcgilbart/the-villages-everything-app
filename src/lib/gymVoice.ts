@@ -423,9 +423,9 @@ export function applyGymVoice(
     };
   }
   return {
-    lifts: withSet(lifts, cur, { rest: command.value }),
+    lifts,
     at: cur,
-    message: `${name}, set ${cur.set + 1}: resting ${command.value} seconds.`,
+    message: `Resting ${command.value} seconds.`,
     restSeconds: command.value,
   };
 }
