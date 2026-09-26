@@ -147,17 +147,31 @@ function dayKey(iso: string, tz: string): string {
   }
 }
 
-function fmtDay(iso: string, index: number, tz: string): string {
-  if (index === 0) return "Today";
-  if (index === 1) return "Tomorrow";
+/** Noon UTC keeps a date-only forecast on the same calendar day in Florida. */
+function forecastCalendar(iso: string): Date {
+  return new Date(`${iso.slice(0, 10)}T12:00:00Z`);
+}
+
+function fmtForecastWhen(iso: string, index: number): { title: string; date: string } {
+  const when = forecastCalendar(iso);
+  let weekday = "";
+  let monthDay = iso.slice(5);
   try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: tz || VILLAGES_TZ,
+    weekday = new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
       weekday: "long",
-    }).format(new Date(iso));
+    }).format(when);
+    monthDay = new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      month: "short",
+      day: "numeric",
+    }).format(when);
   } catch {
-    return iso.slice(0, 10);
+    /* keep the raw date */
   }
+  const title = index === 0 ? "Today" : index === 1 ? "Tomorrow" : weekday;
+  const date = index <= 1 && weekday ? `${weekday.slice(0, 3)}, ${monthDay}` : monthDay;
+  return { title, date };
 }
 
 /**
@@ -648,7 +662,10 @@ export function MySpaceWeatherBoard() {
                       aria-expanded={on}
                       onClick={() => setOpenDay(on ? null : d.date)}
                     >
-                      <span className="ms-wx-day-name">{fmtDay(d.date, i, tz)}</span>
+                      <span className="ms-wx-day-name">
+                        {fmtForecastWhen(d.date, i).title}
+                        <span className="panel-hint">{fmtForecastWhen(d.date, i).date}</span>
+                      </span>
                       <span aria-hidden className="ms-wx-day-emoji">
                         {d.emoji}
                       </span>
@@ -690,7 +707,8 @@ export function MySpaceWeatherBoard() {
                         <div>
                           <p className="ms-wx-kicker">Day details</p>
                           <h4>
-                            {d.emoji} {fmtDay(d.date, idx, tz)}
+                            {d.emoji} {fmtForecastWhen(d.date, idx).title}{" "}
+                            {fmtForecastWhen(d.date, idx).date}
                           </h4>
                           <p>
                             {d.condition} · High {d.highF}° / Low {d.lowF}°

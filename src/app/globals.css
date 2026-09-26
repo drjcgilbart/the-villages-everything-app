@@ -6363,7 +6363,7 @@ button.ms-home-card:hover {
 
 .ms-wx-day-btn {
   display: grid;
-  grid-template-columns: 7rem 2rem 1fr auto auto;
+  grid-template-columns: 8.6rem 2rem 1fr auto auto;
   gap: 0.5rem 0.75rem;
   align-items: center;
   width: 100%;
@@ -6433,7 +6433,10 @@ button.ms-home-card:hover {
 }
 
 .ms-wx-day-name {
+  display: flex;
+  flex-direction: column;
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .ms-wx-day-emoji {
@@ -6448,7 +6451,7 @@ button.ms-home-card:hover {
 
 @media (max-width: 640px) {
   .ms-wx-day-btn {
-    grid-template-columns: 5.5rem 1.75rem 1fr;
+    grid-template-columns: 7.4rem 1.75rem 1fr;
     grid-template-rows: auto auto;
   }
 
