@@ -213,8 +213,10 @@ export type GymLift = {
   kind: string;
   equipment: string;
   sets: GymSet[];
-  /** Extra words after the numbers, such as "per leg" or "each side". */
+  /** Extra words after the rep count, such as "per leg". */
   note?: string;
+  /** Extra words after the time, such as "per side". */
+  timeNote?: string;
 };
 export type GymRoutine = {
   id: string;
@@ -1071,6 +1073,7 @@ function gymWorkouts(raw: unknown): GymWorkout[] {
             kind: clip(l?.kind, 20) || "machine",
             equipment: clip(l?.equipment, 80),
             note: clip(l?.note, 40),
+            timeNote: clip(l?.timeNote, 40),
             sets: Array.isArray(l?.sets)
               ? l.sets.slice(0, 20).map((s) => ({
                   weight: s?.weight ?? "",
@@ -1111,6 +1114,7 @@ function gymLifts(raw: unknown): GymLift[] {
         kind: clip(row?.kind, 20) || "machine",
         equipment: clip(row?.equipment, 80),
         note: clip(row?.note, 40),
+        timeNote: clip(row?.timeNote, 40),
         sets: Array.isArray(row?.sets)
           ? row.sets.slice(0, 20).map((s) => ({
               weight: s?.weight ?? "",
