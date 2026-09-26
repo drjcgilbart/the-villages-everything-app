@@ -61,7 +61,8 @@ export const ALARM_TONE_OPTIONS: { id: AlarmTone; label: string; hint: string }[
 
 export function playAlarmTone(
   tone: AlarmTone = "classic",
-  durationSec = 2
+  durationSec = 2,
+  volume = 0.06
 ): () => void {
   if (typeof window === "undefined") return () => {};
   let ctx: AudioContext;
@@ -102,7 +103,7 @@ export function playAlarmTone(
     const gain = ctx.createGain();
     osc.type = "square";
     osc.frequency.value = freq;
-    gain.gain.value = 0.06;
+    gain.gain.value = volume;
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();

@@ -93,6 +93,13 @@ function normalizeVoice(raw: string) {
     .trim();
 }
 
+/** True when the phrase is asking to cancel the rest countdown or its alarm. */
+export function isRestCancelPhrase(raw: string) {
+  const text = normalizeVoice(raw);
+  if (!text) return false;
+  return /\b(stop|cancel|silence|end)\b/.test(text) && /\b(timer|alarm)\b/.test(text);
+}
+
 function isStopPhrase(text: string) {
   return (
     /\b(stop listening|microphone off|mic off|turn off the microphone|turn off microphone|stop microphone|pause listening)\b/.test(

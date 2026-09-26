@@ -31,7 +31,7 @@ import {
   starterLifts,
   workoutHasNumbers,
 } from "@/lib/gymCatalog";
-import { applyGymVoiceSequence, parseGymVoiceSequence, type GymVoiceAt } from "@/lib/gymVoice";
+import { applyGymVoiceSequence, isRestCancelPhrase, parseGymVoiceSequence, type GymVoiceAt } from "@/lib/gymVoice";
 import { playAlarmTone } from "@/lib/mySpaceStorage";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { GymExerciseHowTo } from "@/components/GymExerciseHowTo";
@@ -433,8 +433,18 @@ export function MySpaceGymBoard() {
   useEffect(() => {
     if (restClock?.phase !== "alarm") return;
     silenceRestAlarm();
-    restAlarmStop.current = playAlarmTone("urgent", 10);
+    restAlarmStop.current = playAlarmTone("classic", 10, 0.03);
+    const nudge = window.setTimeout(() => {
+      const rec = voiceRecRef.current;
+      if (!rec || !listeningRef.current) return;
+      try {
+        rec.stop();
+      } catch {
+        /* onend starts it again so “stop timer” can be heard */
+      }
+    }, 400);
     return () => {
+      window.clearTimeout(nudge);
       silenceRestAlarm();
     };
   }, [restClock?.phase, restClock?.endsAt]);
@@ -749,6 +759,11 @@ export function MySpaceGymBoard() {
         if (!piece?.isFinal) continue;
         const said = String(piece[0]?.transcript || "").trim();
         if (!said) continue;
+        if (isRestCancelPhrase(said)) {
+          resetRestTimer();
+          setVoiceHeard("Timer stopped.");
+          return;
+        }
         const commands = parseGymVoiceSequence(said);
         if (commands.some((command) => command.type === "stopBare")) {
           if (restClockRef.current) {
@@ -797,7 +812,7 @@ export function MySpaceGymBoard() {
     voiceRecRef.current = rec;
     listeningRef.current = true;
     setListening(true);
-    setVoiceHeard("Listening. Say rest 90 seconds. Say stop timer to end it early.");
+    setVoiceHeard("Listening. Say rest 90 seconds. Say stop timer or stop alarm to cancel it.");
     try {
       rec.start();
     } catch {
@@ -1070,7 +1085,7 @@ export function MySpaceGymBoard() {
                 <strong>{listening ? "Microphone on" : "Microphone off"}</strong>
                 <span>
                   {voiceHeard ||
-                    "Tap Start listening. Say rest 90 seconds for a popup countdown. Say stop timer to end it early."}
+                    "Tap Start listening. Say rest 90 seconds for a popup countdown. Say stop timer or stop alarm to cancel it."}
                 </span>
               </div>
               {restClock && typeof document !== "undefined"
@@ -1090,8 +1105,8 @@ export function MySpaceGymBoard() {
                         </p>
                         <p>
                           {restClock.phase === "alarm"
-                            ? "The alarm plays for 10 seconds, then this closes."
-                            : "Say stop timer to end this early."}
+                            ? "Say stop timer or stop alarm. Otherwise it stops in 10 seconds."
+                            : "Say stop timer or stop alarm to end this early."}
                         </p>
                       </div>
                     </div>,
