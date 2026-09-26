@@ -567,7 +567,7 @@ export function MySpaceDashboard() {
       <section className="section">
         <div className="shell">
       {onPlans ? null : (
-      <div className="about-panel my-space-header">
+      <div className="about-panel my-space-header my-space-header-compact">
         <div>
           <span className="kicker">
             {visitor
@@ -578,16 +578,14 @@ export function MySpaceDashboard() {
           </span>
           {visitor ? (
             <>
-              <h2 style={{ margin: "0.35rem 0" }}>
-                {PRODUCT_NAMES.doorTitle}
-              </h2>
+              <h2>{PRODUCT_NAMES.doorTitle}</h2>
               <p style={{ margin: 0, color: "var(--muted)" }}>
                 {PRODUCT_NAMES.doorBlurb}
               </p>
             </>
           ) : (
             <div data-privacy-block="Name">
-              <h2 style={{ margin: "0.35rem 0" }} className="member-name">
+              <h2 className="member-name">
                 <span className="member-name-text">
                   {space?.spaceTitle ||
                     `${member?.name.split(" ")[0] || "Neighbor"}’s Space`}
@@ -595,10 +593,7 @@ export function MySpaceDashboard() {
                 <MemberBadgesRow badges={data?.badges || []} />
               </h2>
               <p style={{ margin: 0, color: "var(--muted)" }}>
-                <span className="member-name">
-                  <span className="member-name-text">{member?.name}</span>
-                  <MemberBadgesRow badges={data?.badges || []} />
-                </span>
+                <span className="member-name-text">{member?.name}</span>
                 {member?.village ? ` · ${member.village}` : ""} · Plan:{" "}
                 <strong>{planLabel}</strong>
                 {space?.household?.role === "member" && space.household.ownerName
@@ -610,11 +605,6 @@ export function MySpaceDashboard() {
               </p>
             </div>
           )}
-          <p className="panel-hint" style={{ marginBottom: 0 }}>
-            My Space is private to this login. These boards are never shared
-            with another member. Public Hub pages (Dining, Golf, Calendar of
-            Events, Golf Cart Hero) stay free.
-          </p>
           {note && <p className="club-sync-note">{note}</p>}
         </div>
         <div className="hero-actions">
@@ -632,15 +622,6 @@ export function MySpaceDashboard() {
             </>
           ) : (
             <>
-              <Link href="/club-zone" className="btn btn-ghost btn-sm">
-                Clubs
-              </Link>
-              <Link href="/wealth#portfolio" className="btn btn-ghost btn-sm">
-                Wealth
-              </Link>
-              <Link href="/yard-sale/dashboard" className="btn btn-ghost btn-sm">
-                Yard sale
-              </Link>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"

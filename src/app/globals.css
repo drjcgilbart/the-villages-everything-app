@@ -2185,6 +2185,22 @@ a.club-card {
   margin-bottom: 1rem;
 }
 
+.my-space-header-compact {
+  align-items: center;
+  gap: 0.45rem 1rem;
+  margin-bottom: 0.65rem;
+  padding: 0.7rem 0.95rem;
+}
+
+.my-space-header-compact h2 {
+  margin: 0.1rem 0 0.15rem;
+  font-size: 1.25rem;
+}
+
+.my-space-header-compact .hero-actions {
+  margin: 0;
+}
+
 .my-space-gate,
 .my-space-upgrade {
   max-width: 640px;
@@ -9722,6 +9738,15 @@ button.text-link {
 .about-panel h2 {
   margin: 0 0 0.75rem;
   font-family: var(--font-display), Georgia, serif;
+}
+
+.about-panel.my-space-header-compact {
+  padding: 0.7rem 0.95rem;
+}
+
+.about-panel.my-space-header-compact h2 {
+  margin: 0.1rem 0 0.15rem;
+  font-size: 1.25rem;
 }
 
 .about-panel ul {
