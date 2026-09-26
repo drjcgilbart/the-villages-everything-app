@@ -13,6 +13,7 @@ export type GymVoiceCommand =
   | { type: "time"; value: number }
   | { type: "rest"; value: number }
   | { type: "stopAlarm" }
+  | { type: "stopBare" }
   | { type: "stop" }
   | { type: "unknown" };
 
@@ -97,8 +98,7 @@ function isStopPhrase(text: string) {
     /\b(stop listening|microphone off|mic off|turn off the microphone|turn off microphone|stop microphone|pause listening)\b/.test(
       text
     ) ||
-    text === "pause" ||
-    text === "stop"
+    text === "pause"
   );
 }
 
@@ -133,6 +133,7 @@ function inRange(n: number) {
 export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
   const text = normalizeVoice(raw);
   if (!text) return [{ type: "unknown" }];
+  if (text === "stop") return [{ type: "stopBare" }];
   if (isStopPhrase(text)) return [{ type: "stop" }];
 
   const tokens = tokenizeVoice(text);
@@ -147,7 +148,7 @@ export function parseGymVoiceSequence(raw: string): GymVoiceCommand[] {
         const filler = tokens[j];
         if (filler?.kind === "word" && (filler.value === "the" || filler.value === "my")) j += 1;
         const what = tokens[j];
-        if (what?.kind === "word" && (what.value === "alarm" || what.value === "timer" || what.value === "rest")) {
+        if (what?.kind === "word" && (what.value === "alarm" || what.value === "timer" || what.value === "rest" || what.value === "now")) {
           commands.push({ type: "stopAlarm" });
           i = j + 1;
           continue;
@@ -339,8 +340,8 @@ export function applyGymVoice(
   if (command.type === "stop") {
     return { lifts, at, message: "Microphone off.", stop: true };
   }
-  if (command.type === "stopAlarm") {
-    return { lifts, at, message: "Alarm off. Rest timer reset.", stopAlarm: true };
+  if (command.type === "stopAlarm" || command.type === "stopBare") {
+    return { lifts, at, message: "Timer stopped.", stopAlarm: true };
   }
   const cur = clampAt(lifts, at);
   const name = lifts[cur.exercise]?.name || "Exercise";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { finishPlannerReturn } from "@/lib/plannerReturn";
 import {
   emptyBoards,
@@ -343,7 +344,7 @@ export function MySpaceGymBoard() {
   const [listening, setListening] = useState(false);
   const [voiceHeard, setVoiceHeard] = useState("");
   const [voiceAt, setVoiceAt] = useState<GymVoiceAt>({ exercise: 0, set: 0 });
-  const [restClock, setRestClock] = useState<{ endsAt: number } | { ringing: true } | null>(null);
+  const [restClock, setRestClock] = useState<{ phase: "count" | "alarm"; endsAt: number } | null>(null);
   const [restTick, setRestTick] = useState(0);
   const [editRoutineId, setEditRoutineId] = useState<string | null>(null);
   const [addingGym, setAddingGym] = useState(false);
@@ -373,6 +374,7 @@ export function MySpaceGymBoard() {
   const voiceAtRef = useRef(voiceAt);
   const listeningRef = useRef(false);
   const restAlarmStop = useRef<(() => void) | null>(null);
+  const restClockRef = useRef(restClock);
   const voiceRecRef = useRef<{
     stop: () => void;
     abort: () => void;
@@ -383,6 +385,7 @@ export function MySpaceGymBoard() {
   } | null>(null);
   liftsRef.current = lifts;
   voiceAtRef.current = voiceAt;
+  restClockRef.current = restClock;
 
   function silenceRestAlarm() {
     restAlarmStop.current?.();
@@ -390,36 +393,51 @@ export function MySpaceGymBoard() {
   }
 
   function resetRestTimer() {
+    restClockRef.current = null;
     silenceRestAlarm();
     setRestClock(null);
   }
 
   function startRestTimer(seconds: number) {
     const total = Math.max(1, Math.min(600, Math.round(seconds)));
+    const next = { phase: "count" as const, endsAt: Date.now() + total * 1000 };
+    restClockRef.current = next;
     silenceRestAlarm();
-    setRestClock({ endsAt: Date.now() + total * 1000 });
+    setRestClock(next);
   }
 
   useEffect(() => {
-    if (!restClock || "ringing" in restClock) return;
-    const id = window.setInterval(() => setRestTick((n) => n + 1), 250);
+    if (!restClock) return;
+    const id = window.setInterval(() => {
+      const clock = restClockRef.current;
+      if (!clock) return;
+      if (Date.now() < clock.endsAt) {
+        setRestTick((n) => n + 1);
+        return;
+      }
+      if (clock.phase === "count") {
+        const alarm = { phase: "alarm" as const, endsAt: Date.now() + 10000 };
+        restClockRef.current = alarm;
+        setRestClock(alarm);
+        return;
+      }
+      restClockRef.current = null;
+      restAlarmStop.current?.();
+      restAlarmStop.current = null;
+      setRestClock(null);
+      setVoiceHeard("Rest done.");
+    }, 250);
     return () => window.clearInterval(id);
-  }, [restClock]);
+  }, [restClock?.phase, restClock?.endsAt]);
 
   useEffect(() => {
-    if (!restClock || "ringing" in restClock) return;
-    if (Date.now() < restClock.endsAt) return;
-    setRestClock({ ringing: true });
-  }, [restClock, restTick]);
-
-  useEffect(() => {
-    if (!restClock || !("ringing" in restClock)) return;
+    if (restClock?.phase !== "alarm") return;
     silenceRestAlarm();
-    restAlarmStop.current = playAlarmTone("urgent", 180);
+    restAlarmStop.current = playAlarmTone("urgent", 10);
     return () => {
       silenceRestAlarm();
     };
-  }, [restClock]);
+  }, [restClock?.phase, restClock?.endsAt]);
 
   useEffect(() => {
     if (!ready || openedFromPlanner.current) return;
@@ -732,7 +750,18 @@ export function MySpaceGymBoard() {
         const said = String(piece[0]?.transcript || "").trim();
         if (!said) continue;
         const commands = parseGymVoiceSequence(said);
+        if (commands.some((command) => command.type === "stopBare")) {
+          if (restClockRef.current) {
+            resetRestTimer();
+            setVoiceHeard("Timer stopped.");
+          } else {
+            setVoiceHeard("Microphone off.");
+            stopGymVoice();
+          }
+          return;
+        }
         if (commands.some((command) => command.type === "stop")) {
+          resetRestTimer();
           setVoiceHeard("Microphone off.");
           stopGymVoice();
           return;
@@ -768,7 +797,7 @@ export function MySpaceGymBoard() {
     voiceRecRef.current = rec;
     listeningRef.current = true;
     setListening(true);
-    setVoiceHeard("Listening. Say rest 90 seconds for a countdown. Say stop alarm when it rings.");
+    setVoiceHeard("Listening. Say rest 90 seconds. Say stop timer to end it early.");
     try {
       rec.start();
     } catch {
@@ -1041,34 +1070,34 @@ export function MySpaceGymBoard() {
                 <strong>{listening ? "Microphone on" : "Microphone off"}</strong>
                 <span>
                   {voiceHeard ||
-                    "Tap Start listening. Say rest 90 seconds to start a countdown. Say stop alarm when it rings."}
+                    "Tap Start listening. Say rest 90 seconds for a popup countdown. Say stop timer to end it early."}
                 </span>
               </div>
-              {restClock ? (
-                <div
-                  className={`ms-gym-rest${"ringing" in restClock ? " is-ringing" : ""}`}
-                  role="status"
-                >
-                  {"ringing" in restClock ? (
-                    <>
-                      <strong>Rest is over</strong>
-                      <span>Say stop alarm, or tap the button.</span>
-                    </>
-                  ) : (
-                    <>
-                      <strong>
-                        {fmtRest(
-                          Math.max(0, Math.ceil((restClock.endsAt - Date.now()) / 1000))
-                        )}
-                      </strong>
-                      <span>Rest countdown</span>
-                    </>
-                  )}
-                  <button type="button" className="btn btn-primary btn-sm" onClick={resetRestTimer}>
-                    Stop alarm
-                  </button>
-                </div>
-              ) : null}
+              {restClock && typeof document !== "undefined"
+                ? createPortal(
+                    <div className="ms-gym-rest-pop" role="dialog" aria-modal="true" aria-live="assertive">
+                      <div className={`ms-gym-rest-card${restClock.phase === "alarm" ? " is-ringing" : ""}`}>
+                        <p className="ms-wx-kicker">
+                          {restClock.phase === "alarm" ? "Rest is over" : "Rest"}
+                        </p>
+                        <p className="ms-gym-rest-time">
+                          {fmtRest(
+                            Math.max(
+                              0,
+                              Math.ceil((restClock.endsAt - Date.now()) / 1000) - (restTick < 0 ? 1 : 0)
+                            )
+                          )}
+                        </p>
+                        <p>
+                          {restClock.phase === "alarm"
+                            ? "The alarm plays for 10 seconds, then this closes."
+                            : "Say stop timer to end this early."}
+                        </p>
+                      </div>
+                    </div>,
+                    document.body
+                  )
+                : null}
               <div className="field">
                 <label>Gym</label>
                 <select
