@@ -511,6 +511,26 @@ export function applyGymVoice(
   };
 }
 
+function withRecordedRest(original: GymLift[], next: GymLift[]): GymLift[] {
+  return next.map((lift, i) => {
+    const prev = original[i];
+    if (!prev) return lift;
+    return {
+      ...lift,
+      name: prev.name,
+      kind: prev.kind,
+      equipment: prev.equipment,
+      round: prev.round,
+      note: prev.note,
+      timeNote: prev.timeNote,
+      sets: lift.sets.map((set, j) => ({
+        ...set,
+        rest: prev.sets[j]?.rest ?? "",
+      })),
+    };
+  });
+}
+
 /** Apply every command in one phrase. Each number stays on the set you are on. */
 export function applyGymVoiceSequence(
   lifts: GymLift[],
@@ -541,5 +561,11 @@ export function applyGymVoiceSequence(
       break;
     }
   }
-  return { lifts: liftsNow, at: atNow, message: notes.join(" "), stop, timer };
+  return {
+    lifts: withRecordedRest(lifts, liftsNow),
+    at: atNow,
+    message: notes.join(" "),
+    stop,
+    timer,
+  };
 }

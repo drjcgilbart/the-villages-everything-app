@@ -574,7 +574,7 @@ export function MySpaceGymBoard() {
             kind: l.kind || "machine",
             equipment: l.equipment || "",
             sets: l.sets?.length
-              ? l.sets.map((s) => ({ ...emptySet(), ...s, rest: "" }))
+              ? l.sets.map((s) => ({ ...emptySet(), ...s }))
               : [emptySet()],
           }))
         : [emptyLift()]
@@ -616,7 +616,7 @@ export function MySpaceGymBoard() {
         ...l,
         name: l.name.trim().slice(0, 80),
         equipment: (l.equipment || "").trim().slice(0, 80),
-        sets: l.sets.slice(0, 20).map((s) => ({ ...s, rest: "" as const })),
+        sets: l.sets.slice(0, 20),
       }))
       .filter((l) => l.name);
     if (!cleaned.length && !notes.trim() && !media.length) return;
@@ -814,7 +814,12 @@ export function MySpaceGymBoard() {
           stopGymVoice();
           return;
         }
-        const result = applyGymVoiceSequence(liftsRef.current, voiceAtRef.current, workoutCommands);
+        const beforeAt = voiceAtRef.current;
+        const beforeLifts = liftsRef.current;
+        const finishedSet = workoutCommands.some(
+          (command) => command.type === "done" || command.type === "next"
+        );
+        const result = applyGymVoiceSequence(beforeLifts, beforeAt, workoutCommands);
         liftsRef.current = result.lifts;
         voiceAtRef.current = result.at;
         setLifts(result.lifts);
@@ -822,6 +827,10 @@ export function MySpaceGymBoard() {
         setVoiceHeard(result.message);
         if (result.timer === "stop") resetRestTimer();
         else if (result.timer) startRestTimer(result.timer.seconds);
+        else if (finishedSet) {
+          const planned = Number(beforeLifts[beforeAt.exercise]?.sets[beforeAt.set]?.rest);
+          if (planned > 0) startRestTimer(planned);
+        }
         writeWorkout(result.lifts, true);
         jumpTo(`ms-gym-ex-${result.at.exercise}`);
         if (result.stop) stopGymVoice();
@@ -1359,6 +1368,7 @@ export function MySpaceGymBoard() {
                           aria-pressed={Boolean(s.done)}
                           aria-label={`Set ${j + 1} ${s.done ? "done" : "not done"}`}
                           onClick={() => {
+                            const markingDone = !s.done;
                             const next = lifts.map((l, idx) =>
                               idx === i
                                 ? {
@@ -1371,6 +1381,10 @@ export function MySpaceGymBoard() {
                             );
                             setLifts(next);
                             writeWorkout(next, true);
+                            if (markingDone) {
+                              const planned = Number(s.rest);
+                              if (planned > 0) startRestTimer(planned);
+                            }
                           }}
                         >
                           {s.done ? "✓" : j + 1}
