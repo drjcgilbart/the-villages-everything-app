@@ -29,6 +29,7 @@ import {
   starterLifts,
   workoutHasNumbers,
 } from "@/lib/gymCatalog";
+import { applyGymVoice, parseGymVoice, type GymVoiceAt } from "@/lib/gymVoice";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { GymExerciseHowTo } from "@/components/GymExerciseHowTo";
 import {
@@ -330,6 +331,9 @@ export function MySpaceGymBoard() {
   const [routineName, setRoutineName] = useState("");
   const [customRoutine, setCustomRoutine] = useState("");
   const [sessionOn, setSessionOn] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceHeard, setVoiceHeard] = useState("");
+  const [voiceAt, setVoiceAt] = useState<GymVoiceAt>({ exercise: 0, set: 0 });
   const [editRoutineId, setEditRoutineId] = useState<string | null>(null);
   const [addingGym, setAddingGym] = useState(false);
   const [gymBeforeNew, setGymBeforeNew] = useState("");
@@ -354,6 +358,19 @@ export function MySpaceGymBoard() {
   const workouts = value.workouts || [];
   const openedFromPlanner = useRef(false);
   const seededDumbbell = useRef(false);
+  const liftsRef = useRef(lifts);
+  const voiceAtRef = useRef(voiceAt);
+  const listeningRef = useRef(false);
+  const voiceRecRef = useRef<{
+    stop: () => void;
+    abort: () => void;
+    start: () => void;
+    onresult: ((ev: { resultIndex: number; results: ArrayLike<{ isFinal?: boolean; 0?: { transcript?: string } }> }) => void) | null;
+    onend: (() => void) | null;
+    onerror: ((ev: { error?: string }) => void) | null;
+  } | null>(null);
+  liftsRef.current = lifts;
+  voiceAtRef.current = voiceAt;
 
   useEffect(() => {
     if (!ready || openedFromPlanner.current) return;
@@ -388,6 +405,11 @@ export function MySpaceGymBoard() {
     // Seed once when the gym board finishes loading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+
+  useEffect(() => {
+    if (!sessionOn) stopGymVoice();
+    return () => stopGymVoice();
+  }, [sessionOn]);
 
   const routines = value.routines || [];
   const supplements = value.supplements || [];
@@ -478,6 +500,8 @@ export function MySpaceGymBoard() {
     setLifts([emptyLift()]);
     setMedia([]);
     setSavedPhoneIds([]);
+    stopGymVoice();
+    setVoiceAt({ exercise: 0, set: 0 });
   }
 
   function writeWorkout(nextLifts: GymLift[], keepOpen: boolean) {
@@ -583,6 +607,100 @@ export function MySpaceGymBoard() {
     };
     if (existing) return list.map((r) => (r.id === existing.id ? row : r));
     return [row, ...list];
+  }
+
+  function stopGymVoice() {
+    listeningRef.current = false;
+    setListening(false);
+    const rec = voiceRecRef.current;
+    voiceRecRef.current = null;
+    if (!rec) return;
+    rec.onresult = null;
+    rec.onend = null;
+    rec.onerror = null;
+    try {
+      rec.stop();
+    } catch {
+      /* already stopped */
+    }
+    try {
+      rec.abort();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function startGymVoice() {
+    const w = window as unknown as {
+      SpeechRecognition?: new () => NonNullable<typeof voiceRecRef.current> & {
+        lang: string;
+        continuous: boolean;
+        interimResults: boolean;
+      };
+      webkitSpeechRecognition?: new () => NonNullable<typeof voiceRecRef.current> & {
+        lang: string;
+        continuous: boolean;
+        interimResults: boolean;
+      };
+    };
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) {
+      setVoiceHeard("This browser can’t use the microphone. Chrome on Android can.");
+      return;
+    }
+    stopGymVoice();
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.onresult = (ev) => {
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const piece = ev.results[i];
+        if (!piece?.isFinal) continue;
+        const said = String(piece[0]?.transcript || "").trim();
+        if (!said) continue;
+        const command = parseGymVoice(said);
+        if (command.type === "stop") {
+          setVoiceHeard("Microphone off.");
+          stopGymVoice();
+          return;
+        }
+        const result = applyGymVoice(liftsRef.current, voiceAtRef.current, command);
+        liftsRef.current = result.lifts;
+        voiceAtRef.current = result.at;
+        setLifts(result.lifts);
+        setVoiceAt(result.at);
+        setVoiceHeard(result.message);
+        writeWorkout(result.lifts, true);
+        jumpTo(`ms-gym-ex-${result.at.exercise}`);
+        if (result.stop) stopGymVoice();
+      }
+    };
+    rec.onerror = (ev) => {
+      if (ev.error === "aborted" || ev.error === "no-speech") return;
+      if (ev.error === "not-allowed") {
+        setVoiceHeard("Microphone permission is blocked for this site.");
+        stopGymVoice();
+      }
+    };
+    rec.onend = () => {
+      if (!listeningRef.current || voiceRecRef.current !== rec) return;
+      try {
+        rec.start();
+      } catch {
+        stopGymVoice();
+      }
+    };
+    voiceRecRef.current = rec;
+    listeningRef.current = true;
+    setListening(true);
+    setVoiceHeard("Listening. Say done, next, weight 25, rest 90, or stop listening.");
+    try {
+      rec.start();
+    } catch {
+      stopGymVoice();
+      setVoiceHeard("Could not start the microphone. Tap Start listening again.");
+    }
   }
 
   function jumpTo(id: string) {
@@ -816,9 +934,25 @@ export function MySpaceGymBoard() {
                   <p className="ms-golf-kicker">{routineName || "Workout"}</p>
                   <h3 style={{ margin: "0.15rem 0 0" }}>Tap a box when the set is done</h3>
                 </div>
-                <button type="button" className="btn btn-primary btn-sm" onClick={saveWorkout}>
-                  Finish
-                </button>
+                <div className="hero-actions">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${listening ? "btn-primary" : "btn-ghost"}`}
+                    onClick={() => (listening ? stopGymVoice() : startGymVoice())}
+                  >
+                    {listening ? "Stop listening" : "Start listening"}
+                  </button>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={saveWorkout}>
+                    Finish
+                  </button>
+                </div>
+              </div>
+              <div className={`ms-gym-voice${listening ? " is-on" : ""}`} aria-live="polite">
+                <strong>{listening ? "Microphone on" : "Microphone off"}</strong>
+                <span>
+                  {voiceHeard ||
+                    "Tap Start listening, then say done, next, weight 25, add 5 pounds, reps 12, time 30, rest 90, or stop listening."}
+                </span>
               </div>
               <div className="field">
                 <label>Gym</label>
@@ -963,7 +1097,11 @@ export function MySpaceGymBoard() {
                 const last = lastUsedFor(workouts, lift.name);
                 const isCardio = lift.kind === "cardio" || lift.sets.some((row) => row.seconds !== "");
                 return (
-                  <article key={i} className="ms-gym-lift ms-gym-lift-live">
+                  <article
+                    key={i}
+                    id={`ms-gym-ex-${i}`}
+                    className="ms-gym-lift ms-gym-lift-live"
+                  >
                     <div className="ms-gym-lift-title">
                       <div>
                         <strong>{lift.name || "Exercise"}</strong>
@@ -1003,7 +1141,9 @@ export function MySpaceGymBoard() {
                     {lift.sets.map((s, j) => (
                       <div
                         key={j}
-                        className={`ms-gym-set-live${s.done ? " is-done" : ""}`}
+                        className={`ms-gym-set-live${s.done ? " is-done" : ""}${
+                          listening && voiceAt.exercise === i && voiceAt.set === j ? " is-current" : ""
+                        }`}
                       >
                         <button
                           type="button"
