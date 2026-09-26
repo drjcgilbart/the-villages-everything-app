@@ -1177,13 +1177,88 @@ export function MySpaceGymBoard() {
 
       {tab === "routines" && (
         <div className="about-panel ms-module">
+          <h3>Your saved routines</h3>
+          <p className="panel-hint">
+            Dumbbell Upper Body, Dumbbell Lower Body, and Dumbbell Core are here with the
+            routines you already saved. Start loads one at the gym. Edit opens it in the builder
+            below.
+          </p>
+          {routines.length === 0 ? (
+            <p className="panel-hint">None yet — tap a preset below, tweak it, save.</p>
+          ) : (
+            [...routines]
+              .sort((a, b) => {
+                const rank = (name: string) => (name.toLowerCase().startsWith("dumbbell") ? 0 : 1);
+                return rank(a.name) - rank(b.name) || a.name.localeCompare(b.name);
+              })
+              .map((r) => (
+              <article key={r.id} className="ms-gym-session">
+                <div className="ms-gym-session-main">
+                  <div>
+                    <strong>{r.name}</strong>
+                    <p className="panel-hint">
+                      {r.exercises.map((e) => e.name).join(" · ") || "No exercises"}
+                    </p>
+                  </div>
+                  <div className="hero-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => startRoutine(r.name, r.exercises)}
+                    >
+                      Start
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        setEditRoutineId(r.id);
+                        setRoutineName(r.name);
+                        setLifts(cloneLifts(r.exercises));
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() =>
+                        persist({
+                          ...value,
+                          routines: routines.filter((x) => x.id !== r.id),
+                        })
+                      }
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))
+          )}
           <h3>Build a routine once, tap it at the gym</h3>
           <p className="panel-hint">
             Name it Leg Day, HIIT, or whatever you actually do. Add the exercises and planned
             sets. Next time, one tap loads the whole list.
           </p>
           <div className="ms-gym-routine-chips">
-            {ROUTINE_PRESETS.map((n) => (
+            {routines.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setEditRoutineId(r.id);
+                  setRoutineName(r.name);
+                  setLifts(cloneLifts(r.exercises));
+                }}
+              >
+                {r.name}
+              </button>
+            ))}
+            {ROUTINE_PRESETS.filter(
+              (n) => !routines.some((r) => r.name.toLowerCase() === n.toLowerCase())
+            ).map((n) => (
               <button
                 key={n}
                 type="button"
@@ -1311,55 +1386,6 @@ export function MySpaceGymBoard() {
               {editRoutineId ? "Save routine" : "Save routine"}
             </button>
           </div>
-          <h3>Saved routines</h3>
-          {routines.length === 0 ? (
-            <p className="panel-hint">None yet — tap a preset above, tweak it, save.</p>
-          ) : (
-            routines.map((r) => (
-              <article key={r.id} className="ms-gym-session">
-                <div className="ms-gym-session-main">
-                  <div>
-                    <strong>{r.name}</strong>
-                    <p className="panel-hint">
-                      {r.exercises.map((e) => e.name).join(" · ") || "No exercises"}
-                    </p>
-                  </div>
-                  <div className="hero-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      onClick={() => startRoutine(r.name, r.exercises)}
-                    >
-                      Start
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => {
-                        setEditRoutineId(r.id);
-                        setRoutineName(r.name);
-                        setLifts(cloneLifts(r.exercises));
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() =>
-                        persist({
-                          ...value,
-                          routines: routines.filter((x) => x.id !== r.id),
-                        })
-                      }
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))
-          )}
         </div>
       )}
 
