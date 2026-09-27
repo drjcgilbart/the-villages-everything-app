@@ -3004,6 +3004,80 @@ a.my-space-link-card:hover {
   margin-top: 0.65rem;
 }
 
+.trip-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.trip-card img {
+  width: 100%;
+  aspect-ratio: 1.2;
+  object-fit: cover;
+  display: block;
+}
+
+.trip-card-body {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.trip-card-body h3 {
+  margin: 0.15rem 0 0.35rem;
+}
+
+.trip-card-more {
+  margin: 0.65rem 0 0;
+  font-weight: 800;
+  color: var(--palm-deep);
+}
+
+.trip-pop-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(18, 24, 20, 0.55);
+}
+
+.trip-pop {
+  width: min(42rem, 100%);
+  max-height: min(92dvh, 54rem);
+  overflow: auto;
+  background: #fffdf8;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 40px rgba(28, 36, 48, 0.28);
+}
+
+.trip-pop-art {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+}
+
+.trip-pop-body {
+  padding: 0.9rem 1.15rem 1.25rem;
+}
+
+.trip-pop-tips {
+  margin: 0.35rem 0 0.9rem;
+  padding-left: 1.15rem;
+}
+
+.trip-pop-tips li {
+  margin: 0.28rem 0;
+}
+
 .ms-boat h3[id],
 .ms-boat-section-art,
 #springs,
