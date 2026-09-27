@@ -7,17 +7,15 @@ import { fetchUploadBlobBytes, fetchUploadRedisBytes } from "@/lib/dataFs";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function mediaResponse(req: Request, data: Buffer, filename: string, type: string, cache: string) {
+function mediaResponse(req: Request, data: Buffer, type: string, cache: string) {
   let contentType = type || "application/octet-stream";
-  let downloadName = filename;
   if (data.subarray(0, 5).toString("ascii") === "%PDF-") {
     contentType = "application/pdf";
-    if (!downloadName.toLowerCase().endsWith(".pdf")) downloadName = `${downloadName}.pdf`;
   }
   const headers: Record<string, string> = {
     "Content-Type": contentType,
     "X-Content-Type-Options": "nosniff",
-    "Content-Disposition": `inline; filename="${downloadName.replace(/"/g, "")}"`,
+    "Content-Disposition": "inline",
     "Cache-Control": cache,
     "Accept-Ranges": "bytes",
   };
@@ -104,7 +102,7 @@ export async function GET(
   for (const candidate of names) {
     if (!candidate || candidate === "." || candidate === "..") continue;
     const found = await loadNamedMedia(candidate);
-    if (found) return mediaResponse(req, found.data, candidate, found.type, found.cache);
+    if (found) return mediaResponse(req, found.data, found.type, found.cache);
   }
   return new NextResponse("Not found", { status: 404 });
 }

@@ -1037,8 +1037,8 @@ export function AdminStudio() {
                   The cover picture is the photo on the blog list and at the top of
                   the post. Place in the story drops a picture or a PDF where you
                   want it. Anything you do not place still shows at the end. A PDF
-                  shows as a document graphic, and clicking it opens the file in a
-                  new window.
+                  shows as a document graphic. Clicking it opens the PDF in the
+                  browser, where it can also be saved.
                 </p>
               </div>
               {postForm.images.length > 0 && (

@@ -54,8 +54,13 @@ function isGateActive(password: string): boolean {
   return envFlag === "1" || envFlag === "true" || envFlag === "on";
 }
 
-function withSecurity(res: NextResponse): NextResponse {
-  return applySecurityHeaders(res);
+function withSecurity(res: NextResponse, pathname = ""): NextResponse {
+  const out = applySecurityHeaders(res);
+  // Chrome hides a PDF inside a page when this header is on the file itself.
+  if (pathname.startsWith("/api/media/")) {
+    out.headers.delete("Cross-Origin-Opener-Policy");
+  }
+  return out;
 }
 
 export async function middleware(req: NextRequest) {
@@ -117,14 +122,14 @@ export async function middleware(req: NextRequest) {
 
   // No password configured, or SITE_GATE_ENABLED is not on → full public access
   if (!isGateActive(password)) {
-    return withSecurity(NextResponse.next());
+    return withSecurity(NextResponse.next(), pathname);
   }
 
   const expected = await siteGateToken(password);
   const cookie = req.cookies.get(SITE_GATE_COOKIE)?.value;
 
   if (cookie && cookie === expected) {
-    return withSecurity(NextResponse.next());
+    return withSecurity(NextResponse.next(), pathname);
   }
 
   if (pathname.startsWith("/api/")) {
