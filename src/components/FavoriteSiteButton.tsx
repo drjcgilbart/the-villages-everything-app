@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   getDeferredInstall,
   isStandaloneApp,
@@ -131,14 +130,12 @@ export function FavoriteSiteButton() {
   const [open, setOpen] = useState(false);
   const [env, setEnv] = useState<ClientEnv | null>(null);
   const [busy, setBusy] = useState(false);
-  const [hideInApp, setHideInApp] = useState(false);
   const [installEvent, setInstallEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [alreadyApp, setAlreadyApp] = useState(false);
   const [installNote, setInstallNote] = useState("");
 
   useEffect(() => {
-    setHideInApp(isNativeAppShell());
     setEnv(detectEnv());
     setAlreadyApp(isStandaloneApp());
     setInstallEvent(getDeferredInstall());
@@ -190,8 +187,6 @@ export function FavoriteSiteButton() {
     }
     setBusy(false);
   }
-
-  if (hideInApp) return null;
 
   const showDesktopHelp = Boolean(env && !env.isMobile);
 

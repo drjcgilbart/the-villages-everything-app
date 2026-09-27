@@ -47,7 +47,7 @@ const UTILITY_NAV: UtilityItem[] = [
 const WEB_MEMBERSHIP: UtilityItem = { href: "/donate", label: "Support" };
 const NATIVE_MEMBERSHIP: UtilityItem = {
   href: "/my-space?tab=plans",
-  label: "Plans",
+  label: "Support",
 };
 
 /** Pages wrap as one centered row so a new button never sits alone on a short line. */
@@ -247,6 +247,38 @@ export function Header({
     >
       <div className="utility-bar">
         <div className="shell utility-bar-inner">
+          <FavoriteSiteButton />
+          <nav className="utility-nav" aria-label="Site links">
+            {utilityItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={isUtilityActive(item) ? "active" : ""}
+              >
+                {item.label}
+              </Link>
+            ))}
+            {isAdmin ? (
+              <AccountMenu
+                isAdmin
+                label="Admin"
+                adminActive={pathname === "/admin" || pathname.startsWith("/admin/")}
+              />
+            ) : signedIn ? (
+              <AccountMenu
+                isAdmin={false}
+                label={displayName(signedInName)}
+                adminActive={false}
+              />
+            ) : (
+              <Link
+                href="/yard-sale/login"
+                className={pathname === "/yard-sale/login" ? "active" : ""}
+              >
+                Sign in
+              </Link>
+            )}
+          </nav>
           {isAdmin ? (
             <Suspense fallback={null}>
               <div
@@ -259,32 +291,6 @@ export function Header({
               </div>
             </Suspense>
           ) : null}
-          <FavoriteSiteButton />
-          <nav className="utility-nav" aria-label="Site links">
-            {utilityItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={isUtilityActive(item) ? "active" : ""}
-              >
-                {item.label}
-              </Link>
-            ))}
-            {isAdmin || signedIn ? (
-              <AccountMenu
-                isAdmin={isAdmin}
-                label={isAdmin ? "Admin" : displayName(signedInName)}
-                adminActive={pathname === "/admin" || pathname.startsWith("/admin/")}
-              />
-            ) : (
-              <Link
-                href="/yard-sale/login"
-                className={pathname === "/yard-sale/login" ? "active" : ""}
-              >
-                Sign in
-              </Link>
-            )}
-          </nav>
         </div>
       </div>
 

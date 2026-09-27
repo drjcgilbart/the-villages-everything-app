@@ -13068,15 +13068,103 @@ body.theme-music-open .mascot-quip-popup {
     opacity: 0.22;
   }
 
+  .hub-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand brand"
+      "tools tools"
+      "menu search";
+    align-items: center;
+    padding-inline: 1rem;
+  }
+
+  .utility-bar .shell.utility-bar-inner {
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .utility-bar {
+    grid-area: tools;
+    min-width: 0;
+  }
+
+  .utility-bar-inner {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 0;
+    padding: 0.16rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .utility-bar-inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .utility-nav,
+  .local-dev-tools {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: max-content;
+  }
+
+  .hub-header-inner,
+  .hub-header-top {
+    display: contents;
+  }
+
+  .hub-header-top .brand {
+    grid-area: brand;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.28rem 0 0.05rem;
+  }
+
+  .hub-header-top .brand-mark-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .hub-header-top .brand-name {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100vw - 4.2rem);
+  }
+
+  .hub-header-top .brand-tag {
+    display: none;
+  }
+
+  .hub-header-top > .site-search {
+    grid-area: search;
+    order: 0;
+    flex: none;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    padding-bottom: 0.28rem;
+  }
+
   .nav-toggle-wrap {
+    grid-area: menu;
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
     min-width: 0;
-    flex: 1 1 auto;
+    flex: none;
     position: relative;
     z-index: 46;
+    padding-bottom: 0.28rem;
   }
 
   .hub-header.hub-menu-open .hub-header-top {
@@ -13096,6 +13184,7 @@ body.theme-music-open .mascot-quip-popup {
   }
 
   .nav-first-hint {
+    max-width: 9.2rem;
     display: inline-flex;
     align-items: center;
     gap: 0.28rem;
@@ -13119,6 +13208,8 @@ body.theme-music-open .mascot-quip-popup {
 
   .nav-first-hint-text {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .nav-close-hint {
