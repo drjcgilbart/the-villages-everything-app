@@ -51,7 +51,9 @@ export type BoardId =
   | "memories"
   | "golfLog"
   | "pickleballLog"
+  | "space"
   | "boating"
+  | "archery"
   | "lounge";
 
 export type BoardPhase = "live" | "next" | "later";
@@ -253,6 +255,16 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     previewLine: "DUPR · last match · find a game",
   },
   {
+    id: "space",
+    label: "Space Coast",
+    icon: "🚀",
+    minRank: 0,
+    phase: "live",
+    teaser:
+      "Cape launches, SpaceX and the other pads, and where to stand. Stays in My Space.",
+    previewLine: "A Go from the Cape · Titusville is free · Playalinda may be closed",
+  },
+  {
     id: "boating",
     label: "Boating/Fishing",
     icon: "🎣",
@@ -261,6 +273,16 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     teaser:
       "Boat ramps, bass water, and gulf day trips around The Villages. Stays in My Space.",
     previewLine: "Panasoffkee at dawn · Tsala canals · check FWC before you splash",
+  },
+  {
+    id: "archery",
+    label: "Archery/Shooting",
+    icon: "🎯",
+    minRank: 0,
+    phase: "live",
+    teaser:
+      "Ranges, archery, and the outdoors desk. Stays in My Space.",
+    previewLine: "Shooters World in town · Tenoroc for clays · confirm the license on MyFWC",
   },
   {
     id: "lounge",

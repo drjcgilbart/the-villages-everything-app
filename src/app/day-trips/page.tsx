@@ -18,9 +18,10 @@ export default function DayTripsPage() {
             <p>
               Places a Villages neighbor can reach in a day — with the grown
               kids, the grandkids, or just the passenger who picks the music.
-              Drive times start from the middle of town. Tickets, shows, and
-              tides change. Check before you put the cart on the charger and
-              steal the car.
+              Drive times start from the middle of town. The far springs,
+              Butterfly World, and the southeast gardens are marked as dawn
+              departures. Tickets, shows, and tides change. Check before you
+              put the cart on the charger and steal the car.
             </p>
           </div>
           <PageHeroMascot

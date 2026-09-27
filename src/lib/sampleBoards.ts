@@ -67,6 +67,14 @@ export const SAMPLE_GLASS: Partial<Record<BoardId, string[]>> = {
     "Coleman Landing on Lake Panasoffkee — specks in winter, bass the rest of the year",
     "Golf-course ponds stay off the boat trailer. The real water is just outside the gates.",
   ],
+  space: [
+    "Next Cape launch — check the morning of, because a Go can still scrub",
+    "Space View Park in Titusville is the free lawn. The Visitor Complex is the ticket.",
+  ],
+  archery: [
+    "Shooters World on County Road 44A — indoor lanes, confirm the fee",
+    "Tenoroc for rifle, clays, and the Ridge Archers 3-D course",
+  ],
   news: [
     "Following: The Villages",
     "Muted: HOA rumor mill (example — delete me)",

@@ -86,8 +86,22 @@ function collect(): Raw[] {
     title: "Day Trips & Fun Stuff",
     href: "/day-trips",
     snippet:
-      "Springs, beaches, animals, space, and towns within a day’s drive of The Villages.",
+      "Springs, botanical gardens, Butterfly World, Devil’s Den, beaches, and towns within a day’s drive of The Villages.",
     section: "Pages",
+  });
+  add({
+    title: "Space Coast",
+    href: "/my-space?tab=space",
+    snippet:
+      "My Space: Cape Canaveral and Kennedy launches, SpaceX and the other pads, and free and paid places to watch.",
+    section: "My Space",
+  });
+  add({
+    title: "Archery/Shooting",
+    href: "/my-space?tab=archery",
+    snippet:
+      "My Space: shooting ranges, archery, and outdoors notes for neighbors around The Villages.",
+    section: "My Space",
   });
   add({
     title: "Cruise Central",

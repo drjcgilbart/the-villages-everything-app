@@ -16,6 +16,8 @@ import {
 import { GlassDoorPreview } from "@/components/GlassDoorPreview";
 import { MY_SPACE_HUB_JUMPS } from "@/lib/hubMemberBridges";
 import { MySpaceBoatingBoard } from "@/components/MySpaceBoatingBoard";
+import { MySpaceSpaceCoast } from "@/components/MySpaceSpaceCoast";
+import { MySpaceArcheryBoard } from "@/components/MySpaceArcheryBoard";
 import { MySpaceWeatherBoard } from "@/components/MySpaceWeatherBoard";
 import { MySpaceWeatherStrip } from "@/components/MySpaceWeatherStrip";
 import { MySpaceFavoritesHub } from "@/components/MySpaceFavoritesHub";
@@ -126,7 +128,9 @@ type DashTab =
   | "memories"
   | "golfLog"
   | "pickleballLog"
+  | "space"
   | "boating"
+  | "archery"
   | "favorites"
   | "membership"
   | "lounge"
@@ -288,9 +292,17 @@ export function MySpaceDashboard() {
       tabParam === "pets" ||
       tabParam === "food" ||
       tabParam === "maintenance" ||
-      tabParam === "boating"
+      tabParam === "boating" ||
+      tabParam === "space" ||
+      tabParam === "archery"
     ) {
       setTab(tabParam);
+    }
+    if (tabParam === "spacecoast" || tabParam === "space-coast") {
+      setTab("space");
+    }
+    if (tabParam === "shooting") {
+      setTab("archery");
     }
     if (params.get("joined") === "household") {
       setNote("You’re on the household. Your boards stay on this login.");
@@ -493,10 +505,22 @@ export function MySpaceDashboard() {
         boardId: "pickleballLog",
       },
       {
+        id: "space",
+        label: "Space Coast",
+        icon: "🚀",
+        boardId: "space",
+      },
+      {
         id: "boating",
         label: "Boating/Fishing",
         icon: "🎣",
         boardId: "boating",
+      },
+      {
+        id: "archery",
+        label: "Archery/Shooting",
+        icon: "🎯",
+        boardId: "archery",
       },
       {
         id: "favorites",
@@ -1136,10 +1160,24 @@ export function MySpaceDashboard() {
       </section>
       )}
 
+      {tab === "space" && (
+      <section id="ms-space" className="my-space-block">
+        <h3 className="my-space-block-title">Space Coast</h3>
+        {locked("space") ? glass("space") : <MySpaceSpaceCoast />}
+      </section>
+      )}
+
       {tab === "boating" && (
       <section id="ms-boating" className="my-space-block">
         <h3 className="my-space-block-title">Boating/Fishing</h3>
         {locked("boating") ? glass("boating") : <MySpaceBoatingBoard />}
+      </section>
+      )}
+
+      {tab === "archery" && (
+      <section id="ms-archery" className="my-space-block">
+        <h3 className="my-space-block-title">Archery/Shooting</h3>
+        {locked("archery") ? glass("archery") : <MySpaceArcheryBoard />}
       </section>
       )}
 
