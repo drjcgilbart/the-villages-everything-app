@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { PlannerReturnBar } from "@/components/PlannerReturnBar";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   MySpacePetSchedule,
   MySpaceRoyaltyLounge,
@@ -15,6 +15,7 @@ import {
 } from "@/components/MySpaceNextBoards";
 import { GlassDoorPreview } from "@/components/GlassDoorPreview";
 import { MY_SPACE_HUB_JUMPS } from "@/lib/hubMemberBridges";
+import { MySpaceBoatingBoard } from "@/components/MySpaceBoatingBoard";
 import { MySpaceWeatherBoard } from "@/components/MySpaceWeatherBoard";
 import { MySpaceWeatherStrip } from "@/components/MySpaceWeatherStrip";
 import { MySpaceFavoritesHub } from "@/components/MySpaceFavoritesHub";
@@ -125,6 +126,7 @@ type DashTab =
   | "memories"
   | "golfLog"
   | "pickleballLog"
+  | "boating"
   | "favorites"
   | "membership"
   | "lounge"
@@ -282,7 +284,12 @@ export function MySpaceDashboard() {
     ) {
       setTab("favorites");
     }
-    if (tabParam === "pets" || tabParam === "food" || tabParam === "maintenance") {
+    if (
+      tabParam === "pets" ||
+      tabParam === "food" ||
+      tabParam === "maintenance" ||
+      tabParam === "boating"
+    ) {
       setTab(tabParam);
     }
     if (params.get("joined") === "household") {
@@ -434,8 +441,13 @@ export function MySpaceDashboard() {
     />
   );
 
-  const tabs: { id: DashTab; label: string; icon: string; boardId: BoardId }[] =
-    [
+  const tabs: {
+    id: DashTab;
+    label: string;
+    icon: string;
+    boardId: BoardId;
+    breakBefore?: boolean;
+  }[] = [
       { id: "home", label: "Home", icon: "🏠", boardId: "home" },
       { id: "weather", label: getBoard("weather").label, icon: "🌤", boardId: "weather" },
       { id: "health", label: getBoard("health").label, icon: "💚", boardId: "health" },
@@ -458,6 +470,7 @@ export function MySpaceDashboard() {
         label: getBoard("investments").label,
         icon: "📈",
         boardId: "investments",
+        breakBefore: true,
       },
       { id: "news", label: getBoard("news").label, icon: "📰", boardId: "news" },
       {
@@ -479,7 +492,19 @@ export function MySpaceDashboard() {
         icon: "🏓",
         boardId: "pickleballLog",
       },
-      { id: "favorites", label: "Favorites", icon: "⭐", boardId: "favorites" },
+      {
+        id: "boating",
+        label: "Boating/Fishing",
+        icon: "🎣",
+        boardId: "boating",
+      },
+      {
+        id: "favorites",
+        label: "Favorites",
+        icon: "⭐",
+        boardId: "favorites",
+        breakBefore: true,
+      },
       { id: "membership", label: "Plans", icon: "🎟", boardId: "membership" },
       { id: "lounge", label: "Royalty", icon: "👑", boardId: "lounge" },
       { id: "links", label: "Shortcuts", icon: "🔗", boardId: "shortcuts" },
@@ -678,18 +703,20 @@ export function MySpaceDashboard() {
         </button>
         <nav className="ms-dash-nav" aria-label="My Space tools">
           {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`ms-dash-nav-btn ${tab === t.id ? "active" : ""} ${locked(t.boardId) ? "is-locked" : ""}`}
-              onClick={() => goToTab(t.id)}
-              aria-selected={tab === t.id}
-            >
-              <span className="ms-dash-nav-icon" aria-hidden>
-                {t.icon}
-              </span>
-              <span>{t.label}</span>
-            </button>
+            <Fragment key={t.id}>
+              {t.breakBefore ? <span className="ms-dash-nav-break" /> : null}
+              <button
+                type="button"
+                className={`ms-dash-nav-btn ${tab === t.id ? "active" : ""} ${locked(t.boardId) ? "is-locked" : ""}`}
+                onClick={() => goToTab(t.id)}
+                aria-selected={tab === t.id}
+              >
+                <span className="ms-dash-nav-icon" aria-hidden>
+                  {t.icon}
+                </span>
+                <span>{t.label}</span>
+              </button>
+            </Fragment>
           ))}
         </nav>
       </div>
@@ -1106,6 +1133,13 @@ export function MySpaceDashboard() {
         <Link href="/golf-zone#my-scorecard" className="btn btn-primary btn-sm">
           Open Golf
         </Link>
+      </section>
+      )}
+
+      {tab === "boating" && (
+      <section id="ms-boating" className="my-space-block">
+        <h3 className="my-space-block-title">Boating/Fishing</h3>
+        {locked("boating") ? glass("boating") : <MySpaceBoatingBoard />}
       </section>
       )}
 

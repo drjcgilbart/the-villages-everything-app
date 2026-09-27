@@ -51,6 +51,7 @@ export type BoardId =
   | "memories"
   | "golfLog"
   | "pickleballLog"
+  | "boating"
   | "lounge";
 
 export type BoardPhase = "live" | "next" | "later";
@@ -250,6 +251,16 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     teaser:
       "Opens Pickleball — public courts and DUPR, plus your match log when Lanai Legend or Royalty is on.",
     previewLine: "DUPR · last match · find a game",
+  },
+  {
+    id: "boating",
+    label: "Boating/Fishing",
+    icon: "🎣",
+    minRank: 0,
+    phase: "live",
+    teaser:
+      "Boat ramps, bass water, and gulf day trips around The Villages. Stays in My Space.",
+    previewLine: "Panasoffkee at dawn · Tsala canals · check FWC before you splash",
   },
   {
     id: "lounge",

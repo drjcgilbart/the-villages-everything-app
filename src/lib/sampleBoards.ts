@@ -63,6 +63,10 @@ export const SAMPLE_GLASS: Partial<Record<BoardId, string[]>> = {
     "DUPR 3.0 — my knees filed a dissent",
     "Last match: 11–9, 5–11, 11–8 · Court 3 · I ‘let them have’ one",
   ],
+  boating: [
+    "Coleman Landing on Lake Panasoffkee — specks in winter, bass the rest of the year",
+    "Golf-course ponds stay off the boat trailer. The real water is just outside the gates.",
+  ],
   news: [
     "Following: The Villages",
     "Muted: HOA rumor mill (example — delete me)",
