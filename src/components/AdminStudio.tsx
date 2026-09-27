@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { Photo, Post, PostType, SiteContent, Video, VideoSource } from "@/lib/types";
 import { prepareStudioImageFile } from "@/lib/browserImage";
 import { isPdfMediaUrl, isPdfUpload } from "@/lib/mediaKind";
-import { parseBodyChunks, serializeBodyChunks, type BodyChunk } from "@/lib/postDraft";
+import { parseBodyChunks, serializeBodyChunks, type BodyChunk } from "@/lib/storyBlocks";
 import { AdminCreatorDesk } from "@/components/AdminCreatorDesk";
 import { PdfLinkCard } from "@/components/PdfLinkCard";
 import type { DeskWebsite } from "@/lib/creatorDeskTypes";
