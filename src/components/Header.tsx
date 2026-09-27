@@ -258,26 +258,21 @@ export function Header({
                 {item.label}
               </Link>
             ))}
-            {isAdmin ? (
-              <AccountMenu
-                isAdmin
-                label="Admin"
-                adminActive={pathname === "/admin" || pathname.startsWith("/admin/")}
-              />
-            ) : signedIn ? (
+            {signedIn && !isAdmin ? (
               <AccountMenu
                 isAdmin={false}
                 label={displayName(signedInName)}
                 adminActive={false}
               />
-            ) : (
+            ) : null}
+            {!signedIn && !isAdmin ? (
               <Link
                 href="/yard-sale/login"
                 className={pathname === "/yard-sale/login" ? "active" : ""}
               >
                 Sign in
               </Link>
-            )}
+            ) : null}
           </nav>
           {isAdmin ? (
             <Suspense fallback={null}>
@@ -288,6 +283,11 @@ export function Header({
               >
                 <PhoneViewToggle isAdmin={isAdmin} />
                 <HideMyDataToggle isAdmin={isAdmin} />
+                <AccountMenu
+                  isAdmin
+                  label="Admin"
+                  adminActive={pathname === "/admin" || pathname.startsWith("/admin/")}
+                />
               </div>
             </Suspense>
           ) : null}
