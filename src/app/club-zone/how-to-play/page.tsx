@@ -26,12 +26,6 @@ export default function HowToPlayPage() {
               <Link href="/club-zone" className="btn btn-primary">
                 Club directory
               </Link>
-              <a href="#cards" className="btn btn-ghost">
-                Cards
-              </a>
-              <a href="#rec" className="btn btn-ghost">
-                Rec-center games
-              </a>
             </div>
           </div>
           <PageHeroMascot
