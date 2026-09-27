@@ -46,6 +46,9 @@ export default async function ClubZonePage() {
               <a href="#club-leader-form" className="btn btn-ghost">
                 Leaders: update your club
               </a>
+              <Link href="/club-zone/how-to-play" className="btn btn-ghost">
+                How to play
+              </Link>
               <Link href="/my-space" className="btn btn-ghost">
                 My Space favorites
               </Link>

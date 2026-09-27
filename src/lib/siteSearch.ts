@@ -104,6 +104,13 @@ function collect(): Raw[] {
     section: "My Space",
   });
   add({
+    title: "How to play",
+    href: "/club-zone/how-to-play",
+    snippet:
+      "Rules and scoring for mah jongg, bridge, canasta, shuffleboard, darts, table tennis, bocce, and the other games neighbors play.",
+    section: "Pages",
+  });
+  add({
     title: "Theme Parks",
     href: "/theme-parks",
     snippet:

@@ -50,16 +50,7 @@ const NATIVE_MEMBERSHIP: UtilityItem = {
   label: "Plans",
 };
 
-/**
- * Three topic rows so every pill stays fully visible (Golf starts row 2).
- * Two nowrap rows clipped Best of the Month on typical desktop widths.
- */
-const GOLF_SPLIT = MAIN_TOPICS.findIndex((t) => t.href === "/golf-zone");
-const TOPICS_ROW_1 =
-  GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(0, GOLF_SPLIT) : MAIN_TOPICS;
-const AFTER_GOLF = GOLF_SPLIT >= 0 ? MAIN_TOPICS.slice(GOLF_SPLIT) : [];
-const TOPICS_ROW_2 = AFTER_GOLF.slice(0, 7);
-const TOPICS_ROW_3 = AFTER_GOLF.slice(7);
+/** Pages wrap as one centered row so a new button never sits alone on a short line. */
 
 function displayName(full: string | null | undefined) {
   const n = String(full || "").trim();
@@ -367,18 +358,8 @@ export function Header({
           aria-label="Villages pages"
         >
           <div className="hub-topics-row">
-            {TOPICS_ROW_1.map((item) => topicLink(item))}
+            {MAIN_TOPICS.map((item) => topicLink(item))}
           </div>
-          {TOPICS_ROW_2.length > 0 && (
-            <div className="hub-topics-row">
-              {TOPICS_ROW_2.map((item) => topicLink(item))}
-            </div>
-          )}
-          {TOPICS_ROW_3.length > 0 && (
-            <div className="hub-topics-row">
-              {TOPICS_ROW_3.map((item) => topicLink(item))}
-            </div>
-          )}
         </nav>
 
         {open ? (

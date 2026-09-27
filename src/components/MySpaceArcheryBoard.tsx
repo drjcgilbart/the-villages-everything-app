@@ -87,6 +87,8 @@ export function MySpaceArcheryBoard() {
 
       <div className="ms-boat-jump">
         <a className="btn btn-ghost btn-sm" href="#ms-arch-ranges">Ranges</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-clays">Clays</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-ranked">Skeet and trap</a>
         <a className="btn btn-ghost btn-sm" href="#ms-arch-bow">Archery</a>
         <a className="btn btn-ghost btn-sm" href="#ms-arch-woods">Woods and licenses</a>
       </div>
@@ -140,6 +142,151 @@ export function MySpaceArcheryBoard() {
               Where to shoot
             </a>
           </div>
+        </article>
+      </div>
+
+      <div className="ms-boat-section-art" id="ms-arch-clays">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/graphics/outdoors/archery.jpg" alt="" />
+        <h3 className="my-space-block-title">Sporting clays, trap, and skeet</h3>
+      </div>
+      <p className="panel-hint" style={{ marginTop: 0 }}>
+        Three different ways to shoot at a flying clay. Eyes and ears still
+        come first. Prices and hours are on each club’s own page.
+      </p>
+      <div className="ms-boat-grid">
+        <article className="about-panel ms-boat-card">
+          <h3>Sporting clays</h3>
+          <p>
+            A walk or a golf-cart ride through a course. Each station throws
+            targets that imitate a bird: crossing, dropping, bouncing along
+            the ground, or coming off the water. You usually shoot pairs.
+            The course changes, which is why people call it golf with a
+            shotgun. A round is often 50 or 100 targets. Tenoroc’s public
+            course is on the FWC page. Blackjack, closer to home, is the
+            private course built for this game.
+          </p>
+        </article>
+        <article className="about-panel ms-boat-card">
+          <h3>Trap</h3>
+          <p>
+            Targets leave one house in front of you and fly away. Five
+            shooters rotate through five posts. A standard round is 25
+            targets. The angle changes, but the target is always going away.
+            It is the usual first clay game, and it is what a lot of bird
+            hunters practice before season.
+          </p>
+        </article>
+        <article className="about-panel ms-boat-card">
+          <h3>Skeet</h3>
+          <p>
+            Two houses, high and low, throw targets that cross in front of
+            you. You walk eight stations around a semicircle, plus a center
+            station. A round is 25 targets, including singles and doubles.
+            The shot is more of a crossing target than trap. If trap feels
+            too predictable, skeet is the next step.
+          </p>
+        </article>
+        <article className="about-panel ms-boat-card">
+          <h3>Five-stand</h3>
+          <p>
+            A compact version of sporting clays. You stay on a stand and the
+            traps around you throw a menu of targets. Useful when you do not
+            want to ride a cart around a hundred acres, and many clubs that
+            have trap and skeet have a five-stand next to them.
+          </p>
+        </article>
+        <article className="about-panel ms-boat-card">
+          <p className="ms-boat-meta">About 25 minutes · Sumterville</p>
+          <h3>Blackjack Sporting Clays</h3>
+          <p className="ms-boat-meta">3372 County Road 526 · (352) 569-9469</p>
+          <p>
+            The close sporting-clays ground. Four automated courses on about
+            100 acres, carts between stations, a five-stand, and trap and
+            skeet as well. Open to the public, with memberships if you go
+            often. Their site lists Wednesday through Friday 8 a.m. to 2 p.m.,
+            and Saturday and Sunday 8 a.m. to 3 p.m., closed Monday and
+            Tuesday. Confirm before you load the car. Yelp has them at 4.3
+            from 19 reviews, so they are the nearby example, not on the
+            4.5 list below. Prices are a download on their site.
+          </p>
+          <div className="hero-actions">
+            <a className="btn btn-primary btn-sm" href={mapsSearch("Blackjack Sporting Clays 3372 County Road 526 Sumterville")} target="_blank" rel="noopener noreferrer">
+              Open in maps
+            </a>
+            <a className="btn btn-ghost btn-sm" href="https://www.blackjackclays.com/" target="_blank" rel="noopener noreferrer">
+              Blackjack
+            </a>
+          </div>
+        </article>
+        <article className="about-panel ms-boat-card">
+          <p className="ms-boat-meta">About 50 minutes · Dunnellon</p>
+          <h3>Robinson Ranch Trap and Skeet</h3>
+          <p className="ms-boat-meta">19730 SE 127th Terrace · (352) 572-7339</p>
+          <p>
+            A public club aimed at trap and skeet, plus a five-stand. The
+            Amateur Trapshooting Association lists several trap fields and
+            skeet fields here. Hours on their site are mostly mornings,
+            closed Monday and Friday. Call if you will arrive after noon.
+            A single published review is not enough to call it a 4.5, so it
+            stays in this section as the nearby trap and skeet ground.
+          </p>
+          <div className="hero-actions">
+            <a className="btn btn-primary btn-sm" href={mapsSearch("Robinson Ranch Trap and Skeet Dunnellon Florida")} target="_blank" rel="noopener noreferrer">
+              Open in maps
+            </a>
+            <a className="btn btn-ghost btn-sm" href="https://robinsonranch-trap-skeet.com/" target="_blank" rel="noopener noreferrer">
+              Robinson Ranch
+            </a>
+          </div>
+        </article>
+      </div>
+
+      <div className="ms-boat-section-art" id="ms-arch-ranked">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/graphics/outdoors/archery.jpg" alt="" />
+        <h3 className="my-space-block-title">Skeet and trap at 4.5 and up</h3>
+      </div>
+      <p className="panel-hint" style={{ marginTop: 0 }}>
+        Within about an hour of the middle of The Villages, public or
+        private, and only if a 5-star site shows 4.5 or better from a real
+        stack of reviews. A perfect score from one review does not count.
+        Ratings move. Look again the week you go.
+      </p>
+      <div className="ms-boat-grid">
+        <article className="about-panel ms-boat-card">
+          <p className="ms-boat-meta">About 4.6 · Google-sourced listings, about 35 reviews · Yelp 4.8 from 4</p>
+          <h3>Eustis Gun Club</h3>
+          <p className="ms-boat-meta">12950 Frankies Road, Tavares · about 40 minutes · (352) 408-8869</p>
+          <p>
+            The skeet and trap ground inside an hour that clears 4.5. It is a
+            membership club, not a walk-up public range: trap, skeet,
+            five-stand, sporting clays, and night skeet, plus rifle and
+            pistol. Their site has listed trap or skeet around $6 a round.
+            Confirm the clay price, the guest rule, and the hours before you
+            drive. A neighbor has to invite you, or you ask them for a tour
+            and a membership.
+          </p>
+          <div className="hero-actions">
+            <a className="btn btn-primary btn-sm" href={mapsSearch("Eustis Gun Club 12950 Frankies Road Tavares Florida")} target="_blank" rel="noopener noreferrer">
+              Open in maps
+            </a>
+            <a className="btn btn-ghost btn-sm" href="https://www.eustisgunclub.org/" target="_blank" rel="noopener noreferrer">
+              Eustis Gun Club
+            </a>
+          </div>
+        </article>
+        <article className="about-panel ms-boat-card">
+          <h3>Why the list is short</h3>
+          <p>
+            Gator Skeet and Trap in Gainesville is a real skeet club and sits
+            at about 4.4 on Google from 50 reviews, just under the line, and
+            it is a little over an hour. Silver Dollar Shooters Club near
+            Odessa is about 4.5 on Tripadvisor and is closer to an hour and
+            a half. Blackjack is the best-known clays course next door and
+            sits at 4.3 on Yelp. They are worth knowing. They are not on
+            this list.
+          </p>
         </article>
       </div>
 
