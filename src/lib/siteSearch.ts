@@ -104,10 +104,17 @@ function collect(): Raw[] {
     section: "My Space",
   });
   add({
+    title: "Theme Parks",
+    href: "/theme-parks",
+    snippet:
+      "Disney World, Universal, Epic Universe, SeaWorld, Discovery Cove, Busch Gardens, and Florida water parks within a day’s drive.",
+    section: "Pages",
+  });
+  add({
     title: "Cruise Central",
     href: "/cruise-central",
     snippet:
-      "Florida cruise ports from The Villages, plus documents, packing, and the drive home.",
+      "Florida cruise ports, upcoming Port Canaveral sailings, cruise-line ships, and where last-minute fares are posted.",
     section: "Pages",
   });
   add({

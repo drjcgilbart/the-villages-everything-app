@@ -807,6 +807,15 @@ export const MAIN_TOPICS: {
     image: "/graphics/day-trips/space.jpg",
   },
   {
+    href: "/theme-parks",
+    label: "Theme Parks",
+    icon: "🎢",
+    matchPrefixes: ["/theme-parks"],
+    blurb:
+      "Disney, Universal, SeaWorld, Busch Gardens, the smaller parks, and the water parks — a day’s drive from The Villages.",
+    image: "/graphics/theme-parks/castle.jpg",
+  },
+  {
     href: "/cruise-central",
     label: "Cruise Central",
     icon: "🚢",

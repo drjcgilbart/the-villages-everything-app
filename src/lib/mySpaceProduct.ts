@@ -329,7 +329,7 @@ export const TIER_SUMMARY: Record<
 export const ALWAYS_PUBLIC = [
   "Home, Town Squares, Rec Centers, The Villages directory",
   "Dining, Local News, Calendar of Events, Forums, Yard Sale browse",
-  "Golf, Pickleball, Clubs, Art, Day Trips & Fun Stuff, Cruise Central, Local Pros, Real Estate, Official Map",
+  "Golf, Pickleball, Clubs, Art, Day Trips & Fun Stuff, Theme Parks, Cruise Central, Local Pros, Real Estate, Official Map",
   "Golf Cart Hero",
   "My Retirement Reboot story: About, Blog, Photos, Videos",
 ] as const;

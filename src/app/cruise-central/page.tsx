@@ -16,10 +16,10 @@ export default function CruiseCentralPage() {
             <span className="kicker">Ships from Florida</span>
             <h1>Cruise Central</h1>
             <p>
-              Five cruise ports you can drive to from The Villages, and the
-              un-fun folder that keeps the fun one from going sideways.
-              Port Canaveral is the neighborly choice. Miami is the one you
-              plan a night around. Ships move. The paperwork does not.
+              Five cruise ports you can drive to from The Villages, the ships
+              leaving Port Canaveral in the next few weeks, and the pages
+              where the fares actually change. Port Canaveral is the
+              neighborly choice. Miami is the one you plan a night around.
             </p>
           </div>
           <PageHeroMascot

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { CruiseSailings } from "@/components/CruiseSailings";
 
 function mapsSearch(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -264,6 +265,9 @@ export function CruiseCentral() {
       <section className="section">
         <div className="shell">
           <div className="ms-boat-jump">
+            <a className="btn btn-ghost btn-sm" href="#sailings">Upcoming sailings</a>
+            <a className="btn btn-ghost btn-sm" href="#deals">Deals</a>
+            <a className="btn btn-ghost btn-sm" href="#ships">The ships</a>
             {GROUPS.map((group) => (
               <a key={group.id} className="btn btn-ghost btn-sm" href={`#${group.id}`}>
                 {group.title}
@@ -286,6 +290,8 @@ export function CruiseCentral() {
           </div>
         </div>
       </section>
+
+      <CruiseSailings />
 
       {GROUPS.map((group) => (
         <section key={group.id} className="section" id={group.id} style={{ paddingTop: 0 }}>
