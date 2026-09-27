@@ -2,7 +2,9 @@ import type { PhotoImage } from "./types";
 import { slugify } from "./content";
 import { grokJson, xaiConfigured } from "./xaiChat";
 
-const TABLE_RULE = /^[\s|:-]+$/;
+function isTableRule(line: string): boolean {
+  return /^[\s|:-]+$/.test(line) && line.includes("-");
+}
 
 function storyParts(body: string): string[] {
   return body.split(
@@ -143,24 +145,54 @@ export function parseStoryTable(raw: string): PostTable | null {
   const lines = String(raw || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line && !TABLE_RULE.test(line));
-  const grid = lines
-    .map(tableCells)
-    .filter((row) => row.some(Boolean))
-    .slice(0, 41);
+    .filter((line) => line && !isTableRule(line));
+  const grid = lines.map(tableCells).slice(0, 41);
   if (grid.length < 2) return null;
-  const width = Math.min(6, Math.max(...grid.map((row) => row.length)));
-  if (width < 1) return null;
+  const width = Math.min(6, Math.max(...grid.map((row) => row.length), 1));
   const sized = grid.map((row) => {
     const next = row.slice(0, width);
     while (next.length < width) next.push("");
     return next;
   });
   const [headers, ...rows] = sized;
-  if (!headers.some(Boolean)) return null;
-  const body = rows.filter((row) => row.some(Boolean));
-  if (!body.length) return null;
-  return { headers, rows: body };
+  return { headers, rows };
+}
+
+export type BodyChunk =
+  | { kind: "text"; text: string }
+  | { kind: "table"; rows: string[][] };
+
+/** Story editor blocks. Tables stay a grid even before the cells are filled in. */
+export function parseBodyChunks(body: string): BodyChunk[] {
+  const chunks: BodyChunk[] = [];
+  for (const part of storyParts(String(body || ""))) {
+    if (!part) continue;
+    const table = part.match(/^\[\[table\]\]([\s\S]*)\[\[\/table\]\]$/);
+    if (table) {
+      const parsed = parseStoryTable(table[1]);
+      if (parsed) {
+        chunks.push({ kind: "table", rows: [parsed.headers, ...parsed.rows] });
+        continue;
+      }
+    }
+    const prev = chunks[chunks.length - 1];
+    if (prev && prev.kind === "text") prev.text += part;
+    else chunks.push({ kind: "text", text: part });
+  }
+  if (!chunks.length) chunks.push({ kind: "text", text: "" });
+  return chunks;
+}
+
+export function serializeBodyChunks(chunks: BodyChunk[]): string {
+  return chunks
+    .map((chunk) => {
+      if (chunk.kind === "text") return chunk.text;
+      const lines = chunk.rows.map(
+        (row) => `| ${row.map((cell) => cell.replace(/\|/g, "/")).join(" | ")} |`
+      );
+      return `\n[[table]]\n${lines.join("\n")}\n[[/table]]\n`;
+    })
+    .join("");
 }
 
 /** Split a story into paragraphs, [[photo:id]] pictures, and [[table]] blocks. */
@@ -178,8 +210,16 @@ export function blocksForPost(body: string, images: PhotoImage[]): PostBlock[] {
     const table = part.match(/^\[\[table\]\]([\s\S]*)\[\[\/table\]\]$/);
     if (table) {
       const parsed = parseStoryTable(table[1]);
-      if (parsed) blocks.push({ kind: "table", ...parsed });
-      else if (part.trim()) blocks.push({ kind: "text", text: part.trim() });
+      const filled = parsed
+        ? {
+            headers: parsed.headers,
+            rows: parsed.rows.filter((row) => row.some(Boolean)),
+          }
+        : null;
+      const hasText =
+        filled &&
+        (filled.headers.some(Boolean) || filled.rows.some((row) => row.some(Boolean)));
+      if (filled && hasText) blocks.push({ kind: "table", ...filled });
       continue;
     }
     const paras = part

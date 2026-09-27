@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPostBySlugAsync } from "@/lib/content";
 import { formatDate } from "@/lib/format";
+import { PdfLinkCard } from "@/components/PdfLinkCard";
 import { blocksForPost, photosNotInBody } from "@/lib/postDraft";
 import { isPdfMediaUrl } from "@/lib/mediaKind";
 import type { PhotoImage } from "@/lib/types";
@@ -102,10 +103,7 @@ function PostFigure({ image, cover }: { image: PhotoImage; cover?: boolean }) {
     const label = image.caption?.trim() || "Open the PDF";
     return (
       <figure className="prose-figure prose-pdf">
-        <a className="prose-pdf-link" href={image.url} target="_blank" rel="noopener noreferrer">
-          <span className="prose-pdf-mark">PDF</span>
-          <span>{label}</span>
-        </a>
+        <PdfLinkCard href={image.url} label={label} />
       </figure>
     );
   }

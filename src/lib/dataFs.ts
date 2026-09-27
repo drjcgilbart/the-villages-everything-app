@@ -884,6 +884,18 @@ function guessUploadContentType(filename: string): string {
  *   2) Redis base64 fallback (when Blob is over quota / missing)
  * Local disk always keeps a same-instance copy for dev.
  */
+/** Keep the extension when a long filename is shortened, so a PDF stays a PDF. */
+function safeUploadBasename(filename: string): string {
+  const base = path
+    .basename(String(filename || "upload.bin"))
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
+  const extMatch = base.match(/\.[a-z0-9]{1,8}$/i);
+  const ext = extMatch ? extMatch[0].toLowerCase() : "";
+  const stem = (ext ? base.slice(0, -ext.length) : base).replace(/\.+$/, "");
+  const room = Math.max(1, 80 - ext.length);
+  return `${stem.slice(0, room) || "upload"}${ext}`;
+}
+
 export async function saveUploadFile(
   buffer: Buffer,
   filename: string,
@@ -892,11 +904,8 @@ export async function saveUploadFile(
   const { assertSafeUpload } = await import("./uploadGuard");
   assertSafeUpload(buffer, filename, contentType);
 
-  const safe = path
-    .basename(String(filename || "upload.bin"))
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .slice(0, 80);
-  const name = `${Date.now().toString(36)}-${safe || "upload.bin"}`;
+  const safe = safeUploadBasename(filename);
+  const name = `${Date.now().toString(36)}-${safe}`;
   const mime = contentType || guessUploadContentType(name);
   const appUrl = `/api/media/${encodeURIComponent(name)}`;
 

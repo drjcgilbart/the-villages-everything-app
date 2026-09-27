@@ -1,17 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Photo, Post, PostType, SiteContent, Video, VideoSource } from "@/lib/types";
 import { prepareStudioImageFile } from "@/lib/browserImage";
 import { isPdfMediaUrl, isPdfUpload } from "@/lib/mediaKind";
+import { parseBodyChunks, serializeBodyChunks, type BodyChunk } from "@/lib/postDraft";
 import { AdminCreatorDesk } from "@/components/AdminCreatorDesk";
+import { PdfLinkCard } from "@/components/PdfLinkCard";
 import type { DeskWebsite } from "@/lib/creatorDeskTypes";
-
-const TABLE_STARTER = `[[table]]
-What | Detail
-First item | 
-Second item | 
-[[/table]]`;
 type Tab = "posts" | "videos" | "photos" | "channel";
 
 type PostForm = {
@@ -129,12 +126,40 @@ export function AdminStudio() {
   const [filling, setFilling] = useState(false);
   const [uploading, setUploading] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [chunks, setChunks] = useState<BodyChunk[]>([{ kind: "text", text: "" }]);
+  const [activeChunk, setActiveChunk] = useState(0);
+  const [tableAsk, setTableAsk] = useState<{ rows: string; cols: string } | null>(null);
   const [ytPulling, setYtPulling] = useState(false);
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
     setTimeout(() => setMsg(null), 8000);
   };
+
+  useEffect(() => {
+    const body = serializeBodyChunks(chunks);
+    setPostForm((current) => (current.body === body ? current : { ...current, body }));
+  }, [chunks]);
+
+  useEffect(() => {
+    if (!tableAsk) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTableAsk(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tableAsk]);
+
+  function loadStory(body: string) {
+    setChunks(parseBodyChunks(body));
+    setActiveChunk(0);
+  }
+
+  function clearStory() {
+    setChunks([{ kind: "text", text: "" }]);
+    setActiveChunk(0);
+    setPostForm(emptyPost);
+  }
 
   useEffect(() => {
     if (!msg) return;
@@ -200,6 +225,10 @@ export function AdminStudio() {
 
   async function savePost(e: React.FormEvent) {
     e.preventDefault();
+    if (!serializeBodyChunks(chunks).trim()) {
+      flash("err", "Write the story in the body first.");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/posts", {
@@ -210,7 +239,7 @@ export function AdminStudio() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
       setContent(data);
-      setPostForm(emptyPost);
+      clearStory();
       flash("ok", postForm.id ? "Post updated" : "Post published");
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Save failed");
@@ -248,7 +277,7 @@ export function AdminStudio() {
     const data = await res.json();
     if (!res.ok) return flash("err", data.error || "Delete failed");
     setContent(data);
-    if (postForm.id === id) setPostForm(emptyPost);
+    if (postForm.id === id) clearStory();
     flash("ok", "Post deleted");
   }
 
@@ -337,6 +366,7 @@ export function AdminStudio() {
       featuredImageId: firstPictureId(images, p.featuredImageId),
       featured: !!p.featured,
     });
+    loadStory(p.body || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -351,6 +381,7 @@ export function AdminStudio() {
       body: draft.body || "",
       tags: (draft.tags || []).join(", "),
     });
+    loadStory(draft.body || "");
     flash("ok", "Website draft is in the blog form. Add pictures, then publish.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -526,42 +557,158 @@ export function AdminStudio() {
   function removePostImage(imageId: string) {
     setPostForm((f) => {
       const images = f.images.filter((img) => img.id !== imageId);
-      const body = f.body
-        .split(`[[photo:${imageId}]]`)
-        .join("")
-        .replace(/\n{3,}/g, "\n\n");
       return {
         ...f,
         images,
-        body,
-        featuredImageId: f.featuredImageId === imageId ? images[0]?.id || "" : f.featuredImageId,
+        featuredImageId: firstPictureId(
+          images,
+          f.featuredImageId === imageId ? "" : f.featuredImageId
+        ),
       };
     });
+    setChunks((prev) =>
+      parseBodyChunks(
+        serializeBodyChunks(prev)
+          .split(`[[photo:${imageId}]]`)
+          .join("")
+          .replace(/\n{3,}/g, "\n\n")
+      )
+    );
   }
 
-  function insertTable() {
-    const snippet = `\n${TABLE_STARTER}\n`;
-    const el = bodyRef.current;
-    const current = el ? el.value : postForm.body;
-    const start = el ? el.selectionStart : current.length;
-    const end = el ? el.selectionEnd : current.length;
-    const next = current.slice(0, start) + snippet + current.slice(end);
-    const caret = start + snippet.length;
-    setPostForm((f) => ({ ...f, body: next }));
-    requestAnimationFrame(() => {
-      const node = bodyRef.current;
-      if (!node) return;
-      node.focus();
-      node.setSelectionRange(caret, caret);
+  function confirmTable() {
+    const rows = Math.min(24, Math.max(2, Math.floor(Number(tableAsk?.rows))));
+    const cols = Math.min(6, Math.max(1, Math.floor(Number(tableAsk?.cols))));
+    if (!Number.isFinite(rows) || !Number.isFinite(cols)) {
+      flash("err", "Enter how many rows and columns you want.");
+      return;
+    }
+    const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => ""));
+    setChunks((prev) => {
+      const next = prev.map((chunk) =>
+        chunk.kind === "text"
+          ? { kind: "text" as const, text: chunk.text }
+          : { kind: "table" as const, rows: chunk.rows.map((row) => row.slice()) }
+      );
+      const index = next[activeChunk]?.kind === "text" ? activeChunk : next.findIndex((chunk) => chunk.kind === "text");
+      const at = index >= 0 ? index : next.length;
+      const chunk = next[at];
+      if (!chunk || chunk.kind !== "text") {
+        next.push({ kind: "table", rows: grid });
+        next.push({ kind: "text", text: "" });
+        return next;
+      }
+      const el = bodyRef.current;
+      const start = el && activeChunk === at ? el.selectionStart : chunk.text.length;
+      const end = el && activeChunk === at ? el.selectionEnd : start;
+      next.splice(
+        at,
+        1,
+        { kind: "text", text: chunk.text.slice(0, start) },
+        { kind: "table", rows: grid },
+        { kind: "text", text: chunk.text.slice(end) }
+      );
+      return next;
+    });
+    setTableAsk(null);
+  }
+
+  function setChunkText(index: number, text: string) {
+    setChunks((prev) =>
+      prev.map((chunk, i) => (i === index && chunk.kind === "text" ? { kind: "text", text } : chunk))
+    );
+  }
+
+  function setTableCell(chunkIndex: number, rowIndex: number, colIndex: number, value: string) {
+    const clean = value.replace(/\|/g, "/");
+    setChunks((prev) =>
+      prev.map((chunk, i) => {
+        if (i !== chunkIndex || chunk.kind !== "table") return chunk;
+        return {
+          kind: "table",
+          rows: chunk.rows.map((row, r) =>
+            r === rowIndex ? row.map((cell, c) => (c === colIndex ? clean : cell)) : row
+          ),
+        };
+      })
+    );
+  }
+
+  function pasteTable(chunkIndex: number, rowIndex: number, colIndex: number, text: string) {
+    if (!text.includes("\t") && !text.includes("\n")) return false;
+    const grid = text
+      .replace(/\r/g, "")
+      .split("\n")
+      .map((line) => line.split("\t"));
+    if (grid.length && grid[grid.length - 1].length === 1 && grid[grid.length - 1][0] === "") {
+      grid.pop();
+    }
+    if (!grid.length) return false;
+    setChunks((prev) =>
+      prev.map((chunk, i) => {
+        if (i !== chunkIndex || chunk.kind !== "table") return chunk;
+        const pastedWidth = Math.max(...grid.map((row) => row.length));
+        const width = Math.min(6, Math.max(chunk.rows[0]?.length || 1, colIndex + pastedWidth));
+        const height = Math.min(24, Math.max(chunk.rows.length, rowIndex + grid.length));
+        const rows = Array.from({ length: height }, (_, r) => {
+          const existing = chunk.rows[r] || [];
+          return Array.from({ length: width }, (_, c) => {
+            const sourceRow = r - rowIndex;
+            const sourceCol = c - colIndex;
+            if (sourceRow >= 0 && sourceRow < grid.length && sourceCol >= 0 && sourceCol < grid[sourceRow].length) {
+              return grid[sourceRow][sourceCol].replace(/\|/g, "/");
+            }
+            return existing[c] || "";
+          });
+        });
+        return { kind: "table", rows };
+      })
+    );
+    return true;
+  }
+
+  function removeTable(index: number) {
+    setChunks((prev) => {
+      const merged: BodyChunk[] = [];
+      prev.forEach((chunk, i) => {
+        if (i === index) return;
+        const last = merged[merged.length - 1];
+        if (chunk.kind === "text" && last?.kind === "text") {
+          last.text += chunk.text;
+          return;
+        }
+        merged.push(
+          chunk.kind === "text"
+            ? { kind: "text", text: chunk.text }
+            : { kind: "table", rows: chunk.rows.map((row) => row.slice()) }
+        );
+      });
+      return merged.length ? merged : [{ kind: "text", text: "" }];
     });
   }
 
   function placePictureInStory(imageId: string) {
     const token = `[[photo:${imageId}]]`;
-    setPostForm((f) => {
-      if (f.body.includes(token)) return f;
-      const body = f.body.trim() ? `${f.body.trim()}\n\n${token}\n` : `${token}\n`;
-      return { ...f, body };
+    setChunks((prev) => {
+      if (serializeBodyChunks(prev).includes(token)) return prev;
+      const next = prev.map((chunk) =>
+        chunk.kind === "text"
+          ? { kind: "text" as const, text: chunk.text }
+          : { kind: "table" as const, rows: chunk.rows.map((row) => row.slice()) }
+      );
+      let index = next.length - 1;
+      while (index >= 0 && next[index].kind !== "text") index -= 1;
+      if (index < 0) {
+        next.push({ kind: "text", text: `${token}\n` });
+        return next;
+      }
+      const chunk = next[index];
+      if (chunk.kind !== "text") return next;
+      next[index] = {
+        kind: "text",
+        text: chunk.text.trim() ? `${chunk.text.trim()}\n\n${token}\n` : `${token}\n`,
+      };
+      return next;
     });
   }
 
@@ -745,24 +892,75 @@ export function AdminStudio() {
               </div>
               <div className="field">
                 <label htmlFor="post-body">Body</label>
-                <textarea
-                  id="post-body"
-                  ref={bodyRef}
-                  required
-                  value={postForm.body}
-                  onChange={(e) => setPostForm((f) => ({ ...f, body: e.target.value }))}
-                  placeholder="Separate paragraphs with a blank line"
-                />
+                <div className="studio-story">
+                  {chunks.map((chunk, index) =>
+                    chunk.kind === "text" ? (
+                      <textarea
+                        key={`text-${index}`}
+                        id={index === 0 ? "post-body" : undefined}
+                        className="studio-body"
+                        ref={index === activeChunk ? bodyRef : undefined}
+                        value={chunk.text}
+                        placeholder={index === 0 ? "Separate paragraphs with a blank line" : "Story continues here"}
+                        onFocus={() => setActiveChunk(index)}
+                        onChange={(e) => setChunkText(index, e.target.value)}
+                      />
+                    ) : (
+                      <div key={`table-${index}`} className="studio-table">
+                        <table>
+                          <tbody>
+                            {chunk.rows.map((row, rowIndex) => (
+                              <tr key={rowIndex}>
+                                {row.map((cell, colIndex) => (
+                                  <td key={colIndex}>
+                                    <input
+                                      aria-label={
+                                        rowIndex === 0
+                                          ? `Header column ${colIndex + 1}`
+                                          : `Row ${rowIndex} column ${colIndex + 1}`
+                                      }
+                                      value={cell}
+                                      onChange={(e) =>
+                                        setTableCell(index, rowIndex, colIndex, e.target.value)
+                                      }
+                                      onPaste={(e) => {
+                                        const text = e.clipboardData.getData("text");
+                                        if (pasteTable(index, rowIndex, colIndex, text)) {
+                                          e.preventDefault();
+                                        }
+                                      }}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => removeTable(index)}
+                        >
+                          Remove table
+                        </button>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
               <div className="admin-actions">
-                <button type="button" className="btn btn-ghost" onClick={insertTable}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setTableAsk({ rows: "4", cols: "2" })}
+                >
                   Insert a table
                 </button>
               </div>
               <p className="panel-hint" style={{ marginTop: 0 }}>
-                A table uses one line per row. The first line is the header, and a
-                vertical bar separates the columns. Leave [[table]] and [[/table]]
-                in place, then replace the sample rows.
+                Insert a table asks how many rows and columns you want, then puts
+                that grid in the story. The first row is the header. Type in the
+                cells, or paste a block copied from a spreadsheet.
               </p>
               <div className="admin-actions">
                 <button
@@ -794,9 +992,10 @@ export function AdminStudio() {
                 />
                 <p className="panel-hint">
                   The cover picture is the photo on the blog list and at the top of
-                  the post. A PDF is not the cover. Place in the story drops that
-                  file where you want it. Anything you do not place still shows at
-                  the end. Readers open a PDF in the browser.
+                  the post. Place in the story drops a picture or a PDF where you
+                  want it. Anything you do not place still shows at the end. A PDF
+                  shows as a document graphic, and clicking it opens the file in a
+                  new window.
                 </p>
               </div>
               {postForm.images.length > 0 && (
@@ -811,14 +1010,7 @@ export function AdminStudio() {
                         className={`admin-photo-tile ${isFeatured ? "featured" : ""}`}
                       >
                         {pdf ? (
-                          <a
-                            className="admin-pdf-preview"
-                            href={img.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            PDF
-                          </a>
+                          <PdfLinkCard href={img.url} label={img.caption || "Open the PDF"} compact />
                         ) : (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={img.url} alt="" />
@@ -888,7 +1080,7 @@ export function AdminStudio() {
                   {busy ? "Saving…" : postForm.id ? "Update post" : "Publish post"}
                 </button>
                 {postForm.id && (
-                  <button type="button" className="btn btn-ghost" onClick={() => setPostForm(emptyPost)}>
+                  <button type="button" className="btn btn-ghost" onClick={clearStory}>
                     Cancel edit
                   </button>
                 )}
@@ -1253,6 +1445,63 @@ export function AdminStudio() {
           </>
         )}
       </div>
+      {tableAsk
+        ? createPortal(
+            <div className="fav-site-overlay" onClick={() => setTableAsk(null)}>
+              <div
+                className="fav-site-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="table-ask-title"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h2 id="table-ask-title">Insert a table</h2>
+                <p className="fav-site-lead">
+                  How many rows and columns should this table have? The first row
+                  is the header. After it lands in the story, type in the cells or
+                  paste from a spreadsheet.
+                </p>
+                <div className="form-row">
+                  <div className="field">
+                    <label htmlFor="table-rows">Rows</label>
+                    <input
+                      id="table-rows"
+                      type="number"
+                      min={2}
+                      max={24}
+                      value={tableAsk.rows}
+                      onChange={(event) =>
+                        setTableAsk({ ...tableAsk, rows: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="table-cols">Columns</label>
+                    <input
+                      id="table-cols"
+                      type="number"
+                      min={1}
+                      max={6}
+                      value={tableAsk.cols}
+                      onChange={(event) =>
+                        setTableAsk({ ...tableAsk, cols: event.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="admin-actions">
+                  <button type="button" className="btn btn-primary" onClick={confirmTable}>
+                    Put the table in the story
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setTableAsk(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
