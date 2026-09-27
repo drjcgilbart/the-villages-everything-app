@@ -10481,6 +10481,45 @@ button.text-link {
   gap: 0.75rem;
 }
 
+.studio-format {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+
+.studio-rich {
+  overflow: auto;
+  line-height: 1.5;
+}
+
+.studio-rich:empty:before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+}
+
+.pdf-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 7rem);
+}
+
+.pdf-screen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.pdf-screen iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 70vh;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #525659;
+}
+
 .studio-table {
   margin: 0.35rem 0 0.85rem;
   overflow-x: auto;

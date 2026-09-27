@@ -27,6 +27,7 @@ export function plainStory(body: string): string {
       ` ${String(inner).replace(/\|/g, " ")} `
     )
     .replace(/\[\[photo:[a-zA-Z0-9_-]+\]\]/g, " ")
+    .replace(/<\/?(?:b|i|u|br)\s*\/?>/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }

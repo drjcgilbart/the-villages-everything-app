@@ -1,3 +1,9 @@
+"use client";
+
+export function pdfViewHref(file: string) {
+  return `/read-pdf?file=${encodeURIComponent(file)}`;
+}
+
 export function PdfLinkCard({
   href,
   label,
@@ -7,12 +13,17 @@ export function PdfLinkCard({
   label: string;
   compact?: boolean;
 }) {
+  const view = pdfViewHref(href);
   return (
     <a
       className={compact ? "pdf-card pdf-card-compact" : "pdf-card"}
-      href={href}
+      href={view}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={(event) => {
+        const popup = window.open(view, "villagesPdf", "popup,width=1040,height=860");
+        if (popup) event.preventDefault();
+      }}
     >
       <svg className="pdf-card-art" viewBox="0 0 120 148" aria-hidden="true">
         <rect x="8" y="8" width="104" height="132" rx="10" fill="#fffaf2" stroke="#1f6b4a" strokeWidth="3" />

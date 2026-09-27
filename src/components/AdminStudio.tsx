@@ -8,6 +8,7 @@ import { isPdfMediaUrl, isPdfUpload } from "@/lib/mediaKind";
 import { parseBodyChunks, serializeBodyChunks, type BodyChunk } from "@/lib/storyBlocks";
 import { AdminCreatorDesk } from "@/components/AdminCreatorDesk";
 import { PdfLinkCard } from "@/components/PdfLinkCard";
+import { sanitizeStoryHtml, StoryRichText } from "@/components/StoryRichText";
 import type { DeskWebsite } from "@/lib/creatorDeskTypes";
 type Tab = "posts" | "videos" | "photos" | "channel";
 
@@ -41,6 +42,29 @@ type PhotoFormImage = {
   url: string;
   caption: string;
 };
+
+function splitRichAtCursor(root: HTMLDivElement | null, fallback: string) {
+  if (!root) return { before: fallback, after: "" };
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount || !root.contains(selection.anchorNode)) {
+    return { before: fallback, after: "" };
+  }
+  const range = selection.getRangeAt(0);
+  const beforeRange = range.cloneRange();
+  beforeRange.selectNodeContents(root);
+  beforeRange.setEnd(range.startContainer, range.startOffset);
+  const afterRange = range.cloneRange();
+  afterRange.selectNodeContents(root);
+  afterRange.setStart(range.endContainer, range.endOffset);
+  const beforeHost = document.createElement("div");
+  beforeHost.appendChild(beforeRange.cloneContents());
+  const afterHost = document.createElement("div");
+  afterHost.appendChild(afterRange.cloneContents());
+  return {
+    before: sanitizeStoryHtml(beforeHost.innerHTML),
+    after: sanitizeStoryHtml(afterHost.innerHTML),
+  };
+}
 
 function firstPictureId(images: PhotoFormImage[], preferred?: string) {
   if (
@@ -125,7 +149,7 @@ export function AdminStudio() {
   const [busy, setBusy] = useState(false);
   const [filling, setFilling] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [chunks, setChunks] = useState<BodyChunk[]>([{ kind: "text", text: "" }]);
   const [activeChunk, setActiveChunk] = useState(0);
   const [tableAsk, setTableAsk] = useState<{ rows: string; cols: string } | null>(null);
@@ -598,19 +622,25 @@ export function AdminStudio() {
         next.push({ kind: "text", text: "" });
         return next;
       }
-      const el = bodyRef.current;
-      const start = el && activeChunk === at ? el.selectionStart : chunk.text.length;
-      const end = el && activeChunk === at ? el.selectionEnd : start;
+      const split = splitRichAtCursor(activeChunk === at ? bodyRef.current : null, chunk.text);
       next.splice(
         at,
         1,
-        { kind: "text", text: chunk.text.slice(0, start) },
+        { kind: "text", text: split.before },
         { kind: "table", rows: grid },
-        { kind: "text", text: chunk.text.slice(end) }
+        { kind: "text", text: split.after }
       );
       return next;
     });
     setTableAsk(null);
+  }
+
+  function formatStory(command: "bold" | "italic" | "underline") {
+    const node = bodyRef.current;
+    if (!node) return;
+    node.focus();
+    document.execCommand(command);
+    setChunkText(activeChunk, sanitizeStoryHtml(node.innerHTML));
   }
 
   function setChunkText(index: number, text: string) {
@@ -891,19 +921,32 @@ export function AdminStudio() {
                 />
               </div>
               <div className="field">
-                <label htmlFor="post-body">Body</label>
+                <label id="post-body-label">Body</label>
+                <div className="studio-format" role="toolbar" aria-label="Story formatting">
+                  <button type="button" className="btn btn-ghost btn-sm" onMouseDown={(event) => event.preventDefault()} onClick={() => formatStory("bold")}>
+                    <strong>B</strong>
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onMouseDown={(event) => event.preventDefault()} onClick={() => formatStory("italic")}>
+                    <em>I</em>
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm" onMouseDown={(event) => event.preventDefault()} onClick={() => formatStory("underline")}>
+                    <u>U</u>
+                  </button>
+                </div>
                 <div className="studio-story">
                   {chunks.map((chunk, index) =>
                     chunk.kind === "text" ? (
-                      <textarea
+                      <StoryRichText
                         key={`text-${index}`}
-                        id={index === 0 ? "post-body" : undefined}
-                        className="studio-body"
-                        ref={index === activeChunk ? bodyRef : undefined}
                         value={chunk.text}
                         placeholder={index === 0 ? "Separate paragraphs with a blank line" : "Story continues here"}
+                        labelledBy={index === 0 ? "post-body-label" : undefined}
+                        active={index === activeChunk}
                         onFocus={() => setActiveChunk(index)}
-                        onChange={(e) => setChunkText(index, e.target.value)}
+                        onChange={(text) => setChunkText(index, text)}
+                        editorRef={(node) => {
+                          if (index === activeChunk) bodyRef.current = node;
+                        }}
                       />
                     ) : (
                       <div key={`table-${index}`} className="studio-table">

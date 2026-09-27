@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPostBySlugAsync } from "@/lib/content";
 import { formatDate } from "@/lib/format";
 import { PdfLinkCard } from "@/components/PdfLinkCard";
+import { StoryText } from "@/components/StoryText";
 import { blocksForPost, photosNotInBody } from "@/lib/postDraft";
 import { isPdfMediaUrl } from "@/lib/mediaKind";
 import type { PhotoImage } from "@/lib/types";
@@ -77,7 +78,9 @@ export default async function PostPage({
             ) : block.kind === "table" ? (
               <PostTable key={`table-${i}`} headers={block.headers} rows={block.rows} />
             ) : (
-              <p key={i}>{block.text}</p>
+              <p key={i}>
+                <StoryText text={block.text} />
+              </p>
             )
           )}
           {trailing.length > 0 && (
