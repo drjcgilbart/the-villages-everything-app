@@ -2,9 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Post } from "@/lib/types";
 import { formatDate } from "@/lib/format";
+import { isPdfMediaUrl } from "@/lib/mediaKind";
 
 function artForPost(post: Post) {
-  if (post.coverImage) return post.coverImage;
+  if (post.coverImage && !isPdfMediaUrl(post.coverImage)) return post.coverImage;
   const tags = (post.tags || []).map((t) => t.toLowerCase());
   if (tags.some((t) => /health|walk|med|fitness|weight/.test(t))) {
     return "/graphics/theme-health.jpg";

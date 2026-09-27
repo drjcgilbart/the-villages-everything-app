@@ -27,21 +27,29 @@ export async function POST(req: Request) {
       );
     }
     const type = file.type || "";
+    const nameLower = (file.name || "").toLowerCase();
     const isVideo = type.startsWith("video/");
     const isImage = type.startsWith("image/");
-    if (!isVideo && !isImage) {
+    const isPdf = type === "application/pdf" || nameLower.endsWith(".pdf");
+    if (!isVideo && !isImage && !isPdf) {
       return NextResponse.json(
-        { error: "Only video or image files are allowed" },
+        { error: "Only video, image, or PDF files are allowed" },
         { status: 400 }
       );
     }
+    let filename = file.name || (isVideo ? "video.mp4" : isPdf ? "document.pdf" : "image.jpg");
+    if (isPdf && !filename.toLowerCase().endsWith(".pdf")) filename = `${filename}.pdf`;
     const buffer = Buffer.from(await file.arrayBuffer());
     const url = await saveUpload(
       buffer,
-      file.name || (isVideo ? "video.mp4" : "image.jpg"),
-      type || undefined
+      filename,
+      isPdf ? "application/pdf" : type || undefined
     );
-    return NextResponse.json({ url, type: isVideo ? "video" : "image", name: file.name });
+    return NextResponse.json({
+      url,
+      type: isVideo ? "video" : isPdf ? "pdf" : "image",
+      name: file.name,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Upload failed" },

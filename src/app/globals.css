@@ -9789,11 +9789,23 @@ a.ts-square-card:hover .ts-square-card-img {
   box-shadow: 0 0 0 2px rgba(31, 107, 74, 0.15);
 }
 
-.admin-photo-tile img {
+.admin-photo-tile img,
+.admin-pdf-preview {
   width: 100%;
   height: 120px;
   object-fit: cover;
   display: block;
+}
+
+.admin-pdf-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4efe6;
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-decoration: none;
 }
 
 .admin-photo-tile-actions {
@@ -10224,6 +10236,61 @@ button.text-link {
   margin-top: 0.4rem;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.prose-pdf-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fffaf2;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.prose-pdf-mark {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+  background: var(--palm);
+  color: #fffaf2;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+.prose-table-wrap {
+  margin: 0 0 1.25rem;
+  overflow-x: auto;
+}
+
+.prose-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.98rem;
+}
+
+.prose-table th,
+.prose-table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.prose-table th {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  background: rgba(255, 250, 242, 0.9);
+}
+
+.prose-table tr:last-child td {
+  border-bottom: none;
 }
 
 .article-photo-end {

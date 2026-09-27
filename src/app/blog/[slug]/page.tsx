@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPostBySlugAsync } from "@/lib/content";
 import { formatDate } from "@/lib/format";
 import { blocksForPost, photosNotInBody } from "@/lib/postDraft";
+import { isPdfMediaUrl } from "@/lib/mediaKind";
 import type { PhotoImage } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,10 +32,11 @@ export default async function PostPage({
   if (!post) notFound();
 
   const images = Array.isArray(post.images) ? post.images : [];
+  const pictures = images.filter((img) => !isPdfMediaUrl(img.url));
   const cover =
-    images.find((img) => img.id === post.featuredImageId) ||
-    (post.coverImage ? images.find((img) => img.url === post.coverImage) : undefined) ||
-    images[0];
+    pictures.find((img) => img.id === post.featuredImageId) ||
+    (post.coverImage ? pictures.find((img) => img.url === post.coverImage) : undefined) ||
+    pictures[0];
   const blocks = blocksForPost(post.body, images);
   const trailing = photosNotInBody(post.body, images, cover?.id);
 
@@ -71,6 +73,8 @@ export default async function PostPage({
           {blocks.map((block, i) =>
             block.kind === "photo" ? (
               <PostFigure key={`${block.image.id}-${i}`} image={block.image} />
+            ) : block.kind === "table" ? (
+              <PostTable key={`table-${i}`} headers={block.headers} rows={block.rows} />
             ) : (
               <p key={i}>{block.text}</p>
             )
@@ -94,6 +98,17 @@ export default async function PostPage({
 }
 
 function PostFigure({ image, cover }: { image: PhotoImage; cover?: boolean }) {
+  if (isPdfMediaUrl(image.url)) {
+    const label = image.caption?.trim() || "Open the PDF";
+    return (
+      <figure className="prose-figure prose-pdf">
+        <a className="prose-pdf-link" href={image.url} target="_blank" rel="noopener noreferrer">
+          <span className="prose-pdf-mark">PDF</span>
+          <span>{label}</span>
+        </a>
+      </figure>
+    );
+  }
   return (
     <figure className={cover ? "article-cover" : "prose-figure"}>
       {/* Uploads are served by /api/media, which the image optimizer does not host. */}
@@ -101,5 +116,32 @@ function PostFigure({ image, cover }: { image: PhotoImage; cover?: boolean }) {
       <img src={image.url} alt={image.caption || ""} />
       {image.caption ? <figcaption>{image.caption}</figcaption> : null}
     </figure>
+  );
+}
+
+function PostTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
+  return (
+    <div className="prose-table-wrap">
+      <table className="prose-table">
+        <thead>
+          <tr>
+            {headers.map((header, index) => (
+              <th key={index} scope="col">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

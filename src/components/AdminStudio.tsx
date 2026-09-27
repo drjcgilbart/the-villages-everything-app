@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Photo, Post, PostType, SiteContent, Video, VideoSource } from "@/lib/types";
 import { prepareStudioImageFile } from "@/lib/browserImage";
+import { isPdfMediaUrl, isPdfUpload } from "@/lib/mediaKind";
 import { AdminCreatorDesk } from "@/components/AdminCreatorDesk";
 import type { DeskWebsite } from "@/lib/creatorDeskTypes";
+
+const TABLE_STARTER = `[[table]]
+What | Detail
+First item | 
+Second item | 
+[[/table]]`;
 type Tab = "posts" | "videos" | "photos" | "channel";
 
 type PostForm = {
@@ -37,6 +44,16 @@ type PhotoFormImage = {
   url: string;
   caption: string;
 };
+
+function firstPictureId(images: PhotoFormImage[], preferred?: string) {
+  if (
+    preferred &&
+    images.some((img) => img.id === preferred && !isPdfMediaUrl(img.url))
+  ) {
+    return preferred;
+  }
+  return images.find((img) => !isPdfMediaUrl(img.url))?.id || "";
+}
 
 type PhotoForm = {
   id: string;
@@ -111,6 +128,7 @@ export function AdminStudio() {
   const [busy, setBusy] = useState(false);
   const [filling, setFilling] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [ytPulling, setYtPulling] = useState(false);
 
   const flash = (kind: "ok" | "err", text: string) => {
@@ -316,10 +334,7 @@ export function AdminStudio() {
       body: p.body,
       tags: (p.tags || []).join(", "),
       images,
-      featuredImageId:
-        p.featuredImageId && images.some((img) => img.id === p.featuredImageId)
-          ? p.featuredImageId
-          : images[0]?.id || "",
+      featuredImageId: firstPictureId(images, p.featuredImageId),
       featured: !!p.featured,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -471,8 +486,11 @@ export function AdminStudio() {
     setUploading(true);
     try {
       const added: PhotoFormImage[] = [];
+      let pdfCount = 0;
       for (const file of Array.from(fileList)) {
-        const ready = await prepareStudioImageFile(file);
+        const pdf = isPdfUpload(file);
+        if (pdf) pdfCount += 1;
+        const ready = pdf ? file : await prepareStudioImageFile(file);
         const fd = new FormData();
         fd.append("file", ready);
         const res = await fetch("/api/upload", { method: "POST", body: fd });
@@ -484,12 +502,20 @@ export function AdminStudio() {
           caption: "",
         });
       }
-      setPostForm((f) => ({
-        ...f,
-        images: [...f.images, ...added],
-        featuredImageId: f.featuredImageId || added[0]?.id || "",
-      }));
-      flash("ok", added.length === 1 ? "Picture uploaded" : `${added.length} pictures uploaded`);
+      setPostForm((f) => {
+        const images = [...f.images, ...added];
+        return {
+          ...f,
+          images,
+          featuredImageId: firstPictureId(images, f.featuredImageId),
+        };
+      });
+      const pictureCount = added.length - pdfCount;
+      const parts = [
+        pictureCount ? `${pictureCount} picture${pictureCount === 1 ? "" : "s"}` : "",
+        pdfCount ? `${pdfCount} PDF${pdfCount === 1 ? "" : "s"}` : "",
+      ].filter(Boolean);
+      flash("ok", `${parts.join(" and ")} uploaded`);
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -510,6 +536,23 @@ export function AdminStudio() {
         body,
         featuredImageId: f.featuredImageId === imageId ? images[0]?.id || "" : f.featuredImageId,
       };
+    });
+  }
+
+  function insertTable() {
+    const snippet = `\n${TABLE_STARTER}\n`;
+    const el = bodyRef.current;
+    const current = el ? el.value : postForm.body;
+    const start = el ? el.selectionStart : current.length;
+    const end = el ? el.selectionEnd : current.length;
+    const next = current.slice(0, start) + snippet + current.slice(end);
+    const caret = start + snippet.length;
+    setPostForm((f) => ({ ...f, body: next }));
+    requestAnimationFrame(() => {
+      const node = bodyRef.current;
+      if (!node) return;
+      node.focus();
+      node.setSelectionRange(caret, caret);
     });
   }
 
@@ -701,14 +744,26 @@ export function AdminStudio() {
                 />
               </div>
               <div className="field">
-                <label>Body</label>
+                <label htmlFor="post-body">Body</label>
                 <textarea
+                  id="post-body"
+                  ref={bodyRef}
                   required
                   value={postForm.body}
                   onChange={(e) => setPostForm((f) => ({ ...f, body: e.target.value }))}
                   placeholder="Separate paragraphs with a blank line"
                 />
               </div>
+              <div className="admin-actions">
+                <button type="button" className="btn btn-ghost" onClick={insertTable}>
+                  Insert a table
+                </button>
+              </div>
+              <p className="panel-hint" style={{ marginTop: 0 }}>
+                A table uses one line per row. The first line is the header, and a
+                vertical bar separates the columns. Leave [[table]] and [[/table]]
+                in place, then replace the sample rows.
+              </p>
               <div className="admin-actions">
                 <button
                   type="button"
@@ -726,11 +781,11 @@ export function AdminStudio() {
               </p>
               <div className="field">
                 <label>
-                  Pictures {uploading ? "(uploading…)" : ""} — select one or many
+                  Pictures and PDFs {uploading ? "(uploading…)" : ""} — select one or many
                 </label>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.pdf,application/pdf"
                   multiple
                   onChange={(e) => {
                     void onUploadPostPhotos(e.target.files);
@@ -738,35 +793,52 @@ export function AdminStudio() {
                   }}
                 />
                 <p className="panel-hint">
-                  The featured picture is the cover on the blog list and at the top of
-                  the post. Place in the story drops that picture where you want it.
-                  Pictures you do not place still show at the end.
+                  The cover picture is the photo on the blog list and at the top of
+                  the post. A PDF is not the cover. Place in the story drops that
+                  file where you want it. Anything you do not place still shows at
+                  the end. Readers open a PDF in the browser.
                 </p>
               </div>
               {postForm.images.length > 0 && (
                 <div className="admin-photo-grid">
                   {postForm.images.map((img, idx) => {
-                    const isFeatured = img.id === postForm.featuredImageId;
+                    const pdf = isPdfMediaUrl(img.url);
+                    const isFeatured = !pdf && img.id === postForm.featuredImageId;
                     const placed = postForm.body.includes(`[[photo:${img.id}]]`);
                     return (
                       <div
                         key={img.id}
                         className={`admin-photo-tile ${isFeatured ? "featured" : ""}`}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.url} alt="" />
+                        {pdf ? (
+                          <a
+                            className="admin-pdf-preview"
+                            href={img.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            PDF
+                          </a>
+                        ) : (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={img.url} alt="" />
+                        )}
                         <div className="admin-photo-tile-actions">
-                          <label className="admin-photo-feature">
-                            <input
-                              type="radio"
-                              name="featured-post-image"
-                              checked={isFeatured}
-                              onChange={() =>
-                                setPostForm((f) => ({ ...f, featuredImageId: img.id }))
-                              }
-                            />
-                            Cover
-                          </label>
+                          {pdf ? (
+                            <span className="admin-photo-feature">PDF</span>
+                          ) : (
+                            <label className="admin-photo-feature">
+                              <input
+                                type="radio"
+                                name="featured-post-image"
+                                checked={isFeatured}
+                                onChange={() =>
+                                  setPostForm((f) => ({ ...f, featuredImageId: img.id }))
+                                }
+                              />
+                              Cover
+                            </label>
+                          )}
                           <button
                             type="button"
                             className="btn btn-ghost btn-sm"
@@ -785,7 +857,7 @@ export function AdminStudio() {
                         <input
                           type="text"
                           className="admin-photo-caption-input"
-                          placeholder={`Caption for picture ${idx + 1}`}
+                          placeholder={pdf ? "Name readers will see on the PDF" : `Caption for picture ${idx + 1}`}
                           value={img.caption}
                           onChange={(e) => {
                             const caption = e.target.value;

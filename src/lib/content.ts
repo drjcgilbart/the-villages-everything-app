@@ -17,6 +17,7 @@ import {
 import type { Photo, Post, SiteContent, Video } from "./types";
 import { SITE_BRAND } from "./siteBrand";
 import { getChannelSiteVideos } from "./channelYoutube";
+import { isPdfMediaUrl } from "./mediaKind";
 
 const CONTENT_FILE = "content.json";
 const PHOTO_FILE = "photo-journal.json";
@@ -331,8 +332,10 @@ function normalizePostImages(raw: unknown): Photo["images"] {
 }
 
 function coverFromImages(images: Photo["images"], featuredImageId?: string) {
+  const pictures = images.filter((img) => !isPdfMediaUrl(img.url));
   const featured =
-    (featuredImageId && images.find((img) => img.id === featuredImageId)) || images[0];
+    (featuredImageId && pictures.find((img) => img.id === featuredImageId)) ||
+    pictures[0];
   return {
     featuredImageId: featured?.id,
     coverImage: featured?.url,

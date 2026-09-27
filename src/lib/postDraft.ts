@@ -2,6 +2,14 @@ import type { PhotoImage } from "./types";
 import { slugify } from "./content";
 import { grokJson, xaiConfigured } from "./xaiChat";
 
+const TABLE_RULE = /^[\s|:-]+$/;
+
+function storyParts(body: string): string[] {
+  return body.split(
+    /(\[\[photo:[a-zA-Z0-9_-]+\]\]|\[\[table\]\][\s\S]*?\[\[\/table\]\])/g
+  );
+}
+
 export type PostSuggestion = {
   title: string;
   slug: string;
@@ -29,7 +37,7 @@ const TOPIC_TAGS: [RegExp, string][] = [
 /** Works with no API key: first line of the story, a short teaser, and a few real topics. */
 export function suggestPostLocally(title: string, body: string): PostSuggestion {
   const cleanTitle = title.trim().slice(0, 200);
-  const text = body.replace(/\[\[photo:[a-zA-Z0-9_-]+\]\]/g, " ").replace(/\s+/g, " ").trim();
+  const text = plainStory(body);
   const sentence = text.split(/(?<=[.!?])\s/)[0] || text;
   const excerpt = sentence.slice(0, 180).trim();
   const hay = `${cleanTitle} ${text}`.toLowerCase();
@@ -71,7 +79,7 @@ From the story, write:
 Do not invent prices, company names, or places that are not in the story.
 JSON: {"title":"","slug":"","excerpt":"","tags":["health"]}`,
       `Author title: ${title.trim() || "(none yet)"}
-Story:\n${body.trim().slice(0, 8000)}`
+Story:\n${plainStory(body).slice(0, 8000)}`
     );
     const tags = (result.tags || [])
       .map((t) =>
@@ -101,20 +109,77 @@ Story:\n${body.trim().slice(0, 8000)}`
   }
 }
 
+export type PostTable = {
+  headers: string[];
+  rows: string[][];
+};
+
 export type PostBlock =
   | { kind: "text"; text: string }
-  | { kind: "photo"; image: PhotoImage };
+  | { kind: "photo"; image: PhotoImage }
+  | ({ kind: "table" } & PostTable);
 
-/** Split a story into paragraphs and [[photo:id]] pictures. */
+/** Story text without picture tokens, for excerpts and tag suggestions. */
+export function plainStory(body: string): string {
+  return String(body || "")
+    .replace(/\[\[table\]\]([\s\S]*?)\[\[\/table\]\]/g, (_, inner: string) =>
+      ` ${String(inner).replace(/\|/g, " ")} `
+    )
+    .replace(/\[\[photo:[a-zA-Z0-9_-]+\]\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tableCells(line: string): string[] {
+  return line
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim().slice(0, 200));
+}
+
+/** First line is the header. Later lines are rows. Columns are split on |. */
+export function parseStoryTable(raw: string): PostTable | null {
+  const lines = String(raw || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !TABLE_RULE.test(line));
+  const grid = lines
+    .map(tableCells)
+    .filter((row) => row.some(Boolean))
+    .slice(0, 41);
+  if (grid.length < 2) return null;
+  const width = Math.min(6, Math.max(...grid.map((row) => row.length)));
+  if (width < 1) return null;
+  const sized = grid.map((row) => {
+    const next = row.slice(0, width);
+    while (next.length < width) next.push("");
+    return next;
+  });
+  const [headers, ...rows] = sized;
+  if (!headers.some(Boolean)) return null;
+  const body = rows.filter((row) => row.some(Boolean));
+  if (!body.length) return null;
+  return { headers, rows: body };
+}
+
+/** Split a story into paragraphs, [[photo:id]] pictures, and [[table]] blocks. */
 export function blocksForPost(body: string, images: PhotoImage[]): PostBlock[] {
   const byId = new Map(images.map((img) => [img.id, img]));
-  const parts = String(body || "").split(/(\[\[photo:[a-zA-Z0-9_-]+\]\])/g);
+  const parts = storyParts(String(body || ""));
   const blocks: PostBlock[] = [];
   for (const part of parts) {
     const token = part.match(/^\[\[photo:([a-zA-Z0-9_-]+)\]\]$/);
     if (token) {
       const image = byId.get(token[1]);
       if (image) blocks.push({ kind: "photo", image });
+      continue;
+    }
+    const table = part.match(/^\[\[table\]\]([\s\S]*)\[\[\/table\]\]$/);
+    if (table) {
+      const parsed = parseStoryTable(table[1]);
+      if (parsed) blocks.push({ kind: "table", ...parsed });
+      else if (part.trim()) blocks.push({ kind: "text", text: part.trim() });
       continue;
     }
     const paras = part
