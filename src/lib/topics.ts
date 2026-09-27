@@ -798,6 +798,15 @@ export const MAIN_TOPICS: {
     image: "/graphics/theme-arts-crafts-v2.jpg",
   },
   {
+    href: "/day-trips",
+    label: "Day Trips & Fun Stuff",
+    icon: "🗺️",
+    matchPrefixes: ["/day-trips"],
+    blurb:
+      "Springs, critters, beaches, and grandkid-sized adventures within a day’s drive of The Villages.",
+    image: "/graphics/day-trips/space.jpg",
+  },
+  {
     href: "/golf-cart-hero",
     label: "Golf Cart Hero",
     icon: "🏎️",

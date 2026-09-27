@@ -150,6 +150,31 @@ const SEASONS = [
 export function MySpaceBoatingBoard() {
   return (
     <div className="ms-boat">
+      <div className="ms-boat-hero">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/graphics/boating/mascot.jpg"
+          alt="Golf-ball mascot with a fishing hat, a rod, and a bass"
+          className="ms-boat-mascot"
+        />
+        <div className="ms-boat-hero-copy">
+          <span className="kicker">Just outside the gates</span>
+          <p>
+            Ramps, bass water, a pontoon at the square, and the gulf when you
+            want salt on the console. The pictures are ours. The water is real.
+          </p>
+        </div>
+        <div className="ms-boat-hero-scenes">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/graphics/boating/ramp.jpg" alt="Cartoon sunrise at a lake boat ramp" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/graphics/boating/pontoon.jpg" alt="Cartoon pontoon boat at a waterfront square" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/graphics/boating/bass.jpg" alt="Cartoon largemouth bass jumping by the lily pads" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/graphics/boating/gulf.jpg" alt="Cartoon fishing boat headed toward a gulf beach" />
+        </div>
+      </div>
       <p className="panel-hint" style={{ marginTop: 0 }}>
         Water worth a trailer is just outside the gates. Golf-course lakes and
         village ponds stay off the hitch. Drive times are from the middle of
@@ -170,9 +195,11 @@ export function MySpaceBoatingBoard() {
         </a>
       </div>
 
-      <h3 id="ms-boat-ramps" className="my-space-block-title">
-        Boat ramps
-      </h3>
+      <div className="ms-boat-section-art" id="ms-boat-ramps">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/graphics/boating/ramp.jpg" alt="" />
+        <h3 className="my-space-block-title">Boat ramps</h3>
+      </div>
       <div className="ms-boat-grid">
         {RAMPS.map((spot) => (
           <article key={spot.name} className="about-panel ms-boat-card">
@@ -194,9 +221,11 @@ export function MySpaceBoatingBoard() {
         ))}
       </div>
 
-      <h3 id="ms-boat-trips" className="my-space-block-title" style={{ marginTop: "1.4rem" }}>
-        Worth the launch
-      </h3>
+      <div className="ms-boat-section-art" id="ms-boat-trips">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/graphics/boating/pontoon.jpg" alt="" />
+        <h3 className="my-space-block-title">Worth the launch</h3>
+      </div>
       <div className="ms-boat-grid">
         {TRIPS.map((spot) => (
           <article key={spot.name} className="about-panel ms-boat-card">
@@ -218,9 +247,11 @@ export function MySpaceBoatingBoard() {
         ))}
       </div>
 
-      <h3 id="ms-boat-fish" className="my-space-block-title" style={{ marginTop: "1.4rem" }}>
-        What bites when
-      </h3>
+      <div className="ms-boat-section-art" id="ms-boat-fish">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/graphics/boating/bass.jpg" alt="" />
+        <h3 className="my-space-block-title">What bites when</h3>
+      </div>
       <div className="ms-boat-grid">
         {SEASONS.map((row) => (
           <article key={row.title} className="about-panel ms-boat-card">
@@ -247,9 +278,11 @@ export function MySpaceBoatingBoard() {
         </article>
       </div>
 
-      <h3 id="ms-boat-rules" className="my-space-block-title" style={{ marginTop: "1.4rem" }}>
-        Before you splash
-      </h3>
+      <div className="ms-boat-section-art" id="ms-boat-rules">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/graphics/boating/springs.jpg" alt="" />
+        <h3 className="my-space-block-title">Before you splash</h3>
+      </div>
       <div className="ms-boat-grid">
         <article className="about-panel ms-boat-card">
           <h3>License</h3>

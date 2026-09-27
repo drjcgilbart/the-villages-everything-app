@@ -83,6 +83,13 @@ function collect(): Raw[] {
     section: "Pages",
   });
   add({
+    title: "Day Trips & Fun Stuff",
+    href: "/day-trips",
+    snippet:
+      "Springs, beaches, animals, space, and towns within a day’s drive of The Villages.",
+    section: "Pages",
+  });
+  add({
     title: "Golf Cart Hero",
     href: "/golf-cart-hero",
     snippet: "The cart chase game. Sprinklers, vans, and Florida chaos.",

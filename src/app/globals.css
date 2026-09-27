@@ -2902,6 +2902,75 @@ a.my-space-link-card:hover {
   }
 }
 
+.ms-boat-hero {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.85rem 1rem;
+  align-items: center;
+  margin: 0 0 1rem;
+}
+
+.ms-boat-mascot {
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  grid-row: span 2;
+}
+
+.ms-boat-hero-copy p {
+  margin: 0.25rem 0 0;
+}
+
+.ms-boat-hero-scenes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.ms-boat-hero-scenes img,
+.ms-boat-section-art img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+}
+
+.ms-boat-section-art {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.35rem;
+  scroll-margin-top: 6.5rem;
+}
+
+.ms-boat-section-art img {
+  width: 4.5rem;
+  height: 4.5rem;
+  flex: 0 0 auto;
+}
+
+.ms-boat-section-art .my-space-block-title {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .ms-boat-hero {
+    grid-template-columns: 5.5rem 1fr;
+  }
+
+  .ms-boat-mascot {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  .ms-boat-hero-scenes {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .ms-boat-jump {
   display: flex;
   flex-wrap: wrap;
@@ -2935,7 +3004,14 @@ a.my-space-link-card:hover {
   margin-top: 0.65rem;
 }
 
-.ms-boat h3[id] {
+.ms-boat h3[id],
+.ms-boat-section-art,
+#springs,
+#animals,
+#grandkids,
+#towns,
+#beach,
+#slow {
   scroll-margin-top: 6.5rem;
 }
 
