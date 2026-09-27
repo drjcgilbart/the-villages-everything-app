@@ -807,6 +807,15 @@ export const MAIN_TOPICS: {
     image: "/graphics/day-trips/space.jpg",
   },
   {
+    href: "/cruise-central",
+    label: "Cruise Central",
+    icon: "🚢",
+    matchPrefixes: ["/cruise-central"],
+    blurb:
+      "Florida cruise ports from The Villages — Canaveral first, then Tampa, Jacksonville, Fort Lauderdale, and Miami.",
+    image: "/graphics/cruises/canaveral.jpg",
+  },
+  {
     href: "/golf-cart-hero",
     label: "Golf Cart Hero",
     icon: "🏎️",

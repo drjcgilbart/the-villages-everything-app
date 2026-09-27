@@ -3085,7 +3085,10 @@ a.my-space-link-card:hover {
 #grandkids,
 #towns,
 #beach,
-#slow {
+#slow,
+#ports,
+#papers,
+#family {
   scroll-margin-top: 6.5rem;
 }
 

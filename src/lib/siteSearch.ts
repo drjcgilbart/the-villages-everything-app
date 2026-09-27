@@ -90,6 +90,13 @@ function collect(): Raw[] {
     section: "Pages",
   });
   add({
+    title: "Cruise Central",
+    href: "/cruise-central",
+    snippet:
+      "Florida cruise ports from The Villages, plus documents, packing, and the drive home.",
+    section: "Pages",
+  });
+  add({
     title: "Golf Cart Hero",
     href: "/golf-cart-hero",
     snippet: "The cart chase game. Sprinklers, vans, and Florida chaos.",
