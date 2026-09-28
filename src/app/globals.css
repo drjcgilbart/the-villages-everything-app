@@ -2586,6 +2586,12 @@ a.my-space-link-card:hover {
   margin-top: 0.75rem;
 }
 
+@media (max-width: 900px) {
+  .ms-tier-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .ms-tier-blurb {
   margin: 0 0 0.75rem;
   font-size: 0.88rem;
@@ -10824,14 +10830,23 @@ a.floating-back-btn {
   letter-spacing: 0.01em;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 900px) {
   .floating-nav-stack {
-    bottom: 5.5rem;
-    left: 0.75rem;
+    left: 0.6rem;
+    right: auto;
+    bottom: 0.65rem;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
   }
 
   .floating-back-btn {
-    padding: 0.55rem 0.75rem;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  main.flex-1 {
+    padding-bottom: 4.75rem;
   }
 }
 
