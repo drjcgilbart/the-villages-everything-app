@@ -45,6 +45,7 @@ const DURABLE_JSON = new Set([
   "creator-desk.json",
   "safety.json",
   "wealth-local.json",
+  "cruise-gallery.json",
 ]);
 
 /**

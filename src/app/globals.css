@@ -2605,6 +2605,69 @@ a.my-space-link-card:hover {
   font-weight: 700;
 }
 
+.cruise-desk {
+  display: grid;
+  gap: 0.85rem;
+  font-size: 1.05rem;
+}
+
+.cruise-desk label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.cruise-desk input,
+.cruise-desk select {
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cruise-leave {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.cruise-checks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cruise-checks label {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.cruise-checks input {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.2rem;
+}
+
+.cruise-compare {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 720px) {
+  .cruise-desk,
+  .cruise-leave,
+  .cruise-checks label {
+    font-size: 1.08rem;
+  }
+}
+
 @media (max-width: 1280px) {
   .ms-tier-grid {
     grid-template-columns: 1fr;
@@ -3142,6 +3205,13 @@ a.my-space-link-card:hover {
 #cards,
 #rec,
 #table,
+#cruise-drive,
+#cruise-compare,
+#cruise-pack,
+#cruise-group,
+#cruise-access,
+#cruise-weather,
+#cruise-photos,
 #papers,
 #family {
   scroll-margin-top: 6.5rem;
