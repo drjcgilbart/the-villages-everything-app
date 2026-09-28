@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { ParkDay } from "@/components/ParkDay";
 
 function mapsSearch(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -570,6 +571,16 @@ export function ThemeParksGuide() {
                 {group.title}
               </a>
             ))}
+            <a className="btn btn-ghost btn-sm" href="#park-drive">When to leave</a>
+            <a className="btn btn-ghost btn-sm" href="#park-compare">Which park</a>
+            <a className="btn btn-ghost btn-sm" href="#park-kids">Grandkids</a>
+            <a className="btn btn-ghost btn-sm" href="#park-tickets">Tickets</a>
+            <a className="btn btn-ghost btn-sm" href="#park-crowds">Crowds</a>
+            <a className="btn btn-ghost btn-sm" href="#park-senior">Scooters and benches</a>
+            <a className="btn btn-ghost btn-sm" href="#park-dinner">Dinner</a>
+            <a className="btn btn-ghost btn-sm" href="#park-pack">Packing</a>
+            <a className="btn btn-ghost btn-sm" href="#park-weather">Storms</a>
+            <a className="btn btn-ghost btn-sm" href="#park-photos">Photos</a>
           </div>
           <div className="golf-feature-grid">
             {GROUPS.map((group) => (
@@ -587,6 +598,8 @@ export function ThemeParksGuide() {
           </div>
         </div>
       </section>
+
+      <ParkDay />
 
       {GROUPS.map((group) => (
         <section key={group.id} className="section" id={group.id} style={{ paddingTop: 0 }}>

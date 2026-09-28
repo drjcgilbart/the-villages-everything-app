@@ -46,6 +46,7 @@ const DURABLE_JSON = new Set([
   "safety.json",
   "wealth-local.json",
   "cruise-gallery.json",
+  "park-gallery.json",
 ]);
 
 /**
