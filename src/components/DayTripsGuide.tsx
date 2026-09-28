@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { TripDay } from "@/components/TripDay";
 
 function mapsSearch(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -1131,6 +1132,15 @@ export function DayTripsGuide() {
                 {group.title}
               </a>
             ))}
+            <a className="btn btn-ghost btn-sm" href="#trip-drive">When to leave</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-cards">The short list</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-kids">Grandkids</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-season">The month</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-senior">Benches</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-dinner">Dinner</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-pack">Packing</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-weather">Storms</a>
+            <a className="btn btn-ghost btn-sm" href="#trip-photos">Photos</a>
           </div>
           <div className="golf-feature-grid">
             {sections.map((group) => (
@@ -1148,6 +1158,8 @@ export function DayTripsGuide() {
           </div>
         </div>
       </section>
+
+      <TripDay />
 
       {sections.map((group) => (
         <section key={group.id} className="section" id={group.id} style={{ paddingTop: 0 }}>
