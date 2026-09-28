@@ -1,3 +1,5 @@
+import { BoatingDesk } from "@/components/BoatingDesk";
+
 function mapsSearch(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
@@ -193,6 +195,13 @@ export function MySpaceBoatingBoard() {
         <a className="btn btn-ghost btn-sm" href="#ms-boat-rules">
           Before you splash
         </a>
+        <a className="btn btn-ghost btn-sm" href="#ms-boat-drive">When to leave</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-boat-directory">Harris Chain and the river</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-boat-report">Catches</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-boat-wind">Wind</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-boat-senior">Docks and ramps</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-boat-pack">Packing</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-boat-photos">Photos</a>
       </div>
 
       <div className="ms-boat-section-art" id="ms-boat-ramps">
@@ -356,6 +365,7 @@ export function MySpaceBoatingBoard() {
           </div>
         </article>
       </div>
+      <BoatingDesk />
     </div>
   );
 }

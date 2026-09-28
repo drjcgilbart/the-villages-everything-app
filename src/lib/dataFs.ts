@@ -49,6 +49,7 @@ const DURABLE_JSON = new Set([
   "park-gallery.json",
   "trip-gallery.json",
   "launch-gallery.json",
+  "boat-log.json",
 ]);
 
 /**

@@ -3089,11 +3089,13 @@ a.my-space-link-card:hover {
 
 .ms-boat-card h3 {
   margin: 0.15rem 0 0.35rem;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
 }
 
 .ms-boat-card p {
   margin: 0.25rem 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
 }
 
 .ms-boat-meta {
