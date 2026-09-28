@@ -107,6 +107,10 @@ export function Footer() {
             Privacy
           </Link>
           {" · "}
+          <Link href="/terms" className="text-link">
+            Terms of Use (EULA)
+          </Link>
+          {" · "}
           <Link href="/safety" className="text-link">
             Safety
           </Link>

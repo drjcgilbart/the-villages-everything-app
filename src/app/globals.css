@@ -2605,7 +2605,7 @@ a.my-space-link-card:hover {
   font-weight: 700;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1280px) {
   .ms-tier-grid {
     grid-template-columns: 1fr;
   }
@@ -10849,7 +10849,7 @@ a.floating-back-btn {
   letter-spacing: 0.01em;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1280px) {
   .floating-nav-stack {
     left: 0.6rem;
     right: auto;

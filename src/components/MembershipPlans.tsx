@@ -146,6 +146,23 @@ export function MembershipPlans() {
           this phone still work.
         </p>
       ) : null}
+      {iosApp ? (
+        <AppleSubscriptionNotes
+          restoring={busy != null}
+          onRestore={() => {
+            setError(null);
+            setBusy("cart_path_regular");
+            void restoreAppleSubscription()
+              .then(() => {
+                window.location.href = "/my-space?subscribed=1";
+              })
+              .catch((e: unknown) => {
+                setError(e instanceof Error ? e.message : "Could not restore");
+                setBusy(null);
+              });
+          }}
+        />
+      ) : null}
       <div className="ms-tier-grid support-plan-grid">
         {HUB_TIERS.map((t) => {
           const current = signedIn && space?.plan === t.id;
@@ -248,27 +265,7 @@ export function MembershipPlans() {
           );
         })}
       </div>
-      {iosApp ? (
-        <AppleSubscriptionNotes
-          restoring={busy != null}
-          onRestore={() => {
-            if (!signedIn) {
-              window.location.href = "/yard-sale/login?next=/donate";
-              return;
-            }
-            setError(null);
-            setBusy("cart_path_regular");
-            void restoreAppleSubscription()
-              .then(() => {
-                window.location.href = "/my-space?subscribed=1";
-              })
-              .catch((e: unknown) => {
-                setError(e instanceof Error ? e.message : "Could not restore");
-                setBusy(null);
-              });
-          }}
-        />
-      ) : null}
+
     </div>
   );
 }

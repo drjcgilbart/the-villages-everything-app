@@ -23,7 +23,9 @@ function webViewWindow(): WebViewWindow | null {
 
 export function isIosNativeApp(): boolean {
   if (!isNativeAppShell() || typeof navigator === "undefined") return false;
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  // iPad Air reports a Mac user agent, so "iPad" is often missing.
+  // The store shell is only iPhone/iPad or Android.
+  return !/Android/i.test(navigator.userAgent);
 }
 
 export function appleIapBridgeReady(): boolean {

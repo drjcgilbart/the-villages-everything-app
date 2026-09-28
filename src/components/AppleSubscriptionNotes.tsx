@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 
-const APPLE_EULA = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
-
-/** Required on the iPhone screen where a yearly plan is bought. */
+/** Required on the iPhone and iPad screen where a yearly plan is bought. */
 export function AppleSubscriptionNotes({
   onRestore,
   restoring = false,
@@ -25,18 +23,16 @@ export function AppleSubscriptionNotes({
       <p>
         <Link href="/privacy">Privacy Policy</Link>
         {" · "}
-        <a href={APPLE_EULA} target="_blank" rel="noopener noreferrer">
-          Terms of Use
-        </a>
+        <Link href="/terms">Terms of Use (EULA)</Link>
       </p>
       {onRestore ? (
         <button
           type="button"
-          className="btn btn-ghost btn-sm"
+          className="btn btn-primary btn-sm"
           disabled={restoring}
           onClick={onRestore}
         >
-          {restoring ? "Restoring…" : "Restore Apple purchase"}
+          {restoring ? "Restoring…" : "Restore Purchases"}
         </button>
       ) : null}
     </div>

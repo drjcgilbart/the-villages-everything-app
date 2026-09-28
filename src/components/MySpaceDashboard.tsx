@@ -805,6 +805,23 @@ export function MySpaceDashboard() {
           error={null}
           onStart={() => void startTrial()}
         />
+        {iosApp ? (
+          <AppleSubscriptionNotes
+            restoring={busy}
+            onRestore={() => {
+              setBusy(true);
+              setNote(null);
+              void restoreAppleSubscription()
+                .then(() => {
+                  window.location.href = "/my-space?subscribed=1";
+                })
+                .catch((e: unknown) => {
+                  setNote(e instanceof Error ? e.message : "Could not restore");
+                  setBusy(false);
+                });
+            }}
+          />
+        ) : null}
         <div className="ms-tier-grid">
           {HUB_TIERS.map((t) => {
             const current = !visitor && t.id === space?.plan;
@@ -926,28 +943,7 @@ export function MySpaceDashboard() {
             );
           })}
         </div>
-        {iosApp ? (
-          <AppleSubscriptionNotes
-            restoring={busy}
-            onRestore={() => {
-              if (visitor) {
-                window.location.href =
-                  "/yard-sale/login?next=" + encodeURIComponent("/my-space?tab=plans");
-                return;
-              }
-              setBusy(true);
-              setNote(null);
-              void restoreAppleSubscription()
-                .then(() => {
-                  window.location.href = "/my-space?subscribed=1";
-                })
-                .catch((e: unknown) => {
-                  setNote(e instanceof Error ? e.message : "Could not restore");
-                  setBusy(false);
-                });
-            }}
-          />
-        ) : null}
+
         {!visitor && space?.household ? (
           <div style={{ marginTop: "1.1rem" }} data-privacy-block="Household">
             <MySpaceHouseholdPanel
