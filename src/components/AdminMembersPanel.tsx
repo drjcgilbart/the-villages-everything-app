@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { PublicMember } from "@/lib/yardSaleTypes";
 import { formatDate } from "@/lib/format";
 import type { HubPlanId } from "@/lib/membershipTiers";
@@ -58,6 +58,15 @@ export function AdminMembersPanel() {
   );
   const [busy, setBusy] = useState(false);
   const [durableHint, setDurableHint] = useState<string | null>(null);
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addPassword, setAddPassword] = useState("");
+  const [addPhone, setAddPhone] = useState("");
+  const [addVillage, setAddVillage] = useState("");
+  const [addNotes, setAddNotes] = useState("");
+  const [addPlan, setAddPlan] = useState("porch_waver");
+  const [addWelcome, setAddWelcome] = useState(false);
+  const [showAddPassword, setShowAddPassword] = useState(false);
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -348,6 +357,64 @@ export function AdminMembersPanel() {
     }
   }
 
+  async function addMember(event: FormEvent) {
+    event.preventDefault();
+    if (addPassword.trim().length < 8) {
+      flash("err", "Password must be at least 8 characters");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "createMember",
+          name: addName,
+          email: addEmail,
+          password: addPassword,
+          phone: addPhone,
+          village: addVillage,
+          notes: addNotes,
+          plan: addPlan,
+          sendWelcome: addWelcome,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not add that member");
+      if (Array.isArray(data.members)) setMembers(data.members);
+      else await load();
+      const who = addName.trim() || addEmail.trim();
+      setAddName("");
+      setAddEmail("");
+      setAddPassword("");
+      setAddPhone("");
+      setAddVillage("");
+      setAddNotes("");
+      setAddWelcome(false);
+      const mail = data.welcomeEmail as
+        | { ok?: boolean; skipped?: boolean; error?: string }
+        | null
+        | undefined;
+      if (addWelcome && mail && !mail.ok) {
+        flash(
+          "err",
+          mail.skipped
+            ? `${who} is approved. Mail is not configured, so no welcome email went out.`
+            : `${who} is approved. Welcome email failed${mail.error ? `: ${mail.error}` : "."}`
+        );
+      } else if (addWelcome && mail?.ok) {
+        flash("ok", `${who} is approved, and the welcome email went out.`);
+      } else {
+        flash("ok", `${who} is approved and can sign in with that password.`);
+      }
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const pendingMembers = members.filter((m) => m.status === "pending");
   const topTierPending = members.filter(
     (m) => m.topTierNomination?.status === "pending"
@@ -361,6 +428,69 @@ export function AdminMembersPanel() {
         Membership sign-ups, tip badges, and Square Royalty nominations from
         Golden Loofah / Custom Star Loofah donations.
       </p>
+
+      <form className="about-panel cruise-desk" style={{ marginBottom: "1.25rem" }} onSubmit={(event) => void addMember(event)}>
+        <h3 style={{ margin: 0 }}>Add a member</h3>
+        <p className="panel-hint" style={{ margin: 0 }}>
+          Approved the moment you save. They sign in with this email and password. No request, and no second approve step.
+        </p>
+        <label>
+          Name
+          <input value={addName} onChange={(event) => setAddName(event.target.value)} required autoComplete="name" />
+        </label>
+        <label>
+          Email
+          <input type="email" value={addEmail} onChange={(event) => setAddEmail(event.target.value)} required autoComplete="off" />
+        </label>
+        <label>
+          Password
+          <span style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              type={showAddPassword ? "text" : "password"}
+              value={addPassword}
+              onChange={(event) => setAddPassword(event.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              style={{ flex: 1 }}
+            />
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAddPassword((v) => !v)}>
+              {showAddPassword ? "Hide" : "Show"}
+            </button>
+          </span>
+        </label>
+        <label>
+          Phone
+          <input value={addPhone} onChange={(event) => setAddPhone(event.target.value)} autoComplete="tel" />
+        </label>
+        <label>
+          Village
+          <input value={addVillage} onChange={(event) => setAddVillage(event.target.value)} />
+        </label>
+        <label>
+          Plan
+          <select value={addPlan} onChange={(event) => setAddPlan(event.target.value)}>
+            {(tiers.length ? tiers : [{ id: "porch_waver", label: "Porch Waver" }]).map((tier) => (
+              <option key={tier.id} value={tier.id}>{tier.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Note for you
+          <input value={addNotes} onChange={(event) => setAddNotes(event.target.value)} placeholder="Optional. Only you see this." />
+        </label>
+        <label className="cruise-checks" style={{ fontWeight: 600 }}>
+          <span style={{ display: "flex", gap: "0.65rem", alignItems: "flex-start" }}>
+            <input type="checkbox" checked={addWelcome} onChange={(event) => setAddWelcome(event.target.checked)} />
+            Send the welcome email
+          </span>
+        </label>
+        <div className="hero-actions">
+          <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy ? "Saving…" : "Add member"}
+          </button>
+        </div>
+      </form>
 
       <div className="dining-summary-stats" style={{ marginBottom: "1.25rem" }}>
         <div className="stat">

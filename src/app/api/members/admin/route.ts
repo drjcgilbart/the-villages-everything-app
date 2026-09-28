@@ -28,6 +28,7 @@ import {
   appendAdminLog,
   getAdminLog,
   getMemberById,
+  addApprovedMember,
   listMembers,
   loadYardSale,
   saveYardSaleAsync,
@@ -125,6 +126,61 @@ export async function POST(req: Request) {
   try {
     await ensureDurableHydrated();
     const body = await req.json();
+
+    if (body.action === "createMember") {
+      const email = String(body.email || "").trim().toLowerCase();
+      if (isSiteOwnerEmail(email)) {
+        return NextResponse.json(
+          { error: "That email is a site-owner login. Use a different address." },
+          { status: 400 }
+        );
+      }
+      const created = addApprovedMember({
+        name: body.name,
+        email,
+        password: body.password,
+        phone: body.phone,
+        village: body.village,
+        notes: body.notes,
+      });
+      await seedNewMemberBoards(created.id);
+      await isolateCopiedOwnerBoards(created.id);
+      const plan = normalizePlan(body.plan);
+      const space = getMemberSpace(created.id);
+      if (plan !== "porch_waver") {
+        updateMemberSpace(created.id, { plan, planExpiresAt: null });
+      }
+      const planLabel = publicSpacePayload(
+        plan === "porch_waver" ? space : getMemberSpace(created.id)
+      ).planLabel;
+      appendAdminLog(
+        created.id,
+        plan === "porch_waver"
+          ? "Added by admin, already approved."
+          : `Added by admin, already approved. Plan set to ${planLabel}.`
+      );
+      await persistAll();
+      let welcomeEmail: Awaited<ReturnType<typeof sendMemberWelcomeEmail>> | null = null;
+      if (body.sendWelcome) {
+        const full = getMemberById(created.id);
+        if (full) {
+          welcomeEmail = await sendMemberWelcomeEmail(full);
+          appendAdminLog(
+            created.id,
+            welcomeEmail.ok
+              ? "Welcome email sent."
+              : `Welcome email failed${"error" in welcomeEmail && welcomeEmail.error ? `: ${welcomeEmail.error}` : ""}.`
+          );
+          await persistAll();
+        }
+      }
+      return NextResponse.json({
+        memberId: created.id,
+        members: membersWithPlans(),
+        durableStorage: durableConfigured(),
+        welcomeEmail,
+      });
+    }
 
     if (body.action === "deleteMember") {
       const id = String(body.id || "");

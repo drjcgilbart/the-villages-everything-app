@@ -172,6 +172,51 @@ export function registerMember(input: {
   return toPublicMember(member);
 }
 
+/** Admin: create an approved login. Does not touch an email that is already on the list. */
+export function addApprovedMember(input: {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  village?: string;
+  notes?: string;
+}) {
+  const name = String(input.name || "").trim().slice(0, 80);
+  const email = String(input.email || "").trim().toLowerCase().slice(0, 120);
+  const password = String(input.password || "");
+  if (!name) throw new Error("Name is required");
+  if (!email || !email.includes("@")) throw new Error("Valid email is required");
+  if (password.length < 8) throw new Error("Password must be at least 8 characters");
+
+  const data = loadYardSale();
+  const existing = data.members.find((m) => m.email === email);
+  if (existing) {
+    throw new Error(
+      existing.status === "pending"
+        ? "That email is already a sign-up request. Approve it in the list below."
+        : "That email is already a member. Use Edit details on the existing account."
+    );
+  }
+
+  const now = new Date().toISOString();
+  const notes = String(input.notes || "").trim().slice(0, 500);
+  const member: Member = {
+    id: uid("mem"),
+    name,
+    email,
+    passwordHash: hashPassword(password),
+    phone: String(input.phone || "").trim().slice(0, 40) || undefined,
+    village: String(input.village || "").trim().slice(0, 80) || undefined,
+    notes: notes || undefined,
+    status: "approved",
+    createdAt: now,
+    approvedAt: now,
+  };
+  data.members.push(member);
+  saveYardSale(data);
+  return member;
+}
+
 export function authenticateMember(email: string, password: string) {
   const data = loadYardSale();
   const member = data.members.find(
