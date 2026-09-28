@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { saveCapeReminder } from "@/lib/capeCalendar";
+import { SpaceCoastDesk } from "@/components/SpaceCoastDesk";
 
 function mapsSearch(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -300,9 +302,62 @@ function LaunchTracker() {
               ? " A Go can still scrub. Look again the morning you drive."
               : " This date is only a window. Do not leave at dawn for a month on a calendar."}
           </p>
+          <SaveLaunch row={row} />
         </article>
       ))}
     </>
+  );
+}
+
+function easternStamp(iso: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || "00";
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, time: `${get("hour")}:${get("minute")}` };
+}
+
+function SaveLaunch({ row }: { row: LaunchRow }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (!PRECISE.has(row.precision)) return null;
+  return (
+    <div className="hero-actions">
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        disabled={busy}
+        onClick={() => {
+          const stamp = easternStamp(row.net);
+          setBusy(true);
+          void saveCapeReminder({
+            title: row.mission || row.name,
+            notes: `${row.pad}. ${row.location}. A Go can still scrub. Check the morning you drive.`,
+            startDate: stamp.date,
+            startTime: stamp.time,
+            endDate: stamp.date,
+            endTime: stamp.time,
+            timerMinutes: null,
+            timerEndsAt: null,
+            timerPausedMs: null,
+            alarmEnabled: true,
+            done: false,
+          }).then((message) => {
+            setMsg(message);
+            setBusy(false);
+          });
+        }}
+      >
+        {busy ? "Saving…" : "Remind me on my calendar"}
+      </button>
+      {msg ? <p>{msg}</p> : null}
+    </div>
   );
 }
 
@@ -353,6 +408,11 @@ export function MySpaceSpaceCoast() {
         <a className="btn btn-ghost btn-sm" href="#ms-space-watch">Where to watch</a>
         <a className="btn btn-ghost btn-sm" href="#ms-space-pads">Who flies</a>
         <a className="btn btn-ghost btn-sm" href="#ms-space-visit">Even without a launch</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-space-drive">When to leave</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-space-guides">Where to stand</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-space-kids">Grandkids</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-space-weather">Storms</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-space-photos">Photos</a>
       </div>
 
       <div className="ms-boat-section-art" id="ms-space-next">
@@ -535,6 +595,7 @@ export function MySpaceSpaceCoast() {
           </p>
         </article>
       </div>
+      <SpaceCoastDesk />
     </div>
   );
 }
