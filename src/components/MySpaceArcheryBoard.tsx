@@ -1,3 +1,5 @@
+import { ArcheryDesk } from "@/components/ArcheryDesk";
+
 function mapsSearch(query: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
@@ -91,6 +93,14 @@ export function MySpaceArcheryBoard() {
         <a className="btn btn-ghost btn-sm" href="#ms-arch-ranked">Skeet and trap</a>
         <a className="btn btn-ghost btn-sm" href="#ms-arch-bow">Archery</a>
         <a className="btn btn-ghost btn-sm" href="#ms-arch-woods">Woods and licenses</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-drive">When to leave</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-new">New here</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-pack">Packing</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-league">Shoots</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-sky">Weather</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-safe">Manners</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-targets">Printable targets</a>
+        <a className="btn btn-ghost btn-sm" href="#ms-arch-photos">Photos</a>
       </div>
 
       <div className="ms-boat-section-art" id="ms-arch-ranges">
@@ -430,6 +440,7 @@ export function MySpaceArcheryBoard() {
           </p>
         </article>
       </div>
+      <ArcheryDesk />
     </div>
   );
 }
