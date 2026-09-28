@@ -11,6 +11,7 @@ import {
   type HubPlanId,
 } from "@/lib/membershipTiers";
 import { TIER_SUMMARY } from "@/lib/mySpaceProduct";
+import { AppleSubscriptionNotes } from "@/components/AppleSubscriptionNotes";
 import { RoyaltyTrialOffer } from "@/components/RoyaltyTrialOffer";
 
 type SpaceBrief = {
@@ -183,23 +184,41 @@ export function MembershipPlans() {
                   boards.
                 </p>
               ) : null}
+              {t.rank > 0 && iosApp && space?.householdRole !== "member" ? (
+                signedIn ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={busy != null}
+                    onClick={() => startSubscribe(t.id)}
+                  >
+                    {busy === t.id
+                      ? "Starting…"
+                      : `Subscribe with Apple · ${formatMembershipPrice(t)}`}
+                  </button>
+                ) : (
+                  <Link
+                    href="/yard-sale/login?next=/donate"
+                    className="btn btn-primary btn-sm"
+                  >
+                    Subscribe with Apple · {formatMembershipPrice(t)}
+                  </Link>
+                )
+              ) : null}
               {t.rank > 0 &&
+              !iosApp &&
               !included &&
               signedIn &&
               approved &&
               space?.householdRole !== "member" &&
-              (!native || iosApp) ? (
+              !native ? (
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"
                   disabled={busy != null}
                   onClick={() => startSubscribe(t.id)}
                 >
-                  {busy === t.id
-                    ? "Starting…"
-                    : iosApp
-                      ? `Subscribe with Apple · ${formatMembershipPrice(t)}`
-                      : `Become ${t.label} · ${formatMembershipPrice(t)}`}
+                  {busy === t.id ? "Starting…" : `Become ${t.label} · ${formatMembershipPrice(t)}`}
                 </button>
               ) : null}
               {t.rank > 0 &&
@@ -212,12 +231,12 @@ export function MembershipPlans() {
                   upgrade.
                 </p>
               ) : null}
-              {t.rank > 0 && !included && signedIn && !approved ? (
+              {t.rank > 0 && !iosApp && !included && signedIn && !approved ? (
                 <p className="pf-form-error" style={{ marginBottom: 0 }}>
                   Your neighbor account must be approved before upgrading.
                 </p>
               ) : null}
-              {t.rank > 0 && !included && !signedIn ? (
+              {t.rank > 0 && !iosApp && !included && !signedIn ? (
                 <Link
                   href="/yard-sale/login?next=/donate"
                   className="btn btn-ghost btn-sm"
@@ -229,28 +248,26 @@ export function MembershipPlans() {
           );
         })}
       </div>
-      {iosApp && signedIn ? (
-        <p style={{ marginTop: "0.8rem" }}>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={busy != null}
-            onClick={() => {
-              setError(null);
-              setBusy("cart_path_regular");
-              void restoreAppleSubscription()
-                .then(() => {
-                  window.location.href = "/my-space?subscribed=1";
-                })
-                .catch((e: unknown) => {
-                  setError(e instanceof Error ? e.message : "Could not restore");
-                  setBusy(null);
-                });
-            }}
-          >
-            Restore Apple purchase
-          </button>
-        </p>
+      {iosApp ? (
+        <AppleSubscriptionNotes
+          restoring={busy != null}
+          onRestore={() => {
+            if (!signedIn) {
+              window.location.href = "/yard-sale/login?next=/donate";
+              return;
+            }
+            setError(null);
+            setBusy("cart_path_regular");
+            void restoreAppleSubscription()
+              .then(() => {
+                window.location.href = "/my-space?subscribed=1";
+              })
+              .catch((e: unknown) => {
+                setError(e instanceof Error ? e.message : "Could not restore");
+                setBusy(null);
+              });
+          }}
+        />
       ) : null}
     </div>
   );

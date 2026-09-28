@@ -35,6 +35,7 @@ import {
   type HubPlanId,
 } from "@/lib/membershipTiers";
 import { isIosNativeApp, requestAppleSubscription, restoreAppleSubscription } from "@/lib/appleIapClient";
+import { AppleSubscriptionNotes } from "@/components/AppleSubscriptionNotes";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import {
   PRODUCT_NAMES,
@@ -855,10 +856,8 @@ export function MySpaceDashboard() {
                   </Link>
                 ) : null}
                 {t.rank > 0 &&
-                  !unlocked &&
+                  iosApp &&
                   !visitor &&
-                  approved &&
-                  (!inNativeApp || iosApp) &&
                   space?.household?.role !== "member" && (
                   <button
                     type="button"
@@ -866,11 +865,23 @@ export function MySpaceDashboard() {
                     disabled={busy}
                     onClick={() => startSubscribe(t.id)}
                   >
-                    {busy
-                      ? "Starting…"
-                      : iosApp
-                        ? `Subscribe with Apple · ${formatMembershipPrice(t)}`
-                        : `Unlock with ${t.label} · ${formatMembershipPrice(t)}`}
+                    {busy ? "Starting…" : `Subscribe with Apple · ${formatMembershipPrice(t)}`}
+                  </button>
+                )}
+                {t.rank > 0 &&
+                  !iosApp &&
+                  !unlocked &&
+                  !visitor &&
+                  approved &&
+                  !inNativeApp &&
+                  space?.household?.role !== "member" && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={busy}
+                    onClick={() => startSubscribe(t.id)}
+                  >
+                    {busy ? "Starting…" : `Unlock with ${t.label} · ${formatMembershipPrice(t)}`}
                   </button>
                 )}
                 {t.rank > 0 &&
@@ -888,7 +899,7 @@ export function MySpaceDashboard() {
                     tools on this phone still work.
                   </p>
                 )}
-                {t.rank > 0 && !unlocked && !visitor && !approved && (
+                {t.rank > 0 && !iosApp && !unlocked && !visitor && !approved && (
                   <p className="pf-form-error" style={{ marginBottom: 0 }}>
                     Account must be approved before upgrading.
                   </p>
@@ -915,28 +926,27 @@ export function MySpaceDashboard() {
             );
           })}
         </div>
-        {iosApp && !visitor ? (
-          <p style={{ marginTop: "0.8rem" }}>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                setNote(null);
-                void restoreAppleSubscription()
-                  .then(() => {
-                    window.location.href = "/my-space?subscribed=1";
-                  })
-                  .catch((e: unknown) => {
-                    setNote(e instanceof Error ? e.message : "Could not restore");
-                    setBusy(false);
-                  });
-              }}
-            >
-              Restore Apple purchase
-            </button>
-          </p>
+        {iosApp ? (
+          <AppleSubscriptionNotes
+            restoring={busy}
+            onRestore={() => {
+              if (visitor) {
+                window.location.href =
+                  "/yard-sale/login?next=" + encodeURIComponent("/my-space?tab=plans");
+                return;
+              }
+              setBusy(true);
+              setNote(null);
+              void restoreAppleSubscription()
+                .then(() => {
+                  window.location.href = "/my-space?subscribed=1";
+                })
+                .catch((e: unknown) => {
+                  setNote(e instanceof Error ? e.message : "Could not restore");
+                  setBusy(false);
+                });
+            }}
+          />
         ) : null}
         {!visitor && space?.household ? (
           <div style={{ marginTop: "1.1rem" }} data-privacy-block="Household">

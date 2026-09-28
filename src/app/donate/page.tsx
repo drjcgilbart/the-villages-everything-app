@@ -67,15 +67,15 @@ export default async function DonatePage({
             </div>
           </div>
           <MembershipPlans />
-          <p className="mkt-disclaimer" style={{ marginTop: "1rem" }}>
+          <p className="mkt-disclaimer hide-in-native-app" style={{ marginTop: "1rem" }}>
             Public Hub pages (Dining, Calendar, Golf, Golf Cart Hero, and the
-            rest of the main banner) stay free. Membership is sold on the
-            website, not in the iPhone/Android store apps.
+            rest of the main banner) stay free. On this website, membership is
+            paid here. The iPhone app sells the same plans with Apple.
           </p>
         </div>
       </section>
 
-      <section className="section" style={{ paddingTop: 0 }}>
+      <section className="section hide-in-native-app" style={{ paddingTop: 0 }}>
         <div className="shell donate-layout">
           <div className="about-panel donate-panel">
             <h2>Optional · buy me a cup of Joe</h2>

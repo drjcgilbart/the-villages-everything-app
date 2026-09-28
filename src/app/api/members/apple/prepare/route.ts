@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
   if (!member) {
     return NextResponse.json({ error: "Please sign in first" }, { status: 401 });
   }
-  if (member.status !== "approved") {
+  if (member.status === "rejected" || member.status === "suspended") {
     return NextResponse.json(
-      { error: "Your account must be approved before subscribing" },
+      { error: "This account cannot buy a plan." },
       { status: 403 }
     );
   }

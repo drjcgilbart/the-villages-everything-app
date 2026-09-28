@@ -2586,6 +2586,25 @@ a.my-space-link-card:hover {
   margin-top: 0.75rem;
 }
 
+.apple-sub-notes {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fffdf9;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.apple-sub-notes p {
+  margin: 0 0 0.65rem;
+}
+
+.apple-sub-notes a {
+  color: var(--palm);
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .ms-tier-grid {
     grid-template-columns: 1fr;
