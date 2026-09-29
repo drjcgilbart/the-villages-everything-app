@@ -659,15 +659,15 @@ export function ArcheryDesk() {
         </p>
         <label>
           Range
-          <input value={rangeName} onChange={(event) => setRangeName(event.target.value)} placeholder="Which range, or which rec-center lane" />
+          <textarea rows={2} value={rangeName} onChange={(event) => setRangeName(event.target.value)} placeholder="Which range, or which rec-center lane" />
         </label>
         <label>
           What you shot
-          <input value={gear} onChange={(event) => setGear(event.target.value)} placeholder="Bow, pistol, trap, or a .22 that behaved" />
+          <textarea rows={2} value={gear} onChange={(event) => setGear(event.target.value)} placeholder="Bow, pistol, trap, or a .22 that behaved" />
         </label>
         <label>
           Caption
-          <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
+          <textarea rows={2} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
         </label>
         <label>
           Photo

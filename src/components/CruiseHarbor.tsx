@@ -517,7 +517,8 @@ export function CruiseHarbor() {
             </label>
             <label>
               Cabin wish
-              <input
+              <textarea
+                rows={2}
                 value={friend.cabin}
                 placeholder="Connecting, balcony, near the elevator"
                 onChange={(event) => setFriend((row) => ({ ...row, cabin: event.target.value }))}
@@ -525,7 +526,8 @@ export function CruiseHarbor() {
             </label>
             <label>
               Dining time
-              <input
+              <textarea
+                rows={2}
                 value={friend.dining}
                 placeholder="Early, late, or whenever the line allows"
                 onChange={(event) => setFriend((row) => ({ ...row, dining: event.target.value }))}
@@ -631,7 +633,7 @@ export function CruiseHarbor() {
             </label>
             <label>
               Caption
-              <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
+              <textarea rows={2} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
             </label>
             <label>
               Photo

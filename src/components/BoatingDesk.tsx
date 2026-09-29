@@ -423,15 +423,15 @@ export function BoatingDesk() {
         </label>
         <label>
           Species
-          <input value={catchForm.species} placeholder="Largemouth, speck, bluegill…" onChange={(event) => setCatchForm((row) => ({ ...row, species: event.target.value }))} />
+          <textarea rows={2} value={catchForm.species} placeholder="Largemouth, speck, bluegill…" onChange={(event) => setCatchForm((row) => ({ ...row, species: event.target.value }))} />
         </label>
         <label>
           Bait or lure
-          <input value={catchForm.bait} placeholder="What they would bite again" onChange={(event) => setCatchForm((row) => ({ ...row, bait: event.target.value }))} />
+          <textarea rows={2} value={catchForm.bait} placeholder="What they would bite again" onChange={(event) => setCatchForm((row) => ({ ...row, bait: event.target.value }))} />
         </label>
         <label>
           Note
-          <input value={catchForm.note} placeholder="Morning, pads, wind, or a skunk" onChange={(event) => setCatchForm((row) => ({ ...row, note: event.target.value }))} />
+          <textarea rows={2} value={catchForm.note} placeholder="Morning, pads, wind, or a skunk" onChange={(event) => setCatchForm((row) => ({ ...row, note: event.target.value }))} />
         </label>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void postCatch()}>
           Post the report
@@ -548,15 +548,15 @@ export function BoatingDesk() {
         <p>Name the boat, name the catch if there was one, and skip the algorithm. A skunk photo is still a photo.</p>
         <label>
           Boat
-          <input value={boat} onChange={(event) => setBoat(event.target.value)} placeholder="The boat, or the rental pontoon" />
+          <textarea rows={2} value={boat} onChange={(event) => setBoat(event.target.value)} placeholder="The boat, or the rental pontoon" />
         </label>
         <label>
           Catch
-          <input value={catchName} onChange={(event) => setCatchName(event.target.value)} placeholder="Bass, speck, or nothing with fins" />
+          <textarea rows={2} value={catchName} onChange={(event) => setCatchName(event.target.value)} placeholder="Bass, speck, or nothing with fins" />
         </label>
         <label>
           Caption
-          <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
+          <textarea rows={2} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
         </label>
         <label>
           Photo

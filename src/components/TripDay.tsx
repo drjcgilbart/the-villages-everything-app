@@ -654,7 +654,7 @@ export function TripDay() {
           <div className="about-panel cruise-desk">
             <label>
               Caption
-              <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
+              <textarea rows={2} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
             </label>
             <p className="ms-boat-meta">Tagged place: {spot.name}.</p>
             <label>

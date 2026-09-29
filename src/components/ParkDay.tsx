@@ -753,7 +753,7 @@ export function ParkDay() {
           <div className="about-panel cruise-desk">
             <label>
               Caption
-              <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
+              <textarea rows={2} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
             </label>
             <p className="ms-boat-meta">Tagged park: {gate.name}. Change it in the leave-by box above if this was a different gate.</p>
             <label>

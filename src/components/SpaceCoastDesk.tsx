@@ -307,7 +307,7 @@ export function SpaceCoastDesk() {
         </label>
         <label>
           Caption
-          <input value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
+          <textarea rows={2} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What the photo is actually of" />
         </label>
         <label>
           Photo
