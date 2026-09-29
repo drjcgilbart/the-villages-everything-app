@@ -437,6 +437,44 @@ function clampImages(images: unknown): string[] {
     .slice(0, MAX_IMAGES);
 }
 
+function filledText(value: unknown, max = 120) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
+function sameSellerName(a: string, b: string) {
+  return a.trim().toLowerCase() === b.trim().toLowerCase() && a.trim().length > 0;
+}
+
+/** Form fields win. The signed-in member fills a blank only when the listing is theirs. */
+export function sellerFieldsForListing(
+  input: {
+    sellerName?: string | null;
+    sellerEmail?: string | null;
+    sellerPhone?: string | null;
+    sellerVillage?: string | null;
+  },
+  member: { id?: string; name?: string; email?: string; phone?: string; village?: string } | null
+) {
+  const typedName = filledText(input.sellerName, 80);
+  const ownListing =
+    !!member?.id && !!member.name && (!typedName || sameSellerName(typedName, member.name));
+  const sellerName = typedName || filledText(member?.name, 80);
+  const sellerEmail =
+    filledText(input.sellerEmail, 120) || (ownListing ? filledText(member?.email, 120) : "");
+  const sellerPhone =
+    filledText(input.sellerPhone, 40) || (ownListing ? filledText(member?.phone, 40) : "");
+  const sellerVillage =
+    filledText(input.sellerVillage, 80) ||
+    (ownListing ? filledText(member?.village, 80) : "");
+  return {
+    sellerName,
+    sellerEmail: sellerEmail || undefined,
+    sellerPhone: sellerPhone || undefined,
+    sellerVillage: sellerVillage || undefined,
+    memberIdForBadges: ownListing ? member?.id : undefined,
+  };
+}
+
 export function createListing(
   memberId: string | null,
   input: {
@@ -463,12 +501,11 @@ export function createListing(
     throw new Error("Your membership is not active yet");
   }
 
-  const sellerName = (member?.name || String(input.sellerName || "")).trim().slice(0, 80);
-  const sellerEmail = (member?.email || String(input.sellerEmail || "")).trim().slice(0, 120);
-  const sellerPhone = (member?.phone || String(input.sellerPhone || "")).trim().slice(0, 40);
-  const sellerVillage = (member?.village || String(input.sellerVillage || ""))
-    .trim()
-    .slice(0, 80);
+  const seller = sellerFieldsForListing(input, member);
+  const sellerName = seller.sellerName;
+  const sellerEmail = seller.sellerEmail || "";
+  const sellerPhone = seller.sellerPhone || "";
+  const sellerVillage = seller.sellerVillage || "";
   if (!sellerName) throw new Error("Your name is required");
   if (!sellerEmail && !sellerPhone) {
     throw new Error("Add an email or phone so buyers can reach you");
@@ -658,22 +695,19 @@ export function listAllListings() {
 
 export function listingWithSeller(listing: YardListing) {
   const member = listing.memberId ? getMemberById(listing.memberId) : null;
-  const name = member?.name || listing.sellerName;
-  const village = member?.village || listing.sellerVillage;
-  const email = member?.email || listing.sellerEmail;
-  const phone = member?.phone || listing.sellerPhone;
+  const seller = sellerFieldsForListing(listing, member);
   const showContact = listing.status === "approved";
   const wantEmail = listing.contactMethod === "email" || listing.contactMethod === "either";
   const wantPhone = listing.contactMethod === "phone" || listing.contactMethod === "either";
   return {
     ...listing,
-    seller: name
+    seller: seller.sellerName
       ? {
-          id: member?.id,
-          name,
-          village,
-          email: showContact && wantEmail ? email : undefined,
-          phone: showContact && wantPhone ? phone : undefined,
+          id: seller.memberIdForBadges,
+          name: seller.sellerName,
+          village: seller.sellerVillage,
+          email: showContact && wantEmail ? seller.sellerEmail : undefined,
+          phone: showContact && wantPhone ? seller.sellerPhone : undefined,
         }
       : null,
   };

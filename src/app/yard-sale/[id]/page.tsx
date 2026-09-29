@@ -118,7 +118,7 @@ export default async function YardListingDetailPage({
                           `Yard sale: ${listing.title}`
                         )}`}
                       >
-                        Email seller
+                        Email {listing.seller.email}
                       </a>
                     )}
                     {listing.seller.phone && (

@@ -20,6 +20,8 @@ export function YardListingCard({
       id?: string;
       name?: string;
       village?: string;
+      email?: string;
+      phone?: string;
       badges?: BadgeDef[];
     } | null;
   };
@@ -63,6 +65,11 @@ export function YardListingCard({
               <MemberBadgesRow badges={listing.seller.badges || []} />
             </span>
             {listing.seller.village ? ` · ${listing.seller.village}` : ""}
+            {(listing.seller.email || listing.seller.phone) && (
+              <span className="yard-seller-contact">
+                {[listing.seller.email, listing.seller.phone].filter(Boolean).join(" · ")}
+              </span>
+            )}
           </p>
         )}
         <Link href={`/yard-sale/${listing.id}`} className="text-link">

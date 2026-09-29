@@ -10146,6 +10146,14 @@ a.ts-square-card:hover .ts-square-card-img {
   font-size: 0.85rem;
   color: var(--ink);
   margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.yard-seller-contact {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .yard-detail-grid {
