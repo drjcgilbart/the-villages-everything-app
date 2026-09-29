@@ -11043,14 +11043,8 @@ a.floating-back-btn {
     font-size: 0.82rem;
   }
 
-  /* The nav row takes the bottom-left corner. Keep the golf ball above it. */
-  .donate-mascot-float {
-    left: 0.6rem;
-    bottom: 4.15rem;
-  }
-
   main.flex-1 {
-    padding-bottom: 8.75rem;
+    padding-bottom: 9.5rem;
   }
 }
 
@@ -11291,7 +11285,6 @@ body.theme-music-open .mascot-quip-popup {
 .donate-mascot-float {
   position: fixed;
   left: 1rem;
-  bottom: 1rem;
   z-index: 79;
   max-width: min(280px, calc(100vw - 5.5rem));
   padding: 0.45rem 0.75rem 0.45rem 0.45rem;
@@ -11314,6 +11307,20 @@ body.theme-music-open .mascot-quip-popup {
 
 .donate-mascot-float .donate-mascot-tag {
   font-size: 0.95rem;
+}
+
+@media (min-width: 1281px) {
+  .donate-mascot-float {
+    bottom: 1rem;
+  }
+}
+
+/* After the base rule, so a phone keeps the ball above Top, Back, and Home. */
+@media (max-width: 1280px) {
+  .donate-mascot-float {
+    left: 0.6rem;
+    bottom: 4.5rem;
+  }
 }
 
 .donate-mascot-card,
@@ -13266,6 +13273,8 @@ body.theme-music-open .mascot-quip-popup {
   }
 
   .donate-mascot-float {
+    left: 0.6rem;
+    bottom: 4.5rem;
     max-width: none;
     padding: 0.35rem;
     border-radius: 999px;
