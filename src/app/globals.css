@@ -11032,8 +11032,14 @@ a.floating-back-btn {
     font-size: 0.82rem;
   }
 
+  /* The nav row takes the bottom-left corner. Keep the golf ball above it. */
+  .donate-mascot-float {
+    left: 0.6rem;
+    bottom: 4.15rem;
+  }
+
   main.flex-1 {
-    padding-bottom: 4.75rem;
+    padding-bottom: 8.75rem;
   }
 }
 
