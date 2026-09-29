@@ -36,6 +36,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ listings });
   }
 
-  const listings = getApprovedListings().map(listingWithSeller);
+  const listings = getApprovedListings().map((listing) => listingWithSeller(listing));
   return NextResponse.json({ listings });
 }

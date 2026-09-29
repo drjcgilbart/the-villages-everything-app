@@ -87,7 +87,7 @@ export default async function VillageDetailPage({
   let yardHere: ReturnType<typeof listingWithSeller>[] = [];
   try {
     yardHere = getApprovedListings()
-      .map(listingWithSeller)
+      .map((listing) => listingWithSeller(listing))
       .filter((l) => mentionsVillage(l.seller?.village, village))
       .slice(0, 4);
   } catch {
