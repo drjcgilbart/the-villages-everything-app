@@ -97,14 +97,12 @@ export default async function YardListingDetailPage({
               <h2 style={{ marginTop: 0 }}>Connect with seller</h2>
               {listing.seller ? (
                 <>
-                  <p className="member-name">
-                    <strong className="member-name-text">
+                  <p className="yard-seller-line">
+                    <strong className="yard-seller-identity">
                       {listing.seller.name || "Seller"}
+                      {listing.seller.village ? ` · ${listing.seller.village}` : ""}
                     </strong>
                     <MemberBadgesRow badges={listing.seller.badges || []} />
-                    {listing.seller.village ? (
-                      <span className="panel-hint"> · {listing.seller.village}</span>
-                    ) : null}
                   </p>
                   <p className="panel-hint">
                     Reach out using the contact method the seller prefers. Meet in a
@@ -121,7 +119,17 @@ export default async function YardListingDetailPage({
                         Email {listing.seller.email}
                       </a>
                     )}
-                    {listing.seller.phone && (
+                    {listing.seller.phone && listing.seller.contactBy?.phone && (
+                      <a className="btn btn-ghost" href={`tel:${listing.seller.phone}`}>
+                        Call {listing.seller.phone}
+                      </a>
+                    )}
+                    {listing.seller.phone && listing.seller.contactBy?.text && (
+                      <a className="btn btn-ghost" href={`sms:${listing.seller.phone}`}>
+                        Text {listing.seller.phone}
+                      </a>
+                    )}
+                    {listing.seller.phone && !listing.seller.contactBy && (
                       <a className="btn btn-ghost" href={`tel:${listing.seller.phone}`}>
                         Call / text {listing.seller.phone}
                       </a>

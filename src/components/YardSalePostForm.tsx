@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ContactChoices } from "@/components/ContactChoices";
 import {
   CATEGORY_OPTIONS,
   CONDITION_LABELS,
+  EMPTY_CONTACT_BY,
   MEETUP_LABELS,
+  contactChoiceError,
+  type ContactBy,
   type ItemCondition,
   type MeetupType,
 } from "@/lib/yardSaleTypes";
@@ -24,7 +28,7 @@ const emptyForm = {
   category: "Other",
   meetupType: "message_to_arrange" as MeetupType,
   meetupNotes: "",
-  contactMethod: "either" as "email" | "phone" | "either",
+  contactBy: { ...EMPTY_CONTACT_BY } satisfies ContactBy,
   images: [] as string[],
   videoUrl: "" as string,
 };
@@ -120,6 +124,15 @@ export function YardSalePostForm({ posterName = "" }: { posterName?: string }) {
       flash("err", "Add at least one photo");
       return;
     }
+    const contactProblem = contactChoiceError(
+      form.contactBy,
+      form.sellerEmail,
+      form.sellerPhone
+    );
+    if (contactProblem) {
+      flash("err", contactProblem);
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/yard-sale/listings", {
@@ -138,7 +151,7 @@ export function YardSalePostForm({ posterName = "" }: { posterName?: string }) {
           category: form.category,
           meetupType: form.meetupType,
           meetupNotes: form.meetupNotes,
-          contactMethod: form.contactMethod,
+          contactBy: form.contactBy,
           images: form.images,
           videoUrl: form.videoUrl || null,
         }),
@@ -275,8 +288,8 @@ export function YardSalePostForm({ posterName = "" }: { posterName?: string }) {
               onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
             />
           </div>
-          <div className="field" style={{ display: "flex", alignItems: "flex-end" }}>
-            <label className="checkbox-row" style={{ width: "100%" }}>
+          <div className="field field-check">
+            <label className="checkbox-row">
               <input
                 type="checkbox"
                 checked={form.isFree}
@@ -302,22 +315,10 @@ export function YardSalePostForm({ posterName = "" }: { posterName?: string }) {
               ))}
             </select>
           </div>
-          <div className="field">
-            <label>Preferred contact</label>
-            <select
-              value={form.contactMethod}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  contactMethod: e.target.value as "email" | "phone" | "either",
-                }))
-              }
-            >
-              <option value="either">Email or phone</option>
-              <option value="email">Email only</option>
-              <option value="phone">Phone only</option>
-            </select>
-          </div>
+          <ContactChoices
+            value={form.contactBy}
+            onChange={(contactBy) => setForm((f) => ({ ...f, contactBy }))}
+          />
         </div>
         <div className="field">
           <label>Meetup notes (optional)</label>

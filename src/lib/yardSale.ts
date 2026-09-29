@@ -11,15 +11,20 @@ import {
   writeJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
-import type {
-  ItemCondition,
-  ListingStatus,
-  Member,
-  MemberStatus,
-  MeetupType,
-  PublicMember,
-  YardListing,
-  YardSaleData,
+import {
+  contactChoiceError,
+  contactMethodFromChoices,
+  normalizeContactBy,
+  resolveContactBy,
+  type ContactBy,
+  type ItemCondition,
+  type ListingStatus,
+  type Member,
+  type MemberStatus,
+  type MeetupType,
+  type PublicMember,
+  type YardListing,
+  type YardSaleData,
 } from "./yardSaleTypes";
 
 const YARD_FILE = "yard-sale.json";
@@ -487,6 +492,7 @@ export function createListing(
     meetupType?: MeetupType;
     meetupNotes?: string;
     contactMethod?: "email" | "phone" | "either";
+    contactBy?: Partial<ContactBy> | null;
     images?: string[];
     videoUrl?: string | null;
     sellerName?: string;
@@ -507,9 +513,9 @@ export function createListing(
   const sellerPhone = seller.sellerPhone || "";
   const sellerVillage = seller.sellerVillage || "";
   if (!sellerName) throw new Error("Your name is required");
-  if (!sellerEmail && !sellerPhone) {
-    throw new Error("Add an email or phone so buyers can reach you");
-  }
+  const contactBy = normalizeContactBy(input.contactBy);
+  const contactProblem = contactChoiceError(contactBy, sellerEmail, sellerPhone);
+  if (contactProblem) throw new Error(contactProblem);
 
   const title = String(input.title || "").trim().slice(0, 120);
   const description = String(input.description || "").trim().slice(0, 3000);
@@ -542,7 +548,8 @@ export function createListing(
     category: String(input.category || "Other").slice(0, 60),
     meetupType: input.meetupType || "message_to_arrange",
     meetupNotes: String(input.meetupNotes || "").trim().slice(0, 300) || undefined,
-    contactMethod: input.contactMethod || "either",
+    contactMethod: contactMethodFromChoices(contactBy),
+    contactBy,
     images,
     videoUrl: input.videoUrl ? String(input.videoUrl).slice(0, 300) : null,
     status: "pending",
@@ -575,13 +582,34 @@ export function updateListing(
   if (input.sellerName !== undefined && !filledText(input.sellerName, 80)) {
     throw new Error("Seller name is required");
   }
-  if (
-    input.sellerEmail !== undefined &&
-    input.sellerPhone !== undefined &&
-    !filledText(input.sellerEmail, 120) &&
-    !filledText(input.sellerPhone, 40)
-  ) {
-    throw new Error("Add an email or phone so buyers can reach the seller");
+
+  const nextEmail =
+    input.sellerEmail !== undefined
+      ? filledText(input.sellerEmail, 120)
+      : prev.sellerEmail || "";
+  const nextPhone =
+    input.sellerPhone !== undefined
+      ? filledText(input.sellerPhone, 40)
+      : prev.sellerPhone || "";
+  let contactBy = prev.contactBy;
+  let contactMethod = prev.contactMethod;
+  const contactIsInThisEdit =
+    input.contactBy != null ||
+    input.contactMethod != null ||
+    input.sellerEmail !== undefined ||
+    input.sellerPhone !== undefined;
+  if (contactIsInThisEdit) {
+    const choices =
+      input.contactBy != null
+        ? normalizeContactBy(input.contactBy)
+        : resolveContactBy({
+            contactBy: prev.contactBy,
+            contactMethod: input.contactMethod || prev.contactMethod,
+          });
+    const contactProblem = contactChoiceError(choices, nextEmail, nextPhone);
+    if (contactProblem) throw new Error(contactProblem);
+    contactBy = choices;
+    contactMethod = contactMethodFromChoices(choices);
   }
 
   let isFree = input.isFree !== undefined ? !!input.isFree : prev.isFree;
@@ -621,7 +649,8 @@ export function updateListing(
       input.meetupNotes !== undefined
         ? String(input.meetupNotes || "").trim().slice(0, 300) || undefined
         : prev.meetupNotes,
-    contactMethod: input.contactMethod || prev.contactMethod,
+    contactMethod,
+    contactBy,
     sellerName:
       input.sellerName !== undefined
         ? filledText(input.sellerName, 80)
@@ -728,8 +757,9 @@ export function listingWithSeller(
   const member = listing.memberId ? getMemberById(listing.memberId) : null;
   const seller = sellerFieldsForListing(listing, member);
   const showContact = listing.status === "approved";
-  const wantEmail = listing.contactMethod === "email" || listing.contactMethod === "either";
-  const wantPhone = listing.contactMethod === "phone" || listing.contactMethod === "either";
+  const contactBy = resolveContactBy(listing);
+  const wantEmail = contactBy.email;
+  const wantPhone = contactBy.phone || contactBy.text;
   const { submittedByName: storedSubmitter, ...rest } = listing;
   const submitter = opts?.includeSubmitter
     ? storedSubmitter || member?.name || undefined
@@ -744,6 +774,7 @@ export function listingWithSeller(
           village: seller.sellerVillage,
           email: showContact && wantEmail ? seller.sellerEmail : undefined,
           phone: showContact && wantPhone ? seller.sellerPhone : undefined,
+          contactBy: showContact ? contactBy : undefined,
         }
       : null,
   };

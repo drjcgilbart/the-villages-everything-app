@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import type { ItemCondition, MeetupType, YardListing } from "@/lib/yardSaleTypes";
+import { ContactChoices } from "@/components/ContactChoices";
+import type { ContactBy, ItemCondition, MeetupType, YardListing } from "@/lib/yardSaleTypes";
 import {
   CATEGORY_OPTIONS,
   CONDITION_LABELS,
   MEETUP_LABELS,
+  contactChoiceError,
+  resolveContactBy,
 } from "@/lib/yardSaleTypes";
 import { formatPrice } from "@/components/YardListingCard";
 import { DEFAULT_PHOTO_MAX_BYTES, prepareUploadImageFile } from "@/lib/browserImage";
@@ -29,7 +32,7 @@ type EditDraft = {
   category: string;
   meetupType: MeetupType;
   meetupNotes: string;
-  contactMethod: "email" | "phone" | "either";
+  contactBy: ContactBy;
   postedBy: string;
   images: string[];
 };
@@ -97,7 +100,7 @@ export function AdminYardSalePanel() {
       category: listing.category,
       meetupType: listing.meetupType,
       meetupNotes: listing.meetupNotes || "",
-      contactMethod: listing.contactMethod,
+      contactBy: resolveContactBy(listing),
       postedBy: listing.submittedByName || "Guest",
       images: [...(listing.images || [])],
     });
@@ -167,6 +170,15 @@ export function AdminYardSalePanel() {
       flash("err", "Keep at least one photo");
       return;
     }
+    const contactProblem = contactChoiceError(
+      editing.contactBy,
+      editing.sellerEmail,
+      editing.sellerPhone
+    );
+    if (contactProblem) {
+      flash("err", contactProblem);
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/yard-sale/listings", {
@@ -187,7 +199,7 @@ export function AdminYardSalePanel() {
           category: editing.category,
           meetupType: editing.meetupType,
           meetupNotes: editing.meetupNotes,
-          contactMethod: editing.contactMethod,
+          contactBy: editing.contactBy,
           images: editing.images,
         }),
       });
@@ -447,8 +459,8 @@ export function AdminYardSalePanel() {
                       }
                     />
                   </div>
-                  <div className="field" style={{ display: "flex", alignItems: "flex-end" }}>
-                    <label className="checkbox-row" style={{ width: "100%" }}>
+                  <div className="field field-check">
+                    <label className="checkbox-row">
                       <input
                         type="checkbox"
                         checked={editing.isFree}
@@ -479,22 +491,14 @@ export function AdminYardSalePanel() {
                       ))}
                     </select>
                   </div>
-                  <div className="field">
-                    <label>Preferred contact</label>
-                    <select
-                      value={editing.contactMethod}
-                      onChange={(e) =>
-                        setEditing({
-                          ...editing,
-                          contactMethod: e.target.value as EditDraft["contactMethod"],
-                        })
-                      }
-                    >
-                      <option value="either">Email or phone</option>
-                      <option value="email">Email only</option>
-                      <option value="phone">Phone only</option>
-                    </select>
-                  </div>
+                  <ContactChoices
+                    value={editing.contactBy}
+                    onChange={(contactBy) =>
+                      setEditing((current) =>
+                        current ? { ...current, contactBy } : current
+                      )
+                    }
+                  />
                 </div>
                 <div className="field">
                   <label>Meetup notes</label>

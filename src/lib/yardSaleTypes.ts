@@ -53,6 +53,77 @@ export type ItemCondition =
   | "for_parts"
   | "freebie";
 
+/** Ways a buyer may reach the seller. At least one must be chosen. */
+export type ContactBy = {
+  phone: boolean;
+  email: boolean;
+  text: boolean;
+};
+
+export const EMPTY_CONTACT_BY: ContactBy = {
+  phone: false,
+  email: false,
+  text: false,
+};
+
+export function normalizeContactBy(
+  raw: Partial<ContactBy> | null | undefined
+): ContactBy {
+  return {
+    phone: !!raw?.phone,
+    email: !!raw?.email,
+    text: !!raw?.text,
+  };
+}
+
+/** Old listings stored a single contactMethod. Phone meant call or text. */
+export function resolveContactBy(listing: {
+  contactBy?: Partial<ContactBy> | null;
+  contactMethod?: "email" | "phone" | "either" | null;
+}): ContactBy {
+  const stored = listing.contactBy;
+  if (stored && (stored.phone || stored.email || stored.text)) {
+    return normalizeContactBy(stored);
+  }
+  if (listing.contactMethod === "email") {
+    return { phone: false, email: true, text: false };
+  }
+  if (listing.contactMethod === "phone") {
+    return { phone: true, email: false, text: true };
+  }
+  if (listing.contactMethod === "either") {
+    return { phone: true, email: true, text: true };
+  }
+  return { ...EMPTY_CONTACT_BY };
+}
+
+export function contactMethodFromChoices(
+  choices: ContactBy
+): "email" | "phone" | "either" {
+  const byNumber = choices.phone || choices.text;
+  if (choices.email && !byNumber) return "email";
+  if (!choices.email && byNumber) return "phone";
+  return "either";
+}
+
+/** Null when the choice is acceptable. Otherwise a sentence the form can show. */
+export function contactChoiceError(
+  choices: ContactBy,
+  email: string,
+  phone: string
+): string | null {
+  if (!choices.phone && !choices.email && !choices.text) {
+    return "Choose at least one way buyers can reach the seller: Phone, Email, or Text. You can choose more than one.";
+  }
+  if (choices.email && !email.trim()) {
+    return "Add an email address, since Email is one of the ways buyers can reach the seller.";
+  }
+  if ((choices.phone || choices.text) && !phone.trim()) {
+    return "Add a phone number, since Phone or Text is one of the ways buyers can reach the seller.";
+  }
+  return null;
+}
+
 export type YardListing = {
   id: string;
   memberId: string;
@@ -72,8 +143,10 @@ export type YardListing = {
   category: string;
   meetupType: MeetupType;
   meetupNotes?: string;
-  /** How buyers should reach seller */
+  /** How buyers should reach seller. Kept in sync with contactBy for older readers. */
   contactMethod: "email" | "phone" | "either";
+  /** Phone, email, and text choices. Missing on listings saved before this field. */
+  contactBy?: ContactBy;
   images: string[]; // max 5
   videoUrl?: string | null; // max 1 short video
   status: ListingStatus;

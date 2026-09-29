@@ -10146,7 +10146,18 @@ a.ts-square-card:hover .ts-square-card-img {
   font-size: 0.85rem;
   color: var(--ink);
   margin: 0 0 0.5rem;
-  overflow-wrap: anywhere;
+}
+
+.yard-seller-line {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.yard-seller-identity {
+  white-space: nowrap;
 }
 
 .yard-seller-contact {
@@ -10870,6 +10881,65 @@ button.text-link {
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
+}
+
+.field .field-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  color: var(--muted);
+}
+
+.field-check {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.field label.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  gap: 0.4rem;
+  margin-bottom: 0;
+  color: var(--ink);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.field-check label.checkbox-row {
+  align-self: flex-start;
+  min-height: 2.9rem;
+}
+
+.field label.checkbox-row input[type="checkbox"],
+.contact-choices input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.2rem;
+  background: transparent;
+  accent-color: var(--palm, #1f6b4a);
+}
+
+.contact-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.15rem;
+  min-height: 2.9rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffdf9;
+}
+
+.contact-choices .checkbox-row {
+  margin: 0;
 }
 
 /* Footer */

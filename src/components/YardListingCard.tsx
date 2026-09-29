@@ -1,9 +1,31 @@
 import Link from "next/link";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
-import type { YardListing } from "@/lib/yardSaleTypes";
+import type { ContactBy, YardListing } from "@/lib/yardSaleTypes";
 import { CONDITION_LABELS, MEETUP_LABELS } from "@/lib/yardSaleTypes";
 import { formatDate } from "@/lib/format";
+
+function sellerContactLine(
+  seller:
+    | {
+        email?: string;
+        phone?: string;
+        contactBy?: ContactBy;
+      }
+    | null
+    | undefined
+) {
+  if (!seller) return "";
+  const parts: string[] = [];
+  if (seller.email) parts.push(seller.email);
+  if (seller.phone) {
+    const by = seller.contactBy;
+    if (by?.phone && !by.text) parts.push(`Call ${seller.phone}`);
+    else if (by?.text && !by.phone) parts.push(`Text ${seller.phone}`);
+    else parts.push(seller.phone);
+  }
+  return parts.join(" · ");
+}
 
 export function formatPrice(listing: { isFree: boolean; price: number | null }) {
   if (listing.isFree || listing.price === 0 || listing.price == null) return "FREE";
@@ -23,9 +45,11 @@ export function YardListingCard({
       email?: string;
       phone?: string;
       badges?: BadgeDef[];
+      contactBy?: ContactBy;
     } | null;
   };
 }) {
+  const contactLine = sellerContactLine(listing.seller);
   const cover = listing.images?.[0];
   return (
     <article className="card yard-card">
@@ -59,17 +83,16 @@ export function YardListingCard({
         </div>
         {listing.seller?.name && (
           <p className="yard-seller">
-            Seller:{" "}
-            <span className="member-name">
-              <span className="member-name-text">{listing.seller.name}</span>
+            <span className="yard-seller-line">
+              <span className="yard-seller-identity">
+                Seller: {listing.seller.name}
+                {listing.seller.village ? ` · ${listing.seller.village}` : ""}
+              </span>
               <MemberBadgesRow badges={listing.seller.badges || []} />
             </span>
-            {listing.seller.village ? ` · ${listing.seller.village}` : ""}
-            {(listing.seller.email || listing.seller.phone) && (
-              <span className="yard-seller-contact">
-                {[listing.seller.email, listing.seller.phone].filter(Boolean).join(" · ")}
-              </span>
-            )}
+            {contactLine ? (
+              <span className="yard-seller-contact">{contactLine}</span>
+            ) : null}
           </p>
         )}
         <Link href={`/yard-sale/${listing.id}`} className="text-link">
