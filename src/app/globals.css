@@ -10750,6 +10750,12 @@ button.text-link {
   background: rgba(31, 107, 74, 0.06);
 }
 
+.field input:disabled,
+.field input:read-only {
+  background: #f4f1ea;
+  color: var(--ink);
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus {

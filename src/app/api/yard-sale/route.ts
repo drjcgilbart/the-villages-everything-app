@@ -21,7 +21,9 @@ export async function GET(req: Request) {
     if (!(await isAdminAuthenticated())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const listings = listAllListings().map(listingWithSeller);
+    const listings = listAllListings().map((listing) =>
+      listingWithSeller(listing, { includeSubmitter: true })
+    );
     return NextResponse.json({ listings });
   }
 

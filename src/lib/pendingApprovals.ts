@@ -186,8 +186,11 @@ export async function listPendingApprovals(): Promise<PendingItem[]> {
         d("Price", l.isFree ? "Free" : l.price != null ? `$${l.price}` : ""),
         d("Condition", l.condition),
         d("Description", l.description),
-        d("Seller", member?.name),
-        d("Seller email", member?.email),
+        d("Seller", l.sellerName),
+        d("Seller village", l.sellerVillage),
+        d("Seller email", l.sellerEmail),
+        d("Seller phone", l.sellerPhone),
+        d("Posted by", l.submittedByName || member?.name || "Guest"),
         d("Photos", l.images?.length ? `${l.images.length} photo(s)` : ""),
       ]),
       editFields: [

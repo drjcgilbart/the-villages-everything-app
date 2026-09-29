@@ -529,6 +529,7 @@ export function createListing(
   const listing: YardListing = {
     id: uid("list"),
     memberId: member?.id || "",
+    submittedByName: member?.name ? filledText(member.name, 80) : undefined,
     sellerName,
     sellerEmail: sellerEmail || undefined,
     sellerPhone: sellerPhone || undefined,
@@ -571,6 +572,17 @@ export function updateListing(
 
   const images = input.images !== undefined ? clampImages(input.images) : prev.images;
   if (!images.length) throw new Error("At least one photo is required");
+  if (input.sellerName !== undefined && !filledText(input.sellerName, 80)) {
+    throw new Error("Seller name is required");
+  }
+  if (
+    input.sellerEmail !== undefined &&
+    input.sellerPhone !== undefined &&
+    !filledText(input.sellerEmail, 120) &&
+    !filledText(input.sellerPhone, 40)
+  ) {
+    throw new Error("Add an email or phone so buyers can reach the seller");
+  }
 
   let isFree = input.isFree !== undefined ? !!input.isFree : prev.isFree;
   let price = prev.price;
@@ -610,6 +622,22 @@ export function updateListing(
         ? String(input.meetupNotes || "").trim().slice(0, 300) || undefined
         : prev.meetupNotes,
     contactMethod: input.contactMethod || prev.contactMethod,
+    sellerName:
+      input.sellerName !== undefined
+        ? filledText(input.sellerName, 80)
+        : prev.sellerName,
+    sellerEmail:
+      input.sellerEmail !== undefined
+        ? filledText(input.sellerEmail, 120) || undefined
+        : prev.sellerEmail,
+    sellerPhone:
+      input.sellerPhone !== undefined
+        ? filledText(input.sellerPhone, 40) || undefined
+        : prev.sellerPhone,
+    sellerVillage:
+      input.sellerVillage !== undefined
+        ? filledText(input.sellerVillage, 80) || undefined
+        : prev.sellerVillage,
     images,
     videoUrl:
       input.videoUrl !== undefined
@@ -693,14 +721,22 @@ export function listAllListings() {
   return loadYardSale().listings.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function listingWithSeller(listing: YardListing) {
+export function listingWithSeller(
+  listing: YardListing,
+  opts?: { includeSubmitter?: boolean }
+) {
   const member = listing.memberId ? getMemberById(listing.memberId) : null;
   const seller = sellerFieldsForListing(listing, member);
   const showContact = listing.status === "approved";
   const wantEmail = listing.contactMethod === "email" || listing.contactMethod === "either";
   const wantPhone = listing.contactMethod === "phone" || listing.contactMethod === "either";
+  const { submittedByName: storedSubmitter, ...rest } = listing;
+  const submitter = opts?.includeSubmitter
+    ? storedSubmitter || member?.name || undefined
+    : undefined;
   return {
-    ...listing,
+    ...rest,
+    ...(opts?.includeSubmitter ? { submittedByName: submitter } : {}),
     seller: seller.sellerName
       ? {
           id: seller.memberIdForBadges,

@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       await notifyAdminOfApprovalRequest({
         topic: "Yard Sale",
         title: listing.title,
-        submittedBy: listing.sellerName || signedIn?.name,
+        submittedBy: listing.submittedByName || "Guest",
         createdAt: listing.createdAt,
         details: {
           title: listing.title,
@@ -55,8 +55,11 @@ export async function POST(req: Request) {
           price: listing.isFree ? "Free" : listing.price,
           condition: listing.condition,
           description: listing.description,
-          seller: listing.sellerName || signedIn?.name,
-          sellerEmail: listing.sellerEmail || signedIn?.email,
+          seller: listing.sellerName,
+          sellerEmail: listing.sellerEmail,
+          sellerPhone: listing.sellerPhone,
+          sellerVillage: listing.sellerVillage,
+          postedBy: listing.submittedByName || "Guest",
           photos: listing.images?.length,
         },
       });
@@ -78,6 +81,27 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const isAdmin = await isAdminAuthenticated();
     const member = await getSessionMember();
+
+    if (isAdmin && body.adminEdit) {
+      const listing = updateListing(body.id, member?.id || "", {
+        title: body.title,
+        description: body.description,
+        price: body.price,
+        isFree: body.isFree,
+        condition: body.condition,
+        category: body.category,
+        meetupType: body.meetupType,
+        meetupNotes: body.meetupNotes,
+        contactMethod: body.contactMethod,
+        sellerName: body.sellerName,
+        sellerEmail: body.sellerEmail,
+        sellerPhone: body.sellerPhone,
+        sellerVillage: body.sellerVillage,
+        isAdmin: true,
+      });
+      await saveYardSaleAsync(loadYardSale());
+      return NextResponse.json({ listing });
+    }
 
     if (isAdmin && body.adminStatus) {
       const listing = setListingStatus(

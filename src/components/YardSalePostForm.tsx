@@ -29,7 +29,7 @@ const emptyForm = {
   videoUrl: "" as string,
 };
 
-export function YardSalePostForm() {
+export function YardSalePostForm({ posterName = "" }: { posterName?: string }) {
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -163,6 +163,16 @@ export function YardSalePostForm() {
       </p>
       {msg ? <div className={`msg msg-${msg.kind}`}>{msg.text}</div> : null}
       <form className="form-grid" onSubmit={submitListing}>
+        {posterName ? (
+          <div className="field">
+            <label htmlFor="yard-posted-by">Posted by</label>
+            <input id="yard-posted-by" value={posterName} readOnly disabled />
+            <p className="panel-hint">
+              This is your membership name. It is saved for the admin review and is
+              not shown on the public listing.
+            </p>
+          </div>
+        ) : null}
         <div className="form-row">
           <div className="field">
             <label>Your name</label>
@@ -172,6 +182,10 @@ export function YardSalePostForm() {
               onChange={(e) => setForm((f) => ({ ...f, sellerName: e.target.value }))}
               placeholder="First name is fine"
             />
+            <p className="panel-hint">
+              Buyers see this name. Use someone else’s name if you are listing the
+              item for them.
+            </p>
           </div>
           <div className="field">
             <label>Village (optional)</label>

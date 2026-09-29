@@ -1,18 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { YardListing } from "@/lib/yardSaleTypes";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import type { ItemCondition, MeetupType, YardListing } from "@/lib/yardSaleTypes";
+import {
+  CATEGORY_OPTIONS,
+  CONDITION_LABELS,
+  MEETUP_LABELS,
+} from "@/lib/yardSaleTypes";
 import { formatPrice } from "@/components/YardListingCard";
 import { formatDate } from "@/lib/format";
+
+type ListingRow = YardListing & {
+  seller?: { name?: string; village?: string; email?: string; phone?: string } | null;
+};
+
+type EditDraft = {
+  id: string;
+  sellerName: string;
+  sellerVillage: string;
+  sellerEmail: string;
+  sellerPhone: string;
+  title: string;
+  description: string;
+  price: string;
+  isFree: boolean;
+  condition: ItemCondition;
+  category: string;
+  meetupType: MeetupType;
+  meetupNotes: string;
+  contactMethod: "email" | "phone" | "either";
+  postedBy: string;
+};
 
 /**
  * Yard Sale listings only. Membership approval lives on the Studio
  * “Members” tab (AdminMembersPanel).
  */
 export function AdminYardSalePanel() {
-  const [listings, setListings] = useState<
-    (YardListing & { seller?: { name?: string } | null })[]
-  >([]);
+  const [listings, setListings] = useState<ListingRow[]>([]);
+  const [editing, setEditing] = useState<EditDraft | null>(null);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null
   );
@@ -46,6 +72,64 @@ export function AdminYardSalePanel() {
       if (!res.ok) throw new Error(data.error || "Update failed");
       await load();
       flash("ok", `Listing ${adminStatus}`);
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(listing: ListingRow) {
+    setEditing({
+      id: listing.id,
+      sellerName: listing.sellerName || listing.seller?.name || "",
+      sellerVillage: listing.sellerVillage || listing.seller?.village || "",
+      sellerEmail: listing.sellerEmail || listing.seller?.email || "",
+      sellerPhone: listing.sellerPhone || listing.seller?.phone || "",
+      title: listing.title,
+      description: listing.description,
+      price: listing.isFree ? "0" : String(listing.price ?? ""),
+      isFree: listing.isFree,
+      condition: listing.condition,
+      category: listing.category,
+      meetupType: listing.meetupType,
+      meetupNotes: listing.meetupNotes || "",
+      contactMethod: listing.contactMethod,
+      postedBy: listing.submittedByName || "Guest",
+    });
+  }
+
+  async function saveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editing) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/yard-sale/listings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editing.id,
+          adminEdit: true,
+          sellerName: editing.sellerName,
+          sellerVillage: editing.sellerVillage,
+          sellerEmail: editing.sellerEmail,
+          sellerPhone: editing.sellerPhone,
+          title: editing.title,
+          description: editing.description,
+          isFree: editing.isFree,
+          price: editing.isFree ? 0 : Number(editing.price),
+          condition: editing.condition,
+          category: editing.category,
+          meetupType: editing.meetupType,
+          meetupNotes: editing.meetupNotes,
+          contactMethod: editing.contactMethod,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not save listing");
+      setEditing(null);
+      await load();
+      flash("ok", "Listing updated");
     } catch (err) {
       flash("err", err instanceof Error ? err.message : "Failed");
     } finally {
@@ -117,13 +201,24 @@ export function AdminYardSalePanel() {
                   </span>
                 </strong>
                 <span>
-                  {formatPrice(l)} · {l.seller?.name || "Unknown seller"} ·{" "}
-                  {l.images?.length || 0} photo(s)
+                  {formatPrice(l)} · Seller: {l.seller?.name || "Unknown seller"}
+                  {l.seller?.village ? ` · ${l.seller.village}` : ""} · Posted by{" "}
+                  {l.submittedByName || "Guest"} · {l.images?.length || 0} photo(s)
                   {l.videoUrl ? " · video" : ""} · {formatDate(l.createdAt)}
                 </span>
               </div>
             </div>
             <div className="admin-actions">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={busy}
+                onClick={() =>
+                  editing?.id === l.id ? setEditing(null) : startEdit(l)
+                }
+              >
+                {editing?.id === l.id ? "Close" : "Edit"}
+              </button>
               {l.status !== "approved" && (
                 <button
                   type="button"
@@ -162,6 +257,193 @@ export function AdminYardSalePanel() {
                 Delete
               </button>
             </div>
+            {editing?.id === l.id ? (
+              <form
+                className="form-grid"
+                style={{ flexBasis: "100%" }}
+                onSubmit={saveEdit}
+              >
+                <p className="panel-hint" style={{ margin: 0 }}>
+                  Posted by {editing.postedBy}. That name stays on the admin
+                  record. Buyers see the seller name below.
+                </p>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Seller name</label>
+                    <input
+                      required
+                      value={editing.sellerName}
+                      onChange={(e) =>
+                        setEditing({ ...editing, sellerName: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Village</label>
+                    <input
+                      value={editing.sellerVillage}
+                      onChange={(e) =>
+                        setEditing({ ...editing, sellerVillage: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={editing.sellerEmail}
+                      onChange={(e) =>
+                        setEditing({ ...editing, sellerEmail: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Phone</label>
+                    <input
+                      value={editing.sellerPhone}
+                      onChange={(e) =>
+                        setEditing({ ...editing, sellerPhone: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Title</label>
+                  <input
+                    required
+                    value={editing.title}
+                    onChange={(e) =>
+                      setEditing({ ...editing, title: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>Description</label>
+                  <textarea
+                    required
+                    value={editing.description}
+                    onChange={(e) =>
+                      setEditing({ ...editing, description: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Category</label>
+                    <select
+                      value={editing.category}
+                      onChange={(e) =>
+                        setEditing({ ...editing, category: e.target.value })
+                      }
+                    >
+                      {(CATEGORY_OPTIONS.includes(editing.category)
+                        ? CATEGORY_OPTIONS
+                        : [editing.category, ...CATEGORY_OPTIONS]
+                      ).map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Condition</label>
+                    <select
+                      value={editing.condition}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          condition: e.target.value as ItemCondition,
+                        })
+                      }
+                    >
+                      {Object.entries(CONDITION_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Price (USD)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      disabled={editing.isFree}
+                      value={editing.isFree ? "0" : editing.price}
+                      onChange={(e) =>
+                        setEditing({ ...editing, price: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="field" style={{ display: "flex", alignItems: "flex-end" }}>
+                    <label className="checkbox-row" style={{ width: "100%" }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.isFree}
+                        onChange={(e) =>
+                          setEditing({ ...editing, isFree: e.target.checked })
+                        }
+                      />
+                      Free / giveaway
+                    </label>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Meetup</label>
+                    <select
+                      value={editing.meetupType}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          meetupType: e.target.value as MeetupType,
+                        })
+                      }
+                    >
+                      {Object.entries(MEETUP_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Preferred contact</label>
+                    <select
+                      value={editing.contactMethod}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          contactMethod: e.target.value as EditDraft["contactMethod"],
+                        })
+                      }
+                    >
+                      <option value="either">Email or phone</option>
+                      <option value="email">Email only</option>
+                      <option value="phone">Phone only</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Meetup notes</label>
+                  <input
+                    value={editing.meetupNotes}
+                    onChange={(e) =>
+                      setEditing({ ...editing, meetupNotes: e.target.value })
+                    }
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
+                  {busy ? "Saving…" : "Save listing"}
+                </button>
+              </form>
+            ) : null}
           </div>
         ))}
       </div>

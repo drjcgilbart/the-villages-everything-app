@@ -56,6 +56,8 @@ export type ItemCondition =
 export type YardListing = {
   id: string;
   memberId: string;
+  /** Member who posted the listing, snapshotted at submit time. Admin record only. */
+  submittedByName?: string;
   /** Guest seller (when posted without a membership). */
   sellerName?: string;
   sellerEmail?: string;

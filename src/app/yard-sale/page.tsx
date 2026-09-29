@@ -2,14 +2,18 @@ import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { YardListingCard } from "@/components/YardListingCard";
 import { YardSalePostForm } from "@/components/YardSalePostForm";
 import { withSellerBadges } from "@/lib/memberBadges";
+import { getSessionMember } from "@/lib/memberAuth";
 import { getApprovedListings, listingWithSeller } from "@/lib/yardSale";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Community Yard Sale" };
 
-export default function YardSalePage() {
+export default async function YardSalePage() {
+  const member = await getSessionMember();
+  const posterName =
+    member && member.status === "approved" ? member.name : "";
   const listings = getApprovedListings()
-    .map(listingWithSeller)
+    .map((listing) => listingWithSeller(listing))
     .map(withSellerBadges);
 
   return (
@@ -54,7 +58,7 @@ export default function YardSalePage() {
             </div>
           </div>
 
-          <YardSalePostForm />
+          <YardSalePostForm posterName={posterName} />
 
           <h2 style={{ marginTop: "2rem" }}>Live listings</h2>
           {listings.length === 0 ? (
