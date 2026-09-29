@@ -8,6 +8,7 @@ import {
   MEETUP_LABELS,
 } from "@/lib/yardSaleTypes";
 import { formatPrice } from "@/components/YardListingCard";
+import { DEFAULT_PHOTO_MAX_BYTES, prepareUploadImageFile } from "@/lib/browserImage";
 import { formatDate } from "@/lib/format";
 
 type ListingRow = YardListing & {
@@ -30,6 +31,7 @@ type EditDraft = {
   meetupNotes: string;
   contactMethod: "email" | "phone" | "either";
   postedBy: string;
+  images: string[];
 };
 
 /**
@@ -43,6 +45,7 @@ export function AdminYardSalePanel() {
     null
   );
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const flash = (kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -96,12 +99,74 @@ export function AdminYardSalePanel() {
       meetupNotes: listing.meetupNotes || "",
       contactMethod: listing.contactMethod,
       postedBy: listing.submittedByName || "Guest",
+      images: [...(listing.images || [])],
     });
+  }
+
+  function removePhoto(url: string) {
+    setEditing((current) =>
+      current
+        ? { ...current, images: current.images.filter((item) => item !== url) }
+        : current
+    );
+  }
+
+  function makeCover(url: string) {
+    setEditing((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        images: [url, ...current.images.filter((item) => item !== url)],
+      };
+    });
+  }
+
+  async function addPhotos(files: FileList | null) {
+    if (!files?.length || !editing) return;
+    const id = editing.id;
+    const room = Math.max(0, 3 - editing.images.length);
+    const picked = Array.from(files).slice(0, room);
+    if (!picked.length) {
+      flash("err", "Maximum 3 photos per listing");
+      return;
+    }
+    setUploading(true);
+    try {
+      let next = [...editing.images];
+      let shrunk = 0;
+      for (const file of picked) {
+        const prepared = await prepareUploadImageFile(file, {
+          maxBytes: DEFAULT_PHOTO_MAX_BYTES,
+        });
+        if (prepared.compressed) shrunk += 1;
+        const fd = new FormData();
+        fd.append("file", prepared.file);
+        const res = await fetch("/api/yard-sale/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+        next = [...next, data.url];
+      }
+      setEditing((current) =>
+        current && current.id === id ? { ...current, images: next } : current
+      );
+      flash(
+        "ok",
+        shrunk ? `Photo added — ${shrunk} shrunk to fit.` : "Photo added. Save the listing to keep it."
+      );
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function saveEdit(e: FormEvent) {
     e.preventDefault();
     if (!editing) return;
+    if (!editing.images.length) {
+      flash("err", "Keep at least one photo");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/yard-sale/listings", {
@@ -123,6 +188,7 @@ export function AdminYardSalePanel() {
           meetupType: editing.meetupType,
           meetupNotes: editing.meetupNotes,
           contactMethod: editing.contactMethod,
+          images: editing.images,
         }),
       });
       const data = await res.json();
@@ -439,7 +505,67 @@ export function AdminYardSalePanel() {
                     }
                   />
                 </div>
-                <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
+                <div className="field">
+                  <label>
+                    Photos (up to 3). The first photo is the cover buyers see.{" "}
+                    {uploading ? "Uploading…" : ""}
+                  </label>
+                  {editing.images.length > 0 ? (
+                    <div className="admin-photo-grid" style={{ marginTop: "0.5rem" }}>
+                      {editing.images.map((url, i) => (
+                        <div
+                          key={url}
+                          className={`admin-photo-tile${i === 0 ? " featured" : ""}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" />
+                          <div className="admin-photo-tile-actions">
+                            <span className="panel-hint">
+                              {i === 0 ? "Cover" : `Photo ${i + 1}`}
+                            </span>
+                            {i !== 0 ? (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => makeCover(url)}
+                              >
+                                Make cover
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              onClick={() => removePhoto(url)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="panel-hint">No photos yet. Add at least one.</p>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploading || busy || editing.images.length >= 3}
+                    style={{ marginTop: "0.75rem" }}
+                    onChange={(e) => {
+                      void addPhotos(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  {editing.images.length >= 3 ? (
+                    <p className="panel-hint">Remove a photo before adding another.</p>
+                  ) : null}
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={busy || uploading || editing.images.length === 0}
+                >
                   {busy ? "Saving…" : "Save listing"}
                 </button>
               </form>

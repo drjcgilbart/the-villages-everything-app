@@ -97,6 +97,7 @@ export async function PUT(req: Request) {
         sellerEmail: body.sellerEmail,
         sellerPhone: body.sellerPhone,
         sellerVillage: body.sellerVillage,
+        images: body.images,
         isAdmin: true,
       });
       await saveYardSaleAsync(loadYardSale());
