@@ -2666,6 +2666,83 @@ a.my-space-link-card:hover {
   .cruise-checks label {
     font-size: 1.08rem;
   }
+
+  .shell,
+  .section,
+  .about-panel,
+  .cruise-desk,
+  .cruise-desk label,
+  .ms-boat,
+  .ms-boat-grid,
+  .ms-boat-card,
+  .ms-boat-hero,
+  .trip-card,
+  .ms-boat-section-art {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .about-panel.cruise-desk,
+  .cruise-desk {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: clip;
+  }
+
+  .cruise-desk label {
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  .ms-boat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cruise-desk input:not([type="checkbox"]):not([type="radio"]),
+  .cruise-desk select,
+  .cruise-desk textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .cruise-desk .cruise-checks input {
+    display: inline-block;
+    width: 1.2rem;
+    min-width: 1.2rem;
+    max-width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .cruise-desk input[type="file"] {
+    overflow: hidden;
+    font-size: 0.95rem;
+  }
+
+  .cruise-desk .hero-actions,
+  .ms-boat-card .hero-actions,
+  .ms-boat-jump {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .cruise-desk .btn,
+  .ms-boat-card .btn,
+  .ms-boat-jump .btn {
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+    height: auto;
+  }
+
+  .ms-boat-section-art .my-space-block-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 }
 
 @media (max-width: 1280px) {
@@ -3060,7 +3137,7 @@ a.my-space-link-card:hover {
 
 @media (max-width: 720px) {
   .ms-boat-hero {
-    grid-template-columns: 5.5rem 1fr;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
   }
 
   .ms-boat-mascot {
@@ -3083,7 +3160,7 @@ a.my-space-link-card:hover {
 
 .ms-boat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr));
   gap: 0.75rem;
 }
 
