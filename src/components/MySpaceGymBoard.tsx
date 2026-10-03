@@ -32,7 +32,7 @@ import {
   workoutHasNumbers,
 } from "@/lib/gymCatalog";
 import { applyGymVoiceSequence, isRestCancelPhrase, parseGymVoiceSequence, type GymVoiceAt } from "@/lib/gymVoice";
-import { playAlarmTone } from "@/lib/mySpaceStorage";
+import { dismissAlarm, raiseAlarm } from "@/lib/alarmAlert";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { GymExerciseHowTo } from "@/components/GymExerciseHowTo";
 import {
@@ -376,7 +376,8 @@ export function MySpaceGymBoard() {
   const liftsRef = useRef(lifts);
   const voiceAtRef = useRef(voiceAt);
   const listeningRef = useRef(false);
-  const restAlarmStop = useRef<(() => void) | null>(null);
+  const restGen = useRef(0);
+  const restAlarmId = useRef<string | null>(null);
   const restClockRef = useRef(restClock);
   const voiceRecRef = useRef<{
     stop: () => void;
@@ -390,23 +391,26 @@ export function MySpaceGymBoard() {
   voiceAtRef.current = voiceAt;
   restClockRef.current = restClock;
 
-  function silenceRestAlarm() {
-    restAlarmStop.current?.();
-    restAlarmStop.current = null;
+  function stopRestAlarm() {
+    const id = restAlarmId.current;
+    restAlarmId.current = null;
+    if (id) dismissAlarm({ id });
   }
 
   function resetRestTimer() {
+    restGen.current += 1;
     restClockRef.current = null;
-    silenceRestAlarm();
     setRestClock(null);
+    stopRestAlarm();
   }
 
   function startRestTimer(seconds: number) {
     const total = Math.max(1, Math.min(600, Math.round(seconds)));
     const next = { phase: "count" as const, endsAt: Date.now() + total * 1000 };
+    restGen.current += 1;
     restClockRef.current = next;
-    silenceRestAlarm();
     setRestClock(next);
+    stopRestAlarm();
   }
 
   useEffect(() => {
@@ -425,8 +429,6 @@ export function MySpaceGymBoard() {
         return;
       }
       restClockRef.current = null;
-      restAlarmStop.current?.();
-      restAlarmStop.current = null;
       setRestClock(null);
       setVoiceHeard("Rest done.");
     }, 250);
@@ -435,8 +437,20 @@ export function MySpaceGymBoard() {
 
   useEffect(() => {
     if (restClock?.phase !== "alarm") return;
-    silenceRestAlarm();
-    restAlarmStop.current = playAlarmTone("classic", 10, 0.03);
+    const gen = restGen.current;
+    restAlarmId.current = raiseAlarm({
+      source: "gym",
+      title: "Rest is over",
+      detail: "The rest timer finished.",
+      tone: "classic",
+      seconds: 10,
+      volume: 0.03,
+      onDismiss: () => {
+        if (restGen.current !== gen) return;
+        restClockRef.current = null;
+        setRestClock(null);
+      },
+    });
     const nudge = window.setTimeout(() => {
       const rec = voiceRecRef.current;
       if (!rec || !listeningRef.current) return;
@@ -448,7 +462,6 @@ export function MySpaceGymBoard() {
     }, 400);
     return () => {
       window.clearTimeout(nudge);
-      silenceRestAlarm();
     };
   }, [restClock?.phase, restClock?.endsAt]);
 
@@ -1147,9 +1160,14 @@ export function MySpaceGymBoard() {
                         </p>
                         <p>
                           {restClock.phase === "alarm"
-                            ? "Say stop timer or stop alarm. Otherwise it stops in 10 seconds."
+                            ? "Say stop timer or stop alarm, or use Turn alarm off."
                             : "Say stop timer or stop alarm to end this early."}
                         </p>
+                        {restClock.phase === "alarm" ? (
+                          <button type="button" className="btn btn-primary" onClick={() => resetRestTimer()}>
+                            Turn alarm off
+                          </button>
+                        ) : null}
                       </div>
                     </div>,
                     document.body

@@ -12,6 +12,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import { NativeAppBoot } from "@/components/NativeAppBoot";
 import { ApplePurchaseBridge } from "@/components/ApplePurchaseBridge";
 import { PhoneViewHide } from "@/components/PhoneViewHide";
+import { AlarmPopup } from "@/components/AlarmPopup";
 import { PrivacyModeRoot } from "@/components/PrivacyModeRoot";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { ensureDurableHydrated } from "@/lib/dataFs";
@@ -70,6 +71,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body id="top" className="min-h-full flex flex-col antialiased">
+        <AlarmPopup />
         <NativeAppBoot />
         <ApplePurchaseBridge />
         <PrivacyModeRoot isAdmin={isAdmin} />

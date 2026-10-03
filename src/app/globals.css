@@ -16913,3 +16913,78 @@ html.privacy-mode [data-privacy-block]::after {
     justify-items: center;
   }
 }
+
+.alarm-popup {
+  width: min(32rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 0;
+  border: none;
+  overflow: auto;
+  background: transparent;
+  color: var(--ink);
+}
+
+.alarm-popup:focus {
+  outline: none;
+}
+
+.alarm-popup::backdrop {
+  background: rgba(18, 24, 20, 0.62);
+}
+
+.alarm-popup-fallback {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  background: rgba(18, 24, 20, 0.62);
+}
+
+.alarm-popup-card {
+  padding: 1.45rem 1.3rem 1.35rem;
+  border-radius: 22px;
+  background: var(--cream);
+  border: 3px solid var(--sunset);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.alarm-popup-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a33b2b;
+}
+
+.alarm-popup h2 {
+  margin: 0 0 0.65rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  line-height: 1.15;
+}
+
+.alarm-popup-detail {
+  margin: 0 0 1.15rem;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.alarm-popup-stop {
+  width: 100%;
+  min-height: 3.3rem;
+  font-size: 1.15rem;
+}
+
+.ms-gym-rest-card .btn {
+  margin-top: 0.9rem;
+}

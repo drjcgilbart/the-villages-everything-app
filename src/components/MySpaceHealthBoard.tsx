@@ -8,6 +8,8 @@ import {
   uid,
   type AlarmTone,
 } from "@/lib/mySpaceStorage";
+import { askAlarmNotificationPermission, dismissAlarm, raiseAlarm } from "@/lib/alarmAlert";
+import { AlarmNotifyButton } from "@/components/AlarmPopup";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_HEALTH } from "@/lib/sampleBoards";
 import { emptyBoards, type GymBoard } from "@/lib/memberBoardModel";
@@ -1568,9 +1570,17 @@ export function MySpaceHealthBoard() {
     };
   }, [activeMeds, state.medicationLogs, today]);
 
+  const healthMounted = useRef(true);
+  const firedMedAlarms = useRef(new Set<string>());
+  useEffect(() => {
+    healthMounted.current = true;
+    return () => {
+      healthMounted.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (!ready || !state.medAlarmEnabled) return;
-    const fired = new Set<string>();
     const tick = () => {
       const t = normalizeMedTime(nowTimeEastern());
       const d = todayKeyEastern();
@@ -1587,15 +1597,22 @@ export function MySpaceHealthBoard() {
         }
       }
       const key = `round:${d}:${t}`;
-      if (!dueNow.length || fired.has(key)) return;
-      fired.add(key);
+      if (!dueNow.length || firedMedAlarms.current.has(key)) return;
+      firedMedAlarms.current.add(key);
       const tone = dueNow[0]?.med.alarmSound || state.medAlarmSound;
       const seconds = dueNow[0]?.med.alarmDurationSec || state.medAlarmDurationSec || 8;
-      playAlarmTone(tone, seconds);
-      setAlarmRound({
-        time: t,
-        names: dueNow.map((item) => item.med.name),
+      const names = dueNow.map((item) => item.med.name);
+      raiseAlarm({
+        source: "health",
+        title: "Medicine alarm",
+        detail: `${formatMedTime(t)} — ${listMedNames(names)}. Not marked taken yet.`,
+        tone,
+        seconds,
+        onDismiss: () => {
+          if (healthMounted.current) setAlarmRound(null);
+        },
       });
+      setAlarmRound({ time: t, names });
     };
     tick();
     const id = window.setInterval(tick, 30_000);
@@ -1661,6 +1678,9 @@ export function MySpaceHealthBoard() {
       ...state,
       medicationLogs: withDoseMark(state.medicationLogs, med, dose, done, time),
     });
+    if (done && dose && alarmRound && normalizeMedTime(dose.time) === alarmRound.time) {
+      dismissAlarm({ source: "health" });
+    }
   }
 
   function markRound(time: string, done: boolean) {
@@ -1673,6 +1693,7 @@ export function MySpaceHealthBoard() {
     persist({ ...state, medicationLogs: logs });
     if (done && alarmRound && alarmRound.time === time) {
       setAlarmRound(null);
+      dismissAlarm({ source: "health" });
     }
   }
 
@@ -2140,6 +2161,7 @@ export function MySpaceHealthBoard() {
                 }
                 persist({ ...state, medicationLogs: logs });
                 setAlarmRound(null);
+                dismissAlarm({ source: "health" });
               }}
             >
               Mark remaining taken
@@ -2178,7 +2200,7 @@ export function MySpaceHealthBoard() {
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => setAlarmRound(null)}
+                  onClick={() => dismissAlarm({ source: "health" })}
                 >
                   Dismiss
                 </button>
@@ -2491,14 +2513,15 @@ export function MySpaceHealthBoard() {
                   <input
                     type="checkbox"
                     checked={med.alarmEnabled}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      if (e.target.checked) askAlarmNotificationPermission();
                       persist({
                         ...state,
                         medications: state.medications.map((m) =>
                           m.id === med.id ? { ...m, alarmEnabled: e.target.checked } : m
                         ),
-                      })
-                    }
+                      });
+                    }}
                   />
                   Alarm for this medication
                 </label>
@@ -2740,14 +2763,19 @@ export function MySpaceHealthBoard() {
             <input
               type="checkbox"
               checked={state.medAlarmEnabled}
-              onChange={(e) => persist({ ...state, medAlarmEnabled: e.target.checked })}
+              onChange={(e) => {
+                if (e.target.checked) askAlarmNotificationPermission();
+                persist({ ...state, medAlarmEnabled: e.target.checked });
+              }}
             />
             Run medication alarms
           </label>
           <p className="panel-hint">
             Each medicine has its own alarm on the form where you enter it. Alarms fire for dose
-            times that are On and not yet taken. Keep this tab open in the browser.
+            times that are On and not yet taken. A window pops up over the page so you can see the
+            dose and turn the sound off. Keep this page open in the browser.
           </p>
+          <AlarmNotifyButton />
 
           <h3 className="ms-h-add-bar">Add medication</h3>
           <p className="panel-hint">

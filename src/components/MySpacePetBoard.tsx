@@ -9,6 +9,8 @@ import {
   uid,
   type AlarmTone,
 } from "@/lib/mySpaceStorage";
+import { askAlarmNotificationPermission, dismissAlarm, raiseAlarm } from "@/lib/alarmAlert";
+import { AlarmNotifyButton } from "@/components/AlarmPopup";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_PET } from "@/lib/sampleBoards";
 
@@ -128,6 +130,15 @@ function clampDuration(v: unknown): number {
   const n = Number(v);
   if (!Number.isFinite(n)) return 30;
   return Math.min(300, Math.max(5, Math.round(n)));
+}
+
+function formatClock(hhmm: string): string {
+  const match = String(hhmm || "").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return hhmm || "";
+  const hour = Math.min(23, Number(match[1]));
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = ((hour + 11) % 12) + 1;
+  return `${hour12}:${match[2]} ${ampm}`;
 }
 
 function seedPet(partial: Partial<Pet> & { name: string }): Pet {
@@ -289,6 +300,7 @@ export function MySpacePetBoard() {
   const [hearing, setHearing] = useState<AlarmTone | null>(null);
   const stopPreviewRef = useRef<(() => void) | null>(null);
   const previewTokenRef = useRef(0);
+  const firedPetAlarms = useRef(new Set<string>());
   const [edit, setEdit] = useState({
     name: "",
     species: "dog",
@@ -324,6 +336,7 @@ export function MySpacePetBoard() {
       ...state,
       completions: { ...state.completions, [key]: { ...cur, ...patch } },
     });
+    if (patch.done) dismissAlarm({ source: "pet" });
   }
 
   function historyFor(events: PetEvent[]) {
@@ -350,24 +363,54 @@ export function MySpacePetBoard() {
 
   useEffect(() => {
     if (!ready) return;
-    const fired = new Set<string>();
     const tick = () => {
       const t = nowTimeEastern();
       const d = todayKeyEastern();
+      const due: {
+        pet: string;
+        word: string;
+        label: string;
+        time: string;
+        sound: AlarmTone;
+        seconds: number;
+      }[] = [];
       for (const p of state.pets) {
-        const check = (events: PetEvent[], enabled: boolean) => {
+        const collect = (events: PetEvent[], enabled: boolean, word: string) => {
           if (!enabled) return;
           for (const ev of events) {
             if (!ev.enabled || ev.time !== t) continue;
             const key = `${ev.id}:${d}`;
-            if (asCompletion(state.completions[key]).done || fired.has(key)) continue;
-            fired.add(key);
-            playAlarmTone(p.alarmSound, p.alarmDurationSec);
+            if (asCompletion(state.completions[key]).done || firedPetAlarms.current.has(key)) continue;
+            firedPetAlarms.current.add(key);
+            due.push({
+              pet: p.name || "Pet",
+              word,
+              label: ev.label,
+              time: ev.time,
+              sound: p.alarmSound,
+              seconds: clampDuration(p.alarmDurationSec),
+            });
           }
         };
-        check(p.walks, p.walkAlarmEnabled);
-        check(p.feeds, p.feedAlarmEnabled);
+        const outing = speciesMeta(p.species).outingAdd;
+        collect(p.walks, p.walkAlarmEnabled, outing.charAt(0).toUpperCase() + outing.slice(1));
+        collect(p.feeds, p.feedAlarmEnabled, "Meal");
       }
+      if (!due.length) return;
+      const seconds = Math.max(...due.map((item) => item.seconds));
+      raiseAlarm({
+        source: "pet",
+        title:
+          due.length === 1 ? `${due[0].pet} ${due[0].word.toLowerCase()} alarm` : "Pet alarm",
+        detail: due
+          .map(
+            (item) =>
+              `${item.pet} — ${item.word} at ${formatClock(item.time)}${item.label ? ` (${item.label})` : ""}`
+          )
+          .join("\n"),
+        tone: due[0].sound,
+        seconds,
+      });
     };
     tick();
     const id = window.setInterval(tick, 30_000);
@@ -870,7 +913,10 @@ export function MySpacePetBoard() {
                 <input
                   type="checkbox"
                   checked={pet.walkAlarmEnabled}
-                  onChange={(e) => patchPet({ ...pet, walkAlarmEnabled: e.target.checked })}
+                  onChange={(e) => {
+                    if (e.target.checked) askAlarmNotificationPermission();
+                    patchPet({ ...pet, walkAlarmEnabled: e.target.checked });
+                  }}
                 />
                 Run {meta.outingLabel.toLowerCase()} alarms
               </label>
@@ -878,7 +924,10 @@ export function MySpacePetBoard() {
                 <input
                   type="checkbox"
                   checked={pet.feedAlarmEnabled}
-                  onChange={(e) => patchPet({ ...pet, feedAlarmEnabled: e.target.checked })}
+                  onChange={(e) => {
+                    if (e.target.checked) askAlarmNotificationPermission();
+                    patchPet({ ...pet, feedAlarmEnabled: e.target.checked });
+                  }}
                 />
                 Run feeding alarms
               </label>
@@ -896,8 +945,10 @@ export function MySpacePetBoard() {
             </div>
             <p className="panel-hint">
               Alarms fire for this pet’s enabled times that aren’t marked done yet. Every pet can have
-              its own sound. Keep the dashboard open so they can ring.
+              its own sound. When one rings, a window pops up over the page with what it is for and a
+              Turn alarm off button. Keep the dashboard open so they can ring.
             </p>
+            <AlarmNotifyButton />
           </div>
         </>
       ) : null}
