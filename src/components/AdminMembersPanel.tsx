@@ -118,7 +118,7 @@ export function AdminMembersPanel() {
     const who = name || "this neighbor";
     if (
       !window.confirm(
-        `Delete ${who} permanently?\n\nThis removes their login, My Space, and yard-sale listings. It cannot be undone.`
+        `Delete ${who} permanently?\n\nThis removes their login, My Space, and Marketplace listings. It cannot be undone.`
       )
     ) {
       return;
@@ -612,7 +612,7 @@ export function AdminMembersPanel() {
       <div className="admin-list">
         {members.length === 0 && (
           <p className="panel-hint">
-            No membership requests yet. When someone joins via Yard Sale / Hub
+            No membership requests yet. When someone joins via Marketplace / Hub
             membership, they&apos;ll appear here for approval.
           </p>
         )}

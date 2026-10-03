@@ -1279,7 +1279,7 @@ export function MySpaceDashboard() {
             <span>Neighbor chat</span>
           </Link>
           <Link href="/yard-sale" className="about-panel my-space-link-card">
-            <strong>Yard Sale</strong>
+            <strong>Marketplace</strong>
             <span>Browse · post from dashboard</span>
           </Link>
         </div>

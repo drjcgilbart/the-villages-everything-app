@@ -22,7 +22,7 @@ export default function SafetyPage() {
         <div className="about-panel" style={{ marginTop: "1.25rem" }}>
           <h2>Report content</h2>
           <p>
-            On a forum post, yard-sale listing, or dining review, tap{" "}
+            On a forum post, Marketplace listing, or dining review, tap{" "}
             <strong>Report</strong>, pick a reason, and send it. Reports go to
             the site host. We hide or remove content that breaks the house
             rules, usually within 24 hours.

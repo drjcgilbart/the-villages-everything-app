@@ -36,7 +36,69 @@ export type ListingStatus =
   | "approved"
   | "rejected"
   | "sold"
-  | "removed";
+  | "removed"
+  | "archived";
+
+/** A live listing can be refreshed this many times. The next removal is 14 days after the last one. */
+export const LISTING_MAX_REFRESHES = 3;
+/** Email the member once a live listing has been up longer than this. */
+export const LISTING_REMIND_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+/** Take a live listing down when it has been up this long without a new refresh. */
+export const LISTING_REMOVE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+
+export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
+  pending: "Pending",
+  approved: "Live",
+  rejected: "Rejected",
+  sold: "Sold",
+  removed: "Removed",
+  archived: "Archived",
+};
+
+export function listingActivityAt(listing: {
+  lastActiveAt?: string | null;
+  approvedAt?: string | null;
+  createdAt: string;
+}): string {
+  return listing.lastActiveAt || listing.approvedAt || listing.createdAt;
+}
+
+export function canRefreshListing(listing: {
+  status: ListingStatus;
+  refreshCount?: number;
+}): boolean {
+  return (
+    listing.status === "approved" &&
+    (listing.refreshCount || 0) < LISTING_MAX_REFRESHES
+  );
+}
+
+/**
+ * Daily clock for a live listing.
+ * Remind after it has been up more than 7 days, once per refresh cycle.
+ * Remove at 14 days, including 14 days after the third refresh.
+ */
+export function listingLifecycleDecision(
+  listing: {
+    status: ListingStatus | string;
+    lastActiveAt?: string | null;
+    approvedAt?: string | null;
+    createdAt: string;
+    reminderSentFor?: string | null;
+  },
+  nowMs: number
+): "none" | "remind" | "remove" {
+  if (listing.status !== "approved") return "none";
+  const activity = listingActivityAt(listing);
+  const start = Date.parse(activity);
+  if (!Number.isFinite(start)) return "none";
+  const age = nowMs - start;
+  if (age >= LISTING_REMOVE_AFTER_MS) return "remove";
+  if (age > LISTING_REMIND_AFTER_MS && listing.reminderSentFor !== activity) {
+    return "remind";
+  }
+  return "none";
+}
 
 export type MeetupType =
   | "porch_pickup"
@@ -155,6 +217,13 @@ export type YardListing = {
   updatedAt: string;
   approvedAt?: string | null;
   soldAt?: string | null;
+  /** How many times Refresh Listing has been used. Missing means 0. */
+  refreshCount?: number;
+  /** When this live run started: approval time, or the latest refresh. */
+  lastActiveAt?: string | null;
+  /** Activity timestamp we already emailed about. Stops a daily reminder repeat. */
+  reminderSentFor?: string | null;
+  archivedAt?: string | null;
 };
 
 export type YardSaleData = {

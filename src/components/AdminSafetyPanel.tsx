@@ -54,7 +54,7 @@ export function AdminSafetyPanel() {
   return (
     <div>
       <p className="panel-hint">
-        Neighbor reports from Report buttons on forums, yard sale, and dining
+        Neighbor reports from Report buttons on forums, Marketplace, and dining
         reviews. Aim to hide or remove bad content within 24 hours. Open reports:{" "}
         <strong>{openCount}</strong>. Neighbor block pairs: {blockCount}.
       </p>

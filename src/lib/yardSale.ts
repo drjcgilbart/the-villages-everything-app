@@ -12,8 +12,10 @@ import {
   writeJsonFileAsync,
 } from "./dataFs";
 import {
+  LISTING_MAX_REFRESHES,
   contactChoiceError,
   contactMethodFromChoices,
+  listingActivityAt,
   normalizeContactBy,
   resolveContactBy,
   type ContactBy,
@@ -556,6 +558,9 @@ export function createListing(
     createdAt: now,
     updatedAt: now,
     approvedAt: null,
+    refreshCount: 0,
+    lastActiveAt: null,
+    reminderSentFor: null,
   };
 
   const data = loadYardSale();
@@ -564,17 +569,54 @@ export function createListing(
   return listing;
 }
 
+export type ManageActor = {
+  memberId?: string | null;
+  memberEmail?: string | null;
+  isAdmin: boolean;
+};
+
+export type ListingAction = "archive" | "refresh" | "remove";
+
+/** The member who posted the listing, or an admin. A guest post matches a later login by seller email. */
+export function actorCanManageListing(listing: YardListing, actor: ManageActor) {
+  if (actor.isAdmin) return true;
+  const memberId = actor.memberId || "";
+  if (!memberId) return false;
+  if (listing.memberId && listing.memberId === memberId) return true;
+  if (!listing.memberId && listing.sellerEmail && actor.memberEmail) {
+    return (
+      listing.sellerEmail.trim().toLowerCase() ===
+      actor.memberEmail.trim().toLowerCase()
+    );
+  }
+  return false;
+}
+
+function byActivityDesc(a: YardListing, b: YardListing) {
+  return listingActivityAt(b).localeCompare(listingActivityAt(a));
+}
+
 export function updateListing(
   listingId: string,
   memberId: string,
-  input: Partial<YardListing> & { isAdmin?: boolean }
+  input: Partial<YardListing> & { isAdmin?: boolean; actorEmail?: string }
 ) {
   const data = loadYardSale();
   const idx = data.listings.findIndex((l) => l.id === listingId);
   if (idx < 0) throw new Error("Listing not found");
   const prev = data.listings[idx];
-  if (!input.isAdmin && prev.memberId !== memberId) {
+  if (
+    !input.isAdmin &&
+    !actorCanManageListing(prev, {
+      memberId,
+      memberEmail: input.actorEmail,
+      isAdmin: false,
+    })
+  ) {
     throw new Error("Not your listing");
+  }
+  if (!input.isAdmin && prev.status === "removed") {
+    throw new Error("This listing was removed");
   }
 
   const images = input.images !== undefined ? clampImages(input.images) : prev.images;
@@ -622,17 +664,18 @@ export function updateListing(
     }
   }
 
-  // Member edits re-submit for approval unless admin (except mark sold)
+  // A live listing stays live when the owner edits it. A rejected listing goes back to review.
   let status = prev.status;
-  if (input.status === "sold" || (input as { markSold?: boolean }).markSold) {
+  if ((input as { markSold?: boolean }).markSold) {
     status = "sold";
-  } else if (!input.isAdmin && prev.status === "approved" && input.title) {
-    // Content edit by member → back to pending
+  } else if (!input.isAdmin && prev.status === "rejected") {
     status = "pending";
   } else if (input.isAdmin && input.status) {
     status = input.status;
   }
 
+  const now = new Date().toISOString();
+  const becomingLive = status === "approved" && prev.status !== "approved";
   const next: YardListing = {
     ...prev,
     title: input.title !== undefined ? String(input.title).trim().slice(0, 120) : prev.title,
@@ -679,14 +722,12 @@ export function updateListing(
       input.adminNote !== undefined
         ? String(input.adminNote || "").slice(0, 500)
         : prev.adminNote,
-    updatedAt: new Date().toISOString(),
-    approvedAt:
-      status === "approved" && prev.status !== "approved"
-        ? new Date().toISOString()
-        : status === "approved"
-          ? prev.approvedAt
-          : prev.approvedAt,
-    soldAt: status === "sold" ? new Date().toISOString() : prev.soldAt,
+    updatedAt: now,
+    approvedAt: becomingLive ? now : prev.approvedAt,
+    lastActiveAt: becomingLive ? now : prev.lastActiveAt,
+    reminderSentFor: becomingLive ? null : prev.reminderSentFor,
+    refreshCount: prev.refreshCount || 0,
+    soldAt: status === "sold" ? now : prev.soldAt,
   };
 
   data.listings[idx] = next;
@@ -702,27 +743,93 @@ export function setListingStatus(
   const data = loadYardSale();
   const idx = data.listings.findIndex((l) => l.id === listingId);
   if (idx < 0) throw new Error("Listing not found");
+  const prev = data.listings[idx];
+  const now = new Date().toISOString();
+  const becomingLive = status === "approved" && prev.status !== "approved";
   data.listings[idx] = {
-    ...data.listings[idx],
+    ...prev,
     status,
     adminNote:
-      adminNote !== undefined
-        ? String(adminNote).slice(0, 500)
-        : data.listings[idx].adminNote,
-    updatedAt: new Date().toISOString(),
-    approvedAt:
-      status === "approved" ? new Date().toISOString() : data.listings[idx].approvedAt,
-    soldAt: status === "sold" ? new Date().toISOString() : data.listings[idx].soldAt,
+      adminNote !== undefined ? String(adminNote).slice(0, 500) : prev.adminNote,
+    updatedAt: now,
+    approvedAt: becomingLive ? now : prev.approvedAt,
+    lastActiveAt: becomingLive ? now : prev.lastActiveAt,
+    reminderSentFor: becomingLive ? null : prev.reminderSentFor,
+    archivedAt: status === "archived" ? now : prev.archivedAt,
+    soldAt: status === "sold" ? now : prev.soldAt,
   };
   saveYardSale(data);
   return data.listings[idx];
 }
 
-export function deleteListing(listingId: string, memberId?: string, isAdmin = false) {
+export function applyListingAction(
+  listingId: string,
+  action: ListingAction,
+  actor: ManageActor
+) {
+  const data = loadYardSale();
+  const idx = data.listings.findIndex((l) => l.id === listingId);
+  if (idx < 0) throw new Error("Listing not found");
+  const prev = data.listings[idx];
+  if (!actorCanManageListing(prev, actor)) {
+    throw new Error("Not your listing");
+  }
+  const now = new Date().toISOString();
+  if (action === "refresh") {
+    if (prev.status !== "approved") {
+      throw new Error("Only a live Marketplace listing can be refreshed");
+    }
+    const count = prev.refreshCount || 0;
+    if (count >= LISTING_MAX_REFRESHES) {
+      throw new Error("This listing has already been refreshed 3 times");
+    }
+    data.listings[idx] = {
+      ...prev,
+      refreshCount: count + 1,
+      lastActiveAt: now,
+      reminderSentFor: null,
+      updatedAt: now,
+    };
+  } else if (action === "archive") {
+    if (prev.status !== "approved") {
+      throw new Error("Only a live Marketplace listing can be archived");
+    }
+    data.listings[idx] = {
+      ...prev,
+      status: "archived",
+      archivedAt: now,
+      updatedAt: now,
+    };
+  } else {
+    if (prev.status === "removed") {
+      throw new Error("This listing is already removed");
+    }
+    data.listings[idx] = {
+      ...prev,
+      status: "removed",
+      updatedAt: now,
+    };
+  }
+  saveYardSale(data);
+  return data.listings[idx];
+}
+
+export function deleteListing(
+  listingId: string,
+  memberId?: string,
+  isAdmin = false,
+  memberEmail?: string
+) {
   const data = loadYardSale();
   const listing = data.listings.find((l) => l.id === listingId);
   if (!listing) throw new Error("Listing not found");
-  if (!isAdmin && listing.memberId !== memberId) {
+  if (
+    !actorCanManageListing(listing, {
+      memberId,
+      memberEmail,
+      isAdmin,
+    })
+  ) {
     throw new Error("Not your listing");
   }
   data.listings = data.listings.filter((l) => l.id !== listingId);
@@ -733,7 +840,7 @@ export function deleteListing(listingId: string, memberId?: string, isAdmin = fa
 export function getApprovedListings() {
   return loadYardSale()
     .listings.filter((l) => l.status === "approved")
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort(byActivityDesc);
 }
 
 export function getListingById(id: string) {
@@ -743,11 +850,11 @@ export function getListingById(id: string) {
 export function getListingsByMember(memberId: string) {
   return loadYardSale()
     .listings.filter((l) => l.memberId === memberId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort(byActivityDesc);
 }
 
 export function listAllListings() {
-  return loadYardSale().listings.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return loadYardSale().listings.slice().sort(byActivityDesc);
 }
 
 export function listingWithSeller(

@@ -67,7 +67,14 @@ export function YardListingCard({
       <div className="yard-card-body">
         <div className="card-meta">
           <span className="pill pill-yard">{listing.category || "Item"}</span>
-          <time dateTime={listing.createdAt}>{formatDate(listing.createdAt)}</time>
+          <time dateTime={(listing.refreshCount || 0) > 0 && listing.lastActiveAt ? listing.lastActiveAt : listing.createdAt}>
+            {(listing.refreshCount || 0) > 0 ? "Refreshed " : ""}
+            {formatDate(
+              (listing.refreshCount || 0) > 0 && listing.lastActiveAt
+                ? listing.lastActiveAt
+                : listing.createdAt
+            )}
+          </time>
         </div>
         <h3>
           <Link href={`/yard-sale/${listing.id}`}>{listing.title}</Link>

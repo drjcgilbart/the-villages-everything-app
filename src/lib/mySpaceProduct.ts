@@ -108,7 +108,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
   },
   {
     id: "yardSale",
-    label: "Yard sale",
+    label: "Marketplace",
     icon: "🏷️",
     minRank: 0,
     phase: "live",
@@ -232,7 +232,7 @@ export const MY_SPACE_BOARDS: BoardDef[] = [
     phase: "live",
     teaser:
       "Private album on your account. Add photos and short movies from PC, iPhone, or Android. The public Photo Journal stays free.",
-    previewLine: "Lanai sunsets and the dog — tagged for Health, Yard Sale, or home.",
+    previewLine: "Lanai sunsets and the dog — tagged for Health, Marketplace, or home.",
   },
   {
     id: "golfLog",
@@ -301,7 +301,7 @@ export const TIER_SUMMARY: Record<
 > = {
   porch_waver: {
     includes:
-      "1 member login (you). My Space door, favorites, shortcuts, yard-sale posting (when approved)",
+      "1 member login (you). My Space door, favorites, shortcuts, Marketplace posting (when approved)",
     blurb:
       "Free neighbor account — just you. You can see every Reboot board as a preview. Personalized tools stay behind the glass until you upgrade.",
   },
@@ -328,7 +328,7 @@ export const TIER_SUMMARY: Record<
 /** Pages that stay free on the public Hub forever (not My Space paywall). */
 export const ALWAYS_PUBLIC = [
   "Home, Town Squares, Rec Centers, The Villages directory",
-  "Dining, Local News, Calendar of Events, Forums, Yard Sale browse",
+  "Dining, Local News, Calendar of Events, Forums, Marketplace browse",
   "Golf, Pickleball, Clubs, Art, Day Trips & Fun Stuff, Theme Parks, Cruise Central, Local Pros, Real Estate, Official Map",
   "Golf Cart Hero",
   "My Retirement Reboot story: About, Blog, Photos, Videos",

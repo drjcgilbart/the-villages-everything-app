@@ -73,7 +73,7 @@ function collect(): Raw[] {
   add({
     title: "My Space",
     href: "/my-space",
-    snippet: "Private member notebook: health, gym, journal, yard sale, photos.",
+    snippet: "Private member notebook: health, gym, journal, Marketplace, photos.",
     section: "Pages",
   });
   add({
@@ -312,8 +312,8 @@ function collect(): Raw[] {
       add({
         title: l.title,
         href: `/yard-sale/${l.id}`,
-        snippet: clip(l.description || "Yard sale listing", 140),
-        section: "Yard Sale",
+        snippet: clip(l.description || "Marketplace listing", 140),
+        section: "Marketplace",
       });
     }
   } catch {

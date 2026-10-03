@@ -87,7 +87,7 @@ export function DonateSuccessClient() {
           {status === "checking" && "Confirming your tip with Stripe…"}
           {status === "badge" &&
             (message ||
-              "Your donation badge now appears next to your name in forums, yard sale, and across the Hub.")}
+              "Your donation badge now appears next to your name in forums, the Marketplace, and across the Hub.")}
           {status === "thanks" &&
             (message ||
               "Thank you for the cup of Joe. Your tip helps this retirement reboot stay online, weird, and caffeinated.")}

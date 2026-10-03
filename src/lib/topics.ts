@@ -590,9 +590,9 @@ export const TOPICS: TopicDef[] = [
     href: "/community-resources",
     navLabel: "Community Resources",
     title: "Community Resources",
-    kicker: "Yard sale · monthly picks",
+    kicker: "Marketplace · monthly picks",
     description:
-      "Community yard sale and Best of the Month — plus links to other public tools. Town Squares, Rec Centers, and Real Estate have their own main tabs. Meet Your Neighbors lives on each village page under The Villages.",
+      "Marketplace and Best of the Month — plus links to other public tools. Town Squares, Rec Centers, and Real Estate have their own main tabs. Meet Your Neighbors lives on each village page under The Villages.",
     image: "/graphics/theme-community-resources.jpg",
     tags: [
       "community",
@@ -609,7 +609,7 @@ export const TOPICS: TopicDef[] = [
       },
       {
         title: "Homes & marketplace",
-        body: "Real estate tools and the community yard sale.",
+        body: "Real estate tools and the Marketplace.",
       },
       {
         title: "Monthly highlights",
@@ -861,7 +861,7 @@ export const MAIN_TOPICS: {
   },
   {
     href: "/yard-sale",
-    label: "Yard Sale",
+    label: "Marketplace",
     icon: "🏷️",
     matchPrefixes: ["/yard-sale"],
     blurb:

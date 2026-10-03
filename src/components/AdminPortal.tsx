@@ -248,7 +248,7 @@ export function AdminPortal() {
             className={tab === "yard" ? "active" : ""}
             onClick={() => setTab("yard")}
           >
-            Yard Sale
+            Marketplace
             {(tabCounts.yard || 0) > 0 ? (
               <span className="admin-tab-badge">{tabCounts.yard}</span>
             ) : null}

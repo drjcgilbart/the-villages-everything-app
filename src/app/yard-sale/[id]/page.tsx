@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ListingManageControls } from "@/components/ListingManageControls";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
 import { formatPrice } from "@/components/YardListingCard";
 import { ListingGallery } from "@/components/ListingGallery";
 import { ReportBlockControls } from "@/components/ReportBlockControls";
+import { isAdminAuthenticated } from "@/lib/auth";
 import { withSellerBadges } from "@/lib/memberBadges";
+import { getSessionMember } from "@/lib/memberAuth";
 import {
+  actorCanManageListing,
   getListingById,
   listingWithSeller,
 } from "@/lib/yardSale";
@@ -36,6 +40,13 @@ export default async function YardListingDetailPage({
   const raw = getListingById(id);
   if (!raw || raw.status !== "approved") notFound();
   const listing = withSellerBadges(listingWithSeller(raw));
+  const member = await getSessionMember();
+  const isAdmin = await isAdminAuthenticated();
+  const canManage = actorCanManageListing(raw, {
+    memberId: member?.status === "approved" ? member.id : "",
+    memberEmail: member?.status === "approved" ? member.email : "",
+    isAdmin,
+  });
 
   return (
     <article>
@@ -43,7 +54,7 @@ export default async function YardListingDetailPage({
         <div className="shell">
           <p className="panel-hint" style={{ margin: 0 }}>
             <Link href="/yard-sale" className="text-link">
-              ← Community Yard Sale
+              ← Marketplace
             </Link>
           </p>
           <div className="card-meta" style={{ marginTop: "0.75rem" }}>
@@ -113,7 +124,7 @@ export default async function YardListingDetailPage({
                       <a
                         className="btn btn-primary"
                         href={`mailto:${listing.seller.email}?subject=${encodeURIComponent(
-                          `Yard sale: ${listing.title}`
+                          `Marketplace: ${listing.title}`
                         )}`}
                       >
                         Email {listing.seller.email}
@@ -151,6 +162,14 @@ export default async function YardListingDetailPage({
               ) : (
                 <p className="panel-hint">Seller information unavailable.</p>
               )}
+              {canManage ? (
+                <ListingManageControls
+                  listing={raw}
+                  onChanged={() => {}}
+                  leavePublicAfterClose
+                  asAdmin={isAdmin}
+                />
+              ) : null}
             </div>
           </div>
         </div>

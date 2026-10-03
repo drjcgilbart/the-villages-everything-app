@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ContactChoices } from "@/components/ContactChoices";
+import { ListingManageControls } from "@/components/ListingManageControls";
 import {
   CATEGORY_OPTIONS,
   CONDITION_LABELS,
   EMPTY_CONTACT_BY,
+  LISTING_STATUS_LABELS,
   MEETUP_LABELS,
   contactChoiceError,
   type ContactBy,
@@ -194,30 +196,6 @@ export function MemberDashboard() {
     }
   }
 
-  async function markSoldApi(id: string) {
-    const res = await fetch("/api/yard-sale/listings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, markSold: true }),
-    });
-    const data = await res.json();
-    if (!res.ok) flash("err", data.error || "Could not mark sold");
-    else flash("ok", "Marked as sold");
-  }
-
-  async function removeListing(id: string) {
-    if (!confirm("Remove this listing?")) return;
-    const res = await fetch(`/api/yard-sale/listings?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
-    if (!res.ok) flash("err", data.error || "Delete failed");
-    else {
-      flash("ok", "Listing removed");
-      await load();
-    }
-  }
-
   if (member === undefined) {
     return <div className="admin-card">Loading…</div>;
   }
@@ -227,7 +205,7 @@ export function MemberDashboard() {
       <div className="admin-card">
         <h2 style={{ marginTop: 0 }}>Sign in required</h2>
         <p className="panel-hint">
-          You need an approved membership to post yard sale items.
+          You need an approved membership to post Marketplace items.
         </p>
         <div className="hero-actions">
           <Link href="/yard-sale/login?next=/yard-sale/dashboard" className="btn btn-primary">
@@ -288,7 +266,7 @@ export function MemberDashboard() {
           </div>
           <div className="admin-actions">
             <Link href="/yard-sale" className="btn btn-ghost btn-sm">
-              Browse sale
+              Browse Marketplace
             </Link>
             <button type="button" className="btn btn-ghost btn-sm" onClick={logout}>
               Sign out
@@ -474,13 +452,22 @@ export function MemberDashboard() {
 
       <div className="admin-card" style={{ marginTop: "1rem" }}>
         <h2 style={{ marginTop: 0 }}>Your listings</h2>
+        <p className="panel-hint">
+          You can edit a listing after it goes live. After 7 days we email you to
+          Refresh Listing, Archive Listing, or Remove Listing. If you do none of
+          those, it comes down on day 14. Refresh moves it to the top, and you
+          can refresh 3 times. Fourteen days after the third refresh, it is
+          removed automatically.
+        </p>
         <div className="admin-list">
-          {listings.length === 0 && (
+          {listings.filter((l) => l.status !== "removed").length === 0 && (
             <p className="panel-hint">No listings yet.</p>
           )}
-          {listings.map((l) => (
+          {listings
+            .filter((l) => l.status !== "removed")
+            .map((l) => (
             <div key={l.id} className="admin-item">
-              <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", minWidth: 0 }}>
                 {l.images[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -494,32 +481,16 @@ export function MemberDashboard() {
                     }}
                   />
                 ) : null}
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <strong>{l.title}</strong>
                   <span>
-                    {formatPrice(l)} · {l.status} · {formatDate(l.createdAt)}
+                    {formatPrice(l)} · {LISTING_STATUS_LABELS[l.status] || l.status} ·{" "}
+                    {formatDate(l.lastActiveAt || l.createdAt)}
                     {l.adminNote ? ` · Note: ${l.adminNote}` : ""}
                   </span>
                 </div>
               </div>
-              <div className="admin-actions">
-                {l.status === "approved" && (
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => markSoldApi(l.id).then(load)}
-                  >
-                    Mark sold
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  onClick={() => removeListing(l.id)}
-                >
-                  Remove
-                </button>
-              </div>
+              <ListingManageControls listing={l} onChanged={load} />
             </div>
           ))}
         </div>

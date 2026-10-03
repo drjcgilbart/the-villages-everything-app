@@ -41,7 +41,7 @@ export function Footer() {
             <div className="footer-group-links">
               <Link href="/my-space">Dashboard</Link>
               <Link href="/yard-sale/login?next=/my-space">Member sign-in</Link>
-              <Link href="/yard-sale/dashboard">Yard sale tools</Link>
+              <Link href="/yard-sale/dashboard">Marketplace tools</Link>
             </div>
           </div>
           <div className="footer-group">

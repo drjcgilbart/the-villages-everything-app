@@ -232,7 +232,7 @@ export default function FutureDevelopmentPage() {
                   — chat about what you just saw from the sky
                 </li>
                 <li>
-                  <Link href="/yard-sale">Yard Sale</Link> — neighbor treasure
+                  <Link href="/yard-sale">Marketplace</Link> — neighbor treasure
                   hunts
                 </li>
                 <li>

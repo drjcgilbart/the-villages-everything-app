@@ -66,7 +66,7 @@ export const HUB_TIERS: TierDef[] = [
     shortLabel: "Porch",
     tagline: "I wave. You wave. That’s the whole social contract.",
     blurb:
-      "Free neighbor account — 1 member login (you). My Space door, favorites, shortcuts, and yard-sale posting when approved. You can see every Reboot board as a preview; personalized tools stay behind the glass until you upgrade.",
+      "Free neighbor account — 1 member login (you). My Space door, favorites, shortcuts, and Marketplace posting when approved. You can see every Reboot board as a preview; personalized tools stay behind the glass until you upgrade.",
     badgeImage: "/graphics/badges/porch-waver.jpg",
     priceUsdPerYear: 0,
     householdSeats: 1,
@@ -167,7 +167,7 @@ export const FEATURE_META: Record<
     anchor: "ms-links",
   },
   yardSalePost: {
-    title: "Yard sale posting",
+    title: "Marketplace posting",
     teaser: "List treasures when an admin has approved your account.",
     anchor: "ms-top",
   },

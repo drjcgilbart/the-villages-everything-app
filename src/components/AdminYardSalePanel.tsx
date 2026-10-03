@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ContactChoices } from "@/components/ContactChoices";
+import { ListingManageControls } from "@/components/ListingManageControls";
 import type { ContactBy, ItemCondition, MeetupType, YardListing } from "@/lib/yardSaleTypes";
 import {
   CATEGORY_OPTIONS,
@@ -233,7 +234,7 @@ export function AdminYardSalePanel() {
 
   return (
     <div>
-      <h2 style={{ marginTop: 0 }}>Community Yard Sale listings</h2>
+      <h2 style={{ marginTop: 0 }}>Marketplace listings</h2>
       <p className="panel-hint">
         Approve item listings here before they go public.{" "}
         <strong>Membership requests</strong> are on the{" "}
@@ -335,6 +336,12 @@ export function AdminYardSalePanel() {
                 Delete
               </button>
             </div>
+            <ListingManageControls
+              listing={l}
+              onChanged={load}
+              allowEdit={false}
+              includeSold={false}
+            />
             {editing?.id === l.id ? (
               <form
                 className="form-grid"

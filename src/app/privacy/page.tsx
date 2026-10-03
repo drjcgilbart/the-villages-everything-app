@@ -42,7 +42,7 @@ export default function PrivacyPage() {
             <li>
               <strong>Account / membership info</strong> you choose to provide
               (name, email, village, password or login token) when you join or
-              use member features such as My Space, yard sale, or golf club
+              use member features such as My Space, the Marketplace, or golf club
               tools.
             </li>
             <li>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
           <h2>How we use information</h2>
           <ul>
             <li>To run community features (directories, ratings, calendar, members).</li>
-            <li>To moderate uploads (Best of the Month, Local Pros, yard sale).</li>
+            <li>To moderate uploads (Best of the Month, Local Pros, Marketplace).</li>
             <li>To respond to leads or support requests you send.</li>
             <li>To improve reliability, fix bugs, and understand which pages work.</li>
             <li>To process voluntary donations through Stripe.</li>
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
             Content you submit for public areas (for example Best of the Month or
             Local Pros) may be shown on the site after approval. Do not upload
             photos of other people without their permission. Neighbors can tap{" "}
-            <strong>Report</strong> on forums, yard-sale listings, and dining
+            <strong>Report</strong> on forums, Marketplace listings, and dining
             reviews, and signed-in members can <strong>Block</strong> another
             member so their posts stay hidden. We review reports and hide or
             remove content that breaks the house rules, usually within 24 hours.

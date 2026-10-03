@@ -4,14 +4,17 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { getSessionMember } from "@/lib/memberAuth";
 import {
+  applyListingAction,
   createListing,
   deleteListing,
+  getListingById,
   getMemberById,
   hydrateYardSale,
   loadYardSale,
   saveYardSaleAsync,
   setListingStatus,
   updateListing,
+  type ListingAction,
 } from "@/lib/yardSale";
 import type { ListingStatus } from "@/lib/yardSaleTypes";
 
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
     });
     if (listing.status === "pending") {
       await notifyAdminOfApprovalRequest({
-        topic: "Yard Sale",
+        topic: "Marketplace",
         title: listing.title,
         submittedBy: listing.submittedByName || "Guest",
         createdAt: listing.createdAt,
@@ -83,6 +86,26 @@ export async function PUT(req: Request) {
     const isAdmin = await isAdminAuthenticated();
     const member = await getSessionMember();
 
+    if (
+      body.action === "archive" ||
+      body.action === "refresh" ||
+      body.action === "remove"
+    ) {
+      if (!isAdmin && (!member || member.status !== "approved")) {
+        return NextResponse.json(
+          { error: "An approved membership is required" },
+          { status: 401 }
+        );
+      }
+      const listing = applyListingAction(body.id, body.action as ListingAction, {
+        memberId: member?.id || "",
+        memberEmail: member?.email || "",
+        isAdmin,
+      });
+      await saveYardSaleAsync(loadYardSale());
+      return NextResponse.json({ listing });
+    }
+
     if (isAdmin && body.adminEdit) {
       const listing = updateListing(body.id, member?.id || "", {
         title: body.title,
@@ -100,6 +123,7 @@ export async function PUT(req: Request) {
         sellerPhone: body.sellerPhone,
         sellerVillage: body.sellerVillage,
         images: body.images,
+        videoUrl: body.videoUrl,
         isAdmin: true,
       });
       await saveYardSaleAsync(loadYardSale());
@@ -116,14 +140,12 @@ export async function PUT(req: Request) {
       return NextResponse.json({ listing });
     }
 
-    if (!member) {
+    if (!member || member.status !== "approved") {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     }
 
     if (body.markSold) {
-      const existing = (
-        await import("@/lib/yardSale")
-      ).getListingById(body.id);
+      const existing = getListingById(body.id);
       if (!existing) {
         return NextResponse.json({ error: "Listing not found" }, { status: 404 });
       }
@@ -135,14 +157,16 @@ export async function PUT(req: Request) {
       return NextResponse.json({ listing });
     }
 
+    const before = getListingById(body.id);
     const listing = updateListing(body.id, member.id, {
       ...body,
       isAdmin: false,
+      actorEmail: member.email,
     });
-    if (listing.status === "pending") {
+    if (listing.status === "pending" && before?.status === "rejected") {
       const seller = getMemberById(listing.memberId);
       await notifyAdminOfApprovalRequest({
-        topic: "Yard Sale",
+        topic: "Marketplace",
         title: listing.title,
         submittedBy: seller?.name || member.name,
         createdAt: listing.updatedAt || listing.createdAt,
@@ -154,7 +178,7 @@ export async function PUT(req: Request) {
           description: listing.description,
           seller: seller?.name || member.name,
           sellerEmail: seller?.email || member.email,
-          note: "Member edited this listing — it needs approval again.",
+          note: "Member edited this rejected listing and sent it back for approval.",
         },
       });
     }
@@ -186,7 +210,7 @@ export async function DELETE(req: Request) {
     if (!member) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     }
-    deleteListing(id, member.id, false);
+    deleteListing(id, member.id, false, member.email);
     await saveYardSaleAsync(loadYardSale());
     return NextResponse.json({ ok: true });
   } catch (err) {

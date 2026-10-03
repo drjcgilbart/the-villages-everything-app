@@ -59,10 +59,10 @@ export const PHOTO_SECTIONS = [
   },
   {
     id: "yard-sale",
-    label: "Yard sale",
+    label: "Marketplace",
     emoji: "🏷️",
     href: "/yard-sale",
-    note: "Listing photos — post them on Yard Sale when you’re ready.",
+    note: "Listing photos — post them on the Marketplace when you’re ready.",
   },
   {
     id: "best-of-month",

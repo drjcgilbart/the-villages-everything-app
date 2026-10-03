@@ -57,6 +57,10 @@
     {
       "path": "/api/members/trial-lifecycle",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/yard-sale/lifecycle",
+      "schedule": "30 13 * * *"
     }
   ]
 }

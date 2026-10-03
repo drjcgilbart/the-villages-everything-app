@@ -15,7 +15,7 @@ type Payload = {
 
 const TAB_LABEL: Record<PendingTab, string> = {
   members: "Members",
-  yard: "Yard Sale",
+  yard: "Marketplace",
   dining: "Dining",
   bestof: "Best of Month",
   golf: "Golf",

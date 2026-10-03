@@ -361,7 +361,7 @@ export default async function VillageDetailPage({
                 {yardHere.length > 0 && (
                   <>
                     <p style={{ color: "var(--muted)", marginTop: 0 }}>
-                      Yard Sale listings from neighbors who listed this village.
+                      Marketplace listings from neighbors who listed this village.
                     </p>
                     <ul className="village-related-links">
                       {yardHere.map((l) => (

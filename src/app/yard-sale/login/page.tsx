@@ -12,7 +12,7 @@ export default function YardSaleLoginPage() {
           <h1>Member sign-in</h1>
           <p>
             The same account works on PC, iPhone, and Android — My Space boards,
-            yard sale tools, and membership travel with you.
+            Marketplace tools, and membership travel with you.
           </p>
         </div>
       </div>

@@ -54,7 +54,7 @@ export function formatMemberWelcomeEmail(opts: {
     ``,
     `This is the moderately ridiculous everything app for The Villages, Florida — a neighbor-built hub where you can find your village, rate a restaurant, chase live music, and still laugh about the plot twist of starting over here. Whimsical on purpose. Useful on accident. (Mostly on purpose.)`,
     ``,
-    `The public Hub stays free for everyone — Town Squares, Rec Centers, Dining, Calendar, Golf, Pickleball, Clubs, Forums, Yard Sale, Best of the Month, and our sister game, Golf Cart Hero. Phone browser works today; store apps are rolling out. Pull up a chair anytime.`,
+    `The public Hub stays free for everyone — Town Squares, Rec Centers, Dining, Calendar, Golf, Pickleball, Clubs, Forums, Marketplace, Best of the Month, and our sister game, Golf Cart Hero. Phone browser works today; store apps are rolling out. Pull up a chair anytime.`,
     ``,
     `A friendly nudge — not a sales pitch`,
     `Membership is optional. If you are happy waving from the porch, that is a perfectly honorable Villages lifestyle. If you would like a more personal lanai — your own weather, boards, household logins, and private tools — I hope you will take a gentle look at the plans below.`,
@@ -63,7 +63,7 @@ export function formatMemberWelcomeEmail(opts: {
     `What membership unlocks`,
     `Public Hub pages stay free. Membership simply unlocks your private My Space lanai. Each paid tier keeps everything below it, and extra household seats get their own login, password, and boards.`,
     ``,
-    `Porch Waver — $0 / year — Free neighbor account, 1 login. Preview the Reboot boards. My Space door, favorites, shortcuts, and yard-sale posting when approved.`,
+    `Porch Waver — $0 / year — Free neighbor account, 1 login. Preview the Reboot boards. My Space door, favorites, shortcuts, and Marketplace posting when approved.`,
     `Cart Path Regular — $3 / year — 2 member logins, each with their own password and boards. Daily dashboard energy — full weather, investments, news prefs, and entertainment picks.`,
     `Lanai Legend — $5 / year — 3 member logins. The private Reboot: health, pets, kitchen, gym, maintenance, personal calendar, private photos, golf and pickleball.`,
     `Square Royalty — $10 / year — 4 member logins. Everything on the lanai, plus the royalty lounge, badge flair, and early access to new My Space boards.`,
@@ -93,14 +93,14 @@ export function formatMemberWelcomeEmail(opts: {
     <p>Dear ${escapeHtml(first)},</p>
     <p>Thank you for requesting membership at The Villages Everything App. I am delighted to welcome you — truly. You asked to join, I approved your request, and now the porch light is on for you.${village ? ` You listed the Village of <strong>${escapeHtml(village)}</strong>.` : ""}</p>
     <p>This is the moderately ridiculous everything app for The Villages, Florida — a neighbor-built hub where you can find your village, rate a restaurant, chase live music, and still laugh about the plot twist of starting over here. Whimsical on purpose. Useful on accident. (Mostly on purpose.)</p>
-    <p>The public Hub stays free for everyone — Town Squares, Rec Centers, Dining, Calendar, Golf, Pickleball, Clubs, Forums, Yard Sale, Best of the Month, and our sister game, Golf Cart Hero. Phone browser works today; store apps are rolling out. Pull up a chair anytime.</p>
+    <p>The public Hub stays free for everyone — Town Squares, Rec Centers, Dining, Calendar, Golf, Pickleball, Clubs, Forums, Marketplace, Best of the Month, and our sister game, Golf Cart Hero. Phone browser works today; store apps are rolling out. Pull up a chair anytime.</p>
     <h2 style="margin:22px 0 8px;font-size:18px;color:#123d2d">A friendly nudge — not a sales pitch</h2>
     <p>Membership is optional. If you are happy waving from the porch, that is a perfectly honorable Villages lifestyle. If you would like a more personal lanai — your own weather, boards, household logins, and private tools — I hope you will take a gentle look at the plans below.</p>
     <p>Your Square Royalty free month is already running — no card required. Poke around, see if the private boards feel like home, then keep a paid plan or go back to Porch Waver. Either way, you remain welcome.</p>
     <h2 style="margin:22px 0 8px;font-size:18px;color:#123d2d">What membership unlocks</h2>
     <p>Public Hub pages stay free. Membership simply unlocks your private My Space lanai. Each paid tier keeps everything below it, and extra household seats get their own login, password, and boards.</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 18px">
-      <tr style="background:#eef6f0"><td style="padding:8px;border:1px solid #e6dcc8"><strong>Porch Waver</strong> · $0 / year</td><td style="padding:8px;border:1px solid #e6dcc8">1 login. Preview the Reboot boards. My Space door, favorites, shortcuts, and yard-sale posting.</td></tr>
+      <tr style="background:#eef6f0"><td style="padding:8px;border:1px solid #e6dcc8"><strong>Porch Waver</strong> · $0 / year</td><td style="padding:8px;border:1px solid #e6dcc8">1 login. Preview the Reboot boards. My Space door, favorites, shortcuts, and Marketplace posting.</td></tr>
       <tr><td style="padding:8px;border:1px solid #e6dcc8"><strong>Cart Path Regular</strong> · $3 / year</td><td style="padding:8px;border:1px solid #e6dcc8">2 member logins. Full weather, investments, news prefs, and entertainment picks.</td></tr>
       <tr style="background:#eef6f0"><td style="padding:8px;border:1px solid #e6dcc8"><strong>Lanai Legend</strong> · $5 / year</td><td style="padding:8px;border:1px solid #e6dcc8">3 member logins. Health, pets, kitchen, gym, maintenance, personal calendar, private photos, golf and pickleball.</td></tr>
       <tr><td style="padding:8px;border:1px solid #e6dcc8"><strong>Square Royalty</strong> · $10 / year</td><td style="padding:8px;border:1px solid #e6dcc8">4 member logins. Everything on the lanai, plus royalty lounge, badge flair, and early access.</td></tr>

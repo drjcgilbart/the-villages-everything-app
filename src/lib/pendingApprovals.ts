@@ -175,7 +175,7 @@ export async function listPendingApprovals(): Promise<PendingItem[]> {
       id: l.id,
       kind: "yard-sale",
       tab: "yard",
-      topic: "Yard Sale",
+      topic: "Marketplace",
       title: l.title,
       submittedBy: member?.name || l.memberId,
       createdAt: l.createdAt,
