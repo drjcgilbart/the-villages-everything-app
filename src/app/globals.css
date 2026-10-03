@@ -5114,8 +5114,34 @@ button.ms-home-card:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  align-self: flex-start;
   justify-content: flex-end;
   gap: 0.45rem;
+}
+
+.ms-simple-list li.ms-h-hist {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.35rem;
+}
+
+.ms-h-hist-date {
+  margin: 0;
+}
+
+.ms-h-hist-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8.25rem auto;
+  align-items: center;
+  column-gap: 0.75rem;
+}
+
+.ms-h-hist-line .ms-inline-time {
+  width: 8.25rem;
+  justify-self: end;
 }
 
 .ms-h-med-edit {

@@ -378,13 +378,49 @@ function dosesDueToday(med: Medication, logs: MedicationLog[], today: string): D
 function roundKey(slot: MedDoseSlot): string {
   const clock = normalizeMedTime(slot.dose.time);
   if (clock) return clock;
+  const label = slot.dose.label?.trim();
+  if (label) return `label:${label.toLowerCase()}`;
   return `rate:${doseRateText(slot.med.timesPerDay, slot.med.dosePeriod, slot.med.dosePeriodOther)}`;
 }
 
 function roundTitle(time: string) {
+  if (time.startsWith("label:")) return time.slice("label:".length);
   if (time.startsWith("rate:")) return time.slice(5);
   if (time === "none") return "Unscheduled";
   return formatMedTime(time);
+}
+
+const DOSE_LABEL_STARTERS = [
+  "Morning",
+  "Evening",
+  "With breakfast",
+  "With lunch",
+  "With dinner",
+  "Bedtime",
+  "Daily dose",
+  "Weekly dose",
+  "As needed",
+];
+
+function doseLabelChoices(meds: { doseTimes?: { label?: string }[] }[]): string[] {
+  const seen = new Map<string, string>();
+  const add = (raw: string) => {
+    const label = raw.trim().slice(0, 80);
+    if (!label) return;
+    const key = label.toLowerCase();
+    if (!seen.has(key)) seen.set(key, label);
+  };
+  for (const starter of DOSE_LABEL_STARTERS) add(starter);
+  for (const med of meds) {
+    for (const dose of med.doseTimes || []) add(dose.label || "");
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+}
+
+function matchDoseLabel(raw: string, choices: string[]): string {
+  const label = raw.trim().slice(0, 80);
+  if (!label) return "";
+  return choices.find((choice) => choice.toLowerCase() === label.toLowerCase()) || label;
 }
 
 function fmtShortDate(dateStr: string): string {
@@ -415,13 +451,19 @@ function normalizeMedTime(hhmm: string): string {
 
 type MedDoseSlot = { med: Medication; dose: DoseTime; log?: MedicationLog };
 
-function groupSlotsByTime(slots: MedDoseSlot[]): { time: string; slots: MedDoseSlot[] }[] {
+function groupSlotsByTime(
+  slots: MedDoseSlot[]
+): { time: string; title: string; slots: MedDoseSlot[] }[] {
   const map = new Map<string, MedDoseSlot[]>();
+  const titles = new Map<string, string>();
   for (const slot of slots) {
     const t = roundKey(slot);
     const list = map.get(t) || [];
     list.push(slot);
     map.set(t, list);
+    if (!titles.has(t)) {
+      titles.set(t, t.startsWith("label:") ? slot.dose.label.trim() : roundTitle(t));
+    }
   }
   return [...map.entries()]
     .sort(([a], [b]) => {
@@ -432,7 +474,7 @@ function groupSlotsByTime(slots: MedDoseSlot[]): { time: string; slots: MedDoseS
       if (bClock) return 1;
       return a.localeCompare(b);
     })
-    .map(([time, grouped]) => ({ time, slots: grouped }));
+    .map(([time, grouped]) => ({ time, title: titles.get(time) || roundTitle(time), slots: grouped }));
 }
 
 function listMedNames(names: string[]): string {
@@ -1124,8 +1166,9 @@ export function MySpaceHealthBoard() {
   const [medSchedule, setMedSchedule] = useState("");
   const [medNotes, setMedNotes] = useState("");
   const [medAlarmOn, setMedAlarmOn] = useState(true);
-  const [newDoseTime, setNewDoseTime] = useState("12:00");
+  const [newDoseTime, setNewDoseTime] = useState("");
   const [newDoseLabel, setNewDoseLabel] = useState("");
+  const [customDoseLabel, setCustomDoseLabel] = useState(false);
   const [doseMedId, setDoseMedId] = useState<string | null>(null);
   const [editingMedId, setEditingMedId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({
@@ -2124,8 +2167,8 @@ export function MySpaceHealthBoard() {
               <p className="panel-hint" style={{ margin: "4px 0 0" }}>
                 {nextRound
                   ? nextRound.slots.filter((s) => !s.log).length > 1
-                    ? `Next up: ${formatMedTime(nextRound.time)} round — ${listMedNames(nextRound.slots.filter((s) => !s.log).map((s) => s.med.name))} · remaining stay at the top`
-                    : `Next up: ${nextUp?.med.name}${nextUp?.dose.time ? ` at ${formatMedTime(nextUp.dose.time)}` : ""} · remaining stay at the top`
+                    ? `Next up: ${nextRound.title} — ${listMedNames(nextRound.slots.filter((s) => !s.log).map((s) => s.med.name))} · remaining stay at the top`
+                    : `Next up: ${nextUp?.med.name}${nextUp?.dose.time ? ` at ${formatMedTime(nextUp.dose.time)}` : nextUp?.dose.label ? ` · ${nextUp.dose.label}` : ""} · remaining stay at the top`
                   : due
                     ? "All of today’s doses are checked off."
                     : "Add medications to start checking them off."}
@@ -2219,13 +2262,13 @@ export function MySpaceHealthBoard() {
               const remaining = round.slots;
               if (!remaining.length) return null;
               const roundLate =
-                remaining.length > 0 && round.time && round.time !== "none" && now > round.time;
+                remaining.length > 0 && /^\d{2}:\d{2}$/.test(round.time) && now > round.time;
               return (
                 <div key={round.time} className="ms-h-round">
                   <div className="ms-h-round-head">
                     <div>
                       <strong>
-                        {roundTitle(round.time)}
+                        {round.title}
                       </strong>
                       <span className="panel-hint">
                         {" "}
@@ -2392,23 +2435,45 @@ export function MySpaceHealthBoard() {
                     {med.notes ? <div className="panel-hint">{med.notes}</div> : null}
                   </div>
                   <div className="ms-h-med-actions">
-                    {isDailyDose(med) ? (
-                      <span>
-                        {takenCount}/{slots.filter((d) => d.enabled).length || med.timesPerDay} doses
-                        today
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => (editing ? setEditingMedId(null) : startEditMed(med))}
-                    >
-                      {editing ? "Cancel" : "Edit"}
-                    </button>
+                    {editing ? (
+                      <>
+                        <button
+                          type="submit"
+                          form={`ms-med-edit-${med.id}`}
+                          className="btn btn-primary btn-sm"
+                        >
+                          Save changes
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setEditingMedId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {isDailyDose(med) ? (
+                          <span>
+                            {takenCount}/{slots.filter((d) => d.enabled).length || med.timesPerDay}{" "}
+                            doses today
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => startEditMed(med)}
+                        >
+                          Edit
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {editing ? (
                   <form
+                    id={`ms-med-edit-${med.id}`}
                     className="form-grid ms-module-form ms-h-med-edit"
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -2494,18 +2559,6 @@ export function MySpaceHealthBoard() {
                           })
                         }
                       />
-                    </div>
-                    <div className="hero-actions">
-                      <button type="submit" className="btn btn-primary btn-sm">
-                        Save changes
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => setEditingMedId(null)}
-                      >
-                        Cancel
-                      </button>
                     </div>
                   </form>
                 ) : null}
@@ -2635,8 +2688,10 @@ export function MySpaceHealthBoard() {
                   className="form-grid ms-module-form"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const time = newDoseTime || "12:00";
-                    const label = newDoseLabel.trim() || "Dose";
+                    const choices = doseLabelChoices(state.medications);
+                    const drafting = doseMedId === med.id;
+                    const time = normalizeMedTime(drafting ? newDoseTime : "");
+                    const label = matchDoseLabel(drafting ? newDoseLabel : "", choices) || "Dose";
                     persist({
                       ...state,
                       medications: state.medications.map((m) =>
@@ -2653,30 +2708,71 @@ export function MySpaceHealthBoard() {
                       ),
                     });
                     setNewDoseLabel("");
-                    setDoseMedId(med.id);
+                    setNewDoseTime("");
+                    setCustomDoseLabel(false);
+                    setDoseMedId(null);
                   }}
                 >
                   <div className="field">
                     <label>Time</label>
                     <input
                       type="time"
-                      value={doseMedId === med.id ? newDoseTime : "12:00"}
+                      value={doseMedId === med.id ? newDoseTime : ""}
                       onChange={(e) => {
                         setDoseMedId(med.id);
                         setNewDoseTime(e.target.value);
                       }}
                     />
+                    <p className="panel-hint">
+                      Optional. Leave the time blank and this dose gets its own checklist section
+                      named for the label.
+                    </p>
                   </div>
                   <div className="field">
                     <label>Label</label>
-                    <input
-                      value={doseMedId === med.id ? newDoseLabel : ""}
+                    <select
+                      value={
+                        doseMedId === med.id && customDoseLabel
+                          ? "__new__"
+                          : doseMedId === med.id
+                            ? matchDoseLabel(newDoseLabel, doseLabelChoices(state.medications))
+                            : ""
+                      }
                       onChange={(e) => {
                         setDoseMedId(med.id);
-                        setNewDoseLabel(e.target.value);
+                        const next = e.target.value;
+                        if (next === "__new__") {
+                          setCustomDoseLabel(true);
+                          if (
+                            doseLabelChoices(state.medications).some(
+                              (choice) => choice.toLowerCase() === newDoseLabel.trim().toLowerCase()
+                            )
+                          ) {
+                            setNewDoseLabel("");
+                          }
+                          return;
+                        }
+                        setCustomDoseLabel(false);
+                        setNewDoseLabel(next);
                       }}
-                      placeholder="e.g. With lunch"
-                    />
+                    >
+                      <option value="">Choose a label</option>
+                      {doseLabelChoices(state.medications).map((choice) => (
+                        <option key={choice} value={choice}>
+                          {choice}
+                        </option>
+                      ))}
+                      <option value="__new__">Add a new label…</option>
+                    </select>
+                    {doseMedId === med.id && customDoseLabel ? (
+                      <input
+                        value={newDoseLabel}
+                        onChange={(e) => setNewDoseLabel(e.target.value.slice(0, 80))}
+                        placeholder="e.g. With lunch"
+                        aria-label="New dose label"
+                        style={{ marginTop: "0.45rem" }}
+                      />
+                    ) : null}
                   </div>
                   <button type="submit" className="btn btn-primary btn-sm">
                     Add dose time
@@ -3021,41 +3117,45 @@ export function MySpaceHealthBoard() {
                   const head = l.date !== last;
                   last = l.date;
                   return (
-                    <li key={l.id}>
-                      <div>
-                        {head && <div className="panel-hint">{fmtShortDate(l.date)}</div>}
-                        <strong>{l.medicationName}</strong>
-                        {l.dosage ? ` · ${l.dosage}` : ""}
-                        <div className="panel-hint">
-                          {l.scheduledTime ? `Planned ${formatMedTime(l.scheduledTime)}` : "No planned time"}
+                    <li key={l.id} className="ms-h-hist">
+                      {head ? <div className="panel-hint ms-h-hist-date">{fmtShortDate(l.date)}</div> : null}
+                      <div className="ms-h-hist-line">
+                        <div>
+                          <strong>{l.medicationName}</strong>
+                          {l.dosage ? ` · ${l.dosage}` : ""}
+                          <div className="panel-hint">
+                            {l.scheduledTime
+                              ? `Planned ${formatMedTime(l.scheduledTime)}`
+                              : "No planned time"}
+                          </div>
                         </div>
+                        <input
+                          type="time"
+                          className="ms-inline-time"
+                          value={l.time}
+                          onChange={(e) => {
+                            if (!e.target.value) return;
+                            persist({
+                              ...state,
+                              medicationLogs: state.medicationLogs.map((row) =>
+                                row.id === l.id ? { ...row, time: e.target.value } : row
+                              ),
+                            });
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() =>
+                            persist({
+                              ...state,
+                              medicationLogs: state.medicationLogs.filter((x) => x.id !== l.id),
+                            })
+                          }
+                        >
+                          Undo
+                        </button>
                       </div>
-                      <input
-                        type="time"
-                        className="ms-inline-time"
-                        value={l.time}
-                        onChange={(e) => {
-                          if (!e.target.value) return;
-                          persist({
-                            ...state,
-                            medicationLogs: state.medicationLogs.map((row) =>
-                              row.id === l.id ? { ...row, time: e.target.value } : row
-                            ),
-                          });
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() =>
-                          persist({
-                            ...state,
-                            medicationLogs: state.medicationLogs.filter((x) => x.id !== l.id),
-                          })
-                        }
-                      >
-                        Undo
-                      </button>
                     </li>
                   );
                 })}
