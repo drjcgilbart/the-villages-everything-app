@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ALARM_TONE_OPTIONS,
+  clockIsDue,
   nowTimeEastern,
   playAlarmTone,
   todayKeyEastern,
@@ -378,7 +379,7 @@ export function MySpacePetBoard() {
         const collect = (events: PetEvent[], enabled: boolean, word: string) => {
           if (!enabled) return;
           for (const ev of events) {
-            if (!ev.enabled || ev.time !== t) continue;
+            if (!ev.enabled || !clockIsDue(ev.time, t)) continue;
             const key = `${ev.id}:${d}`;
             if (asCompletion(state.completions[key]).done || firedPetAlarms.current.has(key)) continue;
             firedPetAlarms.current.add(key);
@@ -414,7 +415,16 @@ export function MySpacePetBoard() {
     };
     tick();
     const id = window.setInterval(tick, 30_000);
-    return () => window.clearInterval(id);
+    const onWake = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("pageshow", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("pageshow", tick);
+    };
   }, [ready, state.pets, state.completions]);
 
   useEffect(() => {

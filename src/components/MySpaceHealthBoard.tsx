@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  clockIsDue,
   nowTimeEastern,
   playAlarmTone,
   todayKeyEastern,
@@ -1628,27 +1629,31 @@ export function MySpaceHealthBoard() {
       const t = normalizeMedTime(nowTimeEastern());
       const d = todayKeyEastern();
       if (!t) return;
-      const dueNow: { med: Medication; dose: DoseTime }[] = [];
+      const dueNow: { med: Medication; dose: DoseTime; itemKey: string }[] = [];
       for (const med of state.medications) {
         if (!med.active || !med.alarmEnabled) continue;
         for (const dose of dosesDueToday(med, state.medicationLogs, d)) {
-          if (!dose.enabled || normalizeMedTime(dose.time) !== t) continue;
+          const slot = normalizeMedTime(dose.time);
+          if (!dose.enabled || !clockIsDue(slot, t)) continue;
           const already = state.medicationLogs.some(
             (l) => l.medicationId === med.id && l.date === d && l.doseTimeId === dose.id
           );
-          if (!already) dueNow.push({ med, dose });
+          if (already) continue;
+          const itemKey = `${d}:${med.id}:${dose.id}`;
+          if (firedMedAlarms.current.has(itemKey)) continue;
+          dueNow.push({ med, dose, itemKey });
         }
       }
-      const key = `round:${d}:${t}`;
-      if (!dueNow.length || firedMedAlarms.current.has(key)) return;
-      firedMedAlarms.current.add(key);
+      if (!dueNow.length) return;
+      for (const item of dueNow) firedMedAlarms.current.add(item.itemKey);
       const tone = dueNow[0]?.med.alarmSound || state.medAlarmSound;
       const seconds = dueNow[0]?.med.alarmDurationSec || state.medAlarmDurationSec || 8;
       const names = dueNow.map((item) => item.med.name);
+      const when = normalizeMedTime(dueNow[0]?.dose.time || "") || t;
       raiseAlarm({
         source: "health",
         title: "Medicine alarm",
-        detail: `${formatMedTime(t)} — ${listMedNames(names)}. Not marked taken yet.`,
+        detail: `${formatMedTime(when)} — ${listMedNames(names)}. Not marked taken yet.`,
         tone,
         seconds,
         onDismiss: () => {
@@ -1659,7 +1664,16 @@ export function MySpaceHealthBoard() {
     };
     tick();
     const id = window.setInterval(tick, 30_000);
-    return () => window.clearInterval(id);
+    const onWake = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("pageshow", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("pageshow", tick);
+    };
   }, [
     ready,
     state.medAlarmEnabled,

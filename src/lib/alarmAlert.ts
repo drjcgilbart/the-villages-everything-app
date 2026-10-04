@@ -1,6 +1,6 @@
 "use client";
 
-import { playAlarmTone, type AlarmTone } from "@/lib/mySpaceStorage";
+import { alarmNotifySilently, playAlarmTone, type AlarmTone } from "@/lib/mySpaceStorage";
 
 export type AlarmSource = "health" | "pet" | "gym";
 
@@ -97,7 +97,7 @@ async function pingOs(title: string, detail: string) {
         await reg.showNotification(title, {
           body,
           requireInteraction: true,
-          silent: true,
+          silent: alarmNotifySilently(),
           tag: NOTE_TAG,
           renotify: true,
           actions: [{ action: "stop", title: "Turn alarm off" }],
@@ -112,7 +112,7 @@ async function pingOs(title: string, detail: string) {
     const note = new Notification(title, {
       body,
       requireInteraction: true,
-      silent: true,
+      silent: alarmNotifySilently(),
       tag: NOTE_TAG,
     });
     note.onclick = () => {

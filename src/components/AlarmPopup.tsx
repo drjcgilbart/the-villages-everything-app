@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { dismissAlarm, ensureAlarmStopListener, subscribeAlarm, type AlarmView } from "@/lib/alarmAlert";
+import { installAlarmAudioUnlock } from "@/lib/mySpaceStorage";
 
 /** Site-wide alarm window. Stays up until the sound is turned off. */
 export function AlarmPopup() {
@@ -10,6 +11,7 @@ export function AlarmPopup() {
 
   useEffect(() => {
     ensureAlarmStopListener();
+    installAlarmAudioUnlock();
     return subscribeAlarm(setAlert);
   }, []);
 
