@@ -101,8 +101,10 @@ const TONE_STEPS: Record<AlarmTone, { freq: number; gap: number; len: number }[]
 
 let unlockInstalled = false;
 let audioPrimed = false;
+let audioPriming = false;
 let sharedCtx: AudioContext | null = null;
 let phoneSpeaker: HTMLAudioElement | null = null;
+let silentUrl = "";
 const phoneLoopUrls = new Map<AlarmTone, string>();
 
 function androidPhone(): boolean {
@@ -129,9 +131,11 @@ function sharedAudio(): AudioContext | null {
 }
 
 function silentWavUrl(): string {
+  if (silentUrl) return silentUrl;
   const rate = 8000;
   const samples = new Float32Array(rate / 10);
-  return URL.createObjectURL(wavBlob(samples, rate));
+  silentUrl = URL.createObjectURL(wavBlob(samples, rate));
+  return silentUrl;
 }
 
 function wavBlob(samples: Float32Array, rate: number): Blob {
@@ -215,10 +219,9 @@ function phoneElement(): HTMLAudioElement | null {
 
 /** Call from a tap so Android will allow a later alarm to use the speaker. */
 export function primeAlarmAudio(): void {
-  if (typeof window === "undefined" || audioPrimed) return;
-  audioPrimed = true;
+  if (typeof window === "undefined") return;
   const ctx = sharedAudio();
-  if (ctx) {
+  if (ctx && ctx.state !== "running") {
     try {
       const buffer = ctx.createBuffer(1, 1, 22050);
       const source = ctx.createBufferSource();
@@ -231,16 +234,34 @@ export function primeAlarmAudio(): void {
     }
   }
   const el = phoneElement();
-  if (!el || el.dataset.alarm === "1") return;
+  if (!el) return;
+  // A timer may have started the alarm before Android allowed sound.
+  // Play again inside this tap so the same element can keep ringing.
+  if (el.dataset.alarm === "1") {
+    el.muted = false;
+    el.volume = 1;
+    void el.play()?.catch(() => {});
+    return;
+  }
+  if (audioPrimed || audioPriming) return;
+  audioPriming = true;
   try {
     el.src = silentWavUrl();
     const started = el.play();
-    void started?.then(() => {
+    if (!started) {
+      audioPriming = false;
+      return;
+    }
+    void started.then(() => {
+      audioPriming = false;
+      audioPrimed = true;
       if (el.dataset.alarm === "1") return;
       el.pause();
-    }).catch(() => {});
+    }).catch(() => {
+      audioPriming = false;
+    });
   } catch {
-    /* autoplay still locked */
+    audioPriming = false;
   }
 }
 
