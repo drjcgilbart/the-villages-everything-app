@@ -151,6 +151,15 @@ export function MySpaceDashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    const openPets = () => {
+      const tabParam = (new URLSearchParams(window.location.search).get("tab") || "").toLowerCase();
+      if (tabParam === "pets") setTab("pets");
+    };
+    window.addEventListener("tvea-alarm-open", openPets);
+    return () => window.removeEventListener("tvea-alarm-open", openPets);
+  }, []);
+
+  useEffect(() => {
     if (skipBoardScroll.current || toolsOpen) return;
     const id = window.setTimeout(() => {
       document
