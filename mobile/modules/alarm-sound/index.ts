@@ -1,11 +1,21 @@
 import { requireOptionalNativeModule } from "expo-modules-core";
 import { Platform } from "react-native";
 
+type FiredAlarm = {
+  title?: string;
+  detail?: string;
+  source?: string;
+  seconds?: number;
+  endsAt?: number;
+};
+
 type AlarmNative = {
   prepare: () => void;
   start: (seconds: number) => void;
   show: (title: string, detail: string) => void;
   stop: () => void;
+  replaceSchedule: (raw: string) => void;
+  addListener: (event: "onAlarmFired", listener: (payload: FiredAlarm) => void) => { remove: () => void };
 };
 
 function native(): AlarmNative | null {
@@ -33,4 +43,17 @@ export function showAndroidAlarm(title: string, detail: string): void {
 
 export function stopAndroidAlarm(): void {
   native()?.stop();
+}
+
+export function replaceAndroidAlarms(
+  alarms: { id: string; at: number; title: string; detail: string; seconds: number; source: string; tone?: string }[]
+): void {
+  native()?.replaceSchedule(JSON.stringify(alarms));
+}
+
+export function subscribeAndroidAlarms(listener: (payload: FiredAlarm) => void): () => void {
+  const mod = native();
+  if (!mod) return () => {};
+  const sub = mod.addListener("onAlarmFired", listener);
+  return () => sub.remove();
 }

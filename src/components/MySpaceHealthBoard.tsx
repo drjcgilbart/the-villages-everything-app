@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  androidShellPlaysAlarms,
   clockIsDue,
   nowTimeEastern,
   playAlarmTone,
@@ -1650,16 +1651,19 @@ export function MySpaceHealthBoard() {
       const seconds = dueNow[0]?.med.alarmDurationSec || state.medAlarmDurationSec || 8;
       const names = dueNow.map((item) => item.med.name);
       const when = normalizeMedTime(dueNow[0]?.dose.time || "") || t;
-      raiseAlarm({
-        source: "health",
-        title: "Medicine alarm",
-        detail: `${formatMedTime(when)} — ${listMedNames(names)}. Not marked taken yet.`,
-        tone,
-        seconds,
-        onDismiss: () => {
-          if (healthMounted.current) setAlarmRound(null);
-        },
-      });
+      // The Android app rings from the phone alarm clock on every page.
+      if (!androidShellPlaysAlarms()) {
+        raiseAlarm({
+          source: "health",
+          title: "Medicine alarm",
+          detail: `${formatMedTime(when)} — ${listMedNames(names)}. Not marked taken yet.`,
+          tone,
+          seconds,
+          onDismiss: () => {
+            if (healthMounted.current) setAlarmRound(null);
+          },
+        });
+      }
       setAlarmRound({ time: t, names });
     };
     tick();

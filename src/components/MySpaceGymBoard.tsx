@@ -33,6 +33,8 @@ import {
 } from "@/lib/gymCatalog";
 import { applyGymVoiceSequence, isRestCancelPhrase, parseGymVoiceSequence, type GymVoiceAt } from "@/lib/gymVoice";
 import { dismissAlarm, raiseAlarm } from "@/lib/alarmAlert";
+import { rememberGymRest } from "@/lib/alarmSchedule";
+import { androidShellPlaysAlarms } from "@/lib/mySpaceStorage";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { GymExerciseHowTo } from "@/components/GymExerciseHowTo";
 import {
@@ -401,6 +403,7 @@ export function MySpaceGymBoard() {
     restGen.current += 1;
     restClockRef.current = null;
     setRestClock(null);
+    rememberGymRest(null);
     stopRestAlarm();
   }
 
@@ -410,6 +413,7 @@ export function MySpaceGymBoard() {
     restGen.current += 1;
     restClockRef.current = next;
     setRestClock(next);
+    rememberGymRest(next.endsAt);
     stopRestAlarm();
   }
 
@@ -438,6 +442,7 @@ export function MySpaceGymBoard() {
   useEffect(() => {
     if (restClock?.phase !== "alarm") return;
     const gen = restGen.current;
+    if (androidShellPlaysAlarms()) return;
     restAlarmId.current = raiseAlarm({
       source: "gym",
       title: "Rest is over",

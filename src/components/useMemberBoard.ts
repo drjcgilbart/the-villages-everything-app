@@ -92,6 +92,9 @@ export function useMemberBoard<T>(
     async (next: T) => {
       setValue(next);
       if (scopedKey) writeJsonStorage(scopedKey, next);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("tvea-alarm-schedule-sync"));
+      }
       if (!enabled) return;
       const wait = opts?.debounceMs ?? 0;
       if (wait <= 0) {

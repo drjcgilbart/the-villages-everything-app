@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ALARM_TONE_OPTIONS,
+  androidShellPlaysAlarms,
   clockIsDue,
   nowTimeEastern,
   playAlarmTone,
@@ -399,6 +400,7 @@ export function MySpacePetBoard() {
       }
       if (!due.length) return;
       const seconds = Math.max(...due.map((item) => item.seconds));
+      if (androidShellPlaysAlarms()) return;
       raiseAlarm({
         source: "pet",
         title:

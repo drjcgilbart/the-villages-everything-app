@@ -136,6 +136,11 @@ export function showAndroidShellAlarm(title: string, detail: string): void {
   postShellAlarm({ action: "show", title, detail });
 }
 
+export function stopAndroidShellAlarm(): void {
+  if (!androidShellPlaysAlarms()) return;
+  postShellAlarm({ action: "stop" });
+}
+
 function audioContextCtor(): typeof AudioContext | null {
   if (typeof window === "undefined") return null;
   const webkit = window as Window & { webkitAudioContext?: typeof AudioContext };

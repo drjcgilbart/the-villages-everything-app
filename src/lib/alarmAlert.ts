@@ -5,6 +5,7 @@ import {
   androidShellPlaysAlarms,
   playAlarmTone,
   showAndroidShellAlarm,
+  stopAndroidShellAlarm,
   type AlarmTone,
 } from "@/lib/mySpaceStorage";
 
@@ -149,17 +150,21 @@ export function raiseAlarm(input: {
   seconds?: number;
   volume?: number;
   onDismiss?: () => void;
+  /** The phone alarm clock already started the sound. */
+  sound?: "page" | "native";
 }): string {
   if (typeof window === "undefined") return "";
   ensureAlarmStopListener();
   const prev = current;
   current = null;
-  if (prev) {
+  if (prev && input.sound !== "native") {
     try {
       prev.stop();
     } catch {
       /* already stopped */
     }
+  }
+  if (prev) {
     try {
       prev.onDismiss?.();
     } catch {
@@ -170,7 +175,10 @@ export function raiseAlarm(input: {
   const title = merge && prev ? `${prev.title} and ${input.title}` : input.title;
   const detail = merge && prev ? `${prev.detail}\n\n${input.detail}` : input.detail;
   const id = `alarm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-  const stop = playAlarmTone(input.tone ?? "classic", input.seconds ?? 30, input.volume ?? 0.06);
+  const stop =
+    input.sound === "native"
+      ? () => stopAndroidShellAlarm()
+      : playAlarmTone(input.tone ?? "classic", input.seconds ?? 30, input.volume ?? 0.06);
   current = {
     id,
     source: input.source,
@@ -181,8 +189,10 @@ export function raiseAlarm(input: {
   };
   flashTitle(title);
   emit();
-  if (androidShellPlaysAlarms()) showAndroidShellAlarm(title, detail);
-  else void pingOs(title, detail);
+  if (input.sound !== "native") {
+    if (androidShellPlaysAlarms()) showAndroidShellAlarm(title, detail);
+    else void pingOs(title, detail);
+  }
   return id;
 }
 

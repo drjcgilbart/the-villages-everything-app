@@ -29,9 +29,11 @@ import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
 import {
   prepareAndroidAlarms,
+  replaceAndroidAlarms,
   showAndroidAlarm,
   startAndroidAlarm,
   stopAndroidAlarm,
+  subscribeAndroidAlarms,
 } from "./modules/alarm-sound";
 import {
   endConnection,
@@ -169,8 +171,15 @@ function Shell() {
       }
       if (!cancelled) prepareAndroidAlarms();
     })();
+    const unsubscribe = subscribeAndroidAlarms((payload) => {
+      const json = JSON.stringify(payload);
+      webRef.current?.injectJavaScript(
+        `window.dispatchEvent(new CustomEvent("tvea-native-alarm",{detail:${json}}));true;`,
+      );
+    });
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 
@@ -444,6 +453,15 @@ function Shell() {
             title?: string;
             detail?: string;
             seconds?: number;
+            alarms?: {
+              id: string;
+              at: number;
+              title: string;
+              detail: string;
+              seconds: number;
+              source: string;
+              tone?: string;
+            }[];
             productId?: string;
             appAccountToken?: string;
             transactionId?: string;
@@ -459,6 +477,10 @@ function Shell() {
             if (msg.action === "start") startAndroidAlarm(Number(msg.seconds) || 30);
             else if (msg.action === "show") showAndroidAlarm(String(msg.title || "Alarm"), String(msg.detail || ""));
             else if (msg.action === "stop") stopAndroidAlarm();
+            return;
+          }
+          if (msg.type === "tvea-alarm-schedule" && Platform.OS === "android") {
+            replaceAndroidAlarms(Array.isArray(msg.alarms) ? msg.alarms : []);
             return;
           }
           if (Platform.OS !== "ios") return;
