@@ -69,37 +69,78 @@ export function clockIsDue(slot: string, now = nowTimeEastern(), graceMinutes = 
   return ago <= graceMinutes;
 }
 
-/** Simple Web Audio beeps for med/pet alarms (no audio files required). */
-export type AlarmTone = "classic" | "chime" | "urgent" | "digital";
+/** Soft built-in tones, plus a sound chosen from the phone. */
+export type AlarmTone = "classic" | "chime" | "urgent" | "digital" | "phone";
 
-export const ALARM_TONE_OPTIONS: { id: AlarmTone; label: string; hint: string }[] = [
-  { id: "classic", label: "Classic beep", hint: "Windows-style two-beep" },
+export type PhoneAlarmSound = { title: string; uri: string };
+
+export const ALARM_TONE_OPTIONS: { id: Exclude<AlarmTone, "phone">; label: string; hint: string }[] = [
+  { id: "classic", label: "Classic beep", hint: "Two soft beeps" },
   { id: "chime", label: "Soft chime", hint: "Gentle rising notes" },
-  { id: "urgent", label: "Urgent alert", hint: "Fast repeating beep" },
+  { id: "urgent", label: "Urgent alert", hint: "Quicker soft beeps" },
   { id: "digital", label: "Digital pulse", hint: "Stepped rising tones" },
 ];
 
-const TONE_STEPS: Record<AlarmTone, { freq: number; gap: number; len: number }[]> = {
+export function knownAlarmTone(value: unknown): AlarmTone {
+  if (value === "classic" || value === "chime" || value === "urgent" || value === "digital" || value === "phone") {
+    return value;
+  }
+  return "classic";
+}
+
+const TONE_STEPS: Record<Exclude<AlarmTone, "phone">, { freq: number; gap: number; len: number }[]> = {
   classic: [
-    { freq: 880, gap: 200, len: 120 },
-    { freq: 880, gap: 200, len: 120 },
+    { freq: 523, gap: 160, len: 160 },
+    { freq: 659, gap: 280, len: 220 },
   ],
   chime: [
-    { freq: 523, gap: 180, len: 200 },
-    { freq: 659, gap: 180, len: 200 },
-    { freq: 784, gap: 400, len: 280 },
+    { freq: 523, gap: 90, len: 180 },
+    { freq: 659, gap: 90, len: 180 },
+    { freq: 784, gap: 360, len: 280 },
   ],
   urgent: [
-    { freq: 990, gap: 90, len: 80 },
-    { freq: 990, gap: 90, len: 80 },
-    { freq: 990, gap: 90, len: 80 },
+    { freq: 698, gap: 80, len: 70 },
+    { freq: 698, gap: 80, len: 70 },
+    { freq: 784, gap: 220, len: 90 },
   ],
   digital: [
-    { freq: 440, gap: 100, len: 60 },
-    { freq: 660, gap: 100, len: 60 },
-    { freq: 880, gap: 150, len: 80 },
+    { freq: 440, gap: 70, len: 90 },
+    { freq: 554, gap: 70, len: 90 },
+    { freq: 659, gap: 280, len: 160 },
   ],
 };
+
+const phoneAlarmWaiters = new Set<(sounds: PhoneAlarmSound[]) => void>();
+let phoneAlarmSounds: PhoneAlarmSound[] = [];
+
+function onPhoneAlarmSounds(event: Event) {
+  const detail = (event as CustomEvent<PhoneAlarmSound[]>).detail;
+  phoneAlarmSounds = Array.isArray(detail)
+    ? detail.filter((row) => row && typeof row.uri === "string" && typeof row.title === "string")
+    : [];
+  phoneAlarmWaiters.forEach((waiter) => waiter(phoneAlarmSounds));
+}
+
+/** Ask the Android app for the alarm sounds already on the phone. */
+let phoneAlarmListening = false;
+
+export function requestPhoneAlarmSounds(): void {
+  if (typeof window === "undefined") return;
+  if (!phoneAlarmListening) {
+    phoneAlarmListening = true;
+    window.addEventListener("tvea-phone-alarms", onPhoneAlarmSounds);
+  }
+  if (!androidShellPlaysAlarms()) return;
+  postShellAlarm({ action: "sounds" });
+}
+
+export function subscribePhoneAlarmSounds(waiter: (sounds: PhoneAlarmSound[]) => void): () => void {
+  phoneAlarmWaiters.add(waiter);
+  waiter(phoneAlarmSounds);
+  return () => {
+    phoneAlarmWaiters.delete(waiter);
+  };
+}
 
 let unlockInstalled = false;
 let audioPrimed = false;
@@ -197,23 +238,24 @@ function wavBlob(samples: Float32Array, rate: number): Blob {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
+function toneSteps(tone: AlarmTone) {
+  if (tone === "phone") return TONE_STEPS.chime;
+  return TONE_STEPS[tone] || TONE_STEPS.chime;
+}
+
 function toneSamples(tone: AlarmTone): Float32Array {
   const rate = 22050;
-  const amp = 0.62;
-  const steps = TONE_STEPS[tone] || TONE_STEPS.classic;
+  const amp = tone === "urgent" ? 0.2 : tone === "classic" ? 0.15 : 0.11;
+  const steps = toneSteps(tone);
   const chunks: Float32Array[] = [];
   for (const step of steps) {
     const count = Math.max(1, Math.floor((step.len / 1000) * rate));
     const beep = new Float32Array(count);
+    const fadeN = Math.max(1, Math.floor(rate * 0.012));
     for (let i = 0; i < count; i++) {
-      const on = Math.sin((2 * Math.PI * step.freq * i) / rate) >= 0 ? 1 : -1;
-      beep[i] = on * amp;
-    }
-    const fade = Math.min(count, Math.floor(rate * 0.008));
-    for (let i = 0; i < fade; i++) {
-      const gain = i / fade;
-      beep[i] *= gain;
-      beep[count - 1 - i] *= gain;
+      const wave = Math.sin((2 * Math.PI * step.freq * i) / rate);
+      const edge = Math.min(i, count - 1 - i, fadeN);
+      beep[i] = wave * amp * (edge / fadeN);
     }
     chunks.push(beep);
     chunks.push(new Float32Array(Math.max(1, Math.floor((step.gap / 1000) * rate))));
@@ -319,7 +361,7 @@ function playAndroidOscillators(tone: AlarmTone, stopAt: number): () => void {
   void ctx.resume();
   let cancelled = false;
   const oscillators: OscillatorNode[] = [];
-  const steps = TONE_STEPS[tone] || TONE_STEPS.classic;
+  const steps = toneSteps(tone);
 
   const schedule = (when: number) => {
     if (cancelled || Date.now() >= stopAt) return;
@@ -327,9 +369,9 @@ function playAndroidOscillators(tone: AlarmTone, stopAt: number): () => void {
     for (const step of steps) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "square";
+      osc.type = "sine";
       osc.frequency.setValueAtTime(step.freq, cursor);
-      gain.gain.setValueAtTime(0.45, cursor);
+      gain.gain.setValueAtTime(tone === "urgent" ? 0.16 : 0.1, cursor);
       osc.connect(gain);
       gain.connect(ctx.destination);
       const end = cursor + step.len / 1000;
@@ -419,14 +461,20 @@ function playAndroidAlarm(tone: AlarmTone, durationSec: number): () => void {
 }
 
 export function playAlarmTone(
-  tone: AlarmTone = "classic",
+  tone: AlarmTone = "chime",
   durationSec = 2,
-  volume = 0.06
+  volume = 0.06,
+  uri = ""
 ): () => void {
   if (typeof window === "undefined") return () => {};
   if (androidShellPlaysAlarms()) {
     const seconds = Math.min(300, Math.max(1, durationSec));
-    postShellAlarm({ action: "start", seconds, tone });
+    postShellAlarm({
+      action: "start",
+      seconds,
+      tone: tone === "phone" ? "phone" : tone,
+      uri: tone === "phone" ? uri : "",
+    });
     return () => postShellAlarm({ action: "stop" });
   }
   installAlarmAudioUnlock();
@@ -445,7 +493,7 @@ export function playAlarmTone(
   function beep(freq: number, len: number) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = "square";
+    osc.type = "sine";
     osc.frequency.value = freq;
     gain.gain.value = volume;
     osc.connect(gain);
@@ -469,7 +517,7 @@ export function playAlarmTone(
       }
       return;
     }
-    const steps = TONE_STEPS[tone] || TONE_STEPS.classic;
+    const steps = toneSteps(tone);
     let delay = 0;
     for (const step of steps) {
       setTimeout(() => {

@@ -24,6 +24,8 @@ private data class Planned(
   val detail: String,
   val seconds: Int,
   val source: String,
+  val tone: String,
+  val uri: String,
 )
 
 /** One phone-clock alarm for the soonest medicine, pet, or rest time. */
@@ -58,9 +60,11 @@ object AlarmClock {
     val title = if (due.size == 1) due[0].title else "Alarm"
     val detail = due.joinToString("\n\n") { it.detail.ifBlank { it.title } }
     val source = due[0].source
+    val tone = due[0].tone.ifBlank { "chime" }
+    val uri = due[0].uri
     val endsAt = now + seconds * 1000L
     AlarmRinger.prepare(app)
-    AlarmRinger.start(app, seconds)
+    AlarmRinger.start(app, seconds, tone, uri)
     AlarmRinger.show(app, title, detail)
     val payload = mapOf(
       "title" to title,
@@ -129,7 +133,9 @@ object AlarmClock {
               title = row.optString("title").ifBlank { "Alarm" },
               detail = row.optString("detail"),
               seconds = row.optInt("seconds", 30).coerceIn(1, 300),
-              source = row.optString("source").ifBlank { "health" }
+              source = row.optString("source").ifBlank { "health" },
+              tone = row.optString("tone").ifBlank { "chime" },
+              uri = row.optString("uri")
             )
           )
         }
@@ -155,6 +161,8 @@ object AlarmClock {
           .put("detail", row.detail)
           .put("seconds", row.seconds)
           .put("source", row.source)
+          .put("tone", row.tone)
+          .put("uri", row.uri)
       )
     }
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_QUEUE, array.toString()).apply()

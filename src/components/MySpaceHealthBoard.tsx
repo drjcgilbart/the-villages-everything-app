@@ -5,6 +5,7 @@ import {
   androidShellPlaysAlarms,
   clockIsDue,
   nowTimeEastern,
+  knownAlarmTone,
   playAlarmTone,
   todayKeyEastern,
   uid,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/mySpaceStorage";
 import { askAlarmNotificationPermission, dismissAlarm, raiseAlarm } from "@/lib/alarmAlert";
 import { AlarmNotifyButton } from "@/components/AlarmPopup";
+import { AlarmSoundSelect } from "@/components/PhoneAlarmSounds";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_HEALTH } from "@/lib/sampleBoards";
 import { emptyBoards, type GymBoard } from "@/lib/memberBoardModel";
@@ -62,6 +64,7 @@ type Medication = {
   doseTimes: DoseTime[];
   alarmEnabled: boolean;
   alarmSound?: AlarmTone;
+  alarmUri?: string;
   alarmDurationSec?: number;
   active: boolean;
 };
@@ -158,6 +161,7 @@ export type HealthState = {
   dailyProteinGoalG: number;
   sleepGoalHours: number;
   medAlarmSound: AlarmTone;
+  medAlarmUri?: string;
   medAlarmDurationSec: number;
   medAlarmEnabled: boolean;
   habits: Record<string, DayHabit>;
@@ -284,7 +288,8 @@ function defaultState(): HealthState {
     dailyStepsGoal: 8000,
     dailyProteinGoalG: 120,
     sleepGoalHours: 8,
-    medAlarmSound: "classic",
+    medAlarmSound: "chime",
+    medAlarmUri: "",
     medAlarmDurationSec: 30,
     medAlarmEnabled: true,
     habits: {},
@@ -789,7 +794,8 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
       dosePeriodOther: String(m.dosePeriodOther || "").slice(0, 40),
       doseTimes,
       alarmEnabled: m.alarmEnabled !== false,
-      alarmSound: m.alarmSound,
+      alarmSound: m.alarmSound ? knownAlarmTone(m.alarmSound) : undefined,
+      alarmUri: String(m.alarmUri || ""),
       alarmDurationSec: m.alarmDurationSec,
       active: m.active !== false,
     };
@@ -832,7 +838,8 @@ function hydrateHealth(raw: Record<string, unknown> | HealthState): HealthState 
     dailyStepsGoal: Number(r.dailyStepsGoal) || base.dailyStepsGoal,
     dailyProteinGoalG: Number(r.dailyProteinGoalG) || base.dailyProteinGoalG,
     sleepGoalHours: Number(r.sleepGoalHours) || base.sleepGoalHours,
-    medAlarmSound: (r.medAlarmSound as AlarmTone) || "classic",
+    medAlarmSound: knownAlarmTone(r.medAlarmSound),
+    medAlarmUri: String(r.medAlarmUri || ""),
     medAlarmDurationSec: Number(r.medAlarmDurationSec) || 30,
     medAlarmEnabled: r.medAlarmEnabled !== false,
     habits,
@@ -1179,7 +1186,8 @@ export function MySpaceHealthBoard() {
     schedule: "",
     notes: "",
     alarmEnabled: true,
-    alarmSound: "classic" as AlarmTone,
+    alarmSound: "chime" as AlarmTone,
+    alarmUri: "",
     alarmDurationSec: 30,
     timesPerDay: 1,
     dosePeriod: "day" as DosePeriod,
@@ -1767,6 +1775,7 @@ export function MySpaceHealthBoard() {
       notes: med.notes,
       alarmEnabled: med.alarmEnabled !== false,
       alarmSound: med.alarmSound || state.medAlarmSound,
+      alarmUri: med.alarmUri || state.medAlarmUri || "",
       alarmDurationSec: med.alarmDurationSec || state.medAlarmDurationSec || 30,
       timesPerDay: med.timesPerDay || 1,
       dosePeriod: dosePeriodOf(med.dosePeriod),
@@ -1790,6 +1799,7 @@ export function MySpaceHealthBoard() {
               notes: editDraft.notes.trim().slice(0, 500),
               alarmEnabled: editDraft.alarmEnabled,
               alarmSound: editDraft.alarmSound,
+              alarmUri: editDraft.alarmSound === "phone" ? editDraft.alarmUri : "",
               alarmDurationSec: clamp(Number(editDraft.alarmDurationSec) || 30, 5, 300),
               timesPerDay: clamp(Number(editDraft.timesPerDay) || 1, 1, 24),
               dosePeriod: editDraft.dosePeriod,
@@ -2550,17 +2560,13 @@ export function MySpaceHealthBoard() {
                     </label>
                     <div className="field">
                       <label>Alarm sound</label>
-                      <select
-                        value={editDraft.alarmSound}
-                        onChange={(e) =>
-                          setEditDraft({ ...editDraft, alarmSound: e.target.value as AlarmTone })
+                      <AlarmSoundSelect
+                        sound={editDraft.alarmSound}
+                        uri={editDraft.alarmUri}
+                        onChange={(alarmSound, alarmUri) =>
+                          setEditDraft({ ...editDraft, alarmSound, alarmUri })
                         }
-                      >
-                        <option value="classic">Classic beep (Windows-style)</option>
-                        <option value="chime">Soft chime</option>
-                        <option value="urgent">Urgent alert</option>
-                        <option value="digital">Digital pulse</option>
-                      </select>
+                      />
                     </div>
                     <div className="field">
                       <label>Run alarm for (seconds)</label>
@@ -2886,8 +2892,8 @@ export function MySpaceHealthBoard() {
           </label>
           <p className="panel-hint">
             Each medicine has its own alarm on the form where you enter it. Alarms fire for dose
-            times that are On and not yet taken. A window pops up over the page so you can see the
-            dose and turn the sound off. Keep this page open in the browser.
+            times that are On and not yet taken. A window pops up so you can see the dose and turn
+            the sound off. It rings while the app is still running, even on another page.
           </p>
           <AlarmNotifyButton />
 
@@ -2921,6 +2927,7 @@ export function MySpaceHealthBoard() {
                     doseTimes: period === "day" ? defaultDoseTimes(n) : [],
                     alarmEnabled: medAlarmOn,
                     alarmSound: state.medAlarmSound,
+                    alarmUri: state.medAlarmSound === "phone" ? state.medAlarmUri || "" : "",
                     alarmDurationSec: state.medAlarmDurationSec || 30,
                     active: true,
                   },
@@ -2987,17 +2994,13 @@ export function MySpaceHealthBoard() {
             </label>
             <div className="field">
               <label>Alarm sound</label>
-              <select
-                value={state.medAlarmSound}
-                onChange={(e) =>
-                  persist({ ...state, medAlarmSound: e.target.value as AlarmTone })
+              <AlarmSoundSelect
+                sound={state.medAlarmSound}
+                uri={state.medAlarmUri}
+                onChange={(medAlarmSound, medAlarmUri) =>
+                  persist({ ...state, medAlarmSound, medAlarmUri })
                 }
-              >
-                <option value="classic">Classic beep (Windows-style)</option>
-                <option value="chime">Soft chime</option>
-                <option value="urgent">Urgent alert</option>
-                <option value="digital">Digital pulse</option>
-              </select>
+              />
             </div>
             <div className="field">
               <label>Run alarm for (seconds)</label>
@@ -3018,7 +3021,14 @@ export function MySpaceHealthBoard() {
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => playAlarmTone(state.medAlarmSound, 2)}
+              onClick={() =>
+                playAlarmTone(
+                  state.medAlarmSound,
+                  2,
+                  0.06,
+                  state.medAlarmSound === "phone" ? state.medAlarmUri || "" : ""
+                )
+              }
             >
               Test alarm
             </button>

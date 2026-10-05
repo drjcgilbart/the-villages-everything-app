@@ -6283,6 +6283,14 @@ button.ms-home-card:hover {
   font-size: 0.78rem;
 }
 
+.ms-phone-alarms {
+  margin: 0.15rem 0 0.85rem;
+}
+
+.ms-phone-alarms .btn {
+  margin-top: 0.45rem;
+}
+
 @media (max-width: 640px) {
   .ms-pet-event {
     grid-template-columns: auto auto 1fr auto;

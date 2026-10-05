@@ -6,6 +6,7 @@ import {
   androidShellPlaysAlarms,
   clockIsDue,
   nowTimeEastern,
+  knownAlarmTone,
   playAlarmTone,
   todayKeyEastern,
   uid,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/mySpaceStorage";
 import { askAlarmNotificationPermission, dismissAlarm, raiseAlarm } from "@/lib/alarmAlert";
 import { AlarmNotifyButton } from "@/components/AlarmPopup";
+import { PhoneAlarmSelect } from "@/components/PhoneAlarmSounds";
 import { useMemberBoard } from "@/components/useMemberBoard";
 import { SAMPLE_PET } from "@/lib/sampleBoards";
 
@@ -47,6 +49,7 @@ type Pet = {
   vetPhone: string;
   photoName: string;
   alarmSound: AlarmTone;
+  alarmUri?: string;
   alarmDurationSec: number;
   walkAlarmEnabled: boolean;
   feedAlarmEnabled: boolean;
@@ -159,7 +162,8 @@ function seedPet(partial: Partial<Pet> & { name: string }): Pet {
     vetName: String(partial.vetName || ""),
     vetPhone: String(partial.vetPhone || ""),
     photoName: String(partial.photoName || ""),
-    alarmSound: (partial.alarmSound as AlarmTone) || "classic",
+    alarmSound: knownAlarmTone(partial.alarmSound),
+    alarmUri: String(partial.alarmUri || ""),
     alarmDurationSec: clampDuration(partial.alarmDurationSec),
     walkAlarmEnabled: partial.walkAlarmEnabled !== false,
     feedAlarmEnabled: partial.feedAlarmEnabled !== false,
@@ -187,7 +191,7 @@ function asCompletion(v: Completion | boolean | undefined): Completion {
 
 function migratePets(raw: PetState & { petName?: string; walks?: PetEvent[]; feeds?: PetEvent[]; vetNotes?: string }): PetState {
   const base = defaults();
-  const globalSound = (raw.alarmSound as AlarmTone) || "classic";
+  const globalSound = knownAlarmTone(raw.alarmSound);
   const globalDur = clampDuration(raw.alarmDurationSec);
   const globalWalk = raw.walkAlarmEnabled !== false;
   const globalFeed = raw.feedAlarmEnabled !== false;
@@ -442,10 +446,10 @@ export function MySpacePetBoard() {
     setHearing(null);
   }
 
-  function hearTone(tone: AlarmTone, durationSec = 2) {
+  function hearTone(tone: AlarmTone, durationSec = 2, uri = "") {
     stopPreviewRef.current?.();
     const token = ++previewTokenRef.current;
-    const stop = playAlarmTone(tone, durationSec);
+    const stop = playAlarmTone(tone, durationSec, 0.06, uri);
     stopPreviewRef.current = stop;
     setHearing(tone);
     window.setTimeout(
@@ -531,7 +535,9 @@ export function MySpacePetBoard() {
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={() =>
-            hearing === pet.alarmSound ? stopHearing() : hearTone(pet.alarmSound, 2)
+            hearing === pet.alarmSound
+              ? stopHearing()
+              : hearTone(pet.alarmSound, 2, pet.alarmUri || "")
           }
         >
           {hearing === pet.alarmSound ? "Stop alarm" : "Test alarm"}
@@ -873,6 +879,7 @@ export function MySpacePetBoard() {
             <h3 style={{ marginTop: 0 }}>⏰ Alarms for {pet.name}</h3>
             <p className="panel-hint">
               Hear each sound before you pick it. Choosing a sound saves it for this pet only.
+              The four tones are soft. You can also use an alarm sound already on this phone.
             </p>
             <div className="ms-alarm-tones" role="radiogroup" aria-label="Alarm sound">
               {ALARM_TONE_OPTIONS.map((tone) => {
@@ -888,7 +895,7 @@ export function MySpacePetBoard() {
                         type="radio"
                         name={`pet-alarm-sound-${pet.id}`}
                         checked={selected}
-                        onChange={() => patchPet({ ...pet, alarmSound: tone.id })}
+                        onChange={() => patchPet({ ...pet, alarmSound: tone.id, alarmUri: "" })}
                       />
                       <span>
                         <strong>{tone.label}</strong>
@@ -907,6 +914,16 @@ export function MySpacePetBoard() {
                 );
               })}
             </div>
+            <PhoneAlarmSelect
+              uri={pet.alarmSound === "phone" ? pet.alarmUri || "" : ""}
+              onChange={(uri) =>
+                patchPet(
+                  uri
+                    ? { ...pet, alarmSound: "phone", alarmUri: uri }
+                    : { ...pet, alarmSound: "chime", alarmUri: "" }
+                )
+              }
+            />
             <div className="form-grid ms-module-form">
               <div className="field">
                 <label>Run alarm for (seconds)</label>
@@ -949,7 +966,7 @@ export function MySpacePetBoard() {
                 onClick={() =>
                   hearing === pet.alarmSound
                     ? stopHearing()
-                    : hearTone(pet.alarmSound, clampDuration(pet.alarmDurationSec))
+                    : hearTone(pet.alarmSound, clampDuration(pet.alarmDurationSec), pet.alarmUri || "")
                 }
               >
                 {hearing === pet.alarmSound ? "Stop test" : "Test full alarm"}
@@ -957,8 +974,8 @@ export function MySpacePetBoard() {
             </div>
             <p className="panel-hint">
               Alarms fire for this pet’s enabled times that aren’t marked done yet. Every pet can have
-              its own sound. When one rings, a window pops up over the page with what it is for and a
-              Turn alarm off button. Keep the dashboard open so they can ring.
+              its own sound. When one rings, a window pops up with what it is for and a Turn alarm off
+              button. It rings while the app is still running, even on another page.
             </p>
             <AlarmNotifyButton />
           </div>

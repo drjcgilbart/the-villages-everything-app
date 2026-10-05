@@ -25,10 +25,15 @@ class AlarmSoundModule : Module() {
       null
     }
 
-    Function("start") { seconds: Double ->
+    Function("start") { seconds: Double, tone: String, uri: String ->
       val context = appContext.reactContext?.applicationContext ?: return@Function null
-      AlarmRinger.start(context, seconds.toInt())
+      AlarmRinger.start(context, seconds.toInt(), tone, uri)
       null
+    }
+
+    Function("phoneSounds") {
+      val context = appContext.reactContext?.applicationContext ?: return@Function "[]"
+      AlarmRinger.phoneSoundsJson(context)
     }
 
     Function("show") { title: String, detail: String ->

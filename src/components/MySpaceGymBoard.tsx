@@ -447,7 +447,7 @@ export function MySpaceGymBoard() {
       source: "gym",
       title: "Rest is over",
       detail: "The rest timer finished.",
-      tone: "classic",
+      tone: "chime",
       seconds: 10,
       volume: 0.03,
       onDismiss: () => {

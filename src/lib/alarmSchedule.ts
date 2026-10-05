@@ -10,6 +10,7 @@ export type ScheduledAlarm = {
   seconds: number;
   source: "health" | "pet" | "gym";
   tone: AlarmTone;
+  uri?: string;
 };
 
 const ZONE = "America/New_York";
@@ -25,6 +26,7 @@ type Medication = {
   active?: boolean;
   alarmEnabled?: boolean;
   alarmSound?: AlarmTone;
+  alarmUri?: string;
   alarmDurationSec?: number;
   timesPerDay?: number;
   dosePeriod?: DosePeriod;
@@ -42,6 +44,7 @@ type MedicationLog = {
 type HealthBoard = {
   medAlarmEnabled?: boolean;
   medAlarmSound?: AlarmTone;
+  medAlarmUri?: string;
   medAlarmDurationSec?: number;
   medications?: Medication[];
   medicationLogs?: MedicationLog[];
@@ -54,6 +57,7 @@ type Pet = {
   name?: string;
   species?: string;
   alarmSound?: AlarmTone;
+  alarmUri?: string;
   alarmDurationSec?: number;
   walkAlarmEnabled?: boolean;
   feedAlarmEnabled?: boolean;
@@ -107,7 +111,7 @@ export function collectScheduledAlarms(
       detail: "The rest timer finished.",
       seconds: 10,
       source: "gym",
-      tone: "classic",
+      tone: "chime",
     });
   }
   alarms.sort((a, b) => a.at - b.at);
@@ -128,6 +132,8 @@ function medicineAlarms(board: HealthBoard | null | undefined, now: number): Sch
       const at = nextDoseAt(med, dose.id, logs, today, clock, now);
       if (at == null) continue;
       const seconds = clampSeconds(med.alarmDurationSec || board.medAlarmDurationSec || 30);
+      const tone = med.alarmSound || board.medAlarmSound || "chime";
+      const uri = tone === "phone" ? med.alarmUri || board.medAlarmUri || "" : "";
       const name = String(med.name || "Medication");
       const existing = grouped.get(at);
       if (existing) {
@@ -142,7 +148,8 @@ function medicineAlarms(board: HealthBoard | null | undefined, now: number): Sch
           detail: `${formatClock(clock)} — ${name}. Not marked taken yet.`,
           seconds,
           source: "health",
-          tone: med.alarmSound || board.medAlarmSound || "classic",
+          tone,
+          uri,
         });
       }
     }
@@ -156,7 +163,8 @@ function petAlarms(board: PetBoard | null | undefined, now: number): ScheduledAl
   const alarms: ScheduledAlarm[] = [];
   for (const pet of board.pets) {
     const name = String(pet.name || "Pet");
-    const sound = pet.alarmSound || "classic";
+    const sound = pet.alarmSound || "chime";
+    const uri = sound === "phone" ? pet.alarmUri || "" : "";
     const seconds = clampSeconds(pet.alarmDurationSec || 30);
     const rows: { events: PetEvent[] | undefined; enabled: boolean; word: string }[] = [
       { events: pet.walks, enabled: pet.walkAlarmEnabled !== false, word: outingWord(pet.species) },
@@ -182,6 +190,7 @@ function petAlarms(board: PetBoard | null | undefined, now: number): ScheduledAl
           seconds,
           source: "pet",
           tone: sound,
+          uri,
         });
       }
     }

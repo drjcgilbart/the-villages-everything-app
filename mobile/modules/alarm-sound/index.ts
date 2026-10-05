@@ -11,9 +11,10 @@ type FiredAlarm = {
 
 type AlarmNative = {
   prepare: () => void;
-  start: (seconds: number) => void;
+  start: (seconds: number, tone: string, uri: string) => void;
   show: (title: string, detail: string) => void;
   stop: () => void;
+  phoneSounds: () => string;
   replaceSchedule: (raw: string) => void;
   addListener: (event: "onAlarmFired", listener: (payload: FiredAlarm) => void) => { remove: () => void };
 };
@@ -33,8 +34,22 @@ export function prepareAndroidAlarms(): void {
 }
 
 /** Play on the alarm stream, which Do Not Disturb leaves on unless Alarms are off. */
-export function startAndroidAlarm(seconds: number): void {
-  native()?.start(Math.min(300, Math.max(1, Math.round(seconds) || 30)));
+export function startAndroidAlarm(seconds: number, tone = "chime", uri = ""): void {
+  native()?.start(Math.min(300, Math.max(1, Math.round(seconds) || 30)), tone || "chime", uri || "");
+}
+
+export function listAndroidAlarmSounds(): { title: string; uri: string }[] {
+  const raw = native()?.phoneSounds() || "[]";
+  try {
+    const parsed = JSON.parse(raw) as { title?: string; uri?: string }[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((row) => row && typeof row.uri === "string" && typeof row.title === "string") as {
+      title: string;
+      uri: string;
+    }[];
+  } catch {
+    return [];
+  }
 }
 
 export function showAndroidAlarm(title: string, detail: string): void {
@@ -46,7 +61,16 @@ export function stopAndroidAlarm(): void {
 }
 
 export function replaceAndroidAlarms(
-  alarms: { id: string; at: number; title: string; detail: string; seconds: number; source: string; tone?: string }[]
+  alarms: {
+    id: string;
+    at: number;
+    title: string;
+    detail: string;
+    seconds: number;
+    source: string;
+    tone?: string;
+    uri?: string;
+  }[]
 ): void {
   native()?.replaceSchedule(JSON.stringify(alarms));
 }

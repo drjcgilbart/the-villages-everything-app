@@ -31,6 +31,7 @@ import {
   prepareAndroidAlarms,
   replaceAndroidAlarms,
   showAndroidAlarm,
+  listAndroidAlarmSounds,
   startAndroidAlarm,
   stopAndroidAlarm,
   subscribeAndroidAlarms,
@@ -453,6 +454,8 @@ function Shell() {
             title?: string;
             detail?: string;
             seconds?: number;
+            tone?: string;
+            uri?: string;
             alarms?: {
               id: string;
               at: number;
@@ -461,6 +464,7 @@ function Shell() {
               seconds: number;
               source: string;
               tone?: string;
+              uri?: string;
             }[];
             productId?: string;
             appAccountToken?: string;
@@ -474,8 +478,14 @@ function Shell() {
           }
           if (!msg) return;
           if (msg.type === "tvea-alarm" && Platform.OS === "android") {
-            if (msg.action === "start") startAndroidAlarm(Number(msg.seconds) || 30);
-            else if (msg.action === "show") showAndroidAlarm(String(msg.title || "Alarm"), String(msg.detail || ""));
+            if (msg.action === "start") {
+              startAndroidAlarm(Number(msg.seconds) || 30, String(msg.tone || "chime"), String(msg.uri || ""));
+            } else if (msg.action === "sounds") {
+              const sounds = listAndroidAlarmSounds();
+              webRef.current?.injectJavaScript(
+                `window.dispatchEvent(new CustomEvent("tvea-phone-alarms",{detail:${JSON.stringify(sounds)}}));true;`,
+              );
+            } else if (msg.action === "show") showAndroidAlarm(String(msg.title || "Alarm"), String(msg.detail || ""));
             else if (msg.action === "stop") stopAndroidAlarm();
             return;
           }
