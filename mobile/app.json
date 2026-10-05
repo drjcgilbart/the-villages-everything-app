@@ -18,8 +18,8 @@
       "bundleIdentifier": "com.thevillageseverythingapp.app",
       "buildNumber": "4",
       "infoPlist": {
-        "NSCameraUsageDescription": "Allow camera access so you can take photos for Best of the Month, Support Local, yard sale, and member uploads.",
-        "NSPhotoLibraryUsageDescription": "Allow photo library access so you can upload pictures for Best of the Month, Support Local, yard sale, and member content.",
+        "NSCameraUsageDescription": "Allow camera access so you can take photos for Best of the Month, Support Local, Marketplace, and member uploads.",
+        "NSPhotoLibraryUsageDescription": "Allow photo library access so you can upload pictures for Best of the Month, Support Local, Marketplace, and member content.",
         "NSPhotoLibraryAddUsageDescription": "Allow saving photos you capture in the app.",
         "NSMicrophoneUsageDescription": "Allow microphone access if you record short videos for community listings.",
         "NSLocationWhenInUseUsageDescription": "Optional location can help with nearby village features if you enable them.",
@@ -31,7 +31,7 @@
     },
     "android": {
       "package": "com.thevillageseverythingapp.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "usesCleartextTraffic": false,
       "adaptiveIcon": {
         "backgroundColor": "#0c4a6e",
@@ -41,7 +41,11 @@
       },
       "permissions": [
         "ACCESS_NETWORK_STATE",
-        "INTERNET"
+        "INTERNET",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "blockedPermissions": [
         "android.permission.CAMERA",

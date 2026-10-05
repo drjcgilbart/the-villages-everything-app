@@ -1,5 +1,7 @@
 /** Shared localStorage helpers for My Space member modules (this browser only). */
 
+import { isNativeAppShell } from "@/lib/nativeAppShell";
+
 export function todayKeyEastern(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
@@ -109,6 +111,29 @@ const phoneLoopUrls = new Map<AlarmTone, string>();
 
 function androidPhone(): boolean {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+}
+
+type AlarmShellWindow = Window & {
+  ReactNativeWebView?: { postMessage: (data: string) => void };
+  VillagesAndroidAlarm?: boolean;
+};
+
+/** True only in the Android app build that plays on the alarm stream. */
+export function androidShellPlaysAlarms(): boolean {
+  if (typeof window === "undefined" || !androidPhone() || !isNativeAppShell()) return false;
+  const shell = window as AlarmShellWindow;
+  return Boolean(shell.VillagesAndroidAlarm && shell.ReactNativeWebView?.postMessage);
+}
+
+function postShellAlarm(payload: Record<string, unknown>) {
+  const shell = window as AlarmShellWindow;
+  shell.ReactNativeWebView?.postMessage(JSON.stringify({ type: "tvea-alarm", ...payload }));
+}
+
+/** Heads-up for a real alarm. Short “hear it” previews do not call this. */
+export function showAndroidShellAlarm(title: string, detail: string): void {
+  if (!androidShellPlaysAlarms()) return;
+  postShellAlarm({ action: "show", title, detail });
 }
 
 function audioContextCtor(): typeof AudioContext | null {
@@ -394,6 +419,11 @@ export function playAlarmTone(
   volume = 0.06
 ): () => void {
   if (typeof window === "undefined") return () => {};
+  if (androidShellPlaysAlarms()) {
+    const seconds = Math.min(300, Math.max(1, durationSec));
+    postShellAlarm({ action: "start", seconds, tone });
+    return () => postShellAlarm({ action: "stop" });
+  }
   installAlarmAudioUnlock();
   if (androidPhone()) return playAndroidAlarm(tone, durationSec);
   let ctx: AudioContext;

@@ -1,6 +1,12 @@
 "use client";
 
-import { alarmNotifySilently, playAlarmTone, type AlarmTone } from "@/lib/mySpaceStorage";
+import {
+  alarmNotifySilently,
+  androidShellPlaysAlarms,
+  playAlarmTone,
+  showAndroidShellAlarm,
+  type AlarmTone,
+} from "@/lib/mySpaceStorage";
 
 export type AlarmSource = "health" | "pet" | "gym";
 
@@ -175,7 +181,8 @@ export function raiseAlarm(input: {
   };
   flashTitle(title);
   emit();
-  void pingOs(title, detail);
+  if (androidShellPlaysAlarms()) showAndroidShellAlarm(title, detail);
+  else void pingOs(title, detail);
   return id;
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   BackHandler,
+  PermissionsAndroid,
   Platform,
   Pressable,
   RefreshControl,
@@ -26,6 +27,12 @@ import * as Linking from "expo-linking";
 import * as Network from "expo-network";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
+import {
+  prepareAndroidAlarms,
+  showAndroidAlarm,
+  startAndroidAlarm,
+  stopAndroidAlarm,
+} from "./modules/alarm-sound";
 import {
   endConnection,
   finishTransaction,
@@ -147,6 +154,25 @@ function Shell() {
   useEffect(() => {
     checkNetwork();
   }, [checkNetwork]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    let cancelled = false;
+    (async () => {
+      prepareAndroidAlarms();
+      if (Number(Platform.Version) >= 33) {
+        try {
+          await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+        } catch {
+          /* The settings switch can still be turned on by hand. */
+        }
+      }
+      if (!cancelled) prepareAndroidAlarms();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
@@ -402,7 +428,9 @@ function Shell() {
         startInLoadingState
         applicationNameForUserAgent=" VillagesEverythingApp/1.2"
         injectedJavaScriptBeforeContentLoaded={
-          Platform.OS === "ios" ? "window.VillagesAppleIAP=true;true;" : "true;"
+          Platform.OS === "ios"
+            ? "window.VillagesAppleIAP=true;true;"
+            : "window.VillagesAndroidAlarm=true;true;"
         }
         onMessage={(event: WebViewMessageEvent) => {
           const raw = event.nativeEvent.data;
@@ -410,19 +438,30 @@ function Shell() {
             setShowNativeChrome((v) => !v);
             return;
           }
-          type AppleMsg = {
+          type ShellMsg = {
             type?: string;
+            action?: string;
+            title?: string;
+            detail?: string;
+            seconds?: number;
             productId?: string;
             appAccountToken?: string;
             transactionId?: string;
           };
-          let msg: AppleMsg | null = null;
+          let msg: ShellMsg | null = null;
           try {
-            msg = JSON.parse(raw) as AppleMsg;
+            msg = JSON.parse(raw) as ShellMsg;
           } catch {
             return;
           }
-          if (!msg || Platform.OS !== "ios") return;
+          if (!msg) return;
+          if (msg.type === "tvea-alarm" && Platform.OS === "android") {
+            if (msg.action === "start") startAndroidAlarm(Number(msg.seconds) || 30);
+            else if (msg.action === "show") showAndroidAlarm(String(msg.title || "Alarm"), String(msg.detail || ""));
+            else if (msg.action === "stop") stopAndroidAlarm();
+            return;
+          }
+          if (Platform.OS !== "ios") return;
           if (msg.type === "apple-finish" && msg.transactionId) {
             const purchase = pendingPurchases.current.get(msg.transactionId);
             if (!purchase) return;
