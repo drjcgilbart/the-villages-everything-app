@@ -1095,25 +1095,37 @@ export function MySpaceHealthBoard() {
   );
   const autoRecapOnce = useRef(false);
   const [tab, setTab] = useState<HealthTab>("overview");
-
-  useEffect(() => {
-    if (typeof sessionStorage === "undefined") return;
-    const raw = sessionStorage.getItem("tvea-planner-edit");
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as { board?: string; extra?: string };
-      if (parsed.board === "gym") setTab("gym");
-      else if (parsed.board === "health") {
-        if (parsed.extra === "exercise") setTab("exercise");
-        else if (parsed.extra === "meal") setTab("meals");
-        else setTab("meds");
-      }
-    } catch {
-      /* ignore a bad handoff */
-    }
-  }, []);
   const [healthMenuOpen, setHealthMenuOpen] = useState(true);
   const skipHealthMenuScroll = useRef(true);
+
+  useEffect(() => {
+    const fromAlarm = () => {
+      const section = new URLSearchParams(window.location.search).get("section") || "";
+      if (section !== "gym" && section !== "meds" && section !== "medications") return false;
+      setTab(section === "gym" ? "gym" : "meds");
+      setHealthMenuOpen(false);
+      skipHealthMenuScroll.current = false;
+      return true;
+    };
+    if (!fromAlarm() && typeof sessionStorage !== "undefined") {
+      const raw = sessionStorage.getItem("tvea-planner-edit");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as { board?: string; extra?: string };
+          if (parsed.board === "gym") setTab("gym");
+          else if (parsed.board === "health") {
+            if (parsed.extra === "exercise") setTab("exercise");
+            else if (parsed.extra === "meal") setTab("meals");
+            else setTab("meds");
+          }
+        } catch {
+          /* ignore a bad handoff */
+        }
+      }
+    }
+    window.addEventListener("tvea-alarm-open", fromAlarm);
+    return () => window.removeEventListener("tvea-alarm-open", fromAlarm);
+  }, []);
 
   function goToHealthTab(id: HealthTab) {
     setTab(id);

@@ -5,6 +5,7 @@ type FiredAlarm = {
   title?: string;
   detail?: string;
   source?: string;
+  path?: string;
   seconds?: number;
   endsAt?: number;
 };
@@ -15,8 +16,12 @@ type AlarmNative = {
   show: (title: string, detail: string) => void;
   stop: () => void;
   phoneSounds: () => string;
+  takePendingPath: () => string;
   replaceSchedule: (raw: string) => void;
-  addListener: (event: "onAlarmFired", listener: (payload: FiredAlarm) => void) => { remove: () => void };
+  addListener: (
+    event: "onAlarmFired" | "onAlarmSilenced",
+    listener: (payload: FiredAlarm) => void
+  ) => { remove: () => void };
 };
 
 function native(): AlarmNative | null {
@@ -80,4 +85,21 @@ export function subscribeAndroidAlarms(listener: (payload: FiredAlarm) => void):
   if (!mod) return () => {};
   const sub = mod.addListener("onAlarmFired", listener);
   return () => sub.remove();
+}
+
+export function subscribeAndroidAlarmSilence(listener: (payload: FiredAlarm) => void): () => void {
+  const mod = native();
+  if (!mod) return () => {};
+  const sub = mod.addListener("onAlarmSilenced", listener);
+  return () => sub.remove();
+}
+
+/** Page a silenced alarm should open, if the web view was not ready when it rang. */
+export function takePendingAlarmPath(): string {
+  try {
+    const path = native()?.takePendingPath() || "";
+    return typeof path === "string" ? path : "";
+  } catch {
+    return "";
+  }
 }

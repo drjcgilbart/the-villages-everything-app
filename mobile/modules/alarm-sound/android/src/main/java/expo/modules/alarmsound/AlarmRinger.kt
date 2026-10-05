@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
@@ -187,7 +188,7 @@ object AlarmRinger {
     mainHandler.postDelayed(task, seconds * 1000L + 250L)
   }
 
-  fun show(context: Context, title: String, detail: String) {
+  fun show(context: Context, title: String, detail: String, path: String = "", fullScreen: Boolean = true) {
     val app = context.applicationContext
     ensureChannel(app)
     val launch = app.packageManager.getLaunchIntentForPackage(app.packageName)
@@ -202,6 +203,11 @@ object AlarmRinger {
       )
     }
     val safeTitle = title.ifBlank { "Alarm" }
+    val body = if (path.isBlank()) {
+      detail.ifBlank { safeTitle }
+    } else {
+      listOf(detail.ifBlank { safeTitle }, AlarmClock.pageHint(path)).joinToString("\n\n")
+    }
     val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       Notification.Builder(app, CHANNEL_ID)
     } else {
@@ -211,8 +217,8 @@ object AlarmRinger {
     builder
       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
       .setContentTitle(safeTitle)
-      .setContentText(detail.ifBlank { safeTitle })
-      .setStyle(Notification.BigTextStyle().bigText(detail.ifBlank { safeTitle }))
+      .setContentText(body)
+      .setStyle(Notification.BigTextStyle().bigText(body))
       .setCategory(Notification.CATEGORY_ALARM)
       .setVisibility(Notification.VISIBILITY_PUBLIC)
       .setOngoing(true)
@@ -220,7 +226,21 @@ object AlarmRinger {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       builder.setTimeoutAfter(15 * 60 * 1000L)
     }
-    if (pending != null) builder.setContentIntent(pending)
+    if (path.isNotBlank()) {
+      val full = AlarmAlertActivity.pending(app, safeTitle, detail.ifBlank { safeTitle }, path)
+      if (fullScreen) builder.setFullScreenIntent(full, true)
+      builder.setContentIntent(full)
+      val stop = Intent(app, AlarmFireReceiver::class.java).setAction(ALARM_STOP)
+      val stopPending = PendingIntent.getBroadcast(
+        app,
+        71024,
+        stop,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      )
+      builder.addAction(android.R.drawable.ic_lock_silent_mode, "Silence", stopPending)
+    } else if (pending != null) {
+      builder.setContentIntent(pending)
+    }
     try {
       notifier(app)?.notify(NOTIF_ID, builder.build())
     } catch (_: SecurityException) {

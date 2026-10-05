@@ -11,6 +11,34 @@ import {
 
 export type AlarmSource = "health" | "pet" | "gym";
 
+const ALARM_PAGES: Record<AlarmSource, string> = {
+  health: "/health?section=meds#my-health",
+  pet: "/my-space?tab=pets",
+  gym: "/health?section=gym#my-health",
+};
+
+const ALARM_PATHS = new Set<string>(Object.values(ALARM_PAGES));
+
+/** Open the board a phone alarm belongs to. Desktop alarms do not call this. */
+export function openAlarmPage(path: string | undefined): void {
+  if (typeof window === "undefined" || !path || !ALARM_PATHS.has(path)) return;
+  const win = window as Window & { __tveaAlarmGoing?: string };
+  if (win.__tveaAlarmGoing === path) return;
+  const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (here === path) {
+    window.dispatchEvent(new Event("tvea-alarm-open"));
+    win.__tveaAlarmGoing = path;
+    return;
+  }
+  win.__tveaAlarmGoing = path;
+  window.location.assign(path);
+}
+
+export function alarmPageFor(source: AlarmSource | undefined): string {
+  if (!source) return "";
+  return ALARM_PAGES[source] || "";
+}
+
 export type AlarmView = {
   id: string;
   title: string;

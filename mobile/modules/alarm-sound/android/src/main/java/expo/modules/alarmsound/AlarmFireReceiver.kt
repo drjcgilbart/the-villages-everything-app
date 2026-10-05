@@ -7,7 +7,9 @@ import android.content.Intent
 /** Wakes a backgrounded app and rings the alarm that came due. */
 class AlarmFireReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent?) {
-    if (intent?.action != ALARM_ACTION) return
-    AlarmClock.fireDue(context)
+    when (intent?.action) {
+      ALARM_ACTION -> AlarmClock.fireDue(context)
+      ALARM_STOP -> AlarmAlertActivity.silence(context)
+    }
   }
 }

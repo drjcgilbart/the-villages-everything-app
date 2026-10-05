@@ -1,19 +1,27 @@
 package expo.modules.alarmsound
 
 import android.app.AlarmManager
+import android.app.KeyguardManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import org.json.JSONArray
 import org.json.JSONObject
 
 private const val PREFS = "tvea-alarm-clock"
 private const val KEY_QUEUE = "queue"
 private const val KEY_FIRED = "fired"
+private const val KEY_PENDING = "pendingPath"
+private const val KEY_ASKED_OVERLAY = "askedOverlay"
+private const val KEY_ASKED_FULL = "askedFullScreen"
 const val ALARM_ACTION = "com.thevillageseverythingapp.app.ALARM_FIRE"
+const val ALARM_STOP = "com.thevillageseverythingapp.app.ALARM_STOP"
 private const val FIRE_CODE = 71021
 private const val SHOW_CODE = 71022
 
@@ -31,7 +39,107 @@ private data class Planned(
 /** One phone-clock alarm for the soonest medicine, pet, or rest time. */
 object AlarmClock {
   var onFired: ((Map<String, Any>) -> Unit)? = null
+  var onSilenced: ((String) -> Unit)? = null
+  @Volatile var lastPath: String = ""
   private val mainHandler = Handler(Looper.getMainLooper())
+
+  fun pageFor(source: String): String {
+    return when (source) {
+      "pet" -> "/my-space?tab=pets"
+      "gym" -> "/health?section=gym#my-health"
+      else -> "/health?section=meds#my-health"
+    }
+  }
+
+  fun pageHint(path: String): String {
+    return when {
+      path.contains("tab=pets") -> "Silence stops the sound and opens Pets."
+      path.contains("section=gym") -> "Silence stops the sound and opens Gym."
+      else -> "Silence stops the sound and opens Medicine."
+    }
+  }
+
+  fun openPage(context: Context, path: String) {
+    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
+    launch.putExtra("tveaAlarmPath", path)
+    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+    try {
+      context.startActivity(launch)
+    } catch (_: Exception) {
+      /* The popup still names the alarm. */
+    }
+  }
+
+  fun noteSilenced(path: String) {
+    val callback = onSilenced ?: return
+    mainHandler.post { callback(path) }
+  }
+
+  fun rememberPath(context: Context, path: String) {
+    lastPath = path
+    context.applicationContext
+      .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      .edit()
+      .putString(KEY_PENDING, path)
+      .apply()
+  }
+
+  fun consumePendingPath(context: Context): String {
+    val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val path = prefs.getString(KEY_PENDING, "") ?: ""
+    if (path.isNotBlank()) prefs.edit().remove(KEY_PENDING).apply()
+    return path
+  }
+
+  /** One prompt so the card can cover other apps, then one for the lock screen. */
+  fun ensureCoverPermission(context: Context) {
+    val app = context.applicationContext
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+    val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    if (!Settings.canDrawOverlays(app)) {
+      if (prefs.getBoolean(KEY_ASKED_OVERLAY, false)) return
+      prefs.edit().putBoolean(KEY_ASKED_OVERLAY, true).apply()
+      val intent = Intent(
+        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+        Uri.parse("package:${app.packageName}")
+      ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      try {
+        app.startActivity(intent)
+      } catch (_: Exception) {
+        /* The lock-screen card and the Silence notification still work. */
+      }
+      return
+    }
+    if (Build.VERSION.SDK_INT < 34) return
+    val manager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    if (manager.canUseFullScreenIntent()) return
+    if (prefs.getBoolean(KEY_ASKED_FULL, false)) return
+    prefs.edit().putBoolean(KEY_ASKED_FULL, true).apply()
+    val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+      .setData(Uri.parse("package:${app.packageName}"))
+      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+      app.startActivity(intent)
+    } catch (_: Exception) {
+      /* Heads-up Silence still works. */
+    }
+  }
+
+  private fun screenLocked(context: Context): Boolean {
+    return try {
+      val guard = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+      guard.isKeyguardLocked
+    } catch (_: Exception) {
+      false
+    }
+  }
+
+  private fun presentAlert(context: Context, title: String, detail: String, path: String) {
+    val locked = screenLocked(context)
+    val covered = !locked && AlarmOverlay.show(context, title, detail, path)
+    if (!covered) AlarmAlertActivity.open(context, title, detail, path)
+    AlarmRinger.show(context, title, detail, path, fullScreen = !covered)
+  }
 
   fun replace(context: Context, raw: String) {
     val app = context.applicationContext
@@ -57,19 +165,26 @@ object AlarmClock {
     val rest = queue.filter { it.id !in fired && it.at > now + 20_000 }
     writeQueue(app, rest)
     val seconds = due.maxOf { it.seconds }.coerceIn(1, 300)
-    val title = if (due.size == 1) due[0].title else "Alarm"
+    val title = if (due.size == 1) {
+      due[0].title
+    } else {
+      due.joinToString(" · ") { it.title }.take(90)
+    }
     val detail = due.joinToString("\n\n") { it.detail.ifBlank { it.title } }
     val source = due[0].source
     val tone = due[0].tone.ifBlank { "chime" }
     val uri = due[0].uri
+    val path = pageFor(source)
+    rememberPath(app, path)
     val endsAt = now + seconds * 1000L
     AlarmRinger.prepare(app)
     AlarmRinger.start(app, seconds, tone, uri)
-    AlarmRinger.show(app, title, detail)
+    presentAlert(app, title, detail, path)
     val payload = mapOf(
       "title" to title,
       "detail" to detail,
       "source" to source,
+      "path" to path,
       "seconds" to seconds,
       "endsAt" to endsAt.toDouble()
     )

@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { dismissAlarm, ensureAlarmStopListener, subscribeAlarm, type AlarmView } from "@/lib/alarmAlert";
-import { installAlarmAudioUnlock } from "@/lib/mySpaceStorage";
+import {
+  alarmPageFor,
+  dismissAlarm,
+  ensureAlarmStopListener,
+  openAlarmPage,
+  subscribeAlarm,
+  type AlarmView,
+} from "@/lib/alarmAlert";
+import { androidShellPlaysAlarms, installAlarmAudioUnlock } from "@/lib/mySpaceStorage";
 
 /** Site-wide alarm window. Stays up until the sound is turned off. */
 export function AlarmPopup() {
@@ -44,7 +51,7 @@ export function AlarmPopup() {
       aria-describedby="alarm-popup-detail"
       onCancel={(event) => {
         event.preventDefault();
-        dismissAlarm();
+        finishAlarm(alert?.source);
       }}
     >
       {alert ? (
@@ -54,13 +61,19 @@ export function AlarmPopup() {
           <p id="alarm-popup-detail" className="alarm-popup-detail">
             {alert.detail}
           </p>
-          <button type="button" className="btn btn-primary alarm-popup-stop" onClick={() => dismissAlarm()}>
+          <button type="button" className="btn btn-primary alarm-popup-stop" onClick={() => finishAlarm(alert.source)}>
             Turn alarm off
           </button>
         </div>
       ) : null}
     </dialog>
   );
+}
+
+function finishAlarm(source: AlarmView["source"] | undefined) {
+  dismissAlarm();
+  if (!androidShellPlaysAlarms()) return;
+  openAlarmPage(alarmPageFor(source));
 }
 
 /** Asks once, from a click, so a later alarm can also appear over other programs. */

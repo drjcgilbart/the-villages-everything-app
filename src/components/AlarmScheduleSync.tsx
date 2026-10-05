@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { collectScheduledAlarms, readGymRest } from "@/lib/alarmSchedule";
-import { raiseAlarm } from "@/lib/alarmAlert";
+import { dismissAlarm, openAlarmPage, raiseAlarm } from "@/lib/alarmAlert";
 import { androidShellPlaysAlarms, readJsonStorage } from "@/lib/mySpaceStorage";
 
 const HEALTH_KEY = "tvea-ms-health-v2";
@@ -17,6 +17,7 @@ type FiredDetail = {
   detail?: string;
   seconds?: number;
   source?: string;
+  path?: string;
   endsAt?: number;
 };
 
@@ -98,7 +99,13 @@ export function AlarmScheduleSync() {
         sound: "native",
       });
     };
+    const onStop = (event: Event) => {
+      const path = (event as CustomEvent<FiredDetail>).detail?.path;
+      dismissAlarm();
+      openAlarmPage(path);
+    };
     window.addEventListener("tvea-native-alarm", onFire);
+    window.addEventListener("tvea-native-alarm-stop", onStop);
     const kick = () => {
       void pushSchedule();
     };
@@ -109,6 +116,7 @@ export function AlarmScheduleSync() {
     window.addEventListener("pagehide", kick);
     return () => {
       window.removeEventListener("tvea-native-alarm", onFire);
+      window.removeEventListener("tvea-native-alarm-stop", onStop);
       window.clearInterval(id);
       window.removeEventListener("tvea-alarm-schedule-sync", kick);
       document.removeEventListener("visibilitychange", kick);

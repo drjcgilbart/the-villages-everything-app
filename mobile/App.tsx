@@ -35,6 +35,8 @@ import {
   startAndroidAlarm,
   stopAndroidAlarm,
   subscribeAndroidAlarms,
+  subscribeAndroidAlarmSilence,
+  takePendingAlarmPath,
 } from "./modules/alarm-sound";
 import {
   endConnection,
@@ -55,6 +57,13 @@ const SITE_URL =
 
 const BRAND_BLUE = "#0c4a6e";
 const BRAND_GOLD = "#f59e0b";
+
+function alarmPage(value: unknown): string {
+  if (value === "/my-space?tab=pets") return value;
+  if (value === "/health?section=gym#my-health") return value;
+  if (value === "/health?section=meds#my-health") return value;
+  return "";
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WebViewRef = any;
@@ -130,6 +139,9 @@ function Shell() {
   const webRef = useRef<WebViewRef>(null);
   const webReady = useRef(false);
   const pendingToWeb = useRef<unknown[]>([]);
+  const pendingFire = useRef<string | null>(null);
+  const pendingStop = useRef<string | null>(null);
+  const pendingOpen = useRef<string | null>(null);
   const pendingPurchases = useRef<Map<string, Purchase>>(new Map());
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -161,6 +173,8 @@ function Shell() {
   useEffect(() => {
     if (Platform.OS !== "android") return;
     let cancelled = false;
+    const missed = alarmPage(takePendingAlarmPath());
+    if (missed) pendingOpen.current = `window.location.assign(${JSON.stringify(missed)});true;`;
     (async () => {
       prepareAndroidAlarms();
       if (Number(Platform.Version) >= 33) {
@@ -172,15 +186,32 @@ function Shell() {
       }
       if (!cancelled) prepareAndroidAlarms();
     })();
+    const deliver = (slot: { current: string | null }, script: string) => {
+      if (!webReady.current || !webRef.current) {
+        slot.current = script;
+        return;
+      }
+      webRef.current.injectJavaScript(script);
+    };
     const unsubscribe = subscribeAndroidAlarms((payload) => {
       const json = JSON.stringify(payload);
-      webRef.current?.injectJavaScript(
+      deliver(
+        pendingFire,
         `window.dispatchEvent(new CustomEvent("tvea-native-alarm",{detail:${json}}));true;`,
+      );
+    });
+    const unsubscribeSilence = subscribeAndroidAlarmSilence((payload) => {
+      takePendingAlarmPath();
+      const detail = JSON.stringify({ path: alarmPage(payload.path) });
+      deliver(
+        pendingStop,
+        `window.dispatchEvent(new CustomEvent("tvea-native-alarm-stop",{detail:${detail}}));true;`,
       );
     });
     return () => {
       cancelled = true;
       unsubscribe();
+      unsubscribeSilence();
     };
   }, []);
 
@@ -404,6 +435,18 @@ function Shell() {
           setRefreshing(false);
           hideSplash();
           flushToWeb();
+          if (pendingOpen.current) {
+            webRef.current?.injectJavaScript(pendingOpen.current);
+            pendingOpen.current = null;
+          }
+          if (pendingStop.current) {
+            webRef.current?.injectJavaScript(pendingStop.current);
+            pendingStop.current = null;
+            pendingFire.current = null;
+          } else if (pendingFire.current) {
+            webRef.current?.injectJavaScript(pendingFire.current);
+            pendingFire.current = null;
+          }
         }}
         onLoadProgress={({ nativeEvent }: WebViewProgressEvent) => {
           if (nativeEvent.progress > 0.7) hideSplash();
