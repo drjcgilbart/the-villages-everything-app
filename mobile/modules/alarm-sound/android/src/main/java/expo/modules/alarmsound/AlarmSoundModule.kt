@@ -20,18 +20,21 @@ class AlarmSoundModule : Module() {
     }
 
     Function("prepare") {
-      val context = appContext.reactContext?.applicationContext ?: return@Function
+      val context = appContext.reactContext?.applicationContext ?: return@Function null
       AlarmRinger.prepare(context)
+      null
     }
 
     Function("start") { seconds: Double ->
-      val context = appContext.reactContext?.applicationContext ?: return@Function
+      val context = appContext.reactContext?.applicationContext ?: return@Function null
       AlarmRinger.start(context, seconds.toInt())
+      null
     }
 
     Function("show") { title: String, detail: String ->
-      val context = appContext.reactContext?.applicationContext ?: return@Function
+      val context = appContext.reactContext?.applicationContext ?: return@Function null
       AlarmRinger.show(context, title, detail)
+      null
     }
 
     Function("stop") {
@@ -39,8 +42,9 @@ class AlarmSoundModule : Module() {
     }
 
     Function("replaceSchedule") { raw: String ->
-      val context = appContext.reactContext?.applicationContext ?: return@Function
+      val context = appContext.reactContext?.applicationContext ?: return@Function null
       AlarmClock.replace(context, raw)
+      null
     }
   }
 }
