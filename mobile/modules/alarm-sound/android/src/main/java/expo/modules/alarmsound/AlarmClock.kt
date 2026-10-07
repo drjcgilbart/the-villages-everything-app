@@ -18,6 +18,7 @@ private const val PREFS = "tvea-alarm-clock"
 private const val KEY_QUEUE = "queue"
 private const val KEY_FIRED = "fired"
 private const val KEY_PENDING = "pendingPath"
+private const val KEY_DONE = "doneQueue"
 private const val KEY_ASKED_OVERLAY = "askedOverlay"
 private const val KEY_ASKED_FULL = "askedFullScreen"
 const val ALARM_ACTION = "com.thevillageseverythingapp.app.ALARM_FIRE"
@@ -34,13 +35,25 @@ private data class Planned(
   val source: String,
   val tone: String,
   val uri: String,
+  val marks: String,
+  val openPath: String,
+)
+
+data class RingingCard(
+  val title: String,
+  val detail: String,
+  val path: String,
+  val marks: String,
 )
 
 /** One phone-clock alarm for the soonest medicine, pet, or rest time. */
 object AlarmClock {
   var onFired: ((Map<String, Any>) -> Unit)? = null
   var onSilenced: ((String) -> Unit)? = null
+  var onDone: (() -> Unit)? = null
+  var onOpen: ((String) -> Unit)? = null
   @Volatile var lastPath: String = ""
+  @Volatile var card: RingingCard? = null
   private val mainHandler = Handler(Looper.getMainLooper())
 
   fun pageFor(source: String): String {
@@ -51,12 +64,91 @@ object AlarmClock {
     }
   }
 
-  fun pageHint(path: String): String {
-    return when {
-      path.contains("tab=pets") -> "Silence stops the sound and opens Pets."
-      path.contains("section=gym") -> "Silence stops the sound and opens Gym."
-      else -> "Silence stops the sound and opens Medicine."
+  fun pageHint(@Suppress("UNUSED_PARAMETER") path: String): String {
+    return "Done saves the time you press it, turns the sound off, and puts the phone back. Tomorrow's alarm stays at the same time."
+  }
+
+  fun beginCard(title: String, detail: String, path: String, marks: String) {
+    card = RingingCard(title, detail, path, marks.ifBlank { "[]" })
+    AlarmActions.soundOff = false
+  }
+
+  fun clearCard() {
+    card = null
+  }
+
+  fun pathForOpen(): String {
+    val fromCard = card?.path.orEmpty()
+    if (fromCard.isNotBlank()) return fromCard
+    val fromActivity = AlarmAlertActivity.extraPath()
+    if (fromActivity.isNotBlank()) return fromActivity
+    if (AlarmOverlay.currentPath.isNotBlank()) return AlarmOverlay.currentPath
+    return lastPath
+  }
+
+  fun marksForDone(): JSONArray {
+    val raw = card?.marks?.ifBlank { null } ?: AlarmAlertActivity.extraMarks()
+    return try {
+      JSONArray(raw.ifBlank { "[]" })
+    } catch (_: Exception) {
+      JSONArray()
     }
+  }
+
+  fun queueDone(context: Context, marks: JSONArray, at: Long) {
+    if (marks.length() == 0 || at <= 0L) return
+    val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val existing = try {
+      JSONArray(prefs.getString(KEY_DONE, "[]") ?: "[]")
+    } catch (_: Exception) {
+      JSONArray()
+    }
+    val next = JSONArray()
+    for (i in 0 until existing.length()) {
+      val row = existing.optJSONObject(i) ?: continue
+      if (row.optLong("at") == at) continue
+      next.put(row)
+    }
+    next.put(JSONObject().put("marks", marks).put("at", at))
+    val capped = JSONArray()
+    val start = (next.length() - 30).coerceAtLeast(0)
+    for (i in start until next.length()) {
+      capped.put(next.opt(i))
+    }
+    prefs.edit().putString(KEY_DONE, capped.toString()).apply()
+  }
+
+  fun peekDone(context: Context): String {
+    return context.applicationContext
+      .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      .getString(KEY_DONE, "[]") ?: "[]"
+  }
+
+  fun ackDone(context: Context, at: Long) {
+    if (at <= 0L) return
+    val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val existing = try {
+      JSONArray(prefs.getString(KEY_DONE, "[]") ?: "[]")
+    } catch (_: Exception) {
+      JSONArray()
+    }
+    val next = JSONArray()
+    for (i in 0 until existing.length()) {
+      val row = existing.optJSONObject(i) ?: continue
+      if (row.optLong("at") == at) continue
+      next.put(row)
+    }
+    prefs.edit().putString(KEY_DONE, next.toString()).apply()
+  }
+
+  fun noteDone() {
+    val callback = onDone ?: return
+    mainHandler.post { callback() }
+  }
+
+  fun noteOpen(path: String) {
+    val callback = onOpen ?: return
+    mainHandler.post { callback(path) }
   }
 
   fun openPage(context: Context, path: String) {
@@ -134,11 +226,12 @@ object AlarmClock {
     }
   }
 
-  private fun presentAlert(context: Context, title: String, detail: String, path: String) {
+  private fun presentAlert(context: Context, title: String, detail: String, path: String, marks: String) {
+    beginCard(title, detail, path, marks)
     val locked = screenLocked(context)
     val covered = !locked && AlarmOverlay.show(context, title, detail, path)
-    if (!covered) AlarmAlertActivity.open(context, title, detail, path)
-    AlarmRinger.show(context, title, detail, path, fullScreen = !covered)
+    if (!covered) AlarmAlertActivity.open(context, title, detail, path, marks)
+    AlarmRinger.show(context, title, detail, path, marks, fullScreen = !covered)
   }
 
   fun replace(context: Context, raw: String) {
@@ -174,12 +267,22 @@ object AlarmClock {
     val source = due[0].source
     val tone = due[0].tone.ifBlank { "chime" }
     val uri = due[0].uri
-    val path = pageFor(source)
-    rememberPath(app, path)
+    val marks = JSONArray()
+    for (item in due) {
+      val part = try {
+        JSONArray(item.marks.ifBlank { "[]" })
+      } catch (_: Exception) {
+        JSONArray()
+      }
+      for (i in 0 until part.length()) {
+        part.opt(i)?.let { marks.put(it) }
+      }
+    }
+    val path = due.firstOrNull { it.openPath.isNotBlank() }?.openPath ?: pageFor(source)
     val endsAt = now + seconds * 1000L
     AlarmRinger.prepare(app)
     AlarmRinger.start(app, seconds, tone, uri)
-    presentAlert(app, title, detail, path)
+    presentAlert(app, title, detail, path, marks.toString())
     val payload = mapOf(
       "title" to title,
       "detail" to detail,
@@ -232,6 +335,21 @@ object AlarmClock {
     )
   }
 
+  private fun marksJson(row: JSONObject): String {
+    val asArray = row.optJSONArray("marks")
+    if (asArray != null) return asArray.toString()
+    val asText = row.optString("marks")
+    return if (asText.startsWith("[")) asText else "[]"
+  }
+
+  private fun marksArray(raw: String): JSONArray {
+    return try {
+      JSONArray(raw.ifBlank { "[]" })
+    } catch (_: Exception) {
+      JSONArray()
+    }
+  }
+
   private fun parse(raw: String): List<Planned> {
     return try {
       val array = JSONArray(raw)
@@ -250,7 +368,9 @@ object AlarmClock {
               seconds = row.optInt("seconds", 30).coerceIn(1, 300),
               source = row.optString("source").ifBlank { "health" },
               tone = row.optString("tone").ifBlank { "chime" },
-              uri = row.optString("uri")
+              uri = row.optString("uri"),
+              marks = marksJson(row),
+              openPath = row.optString("openPath")
             )
           )
         }
@@ -278,6 +398,8 @@ object AlarmClock {
           .put("source", row.source)
           .put("tone", row.tone)
           .put("uri", row.uri)
+          .put("marks", marksArray(row.marks))
+          .put("openPath", row.openPath)
       )
     }
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_QUEUE, array.toString()).apply()

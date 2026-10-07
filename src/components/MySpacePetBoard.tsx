@@ -304,6 +304,8 @@ export function MySpacePetBoard() {
   const [feedTime, setFeedTime] = useState("12:00");
   const [feedLabel, setFeedLabel] = useState("");
   const [hearing, setHearing] = useState<AlarmTone | null>(null);
+  const [petOpenNonce, setPetOpenNonce] = useState(0);
+  const seenPetOpen = useRef("");
   const stopPreviewRef = useRef<(() => void) | null>(null);
   const previewTokenRef = useRef(0);
   const firedPetAlarms = useRef(new Set<string>());
@@ -438,6 +440,48 @@ export function MySpacePetBoard() {
       stopPreviewRef.current?.();
     };
   }, []);
+
+  useEffect(() => {
+    const bump = () => setPetOpenNonce((n) => n + 1);
+    window.addEventListener("tvea-alarm-open", bump);
+    return () => window.removeEventListener("tvea-alarm-open", bump);
+  }, []);
+
+  useEffect(() => {
+    const onLogged = (event: Event) => {
+      const pets = (event as CustomEvent<{ pets?: PetState }>).detail?.pets;
+      if (!pets || typeof pets !== "object") return;
+      void save(pets);
+    };
+    window.addEventListener("tvea-alarm-logged", onLogged);
+    return () => window.removeEventListener("tvea-alarm-logged", onLogged);
+  }, [save]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const params = new URLSearchParams(window.location.search);
+    const petId = params.get("editPet") || "";
+    const eventId = params.get("editEvent") || "";
+    if (!petId || !eventId) return;
+    const token = `${petOpenNonce}:${petId}:${eventId}`;
+    if (seenPetOpen.current === token) return;
+    if (!state.pets.some((item) => item.id === petId)) return;
+    if (state.activePetId !== petId) {
+      persist({ ...state, activePetId: petId });
+      return;
+    }
+    if (!/^[A-Za-z0-9_-]+$/.test(eventId)) return;
+    seenPetOpen.current = token;
+    const timer = window.setTimeout(() => {
+      const row = document.querySelector(`[data-pet-event-id="${eventId}"]`);
+      const details = row?.closest("details");
+      if (details instanceof HTMLDetailsElement) details.open = true;
+      row?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const note = row?.querySelector("textarea");
+      if (note instanceof HTMLTextAreaElement) note.focus();
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [ready, petOpenNonce, state.activePetId, state.pets]);
 
   function stopHearing() {
     previewTokenRef.current += 1;
@@ -1006,7 +1050,7 @@ function HistoryRows({
   return (
     <ul className="ms-simple-list">
       {rows.map((row) => (
-        <li key={`${row.event.id}:${row.date}`}>
+        <li key={`${row.event.id}:${row.date}`} data-pet-event-id={row.event.id}>
           <div>
             <strong>{row.event.label || "Care"}</strong>
             <span className="panel-hint">

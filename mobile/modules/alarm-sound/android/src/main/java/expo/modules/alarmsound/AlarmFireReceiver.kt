@@ -9,7 +9,7 @@ class AlarmFireReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent?) {
     when (intent?.action) {
       ALARM_ACTION -> AlarmClock.fireDue(context)
-      ALARM_STOP -> AlarmAlertActivity.silence(context)
+      ALARM_STOP -> AlarmActions.silence()
     }
   }
 }

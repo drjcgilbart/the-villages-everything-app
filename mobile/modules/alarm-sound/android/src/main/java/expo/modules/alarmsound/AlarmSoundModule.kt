@@ -6,7 +6,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
 class AlarmSoundModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("AlarmSound")
-    Events("onAlarmFired", "onAlarmSilenced")
+    Events("onAlarmFired", "onAlarmSilenced", "onAlarmDone", "onAlarmOpen")
 
     OnCreate {
       val module = this@AlarmSoundModule
@@ -16,11 +16,19 @@ class AlarmSoundModule : Module() {
       AlarmClock.onSilenced = { path ->
         module.sendEvent("onAlarmSilenced", mapOf("path" to path))
       }
+      AlarmClock.onDone = {
+        module.sendEvent("onAlarmDone", mapOf("ok" to true))
+      }
+      AlarmClock.onOpen = { path ->
+        module.sendEvent("onAlarmOpen", mapOf("path" to path))
+      }
     }
 
     OnDestroy {
       AlarmClock.onFired = null
       AlarmClock.onSilenced = null
+      AlarmClock.onDone = null
+      AlarmClock.onOpen = null
     }
 
     Function("prepare") {
@@ -58,6 +66,17 @@ class AlarmSoundModule : Module() {
     Function("takePendingPath") {
       val context = appContext.reactContext?.applicationContext ?: return@Function ""
       AlarmClock.consumePendingPath(context)
+    }
+
+    Function("peekDoneQueue") {
+      val context = appContext.reactContext?.applicationContext ?: return@Function "[]"
+      AlarmClock.peekDone(context)
+    }
+
+    Function("ackDone") { at: Double ->
+      val context = appContext.reactContext?.applicationContext ?: return@Function null
+      AlarmClock.ackDone(context, at.toLong())
+      null
     }
 
     Function("replaceSchedule") { raw: String ->

@@ -17,9 +17,11 @@ type AlarmNative = {
   stop: () => void;
   phoneSounds: () => string;
   takePendingPath: () => string;
+  peekDoneQueue: () => string;
+  ackDone: (at: number) => void;
   replaceSchedule: (raw: string) => void;
   addListener: (
-    event: "onAlarmFired" | "onAlarmSilenced",
+    event: "onAlarmFired" | "onAlarmSilenced" | "onAlarmDone" | "onAlarmOpen",
     listener: (payload: FiredAlarm) => void
   ) => { remove: () => void };
 };
@@ -75,6 +77,8 @@ export function replaceAndroidAlarms(
     source: string;
     tone?: string;
     uri?: string;
+    marks?: unknown;
+    openPath?: string;
   }[]
 ): void {
   native()?.replaceSchedule(JSON.stringify(alarms));
@@ -92,6 +96,39 @@ export function subscribeAndroidAlarmSilence(listener: (payload: FiredAlarm) => 
   if (!mod) return () => {};
   const sub = mod.addListener("onAlarmSilenced", listener);
   return () => sub.remove();
+}
+
+export function subscribeAndroidAlarmDone(listener: () => void): () => void {
+  const mod = native();
+  if (!mod) return () => {};
+  const sub = mod.addListener("onAlarmDone", () => listener());
+  return () => sub.remove();
+}
+
+export function subscribeAndroidAlarmOpen(listener: (payload: FiredAlarm) => void): () => void {
+  const mod = native();
+  if (!mod) return () => {};
+  const sub = mod.addListener("onAlarmOpen", listener);
+  return () => sub.remove();
+}
+
+/** Presses of Done that the page has not saved yet. */
+export function peekAndroidDoneQueue(): string {
+  try {
+    const raw = native()?.peekDoneQueue() || "[]";
+    return typeof raw === "string" ? raw : "[]";
+  } catch {
+    return "[]";
+  }
+}
+
+export function ackAndroidDone(at: number): void {
+  if (!Number.isFinite(at) || at <= 0) return;
+  try {
+    native()?.ackDone(at);
+  } catch {
+    /* The page will try this press again. */
+  }
 }
 
 /** Page a silenced alarm should open, if the web view was not ready when it rang. */

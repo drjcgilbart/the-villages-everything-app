@@ -188,7 +188,19 @@ object AlarmRinger {
     mainHandler.postDelayed(task, seconds * 1000L + 250L)
   }
 
-  fun show(context: Context, title: String, detail: String, path: String = "", fullScreen: Boolean = true) {
+  /** Stop the tone only. The card and the notification stay. */
+  fun quiet() {
+    stopTone()
+  }
+
+  fun show(
+    context: Context,
+    title: String,
+    detail: String,
+    path: String = "",
+    marks: String = "[]",
+    fullScreen: Boolean = true
+  ) {
     val app = context.applicationContext
     ensureChannel(app)
     val launch = app.packageManager.getLaunchIntentForPackage(app.packageName)
@@ -227,7 +239,7 @@ object AlarmRinger {
       builder.setTimeoutAfter(15 * 60 * 1000L)
     }
     if (path.isNotBlank()) {
-      val full = AlarmAlertActivity.pending(app, safeTitle, detail.ifBlank { safeTitle }, path)
+      val full = AlarmAlertActivity.pending(app, safeTitle, detail.ifBlank { safeTitle }, path, marks)
       if (fullScreen) builder.setFullScreenIntent(full, true)
       builder.setContentIntent(full)
       val stop = Intent(app, AlarmFireReceiver::class.java).setAction(ALARM_STOP)

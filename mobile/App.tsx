@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   BackHandler,
   PermissionsAndroid,
   Platform,
@@ -35,8 +36,12 @@ import {
   startAndroidAlarm,
   stopAndroidAlarm,
   subscribeAndroidAlarms,
+  subscribeAndroidAlarmDone,
+  subscribeAndroidAlarmOpen,
   subscribeAndroidAlarmSilence,
   takePendingAlarmPath,
+  peekAndroidDoneQueue,
+  ackAndroidDone,
 } from "./modules/alarm-sound";
 import {
   endConnection,
@@ -58,11 +63,24 @@ const SITE_URL =
 const BRAND_BLUE = "#0c4a6e";
 const BRAND_GOLD = "#f59e0b";
 
+const ALARM_QUERY = new Set(["section", "editMed", "tab", "editPet", "editEvent"]);
+
+/** Health and pet links only, so an alarm cannot open some other site. */
 function alarmPage(value: unknown): string {
-  if (value === "/my-space?tab=pets") return value;
-  if (value === "/health?section=gym#my-health") return value;
-  if (value === "/health?section=meds#my-health") return value;
-  return "";
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) return "";
+  try {
+    const url = new URL(value, "https://www.thevillageseverythingapp.com");
+    if (url.pathname !== "/health" && url.pathname !== "/my-space") return "";
+    const next = new URLSearchParams();
+    url.searchParams.forEach((item, key) => {
+      if (ALARM_QUERY.has(key) && item.length > 0 && item.length <= 80) next.set(key, item);
+    });
+    const hash = url.hash === "#my-health" ? "#my-health" : "";
+    const search = next.toString();
+    return `${url.pathname}${search ? `?${search}` : ""}${hash}`;
+  } catch {
+    return "";
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,6 +160,7 @@ function Shell() {
   const pendingFire = useRef<string | null>(null);
   const pendingStop = useRef<string | null>(null);
   const pendingOpen = useRef<string | null>(null);
+  const pendingDone = useRef<string | null>(null);
   const pendingPurchases = useRef<Map<string, Purchase>>(new Map());
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -173,8 +192,35 @@ function Shell() {
   useEffect(() => {
     if (Platform.OS !== "android") return;
     let cancelled = false;
-    const missed = alarmPage(takePendingAlarmPath());
-    if (missed) pendingOpen.current = `window.location.assign(${JSON.stringify(missed)});true;`;
+    const deliver = (slot: { current: string | null }, script: string) => {
+      if (!webReady.current || !webRef.current) {
+        slot.current = script;
+        return;
+      }
+      webRef.current.injectJavaScript(script);
+    };
+    const openScript = (path: string) =>
+      `(function(){var path=${JSON.stringify(path)};var here=location.pathname+location.search+location.hash;try{window.dispatchEvent(new CustomEvent("tvea-native-alarm-open",{detail:{path:path}}));}catch(e){}if(here!==path){location.assign(path);}})();true;`;
+    const pullOpen = () => {
+      const missed = alarmPage(takePendingAlarmPath());
+      if (!missed) return;
+      deliver(pendingOpen, openScript(missed));
+    };
+    const pumpDone = () => {
+      let queue: unknown = [];
+      try {
+        queue = JSON.parse(peekAndroidDoneQueue() || "[]");
+      } catch {
+        queue = [];
+      }
+      if (!Array.isArray(queue) || queue.length === 0) return;
+      deliver(
+        pendingDone,
+        `window.dispatchEvent(new CustomEvent("tvea-native-alarm-done",{detail:${JSON.stringify({ queue })}}));true;`,
+      );
+    };
+    pullOpen();
+    pumpDone();
     (async () => {
       prepareAndroidAlarms();
       if (Number(Platform.Version) >= 33) {
@@ -186,13 +232,6 @@ function Shell() {
       }
       if (!cancelled) prepareAndroidAlarms();
     })();
-    const deliver = (slot: { current: string | null }, script: string) => {
-      if (!webReady.current || !webRef.current) {
-        slot.current = script;
-        return;
-      }
-      webRef.current.injectJavaScript(script);
-    };
     const unsubscribe = subscribeAndroidAlarms((payload) => {
       const json = JSON.stringify(payload);
       deliver(
@@ -208,10 +247,35 @@ function Shell() {
         `window.dispatchEvent(new CustomEvent("tvea-native-alarm-stop",{detail:${detail}}));true;`,
       );
     });
+    const unsubscribeDone = subscribeAndroidAlarmDone(() => {
+      pendingFire.current = null;
+      pumpDone();
+    });
+    const unsubscribeOpen = subscribeAndroidAlarmOpen((payload) => {
+      pendingFire.current = null;
+      const path = alarmPage(payload.path);
+      if (!path) return;
+      takePendingAlarmPath();
+      deliver(pendingOpen, openScript(path));
+    });
+    const doneTimer = setInterval(pumpDone, 15_000);
+    const doneSoon = setTimeout(pumpDone, 1000);
+    const doneAgain = setTimeout(pumpDone, 3000);
+    const appState = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      pullOpen();
+      pumpDone();
+    });
     return () => {
       cancelled = true;
+      clearInterval(doneTimer);
+      clearTimeout(doneSoon);
+      clearTimeout(doneAgain);
+      appState.remove();
       unsubscribe();
       unsubscribeSilence();
+      unsubscribeDone();
+      unsubscribeOpen();
     };
   }, []);
 
@@ -439,6 +503,10 @@ function Shell() {
             webRef.current?.injectJavaScript(pendingOpen.current);
             pendingOpen.current = null;
           }
+          if (pendingDone.current) {
+            webRef.current?.injectJavaScript(pendingDone.current);
+            pendingDone.current = null;
+          }
           if (pendingStop.current) {
             webRef.current?.injectJavaScript(pendingStop.current);
             pendingStop.current = null;
@@ -512,6 +580,7 @@ function Shell() {
             productId?: string;
             appAccountToken?: string;
             transactionId?: string;
+            at?: number;
           };
           let msg: ShellMsg | null = null;
           try {
@@ -534,6 +603,10 @@ function Shell() {
           }
           if (msg.type === "tvea-alarm-schedule" && Platform.OS === "android") {
             replaceAndroidAlarms(Array.isArray(msg.alarms) ? msg.alarms : []);
+            return;
+          }
+          if (msg.type === "tvea-alarm-done-ack" && Platform.OS === "android") {
+            ackAndroidDone(Number(msg.at));
             return;
           }
           if (Platform.OS !== "ios") return;

@@ -24,6 +24,14 @@ object AlarmOverlay {
   @Volatile var currentPath: String = ""
   private var view: ScrollView? = null
   private var windowManager: WindowManager? = null
+  private var silenceButton: Button? = null
+
+  fun markQuiet() {
+    silenceButton?.apply {
+      text = "Sound is off"
+      isEnabled = false
+    }
+  }
 
   fun show(context: Context, title: String, detail: String, path: String): Boolean {
     val app = context.applicationContext
@@ -48,7 +56,7 @@ object AlarmOverlay {
     card.isFocusableInTouchMode = true
     card.setOnKeyListener { _, keyCode, event ->
       if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
-        AlarmAlertActivity.silence(app)
+        AlarmActions.leave(app)
         true
       } else {
         false
@@ -63,6 +71,7 @@ object AlarmOverlay {
       true
     } catch (_: Exception) {
       currentPath = ""
+      silenceButton = null
       false
     }
   }
@@ -72,6 +81,7 @@ object AlarmOverlay {
     val card = view
     view = null
     windowManager = null
+    silenceButton = null
     currentPath = ""
     if (wm == null || card == null) return
     try {
@@ -91,7 +101,7 @@ object AlarmOverlay {
       isFocusableInTouchMode = true
       setOnKeyListener { _, keyCode, event ->
         if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
-          AlarmAlertActivity.silence(context)
+          AlarmActions.leave(context)
           true
         } else {
           false
@@ -118,23 +128,7 @@ object AlarmOverlay {
     card.addView(text(context, AlarmClock.pageHint(path), 16f, Color.parseColor("#0c4a6e"), false).apply {
       setPadding(0, dp(context, 14), 0, 0)
     })
-    val silence = Button(context).apply {
-      text = "Silence"
-      isAllCaps = false
-      setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-      setTextColor(Color.WHITE)
-      setTypeface(typeface, Typeface.BOLD)
-      minimumHeight = dp(context, 56)
-      background = GradientDrawable().apply {
-        setColor(Color.parseColor("#0c4a6e"))
-        cornerRadius = dp(context, 16).toFloat()
-      }
-      setOnClickListener { AlarmAlertActivity.silence(context) }
-    }
-    card.addView(silence, LinearLayout.LayoutParams(
-      LinearLayout.LayoutParams.MATCH_PARENT,
-      LinearLayout.LayoutParams.WRAP_CONTENT
-    ).apply { topMargin = dp(context, 22) })
+    silenceButton = AlarmActions.addChoices(context, card, context)
     root.addView(card, LinearLayout.LayoutParams(
       LinearLayout.LayoutParams.MATCH_PARENT,
       LinearLayout.LayoutParams.WRAP_CONTENT

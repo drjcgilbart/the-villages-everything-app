@@ -1127,6 +1127,25 @@ export function MySpaceHealthBoard() {
     return () => window.removeEventListener("tvea-alarm-open", fromAlarm);
   }, []);
 
+  const [alarmEditNonce, setAlarmEditNonce] = useState(0);
+  const seenAlarmEdit = useRef("");
+
+  useEffect(() => {
+    const bump = () => setAlarmEditNonce((n) => n + 1);
+    window.addEventListener("tvea-alarm-open", bump);
+    return () => window.removeEventListener("tvea-alarm-open", bump);
+  }, []);
+
+  useEffect(() => {
+    const onLogged = (event: Event) => {
+      const health = (event as CustomEvent<{ health?: HealthState }>).detail?.health;
+      if (!health || typeof health !== "object") return;
+      void save(health);
+    };
+    window.addEventListener("tvea-alarm-logged", onLogged);
+    return () => window.removeEventListener("tvea-alarm-logged", onLogged);
+  }, [save]);
+
   function goToHealthTab(id: HealthTab) {
     setTab(id);
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 860px)").matches) {
@@ -1777,6 +1796,24 @@ export function MySpaceHealthBoard() {
       dismissAlarm({ source: "health" });
     }
   }
+
+  useEffect(() => {
+    if (!ready) return;
+    const id = new URLSearchParams(window.location.search).get("editMed") || "";
+    if (!id) return;
+    const token = `${alarmEditNonce}:${id}`;
+    if (seenAlarmEdit.current === token) return;
+    const med = state.medications.find((item) => item.id === id);
+    if (!med) return;
+    seenAlarmEdit.current = token;
+    setTab("meds");
+    setHealthMenuOpen(false);
+    startEditMed(med);
+    const timer = window.setTimeout(() => {
+      document.getElementById(`ms-med-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [ready, alarmEditNonce, state.medications]);
 
   function startEditMed(med: Medication) {
     setEditingMedId(med.id);

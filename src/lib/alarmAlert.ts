@@ -19,19 +19,40 @@ const ALARM_PAGES: Record<AlarmSource, string> = {
 
 const ALARM_PATHS = new Set<string>(Object.values(ALARM_PAGES));
 
+const ALARM_QUERY = new Set(["section", "editMed", "tab", "editPet", "editEvent"]);
+
+/** Keep phone Open on this site's health and pet pages. */
+export function safeAlarmPath(path: string | undefined): string {
+  if (typeof window === "undefined" || !path) return "";
+  try {
+    const url = new URL(path, window.location.origin);
+    if (url.origin !== window.location.origin) return "";
+    if (url.pathname !== "/health" && url.pathname !== "/my-space") return "";
+    const next = new URLSearchParams();
+    url.searchParams.forEach((value, key) => {
+      if (ALARM_QUERY.has(key) && value.length <= 80) next.set(key, value);
+    });
+    const search = next.toString();
+    return `${url.pathname}${search ? `?${search}` : ""}${url.hash}`;
+  } catch {
+    return "";
+  }
+}
+
 /** Open the board a phone alarm belongs to. Desktop alarms do not call this. */
 export function openAlarmPage(path: string | undefined): void {
-  if (typeof window === "undefined" || !path || !ALARM_PATHS.has(path)) return;
+  const safe = safeAlarmPath(path) || (path && ALARM_PATHS.has(path) ? path : "");
+  if (typeof window === "undefined" || !safe) return;
   const win = window as Window & { __tveaAlarmGoing?: string };
-  if (win.__tveaAlarmGoing === path) return;
+  if (win.__tveaAlarmGoing === safe) return;
   const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  if (here === path) {
+  if (here === safe) {
     window.dispatchEvent(new Event("tvea-alarm-open"));
-    win.__tveaAlarmGoing = path;
+    win.__tveaAlarmGoing = safe;
     return;
   }
-  win.__tveaAlarmGoing = path;
-  window.location.assign(path);
+  win.__tveaAlarmGoing = safe;
+  window.location.assign(safe);
 }
 
 export function alarmPageFor(source: AlarmSource | undefined): string {

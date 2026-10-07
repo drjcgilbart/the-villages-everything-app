@@ -1,4 +1,7 @@
+import { type AlarmMark } from "@/lib/alarmComplete";
 import { todayKeyEastern, type AlarmTone } from "@/lib/mySpaceStorage";
+
+export type { AlarmMark };
 
 export const GYM_REST_KEY = "tvea-gym-rest";
 
@@ -11,6 +14,10 @@ export type ScheduledAlarm = {
   source: "health" | "pet" | "gym";
   tone: AlarmTone;
   uri?: string;
+  /** What Done should check off. The dose or task clock is not in here as a new time. */
+  marks: AlarmMark[];
+  /** Page Open should show, including the item to edit. */
+  openPath: string;
 };
 
 const ZONE = "America/New_York";
@@ -112,6 +119,8 @@ export function collectScheduledAlarms(
       seconds: 10,
       source: "gym",
       tone: "chime",
+      marks: [{ kind: "gym" }],
+      openPath: "/health?section=gym#my-health",
     });
   }
   alarms.sort((a, b) => a.at - b.at);
@@ -135,14 +144,24 @@ function medicineAlarms(board: HealthBoard | null | undefined, now: number): Sch
       const tone = med.alarmSound || board.medAlarmSound || "chime";
       const uri = tone === "phone" ? med.alarmUri || board.medAlarmUri || "" : "";
       const name = String(med.name || "Medication");
+      const dueDate = dateOf(at);
+      const mark = {
+        kind: "med" as const,
+        medId: String(med.id),
+        doseId: String(dose.id),
+        scheduledTime: clock,
+        dueDate,
+      };
       const existing = grouped.get(at);
       if (existing) {
         existing.detail = `${existing.detail.replace(/\.$/, "")}, ${name}.`;
         existing.seconds = Math.max(existing.seconds, seconds);
         existing.id = `${existing.id}+${med.id}:${dose.id}`;
+        existing.marks.push(mark);
+        existing.openPath = medOpenPath(existing.marks);
       } else {
         grouped.set(at, {
-          id: `med:${dateOf(at)}:${med.id}:${dose.id}`,
+          id: `med:${dueDate}:${med.id}:${dose.id}`,
           at,
           title: "Medicine alarm",
           detail: `${formatClock(clock)} — ${name}. Not marked taken yet.`,
@@ -150,6 +169,8 @@ function medicineAlarms(board: HealthBoard | null | undefined, now: number): Sch
           source: "health",
           tone,
           uri,
+          marks: [mark],
+          openPath: medOpenPath([mark]),
         });
       }
     }
@@ -182,8 +203,11 @@ function petAlarms(board: PetBoard | null | undefined, now: number): ScheduledAl
         if (at == null) continue;
         const when = formatClock(clock);
         const label = event.label ? ` (${event.label})` : "";
+        const dueDate = dateOf(at);
+        const petId = String(pet.id || "");
+        const eventId = String(event.id || "");
         alarms.push({
-          id: `pet:${dateOf(at)}:${event.id}`,
+          id: `pet:${dueDate}:${eventId}`,
           at,
           title: `${name} ${row.word.toLowerCase()} alarm`,
           detail: `${name} — ${row.word} at ${when}${label}`,
@@ -191,11 +215,23 @@ function petAlarms(board: PetBoard | null | undefined, now: number): ScheduledAl
           source: "pet",
           tone: sound,
           uri,
+          marks: [{ kind: "pet", petId, eventId, dueDate }],
+          openPath: `/my-space?tab=pets&editPet=${encodeURIComponent(petId)}&editEvent=${encodeURIComponent(eventId)}`,
         });
       }
     }
   }
   return alarms;
+}
+
+function medOpenPath(marks: AlarmMark[]): string {
+  const ids = [
+    ...new Set(marks.flatMap((mark) => (mark.kind === "med" && mark.medId ? [mark.medId] : []))),
+  ];
+  if (ids.length === 1) {
+    return `/health?section=meds&editMed=${encodeURIComponent(ids[0])}#my-health`;
+  }
+  return "/health?section=meds#my-health";
 }
 
 function enabledDoses(med: Medication): DoseTime[] {

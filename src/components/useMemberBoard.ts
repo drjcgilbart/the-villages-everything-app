@@ -19,6 +19,7 @@ export function useMemberBoard<T>(
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadGen = useRef(0);
   const scopedKey =
     opts?.localKey && memberId ? `${opts.localKey}::${memberId}` : null;
 
@@ -53,6 +54,7 @@ export function useMemberBoard<T>(
       return;
     }
     let cancelled = false;
+    const gen = ++loadGen.current;
     fetch("/api/members/space/boards", {
       cache: "no-store",
       credentials: "include",
@@ -61,6 +63,10 @@ export function useMemberBoard<T>(
       .then(
         (json: { boards?: Record<string, T>; memberId?: string } | null) => {
           if (cancelled) return;
+          if (gen !== loadGen.current) {
+            setReady(true);
+            return;
+          }
           const id = json?.memberId ? String(json.memberId) : null;
           setMemberId(id);
           const server = json?.boards?.[board];
@@ -90,6 +96,7 @@ export function useMemberBoard<T>(
 
   const save = useCallback(
     async (next: T) => {
+      loadGen.current += 1;
       setValue(next);
       if (scopedKey) writeJsonStorage(scopedKey, next);
       if (typeof window !== "undefined") {

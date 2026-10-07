@@ -18,10 +18,12 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 /**
- * Full-screen alarm card. It covers whatever is on the phone, names the alarm,
- * and Silence stops the sound and opens that alarm's page.
+ * Lock-screen alarm card. Done logs this press and returns to the lock screen.
+ * Silence only stops the sound. Open asks to unlock and then shows the item.
  */
 class AlarmAlertActivity : Activity() {
+  private var silenceButton: Button? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     showOverLockScreen()
@@ -34,9 +36,9 @@ class AlarmAlertActivity : Activity() {
     AlarmOverlay.hide()
   }
 
-  @Deprecated("Alarm silence is the back action.")
+  @Deprecated("Back closes the card without logging.")
   override fun onBackPressed() {
-    silence(this)
+    AlarmActions.leave(this)
   }
 
   override fun onNewIntent(intent: Intent) {
@@ -58,8 +60,7 @@ class AlarmAlertActivity : Activity() {
       @Suppress("DEPRECATION")
       window.addFlags(
         WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-          WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-          WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+          WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
       )
     }
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -69,6 +70,8 @@ class AlarmAlertActivity : Activity() {
     val title = source?.getStringExtra(EXTRA_TITLE).orEmpty().ifBlank { "Alarm" }
     val detail = source?.getStringExtra(EXTRA_DETAIL).orEmpty()
     val path = source?.getStringExtra(EXTRA_PATH).orEmpty()
+    val marks = source?.getStringExtra(EXTRA_MARKS).orEmpty().ifBlank { "[]" }
+    if (AlarmClock.card == null) AlarmClock.beginCard(title, detail, path, marks)
     val root = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER
@@ -95,26 +98,9 @@ class AlarmAlertActivity : Activity() {
     card.addView(label(AlarmClock.pageHint(path), 16f, Color.parseColor("#0c4a6e"), false).apply {
       setPadding(0, dp(14), 0, 0)
     })
-    val silence = Button(this).apply {
-      text = "Silence"
-      isAllCaps = false
-      setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-      setTextColor(Color.WHITE)
-      setTypeface(typeface, Typeface.BOLD)
-      minimumHeight = dp(56)
-      background = GradientDrawable().apply {
-        setColor(Color.parseColor("#0c4a6e"))
-        cornerRadius = dp(16).toFloat()
-      }
-      setPadding(dp(18), dp(16), dp(18), dp(16))
-      setOnClickListener { silence(this@AlarmAlertActivity) }
-    }
-    val buttonWrap = LinearLayout.LayoutParams(
-      LinearLayout.LayoutParams.MATCH_PARENT,
-      LinearLayout.LayoutParams.WRAP_CONTENT
-    ).apply { topMargin = dp(22) }
-    card.addView(silence, buttonWrap)
+    silenceButton = AlarmActions.addChoices(this, card, this)
     val scroll = ScrollView(this)
+    scroll.isFocusableInTouchMode = true
     scroll.addView(card, LinearLayout.LayoutParams(
       LinearLayout.LayoutParams.MATCH_PARENT,
       LinearLayout.LayoutParams.WRAP_CONTENT
@@ -143,10 +129,24 @@ class AlarmAlertActivity : Activity() {
     const val EXTRA_TITLE = "tvea_alarm_title"
     const val EXTRA_DETAIL = "tvea_alarm_detail"
     const val EXTRA_PATH = "tvea_alarm_path"
+    const val EXTRA_MARKS = "tvea_alarm_marks"
     private var current: AlarmAlertActivity? = null
 
-    fun open(context: Context, title: String, detail: String, path: String) {
-      val intent = intent(context, title, detail, path).addFlags(
+    fun foreground(): AlarmAlertActivity? = current
+
+    fun extraPath(): String = current?.intent?.getStringExtra(EXTRA_PATH).orEmpty()
+
+    fun extraMarks(): String = current?.intent?.getStringExtra(EXTRA_MARKS).orEmpty().ifBlank { "[]" }
+
+    fun markQuiet() {
+      current?.silenceButton?.apply {
+        text = "Sound is off"
+        isEnabled = false
+      }
+    }
+
+    fun open(context: Context, title: String, detail: String, path: String, marks: String) {
+      val intent = intent(context, title, detail, path, marks).addFlags(
         Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
       )
       try {
@@ -160,29 +160,19 @@ class AlarmAlertActivity : Activity() {
       current?.finish()
     }
 
-    fun silence(context: Context) {
-      val path = current?.intent?.getStringExtra(EXTRA_PATH).orEmpty()
-        .ifBlank { AlarmOverlay.currentPath }
-        .ifBlank { AlarmClock.lastPath }
-      AlarmRinger.stop(context.applicationContext)
-      AlarmOverlay.hide()
-      close()
-      if (path.isNotBlank()) AlarmClock.openPage(context.applicationContext, path)
-      AlarmClock.noteSilenced(path)
-    }
-
-    fun intent(context: Context, title: String, detail: String, path: String): Intent {
+    fun intent(context: Context, title: String, detail: String, path: String, marks: String): Intent {
       return Intent(context, AlarmAlertActivity::class.java)
         .putExtra(EXTRA_TITLE, title)
         .putExtra(EXTRA_DETAIL, detail)
         .putExtra(EXTRA_PATH, path)
+        .putExtra(EXTRA_MARKS, marks)
     }
 
-    fun pending(context: Context, title: String, detail: String, path: String): PendingIntent {
+    fun pending(context: Context, title: String, detail: String, path: String, marks: String): PendingIntent {
       return PendingIntent.getActivity(
         context,
         71023,
-        intent(context, title, detail, path),
+        intent(context, title, detail, path, marks),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
       )
     }

@@ -440,6 +440,19 @@ export function MySpaceGymBoard() {
   }, [restClock?.phase, restClock?.endsAt]);
 
   useEffect(() => {
+    const onDone = () => {
+      restGen.current += 1;
+      restClockRef.current = null;
+      setRestClock(null);
+      const id = restAlarmId.current;
+      restAlarmId.current = null;
+      if (id) dismissAlarm({ id });
+    };
+    window.addEventListener("tvea-gym-rest-done", onDone);
+    return () => window.removeEventListener("tvea-gym-rest-done", onDone);
+  }, []);
+
+  useEffect(() => {
     if (restClock?.phase !== "alarm") return;
     const gen = restGen.current;
     if (androidShellPlaysAlarms()) return;
