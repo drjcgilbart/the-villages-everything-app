@@ -193,6 +193,16 @@ object AlarmRinger {
     stopTone()
   }
 
+  /** Remove the top banner. The tone keeps playing until stop or quiet. */
+  fun hideNotice(context: Context?) {
+    if (context == null) return
+    try {
+      notifier(context.applicationContext)?.cancel(NOTIF_ID)
+    } catch (_: Exception) {
+      /* already gone */
+    }
+  }
+
   fun show(
     context: Context,
     title: String,

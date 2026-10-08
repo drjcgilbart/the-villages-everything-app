@@ -19,7 +19,8 @@ import android.widget.TextView
 
 /**
  * Lock-screen alarm card. Done logs this press and returns to the lock screen.
- * Silence only stops the sound. Open asks to unlock and then shows the item.
+ * Skip closes this alarm without logging it. Silence only stops the sound.
+ * Open asks to unlock and then shows the item.
  */
 class AlarmAlertActivity : Activity() {
   private var silenceButton: Button? = null
@@ -29,11 +30,13 @@ class AlarmAlertActivity : Activity() {
     showOverLockScreen()
     current = this
     setContentView(buildView(intent))
+    AlarmRinger.hideNotice(this)
   }
 
   override fun onResume() {
     super.onResume()
     AlarmOverlay.hide()
+    AlarmRinger.hideNotice(this)
   }
 
   @Deprecated("Back closes the card without logging.")

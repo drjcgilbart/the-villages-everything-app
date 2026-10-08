@@ -11,9 +11,10 @@ import android.widget.Button
 import android.widget.LinearLayout
 
 /**
- * The three alarm buttons.
+ * Alarm buttons on the big card.
  * Done logs the press and leaves the phone where it was.
- * Silence only turns the sound off.
+ * Skip turns the sound off, logs nothing, and leaves the next alarm on its clock.
+ * Silence only turns the sound off and leaves the card up.
  * Open unlocks, when needed, and shows that item.
  */
 object AlarmActions {
@@ -31,12 +32,17 @@ object AlarmActions {
     AlarmClock.noteDone()
   }
 
-  /** Stop the tone and leave the card and the notification up. */
+  /** Stop the tone and leave the card up. Nothing is logged. */
   fun silence() {
     AlarmRinger.quiet()
     soundOff = true
     AlarmOverlay.markQuiet()
     AlarmAlertActivity.markQuiet()
+  }
+
+  /** Stop this ring, close the card, and log nothing. Later alarms stay scheduled. */
+  fun skip(context: Context) {
+    leave(context)
   }
 
   fun open(context: Context) {
@@ -78,10 +84,12 @@ object AlarmActions {
 
   fun addChoices(context: Context, card: LinearLayout, host: Context): Button {
     val done = button(context, "Done — log this time", filled = true) { done(host) }
+    val skipButton = button(context, "Skip this alarm", filled = false) { skip(host) }
     val silence = button(context, if (soundOff) "Sound is off" else "Silence", filled = false) { silence() }
     if (soundOff) silence.isEnabled = false
     val open = button(context, "Open to add details", filled = false) { open(host) }
     card.addView(done, gap(context, 22))
+    card.addView(skipButton, gap(context, 12))
     card.addView(silence, gap(context, 12))
     card.addView(open, gap(context, 12))
     return silence

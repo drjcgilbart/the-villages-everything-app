@@ -65,7 +65,7 @@ object AlarmClock {
   }
 
   fun pageHint(@Suppress("UNUSED_PARAMETER") path: String): String {
-    return "Done saves the time you press it, turns the sound off, and puts the phone back. Tomorrow's alarm stays at the same time."
+    return "Done saves the time you press it, turns the sound off, and puts the phone back. Tomorrow's alarm stays at the same time. Skip turns the sound off and closes this one without logging it. The next alarm still rings when it is time."
   }
 
   fun beginCard(title: String, detail: String, path: String, marks: String) {
@@ -230,8 +230,15 @@ object AlarmClock {
     beginCard(title, detail, path, marks)
     val locked = screenLocked(context)
     val covered = !locked && AlarmOverlay.show(context, title, detail, path)
-    if (!covered) AlarmAlertActivity.open(context, title, detail, path, marks)
-    AlarmRinger.show(context, title, detail, path, marks, fullScreen = !covered)
+    if (covered) {
+      AlarmRinger.hideNotice(context)
+      return
+    }
+    AlarmAlertActivity.open(context, title, detail, path, marks)
+    AlarmRinger.show(context, title, detail, path, marks, fullScreen = true)
+    mainHandler.post {
+      if (AlarmAlertActivity.foreground() != null) AlarmRinger.hideNotice(context)
+    }
   }
 
   fun replace(context: Context, raw: String) {
