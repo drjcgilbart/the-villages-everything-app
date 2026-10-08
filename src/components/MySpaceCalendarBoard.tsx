@@ -227,7 +227,7 @@ export function MySpaceCalendarBoard() {
     true
   );
   const health = useMemberBoard<Record<string, unknown>>("health", {}, true);
-  const pets = useMemberBoard<{ pets?: unknown[] }>("pets", { pets: [] }, true);
+  const pets = useMemberBoard<{ pets?: unknown[]; completions?: Record<string, unknown> }>("pets", { pets: [] }, true);
   const [view, setView] = useState<CalView>("week");
   const [anchor, setAnchor] = useState(todayKey());
   const [form, setForm] = useState(emptyTask(todayKey()));
@@ -239,6 +239,11 @@ export function MySpaceCalendarBoard() {
   const [composer, setComposer] = useState<{ date: string; time: string } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [starredClubs, setStarredClubs] = useState<OverlayEvent[]>([]);
+
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get("view");
+    if (asked === "day" || asked === "three" || asked === "week" || asked === "month") setView(asked);
+  }, []);
 
   const today = todayKey();
   const range = viewRange(anchor, view);
@@ -543,8 +548,13 @@ export function MySpaceCalendarBoard() {
       return;
     }
     const src = detail.source;
+    const undoCheck =
+      detail.done &&
+      (src.board === "pets" ||
+        (src.board === "health" && src.extra !== "meal" && src.extra !== "exercise"));
     if (
       src.repeats &&
+      !undoCheck &&
       !window.confirm("This repeats. Delete removes it from every day on your planner.")
     ) {
       return;
@@ -608,7 +618,13 @@ export function MySpaceCalendarBoard() {
         const raw = { ...(health.value || {}) } as Record<string, unknown>;
         const list = (key: string) =>
           Array.isArray(raw[key]) ? (raw[key] as { id?: string }[]) : [];
-        if (src.extra === "meal") raw.meals = list("meals").filter((row) => row.id !== src.id);
+        if (undoCheck) {
+          raw.medicationLogs = list("medicationLogs").filter((row) => {
+            const log = row as { medicationId?: string; date?: string; scheduledTime?: string; doseTimeId?: string };
+            if (log.medicationId !== src.id || log.date !== detail.date) return true;
+            return log.scheduledTime !== src.extra && log.doseTimeId !== src.extra;
+          });
+        } else if (src.extra === "meal") raw.meals = list("meals").filter((row) => row.id !== src.id);
         else if (src.extra === "exercise") {
           raw.exercises = list("exercises").filter((row) => row.id !== src.id);
         } else {
@@ -623,23 +639,34 @@ export function MySpaceCalendarBoard() {
       } else if (src.board === "pets") {
         if (!pets.ready) throw new Error("Pets are still loading. Try again.");
         const current = pets.value || {};
-        const list = Array.isArray(current.pets) ? current.pets : [];
-        await pets.save({
-          ...current,
-          pets: list.map((pet) => {
-            const row = pet as {
-              id?: string;
-              walks?: { id?: string }[];
-              feeds?: { id?: string }[];
-            };
-            if (row.id !== src.id) return pet;
-            return {
-              ...row,
-              walks: (row.walks || []).filter((event) => event.id !== src.extra),
-              feeds: (row.feeds || []).filter((event) => event.id !== src.extra),
-            };
-          }),
-        });
+        if (undoCheck) {
+          const completions = { ...(current.completions || {}) };
+          const key = `${src.extra}:${detail.date}`;
+          const prev = completions[key];
+          completions[key] =
+            prev && typeof prev === "object"
+              ? { ...prev, done: false, doneAt: undefined }
+              : { done: false, note: "" };
+          await pets.save({ ...current, completions });
+        } else {
+          const list = Array.isArray(current.pets) ? current.pets : [];
+          await pets.save({
+            ...current,
+            pets: list.map((pet) => {
+              const row = pet as {
+                id?: string;
+                walks?: { id?: string }[];
+                feeds?: { id?: string }[];
+              };
+              if (row.id !== src.id) return pet;
+              return {
+                ...row,
+                walks: (row.walks || []).filter((event) => event.id !== src.extra),
+                feeds: (row.feeds || []).filter((event) => event.id !== src.extra),
+              };
+            }),
+          });
+        }
       } else if (src.board === "club") {
         const res = await fetch("/api/members/space", { cache: "no-store", credentials: "include" });
         const data = await res.json();
@@ -788,7 +815,7 @@ export function MySpaceCalendarBoard() {
               >
                 <em>{Number(iso.slice(8, 10))}</em>
                 {evs.slice(0, 3).map((e) => (
-                  <span key={e.id} className={`ms-cal-chip kind-${e.kind}`}>
+                  <span key={e.id} className={`ms-cal-chip kind-${e.kind}${e.done ? " is-done" : ""}`}>
                     {e.title}
                   </span>
                 ))}
@@ -827,7 +854,7 @@ export function MySpaceCalendarBoard() {
                   <button
                     key={e.id}
                     type="button"
-                    className={`ms-cal-chip kind-${e.kind}`}
+                    className={`ms-cal-chip kind-${e.kind}${e.done ? " is-done" : ""}`}
                     onClick={(ev) => {
                       ev.stopPropagation();
                       openDetail(e);
@@ -955,7 +982,15 @@ export function MySpaceCalendarBoard() {
                         disabled={detailBusy}
                         onClick={() => void deleteDetail()}
                       >
-                        {detailBusy ? "Deleting…" : "Delete"}
+                        {detailBusy
+                          ? "Saving…"
+                          : detail.done &&
+                              (detail.source?.board === "pets" ||
+                                (detail.source?.board === "health" &&
+                                  detail.source.extra !== "meal" &&
+                                  detail.source.extra !== "exercise"))
+                            ? "Undo"
+                            : "Delete"}
                       </button>
                     ) : null}
                   </div>

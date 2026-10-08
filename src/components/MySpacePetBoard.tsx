@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   ALARM_TONE_OPTIONS,
   androidShellPlaysAlarms,
@@ -250,14 +251,6 @@ function petAge(birthday: string): string {
   return rem ? `${years}y ${rem}mo` : `${years} year${years === 1 ? "" : "s"}`;
 }
 
-function formatPetTime(hhmm: string): string {
-  if (!/^\d{2}:\d{2}$/.test(hhmm || "")) return hhmm || "";
-  const [h, m] = hhmm.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = ((h + 11) % 12) + 1;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
 function reorderEvents(events: PetEvent[], fromId: string, toId: string): PetEvent[] {
   if (fromId === toId) return events;
   const from = events.findIndex((e) => e.id === fromId);
@@ -345,28 +338,6 @@ export function MySpacePetBoard() {
       completions: { ...state.completions, [key]: { ...cur, ...patch } },
     });
     if (patch.done) dismissAlarm({ source: "pet" });
-  }
-
-  function historyFor(events: PetEvent[]) {
-    const ids = new Set(events.map((event) => event.id));
-    const rows: { date: string; event: PetEvent; completion: Completion }[] = [];
-    for (const [key, raw] of Object.entries(state.completions)) {
-      const done = asCompletion(raw);
-      if (!done.done) continue;
-      const cut = key.lastIndexOf(":");
-      if (cut < 0) continue;
-      const eventId = key.slice(0, cut);
-      if (!ids.has(eventId)) continue;
-      const event = events.find((item) => item.id === eventId);
-      if (!event) continue;
-      rows.push({ date: key.slice(cut + 1), event, completion: done });
-    }
-    rows.sort(
-      (a, b) =>
-        b.date.localeCompare(a.date) ||
-        (b.completion.doneAt || "").localeCompare(a.completion.doneAt || "")
-    );
-    return rows.slice(0, 60);
   }
 
   useEffect(() => {
@@ -887,8 +858,6 @@ export function MySpacePetBoard() {
               }}
               onPatch={(next) => patchPet({ ...pet, walks: next })}
               onCompletion={setCompletion}
-              history={historyFor(pet.walks)}
-              today={today}
               trackBowel={pet.species === "dog"}
             />
             <EventColumn
@@ -914,10 +883,15 @@ export function MySpacePetBoard() {
               }}
               onPatch={(next) => patchPet({ ...pet, feeds: next })}
               onCompletion={setCompletion}
-              history={historyFor(pet.feeds)}
-              today={today}
             />
           </div>
+          <p className="panel-hint">
+            Checked-off alarms are on your personal planner. The month fits on the phone. Tap a date,
+            then tap that alarm.
+          </p>
+          <Link href="/calendar?view=month#my-calendar" className="btn btn-primary btn-sm">
+            Alarm history
+          </Link>
 
           <div className="about-panel ms-module">
             <h3 style={{ marginTop: 0 }}>⏰ Alarms for {pet.name}</h3>
@@ -1029,85 +1003,6 @@ export function MySpacePetBoard() {
   );
 }
 
-function historyDayLabel(date: string, today: string) {
-  if (date === today) return "Today";
-  const parsed = new Date(`${date}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return date;
-  return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function HistoryRows({
-  rows,
-  today,
-  trackBowel,
-  onCompletion,
-}: {
-  rows: { date: string; event: PetEvent; completion: Completion }[];
-  today: string;
-  trackBowel?: boolean;
-  onCompletion: (id: string, patch: Partial<Completion>, date?: string) => void;
-}) {
-  return (
-    <ul className="ms-simple-list">
-      {rows.map((row) => (
-        <li key={`${row.event.id}:${row.date}`} data-pet-event-id={row.event.id}>
-          <div>
-            <strong>{row.event.label || "Care"}</strong>
-            <span className="panel-hint">
-              {" "}
-              · {historyDayLabel(row.date, today)}
-              {row.event.time ? ` · planned ${formatPetTime(row.event.time)}` : ""}
-            </span>
-            {trackBowel ? (
-              <label className="ms-check ms-pet-bm">
-                <input
-                  type="checkbox"
-                  checked={!!row.completion.bowelMovement}
-                  onChange={(e) =>
-                    onCompletion(
-                      row.event.id,
-                      { done: true, bowelMovement: e.target.checked },
-                      row.date
-                    )
-                  }
-                />
-                Bowel movement
-              </label>
-            ) : null}
-            <textarea
-              rows={2}
-              value={row.completion.note}
-              onChange={(e) =>
-                onCompletion(
-                  row.event.id,
-                  { done: true, note: e.target.value.slice(0, 500) },
-                  row.date
-                )
-              }
-              placeholder="Extra notes"
-            />
-          </div>
-          <input
-            type="time"
-            className="ms-inline-time"
-            value={row.completion.doneAt || row.event.time}
-            onChange={(e) =>
-              onCompletion(row.event.id, { done: true, doneAt: e.target.value }, row.date)
-            }
-          />
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => onCompletion(row.event.id, { done: false, doneAt: undefined }, row.date)}
-          >
-            Undo
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function EventColumn({
   title,
   events,
@@ -1121,8 +1016,6 @@ function EventColumn({
   onAdd,
   onPatch,
   onCompletion,
-  history,
-  today,
   trackBowel,
 }: {
   title: string;
@@ -1137,8 +1030,6 @@ function EventColumn({
   onAdd: () => void;
   onPatch: (next: PetEvent[]) => void;
   onCompletion: (id: string, patch: Partial<Completion>, date?: string) => void;
-  history: { date: string; event: PetEvent; completion: Completion }[];
-  today: string;
   trackBowel?: boolean;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -1160,9 +1051,6 @@ function EventColumn({
   }
 
   const openEvents = events.filter((ev) => !completion(ev.id).done);
-  const [showEarlier, setShowEarlier] = useState(false);
-  const todayHistory = history.filter((row) => row.date === today);
-  const earlierHistory = history.filter((row) => row.date !== today);
 
   return (
     <div className="about-panel ms-module">
@@ -1171,7 +1059,7 @@ function EventColumn({
         <p className="panel-hint">Drag the ⋮⋮ handle to reorder. Arrow keys work on the handle too.</p>
       ) : null}
       {openEvents.length === 0 ? (
-        <p className="panel-hint">Nothing left for today. Checked items are in History.</p>
+        <p className="panel-hint">Nothing left for today. Checked items are on your planner.</p>
       ) : null}
       <div className={`ms-pet-event-list ${draggingId ? "is-reordering" : ""}`}>
         {openEvents.map((ev) => {
@@ -1314,33 +1202,6 @@ function EventColumn({
           Add
         </button>
       </form>
-      <details className="ms-pet-history">
-        <summary>History · today ({todayHistory.length})</summary>
-        {todayHistory.length === 0 ? (
-          <p className="panel-hint">Nothing checked off today yet.</p>
-        ) : (
-          <HistoryRows rows={todayHistory} today={today} trackBowel={trackBowel} onCompletion={onCompletion} />
-        )}
-        {earlierHistory.length > 0 ? (
-          <>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setShowEarlier((open) => !open)}
-            >
-              {showEarlier ? "Hide earlier days" : `Show earlier days (${earlierHistory.length})`}
-            </button>
-            {showEarlier ? (
-              <HistoryRows
-                rows={earlierHistory}
-                today={today}
-                trackBowel={trackBowel}
-                onCompletion={onCompletion}
-              />
-            ) : null}
-          </>
-        ) : null}
-      </details>
     </div>
   );
 }

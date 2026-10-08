@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   androidShellPlaysAlarms,
   clockIsDue,
@@ -3154,6 +3155,12 @@ export function MySpaceHealthBoard() {
           )}
 
           <h4>Dose history</h4>
+          <p className="panel-hint">
+            Taken doses also sit on your personal planner. Open a date, then the dose.
+          </p>
+          <Link href="/calendar?view=month#my-calendar" className="btn btn-ghost btn-sm">
+            Open planner
+          </Link>
           <HistoryTabs
             value={hist.meds}
             onChange={(r) => setHist({ ...hist, meds: r })}
