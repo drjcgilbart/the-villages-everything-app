@@ -383,8 +383,9 @@ function addressFromMapsPlace(text: string): string {
   } catch {
     /* Plus signs are already spaces. */
   }
-  if (!/\d/.test(decoded)) return "";
-  return clip(decoded.trim(), 180);
+  const cleaned = decoded.trim();
+  if (!/\d/.test(cleaned) || firstCoords(cleaned)) return "";
+  return clip(cleaned, 180);
 }
 
 function addressFromMapQuery(text: string): string {
@@ -419,15 +420,18 @@ function looseAddr(value: string) {
 function isAddressLabel(text: string, address: string) {
   const a = looseAddr(text);
   const b = looseAddr(address);
-  if (!a || !b) return false;
-  return a === b || a.startsWith(b) || b.startsWith(a);
+  return !!a && a === b;
+}
+
+function isCoordinateLabel(text: string) {
+  return !!firstCoords(text) || /\d+\s*°/.test(text);
 }
 
 function noteFrom(title: string, body: string, address: string) {
+  const fromTitle = title.trim();
+  if (fromTitle && !isCoordinateLabel(fromTitle)) return clip(fromTitle, 160);
   const fromBody = scrubNote(body, address);
-  if (fromBody && !isAddressLabel(fromBody, address)) return clip(fromBody, 160);
-  const fromTitle = scrubNote(title, address);
-  if (fromTitle && !isAddressLabel(fromTitle, address)) return clip(fromTitle, 160);
+  if (fromBody && !isAddressLabel(fromBody, address) && !isCoordinateLabel(fromBody)) return clip(fromBody, 160);
   return "";
 }
 
@@ -546,9 +550,10 @@ function keepNoteToImport(note: KeepNote, fallback: TourHoliday): PinImport {
   const list = Array.isArray(note.listContent) ? note.listContent.map((item) => clip(item?.text, 500)).filter(Boolean) : [];
   const placed = list.filter((line) => hasPlace(line));
   if (placed.length >= 2) return withTitle(mergeImports(placed.map((line) => textToPlace("", line, holiday))), title);
-  const body = [typeof note.textContent === "string" ? note.textContent : "", ...list, annotationBlob(note.annotations)]
-    .filter(Boolean)
-    .join("\n");
+  const located = annotationBlob(note.annotations);
+  const prose = typeof note.textContent === "string" ? note.textContent : "";
+  // A Keep map chip already locates the house. The short link in the note body is the same place.
+  const body = [located && hasPlace(located) ? "" : prose, ...list, located].filter(Boolean).join("\n");
   return textToPlace(title, body, holiday);
 }
 
@@ -806,7 +811,7 @@ async function resolveMapLink(url: string): Promise<{ latitude: number; longitud
     const res = await fetch(url, {
       redirect: "follow",
       headers: { Accept: "text/html", "User-Agent": NOMINATIM_UA },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(4000),
     });
     const fromUrl = firstCoords(res.url || url);
     if (fromUrl) return fromUrl;

@@ -259,8 +259,14 @@ export function LightTourAdmin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: importText, holiday }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "The import did not finish.");
+      const raw = await res.text();
+      let data: { error?: string; message?: string; added?: number; capped?: number } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error("The import did not finish. Click Import pins again.");
+      }
+      if (!res.ok) throw new Error(data.error || "The import did not finish. Click Import pins again.");
       if (!data.capped) setImportText("");
       setNotice(data.message || `Added ${data.added} ${data.added === 1 ? "pin" : "pins"}.`);
       await load();

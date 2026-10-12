@@ -43,18 +43,23 @@ export async function POST(req: Request) {
   if (text.length > 2_000_000) {
     return NextResponse.json({ error: "That file is too large." }, { status: 400 });
   }
-  const placed = await placePinImport(text, holiday);
-  if (!placed.pins.length) {
-    if (placed.already && !placed.missed && !placed.capped) {
-      return NextResponse.json({ added: 0, message: "Those houses are already on the tour." });
+  try {
+    const placed = await placePinImport(text, holiday);
+    if (!placed.pins.length) {
+      if (placed.already && !placed.missed && !placed.capped) {
+        return NextResponse.json({ added: 0, message: "Those houses are already on the tour." });
+      }
+      return NextResponse.json({ error: importError(placed) }, { status: 400 });
     }
-    return NextResponse.json({ error: importError(placed) }, { status: 400 });
+    const member = await getSessionMember();
+    const pins = await importPins(placed.pins.slice(0, 2000), member?.email || "admin");
+    return NextResponse.json({
+      added: pins.length,
+      capped: placed.capped,
+      message: importMessage(pins.length, placed),
+    });
+  } catch (err) {
+    console.error("[light-tour] import failed", err);
+    return NextResponse.json({ error: "The import did not finish. Click Import pins again." }, { status: 500 });
   }
-  const member = await getSessionMember();
-  const pins = await importPins(placed.pins.slice(0, 2000), member?.email || "admin");
-  return NextResponse.json({
-    added: pins.length,
-    capped: placed.capped,
-    message: importMessage(pins.length, placed),
-  });
 }
