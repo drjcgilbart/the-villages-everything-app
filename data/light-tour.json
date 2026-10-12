@@ -1,4 +1,53 @@
 {
-  "pins": [],
+  "pins": [
+    {
+      "id": "pin-hutchinson",
+      "holiday": "halloween",
+      "latitude": 28.7604736,
+      "longitude": -81.9888128,
+      "address": "3129 Hutchinson Way, Lady Lake, FL 32159",
+      "photoUrl": "",
+      "note": "3129 Hutchinson Way",
+      "createdAt": "2026-10-12T14:00:00.000Z",
+      "updatedAt": "2026-10-12T14:00:00.000Z",
+      "createdBy": "admin"
+    },
+    {
+      "id": "pin-glover",
+      "holiday": "halloween",
+      "latitude": 28.7761221,
+      "longitude": -81.9824018,
+      "address": "6467 Glover Ln, Sumterville",
+      "photoUrl": "",
+      "note": "6467 Glover Ln, Sumterville",
+      "createdAt": "2026-10-12T14:00:00.000Z",
+      "updatedAt": "2026-10-12T14:00:00.000Z",
+      "createdBy": "admin"
+    },
+    {
+      "id": "pin-dropped-glover",
+      "holiday": "halloween",
+      "latitude": 28.7757201,
+      "longitude": -81.9828384,
+      "address": "",
+      "photoUrl": "",
+      "note": "28°46'32.6\"N 81°58'58.2\"W",
+      "createdAt": "2026-10-12T14:00:00.000Z",
+      "updatedAt": "2026-10-12T14:00:00.000Z",
+      "createdBy": "admin"
+    },
+    {
+      "id": "pin-dropped-north",
+      "holiday": "halloween",
+      "latitude": 28.8469191,
+      "longitude": -81.9750237,
+      "address": "",
+      "photoUrl": "",
+      "note": "28°50'48.9\"N 81°58'30.1\"W",
+      "createdAt": "2026-10-12T14:00:00.000Z",
+      "updatedAt": "2026-10-12T14:00:00.000Z",
+      "createdBy": "admin"
+    }
+  ],
   "tours": []
 }

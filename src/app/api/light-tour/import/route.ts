@@ -73,12 +73,15 @@ export async function POST(req: Request) {
     const full = err instanceof Error ? err.message.replace(/https?:\/\/\S+/g, "") : "";
     const blobAt = full.indexOf("Blob:");
     const detail = (blobAt >= 0 ? full.slice(blobAt) : full).slice(0, 240);
+    const paused = /plan limits|fixed plan|has been suspended|over quota|hobby plan/i.test(full);
     const storage = /could not save|could not read|redis|blob|durable/i.test(detail);
     return NextResponse.json(
       {
-        error: storage
-          ? "The houses were read, but saving them failed. Click Import pins again in a minute."
-          : "The import did not finish. Click Import pins again.",
+        error: paused
+          ? "Saving new houses is paused because the site's storage plan is full. Houses already on the map stay put."
+          : storage
+            ? "The houses were read, but saving them failed. Click Import pins again in a minute."
+            : "The import did not finish. Click Import pins again.",
         detail,
       },
       { status: 500 }

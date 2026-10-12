@@ -143,29 +143,34 @@ function parseStoreText(text: string): Store {
   }
 }
 
+function bundledStore(): Store {
+  return parseStore(readJsonFile<Partial<Store>>(LIGHT_TOUR_FILE));
+}
+
 export async function readLightTour(): Promise<Store> {
   if (isEphemeralHost() && durableConfigured()) {
     try {
       const text = await pullLightTourText();
-      if (!text) return emptyStore();
-      cacheDurableJson(LIGHT_TOUR_FILE, text);
-      return parseStoreText(text);
+      if (text) {
+        cacheDurableJson(LIGHT_TOUR_FILE, text);
+        return parseStoreText(text);
+      }
     } catch {
-      await ensureDurableHydrated();
-      return parseStore(readJsonFile<Partial<Store>>(LIGHT_TOUR_FILE));
+      /* Remote storage is down. The copy shipped with the site still shows. */
     }
   }
-  await ensureDurableHydrated();
-  return parseStore(readJsonFile<Partial<Store>>(LIGHT_TOUR_FILE));
+  return bundledStore();
 }
 
 /** Writes must see the real saved list. A missed read must not replace it with a shorter one. */
 async function readLightTourForWrite(): Promise<Store> {
   if (isEphemeralHost() && durableConfigured()) {
     const text = await pullLightTourText();
-    if (!text) return emptyStore();
-    cacheDurableJson(LIGHT_TOUR_FILE, text);
-    return parseStoreText(text);
+    if (text) {
+      cacheDurableJson(LIGHT_TOUR_FILE, text);
+      return parseStoreText(text);
+    }
+    return bundledStore();
   }
   return readLightTour();
 }
