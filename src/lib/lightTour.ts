@@ -329,7 +329,7 @@ function coordsIn(text: string): { latitude: number; longitude: number } | null 
     const hit = pair(packed[1], packed[2]);
     if (hit) return hit;
   }
-  const query = text.match(/[?&](?:q|ll|query|center)=(-?\d{1,2}\.\d{2,})\s*,\s*(-?\d{1,3}\.\d{2,})/i);
+  const query = text.match(/[?&](?:q|ll|query|center)=(-?\d{1,2}\.\d{2,})\s*(?:,|%2C)\s*(-?\d{1,3}\.\d{2,})/i);
   if (query) {
     const hit = pair(query[1], query[2]);
     if (hit) return hit;
@@ -374,6 +374,19 @@ function firstAddress(text: string): string {
   return match ? clip(match[0].replace(/\s+/g, " ").trim(), 180) : "";
 }
 
+function addressFromMapsPlace(text: string): string {
+  const match = text.match(/\/maps\/place\/([^/?#"']+)/i);
+  if (!match) return "";
+  let decoded = match[1].replace(/\+/g, " ");
+  try {
+    decoded = decodeURIComponent(decoded);
+  } catch {
+    /* Plus signs are already spaces. */
+  }
+  if (!/\d/.test(decoded)) return "";
+  return clip(decoded.trim(), 180);
+}
+
 function addressFromMapQuery(text: string): string {
   const match = text.match(/[?&](?:q|query)=([^&\s<>"']+)/i);
   if (!match) return "";
@@ -393,11 +406,28 @@ function scrubNote(text: string, address: string) {
   return next.replace(/\s+/g, " ").trim();
 }
 
+function looseAddr(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\b(florida|fl|lady lake|the villages|wildwood|summerfield|oxford|fruitland park)\b/g, " ")
+    .replace(/\b\d{5}\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isAddressLabel(text: string, address: string) {
+  const a = looseAddr(text);
+  const b = looseAddr(address);
+  if (!a || !b) return false;
+  return a === b || a.startsWith(b) || b.startsWith(a);
+}
+
 function noteFrom(title: string, body: string, address: string) {
   const fromBody = scrubNote(body, address);
-  if (fromBody && fromBody.toLowerCase() !== address.toLowerCase()) return clip(fromBody, 160);
+  if (fromBody && !isAddressLabel(fromBody, address)) return clip(fromBody, 160);
   const fromTitle = scrubNote(title, address);
-  if (fromTitle && fromTitle.toLowerCase() !== address.toLowerCase()) return clip(fromTitle, 160);
+  if (fromTitle && !isAddressLabel(fromTitle, address)) return clip(fromTitle, 160);
   return "";
 }
 
@@ -433,7 +463,7 @@ function textToPlace(title: string, body: string, holiday: TourHoliday): PinImpo
   if (placed.length >= 2) return withTitle(mergeImports(placed.map((line) => textToPlace("", line, holiday))), title);
   const blob = [title, body].filter(Boolean).join("\n");
   if (!blob.trim()) return emptyImport();
-  const address = firstAddress(blob) || addressFromMapQuery(blob);
+  const address = addressFromMapsPlace(blob) || firstAddress(blob) || addressFromMapQuery(blob);
   const coords = firstCoords(blob);
   const note = noteFrom(title, body, address);
   if (coords) {
@@ -461,7 +491,8 @@ function isKeepNote(value: unknown): value is KeepNote {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const row = value as Record<string, unknown>;
   if (row.type === "Feature" || row.type === "FeatureCollection" || row.geometry) return false;
-  const hasBody = typeof row.textContent === "string" || Array.isArray(row.listContent);
+  const hasBody =
+    typeof row.textContent === "string" || Array.isArray(row.listContent) || Array.isArray(row.annotations);
   const hasMeta =
     Array.isArray(row.labels) ||
     "userEditedTimestampUsec" in row ||
@@ -501,8 +532,8 @@ function annotationBlob(value: unknown) {
   return value
     .map((item) => {
       if (!item || typeof item !== "object") return "";
-      const row = item as { source?: unknown; url?: unknown; title?: unknown; description?: unknown };
-      return [row.source, row.url, row.title, row.description].map((part) => String(part || "")).filter(Boolean).join(" ");
+      const row = item as { url?: unknown; title?: unknown; description?: unknown };
+      return [row.url, row.title, row.description].map((part) => String(part || "")).filter(Boolean).join(" ");
     })
     .filter(Boolean)
     .join("\n");
@@ -756,6 +787,19 @@ function allowedMapUrl(url: string) {
   }
 }
 
+function coordsFromMapPage(html: string): { latitude: number; longitude: number } | null {
+  const decoded = html.replace(/%2C/gi, ",");
+  const centers = decoded.match(/center=(-?\d{1,2}\.\d{4,}),(-?\d{1,3}\.\d{4,})/);
+  if (centers) {
+    const hit = pair(centers[1], centers[2]);
+    if (hit && nearVillages(hit.latitude, hit.longitude)) return hit;
+  }
+  const direct = firstCoords(decoded);
+  if (direct && nearVillages(direct.latitude, direct.longitude)) return direct;
+  const packed = decoded.match(/!3d(-?\d{1,2}\.\d{4,})!4d(-?\d{1,3}\.\d{4,})/);
+  return packed ? pair(packed[1], packed[2]) : null;
+}
+
 async function resolveMapLink(url: string): Promise<{ latitude: number; longitude: number } | null> {
   if (!allowedMapUrl(url)) return null;
   try {
@@ -766,14 +810,8 @@ async function resolveMapLink(url: string): Promise<{ latitude: number; longitud
     });
     const fromUrl = firstCoords(res.url || url);
     if (fromUrl) return fromUrl;
-    const html = (await res.text()).slice(0, 150_000);
-    const at = html.match(/@(-?\d{1,2}\.\d{4,}),(-?\d{1,3}\.\d{4,})/);
-    if (at) {
-      const hit = pair(at[1], at[2]);
-      if (hit) return hit;
-    }
-    const packed = html.match(/!3d(-?\d{1,2}\.\d{4,})!4d(-?\d{1,3}\.\d{4,})/);
-    return packed ? pair(packed[1], packed[2]) : null;
+    const html = (await res.text()).slice(0, 220_000);
+    return coordsFromMapPage(html);
   } catch {
     return null;
   }
@@ -782,7 +820,7 @@ async function resolveMapLink(url: string): Promise<{ latitude: number; longitud
 export async function forwardGeocode(
   query: string
 ): Promise<{ latitude: number; longitude: number; address: string } | null> {
-  const q = /the villages/i.test(query) ? query : `${query}, The Villages, Florida`;
+  const q = /,|\bflorida\b|\bfl\b|the villages/i.test(query) ? query : `${query}, The Villages, Florida`;
   const url =
     "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&bounded=1&viewbox=-82.25,29.25,-81.70,28.65&q=" +
     encodeURIComponent(q);

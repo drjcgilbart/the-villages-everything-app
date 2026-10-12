@@ -261,7 +261,7 @@ export function LightTourAdmin() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "The import did not finish.");
-      setImportText("");
+      if (!data.capped) setImportText("");
       setNotice(data.message || `Added ${data.added} ${data.added === 1 ? "pin" : "pins"}.`);
       await load();
     } catch (err) {
@@ -290,7 +290,11 @@ export function LightTourAdmin() {
     }
     setError("");
     setImportText(combined);
-    setNotice(files.length === 1 ? `${files[0].name} is ready to import.` : `${files.length} files are ready to import.`);
+    setNotice(
+      files.length === 1
+        ? `${files[0].name} is in the box. Click Import pins to add the houses.`
+        : `${files.length} files are in the box. Click Import pins to add the houses.`
+    );
   }
 
   if (!ready) {
@@ -457,9 +461,10 @@ export function LightTourAdmin() {
         <div className="about-panel lt-card">
           <h2>Bring in saved pins</h2>
           <p className="panel-hint">
-            Paste a Google Keep note, or choose the Takeout files. A note is placed when it has a street address, a
-            Google Maps link, or a latitude and longitude. A Keep label named Halloween, Christmas, or xmas picks the
-            holiday. Otherwise these pins are tagged {HOLIDAY_LABELS[holiday]}. CSV and GeoJSON points still work.
+            Paste a Google Keep note, or choose the Takeout files. Choosing the files only loads them. Click Import
+            pins to save the houses. A note is placed when it has a street address, a Google Maps link, or coordinates.
+            A Keep label named Halloween, Christmas, or xmas picks the holiday. Otherwise these pins are tagged{" "}
+            {HOLIDAY_LABELS[holiday]}.
           </p>
           <div className="field">
             <label htmlFor="lt-import">Note, coordinates, or file text</label>
@@ -484,8 +489,18 @@ export function LightTourAdmin() {
               }}
             />
           </div>
+          {error ? (
+            <p className="lt-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {notice ? (
+            <p className="lt-banner" role="status">
+              {notice}
+            </p>
+          ) : null}
           <button type="button" className="btn btn-primary lt-go" disabled={busy || !importText.trim()} onClick={() => void runImport()}>
-            Import pins
+            {busy ? "Importing…" : "Import pins"}
           </button>
         </div>
 

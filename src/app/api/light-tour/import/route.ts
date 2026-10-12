@@ -52,5 +52,9 @@ export async function POST(req: Request) {
   }
   const member = await getSessionMember();
   const pins = await importPins(placed.pins.slice(0, 2000), member?.email || "admin");
-  return NextResponse.json({ added: pins.length, message: importMessage(pins.length, placed) });
+  return NextResponse.json({
+    added: pins.length,
+    capped: placed.capped,
+    message: importMessage(pins.length, placed),
+  });
 }
