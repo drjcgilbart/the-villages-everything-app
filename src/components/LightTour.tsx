@@ -13,6 +13,7 @@ import {
   HOLIDAY_LABELS,
   MAX_STOPS,
   TOUR_HOLIDAYS,
+  VILLAGES_CENTER,
   haversineMeters,
   tourStartProblem,
   type TourHoliday,
@@ -91,6 +92,18 @@ function locationHelp(err: unknown) {
     return "Location is blocked. Allow location for this site in the browser or phone settings, then try again.";
   }
   return "Location did not come through. Turn location on and try again.";
+}
+
+const VILLAGES_START = {
+  latitude: VILLAGES_CENTER.latitude,
+  longitude: VILLAGES_CENTER.longitude,
+};
+
+const BLOCKED_LOCATION_NOTE =
+  "This computer did not share a location, so the route starts in the middle of The Villages. On a phone, allow location and it starts where you are.";
+
+function geoCode(err: unknown) {
+  return err && typeof err === "object" && "code" in err ? Number((err as { code: number }).code) : 0;
 }
 
 export function LightTour() {
@@ -295,19 +308,32 @@ export function LightTour() {
     }
   }
 
-  async function startingPoint(): Promise<Here> {
-    let here: Here;
-    if (useMine) {
-      const pos = await readLocation();
-      here = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-    } else if (!typedLat.trim() || !typedLng.trim()) {
-      throw new Error("Type a latitude and longitude, or turn Use my location back on.");
-    } else {
-      here = { latitude: Number(typedLat), longitude: Number(typedLng) };
+  async function startingPoint(): Promise<{ here: Here; note: string }> {
+    if (!useMine) {
+      if (!typedLat.trim() || !typedLng.trim()) {
+        throw new Error("Type a latitude and longitude, or turn Use my location back on.");
+      }
+      const typed = { latitude: Number(typedLat), longitude: Number(typedLng) };
+      const typedProblem = tourStartProblem(typed);
+      if (typedProblem) throw new Error(typedProblem);
+      return { here: typed, note: "" };
     }
-    const problem = tourStartProblem(here);
-    if (problem) throw new Error(problem);
-    return here;
+    try {
+      const pos = await readLocation();
+      const here = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      const problem = tourStartProblem(here);
+      if (!problem) return { here, note: "" };
+      // A desktop sometimes reports the ocean at 0, 0 instead of a real fix.
+      if (Math.abs(here.latitude) < 0.05 && Math.abs(here.longitude) < 0.05) {
+        return { here: VILLAGES_START, note: BLOCKED_LOCATION_NOTE };
+      }
+      throw new Error(problem);
+    } catch (err) {
+      if (geoCode(err) || (err instanceof Error && err.message === "This browser does not share location.")) {
+        return { here: VILLAGES_START, note: BLOCKED_LOCATION_NOTE };
+      }
+      throw err;
+    }
   }
 
   async function buildRoute() {
@@ -315,7 +341,8 @@ export function LightTour() {
     setEmpty(false);
     setBusy(true);
     try {
-      const here = await startingPoint();
+      const start = await startingPoint();
+      const here = start.here;
       const stopCount = stopsFromText(countText);
       setCountText(String(stopCount));
       rememberHere(here);
@@ -329,7 +356,7 @@ export function LightTour() {
       if (!res.ok) throw new Error(data.error || "The route did not load.");
       setStops(data.stops || []);
       setLine(data.line || []);
-      setWarning(data.warning || "");
+      setWarning([start.note, data.warning].filter(Boolean).join(" "));
       setEmpty(!!data.empty);
       setIndex(0);
       indexRef.current = 0;
@@ -602,7 +629,8 @@ export function LightTour() {
               Use my location
             </button>
             <p className="panel-hint">
-              The tour uses your location to find the nearest houses and a driving route. Allow location when the phone asks.
+              The tour uses your location to find the nearest houses and a driving route. Allow location when the phone
+              asks. If this computer will not share location, the route starts in the middle of The Villages.
             </p>
             {useMine ? null : (
               <div className="lt-coords">
