@@ -10,6 +10,7 @@ import {
   MAX_STOPS,
   TOUR_HOLIDAYS,
   haversineMeters,
+  tourStartProblem,
   type TourHoliday,
 } from "@/lib/lightTourShared";
 
@@ -48,7 +49,7 @@ function sessionId() {
   }
 }
 
-function readLocation(): Promise<GeolocationPosition> {
+function readFix(timeout: number): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error("This browser does not share location."));
@@ -56,10 +57,28 @@ function readLocation(): Promise<GeolocationPosition> {
     }
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 15000,
+      timeout,
+      maximumAge: 0,
     });
   });
+}
+
+/** A first fix is sometimes 0, 0. Ask once more before giving up. */
+async function readLocation(): Promise<GeolocationPosition> {
+  const first = await readFix(12000);
+  const here = { latitude: first.coords.latitude, longitude: first.coords.longitude };
+  if (!tourStartProblem(here)) return first;
+  try {
+    return await readFix(20000);
+  } catch {
+    return first;
+  }
+}
+
+function stopsFromText(text: string) {
+  const n = Math.round(Number(text));
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_STOPS;
+  return Math.min(MAX_STOPS, n);
 }
 
 function locationHelp(err: unknown) {
@@ -72,7 +91,7 @@ function locationHelp(err: unknown) {
 
 export function LightTour() {
   const [holiday, setHoliday] = useState<TourHoliday>("halloween");
-  const [count, setCount] = useState(DEFAULT_STOPS);
+  const [countText, setCountText] = useState(String(DEFAULT_STOPS));
   const [useMine, setUseMine] = useState(true);
   const [typedLat, setTypedLat] = useState("");
   const [typedLng, setTypedLng] = useState("");
@@ -147,16 +166,18 @@ export function LightTour() {
   }
 
   async function startingPoint(): Promise<Here> {
+    let here: Here;
     if (useMine) {
       const pos = await readLocation();
-      return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      here = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+    } else if (!typedLat.trim() || !typedLng.trim()) {
+      throw new Error("Type a latitude and longitude, or turn Use my location back on.");
+    } else {
+      here = { latitude: Number(typedLat), longitude: Number(typedLng) };
     }
-    const latitude = Number(typedLat);
-    const longitude = Number(typedLng);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-      throw new Error("Type a latitude and longitude, or turn on Use my location.");
-    }
-    return { latitude, longitude };
+    const problem = tourStartProblem(here);
+    if (problem) throw new Error(problem);
+    return here;
   }
 
   async function buildRoute() {
@@ -165,12 +186,14 @@ export function LightTour() {
     setBusy(true);
     try {
       const here = await startingPoint();
+      const stopCount = stopsFromText(countText);
+      setCountText(String(stopCount));
       rememberHere(here);
       const res = await fetch("/api/light-tour/route", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ holiday, latitude: here.latitude, longitude: here.longitude, count }),
+        body: JSON.stringify({ holiday, latitude: here.latitude, longitude: here.longitude, count: stopCount }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "The route did not load.");
@@ -363,13 +386,18 @@ export function LightTour() {
               <label htmlFor="lt-stops">Stops</label>
               <input
                 id="lt-stops"
-                type="number"
-                min={1}
-                max={MAX_STOPS}
+                type="text"
                 inputMode="numeric"
-                value={count}
-                onChange={(e) => setCount(Math.min(MAX_STOPS, Math.max(1, Math.round(Number(e.target.value) || 1))))}
+                autoComplete="off"
+                value={countText}
+                onFocus={(e) => {
+                  const el = e.currentTarget;
+                  requestAnimationFrame(() => el.select());
+                }}
+                onChange={(e) => setCountText(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                onBlur={() => setCountText(String(stopsFromText(countText)))}
               />
+              <p className="panel-hint">Type a number from 1 to {MAX_STOPS}. Click the number, then type the new one.</p>
             </div>
             <button
               type="button"

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { holidayFrom, publicPin, readLightTour, DEFAULT_STOPS, MAX_STOPS } from "@/lib/lightTour";
+import { tourStartProblem } from "@/lib/lightTourShared";
 import { buildDrivingRoute } from "@/lib/lightTourRoute";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
   if (!holiday || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return NextResponse.json({ error: "Need a holiday and your location." }, { status: 400 });
   }
+  const far = tourStartProblem({ latitude, longitude });
+  if (far) return NextResponse.json({ error: far }, { status: 400 });
   const store = await readLightTour();
   const pins = store.pins.filter((pin) => pin.holiday === holiday).map(publicPin);
   if (!pins.length) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
+import { TOUR_START_MAX_METERS, haversineMeters } from "@/lib/lightTourShared";
 
 type Stop = {
   id: string;
@@ -62,11 +63,16 @@ export function LightTourMap({ visitor, line, stops, activeId }: Props) {
       void import("leaflet").then((L) => {
         map.invalidateSize();
         group.clearLayers();
-        if (line.length > 1) {
-          L.polyline(line, { color: "#ffffff", weight: 8, opacity: 0.95 }).addTo(group);
-          L.polyline(line, { color: "#0c4a6e", weight: 4, opacity: 0.95 }).addTo(group);
+        const nearHouses = (latitude: number, longitude: number) =>
+          !stops.length ||
+          stops.some((stop) => haversineMeters(stop, { latitude, longitude }) <= TOUR_START_MAX_METERS);
+        const localLine = line.filter(([latitude, longitude]) => nearHouses(latitude, longitude));
+        if (localLine.length > 1) {
+          L.polyline(localLine, { color: "#ffffff", weight: 8, opacity: 0.95 }).addTo(group);
+          L.polyline(localLine, { color: "#0c4a6e", weight: 4, opacity: 0.95 }).addTo(group);
         }
-        if (visitor) {
+        const showVisitor = !!visitor && nearHouses(visitor.latitude, visitor.longitude);
+        if (visitor && showVisitor) {
           L.circleMarker([visitor.latitude, visitor.longitude], {
             radius: 8,
             color: "#ffffff",
@@ -76,7 +82,7 @@ export function LightTourMap({ visitor, line, stops, activeId }: Props) {
           }).addTo(group);
         }
         const bounds: [number, number][] = [];
-        if (visitor) bounds.push([visitor.latitude, visitor.longitude]);
+        if (visitor && showVisitor) bounds.push([visitor.latitude, visitor.longitude]);
         for (const stop of stops) {
           const active = stop.id === activeId;
           const icon = L.divIcon({
