@@ -4,6 +4,7 @@ import {
   ensureDurableHydrated,
   isEphemeralHost,
   pullDurableJson,
+  pullJsonFromBlob,
   readJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
@@ -119,6 +120,21 @@ function parseStore(raw: Partial<Store> | null): Store {
   return { pins, tours: tours.slice(-400) };
 }
 
+function redisOverLimit(err: unknown) {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /plan limits|fixed plan/i.test(msg);
+}
+
+/** Redis is over its plan, so this file is read from Blob instead of failing the save. */
+async function pullLightTourText(): Promise<string | null> {
+  try {
+    return await pullDurableJson(LIGHT_TOUR_FILE);
+  } catch (err) {
+    if (!redisOverLimit(err)) throw err;
+    return pullJsonFromBlob(LIGHT_TOUR_FILE);
+  }
+}
+
 function parseStoreText(text: string): Store {
   try {
     return parseStore(JSON.parse(text) as Partial<Store>);
@@ -130,7 +146,7 @@ function parseStoreText(text: string): Store {
 export async function readLightTour(): Promise<Store> {
   if (isEphemeralHost() && durableConfigured()) {
     try {
-      const text = await pullDurableJson(LIGHT_TOUR_FILE);
+      const text = await pullLightTourText();
       if (!text) return emptyStore();
       cacheDurableJson(LIGHT_TOUR_FILE, text);
       return parseStoreText(text);
@@ -146,7 +162,7 @@ export async function readLightTour(): Promise<Store> {
 /** Writes must see the real saved list. A missed read must not replace it with a shorter one. */
 async function readLightTourForWrite(): Promise<Store> {
   if (isEphemeralHost() && durableConfigured()) {
-    const text = await pullDurableJson(LIGHT_TOUR_FILE);
+    const text = await pullLightTourText();
     if (!text) return emptyStore();
     cacheDurableJson(LIGHT_TOUR_FILE, text);
     return parseStoreText(text);

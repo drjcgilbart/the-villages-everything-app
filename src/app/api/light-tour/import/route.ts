@@ -70,7 +70,9 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[light-tour] import failed", err);
-    const detail = err instanceof Error ? err.message.replace(/https?:\/\/\S+/g, "").slice(0, 180) : "";
+    const full = err instanceof Error ? err.message.replace(/https?:\/\/\S+/g, "") : "";
+    const blobAt = full.indexOf("Blob:");
+    const detail = (blobAt >= 0 ? full.slice(blobAt) : full).slice(0, 240);
     const storage = /could not save|could not read|redis|blob|durable/i.test(detail);
     return NextResponse.json(
       {
