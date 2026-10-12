@@ -1,4 +1,4 @@
-import { ensureDurableHydrated } from "./dataFs";
+import { durableWriteBlocked, ensureDurableHydrated } from "./dataFs";
 import {
   hasPaidMembership,
   isRoyaltyTrialActive,
@@ -112,6 +112,14 @@ export async function sweepRoyaltyTrials(opts?: {
         result.expired += 1;
       }
     }
+  }
+
+  const blocked =
+    durableWriteBlocked("member-space.json") ||
+    durableWriteBlocked("yard-sale.json");
+  if (blocked) {
+    console.error("[trials] skip save", blocked);
+    return result;
   }
 
   await saveMemberSpacesAsync(loadMemberSpaces());

@@ -191,15 +191,46 @@ async function pushJsonToRedis(filename: string, json: string): Promise<void> {
   throw last instanceof Error ? last : new Error(String(last));
 }
 
+type RedisReadState = "ok" | "missing" | "error";
+const redisReadState = new Map<string, RedisReadState>();
+
+/**
+ * On the live site, a failed Redis read must not be saved back.
+ * The read falls through to the git starter file, and a later successful
+ * write would replace the real member list with that starter file.
+ */
+export function durableWriteBlocked(filename: string): string | null {
+  if (!isEphemeralHost() || !redisConfigured()) return null;
+  const base = path.basename(filename);
+  if (!base || !DURABLE_JSON.has(base)) return null;
+  const state = redisReadState.get(base);
+  if (state === "ok" || state === "missing") return null;
+  return (
+    `Could not save ${base} because the live database copy was not read. ` +
+    "Saving now would replace the real member list with the starter file. [storage-v2]"
+  );
+}
+
+/** True when the live member roster could not be read on this instance. */
+export function memberRosterUnreadable(): boolean {
+  return durableWriteBlocked("yard-sale.json") != null;
+}
+
 async function pullJsonFromRedis(filename: string): Promise<string | null> {
-  if (!redisConfigured() || !DURABLE_JSON.has(filename)) return null;
+  const base = path.basename(filename);
+  if (!redisConfigured() || !DURABLE_JSON.has(base)) return null;
   try {
-    const result = await redisCommand(["GET", redisKey(filename)]);
-    if (result == null) return null;
+    const result = await redisCommand(["GET", redisKey(base)]);
+    if (result == null) {
+      redisReadState.set(base, "missing");
+      return null;
+    }
     const text = String(result);
+    redisReadState.set(base, text ? "ok" : "missing");
     return text || null;
   } catch (err) {
-    console.error("[dataFs] redis pull failed", filename, err);
+    redisReadState.set(base, "error");
+    console.error("[dataFs] redis pull failed", base, err);
     // Signal hard failure to callers that must not fall back to stale Blob
     throw err;
   }
@@ -564,6 +595,12 @@ async function pushJsonToBlob(filename: string, json: string): Promise<void> {
 async function syncDurableJson(filename: string, json: string): Promise<void> {
   if (!DURABLE_JSON.has(filename)) return;
 
+  const blocked = durableWriteBlocked(filename);
+  if (blocked) {
+    console.error("[dataFs] refused stale durable write", filename);
+    throw new Error(blocked);
+  }
+
   // No remote backend at all
   if (!durableConfigured()) {
     if (!isEphemeralHost()) return;
@@ -753,6 +790,8 @@ export async function hydrateDurableJsonFromBlob(): Promise<{
 }
 
 let hydrateOnce: Promise<void> | null = null;
+/** The real hydrate, not the 2s page-load race. Saves must wait for this. */
+let hydrateWork: Promise<void> = Promise.resolve();
 /** Last successful hydrate time — re-pull so other instances see approvals. */
 let lastHydrateAt = 0;
 const HYDRATE_TTL_MS = 4_000;
@@ -775,6 +814,7 @@ export function ensureDurableHydrated(): Promise<void> {
       lastHydrateAt = Date.now();
     })
     .catch(() => undefined);
+  hydrateWork = work;
   // Never block a page more than 2s on Redis/Blob — hung storage was taking
   // the live site down (0-byte responses until the function timed out).
   hydrateOnce = Promise.race([
@@ -782,6 +822,11 @@ export function ensureDurableHydrated(): Promise<void> {
     new Promise<void>((resolve) => setTimeout(resolve, 2000)),
   ]);
   return hydrateOnce;
+}
+
+/** Wait until the in-flight Redis/Blob read finishes, past the 2s page race. */
+export function settleDurableHydrate(): Promise<void> {
+  return hydrateWork;
 }
 
 /** Reset hydrate latch after a successful durable write (optional). */

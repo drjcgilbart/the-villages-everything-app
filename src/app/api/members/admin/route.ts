@@ -5,8 +5,10 @@ import {
   durableConfigured,
   ensureDurableHydrated,
   isEphemeralHost,
+  memberRosterUnreadable,
   missingDurableStorageHelp,
   redisConfigured,
+  settleDurableHydrate,
 } from "@/lib/dataFs";
 import { badgesForMemberRecord } from "@/lib/memberBadges";
 import {
@@ -88,7 +90,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   await ensureDurableHydrated();
-  await isolateAllCopiedOwnerBoards();
+  await settleDurableHydrate();
+  await isolateAllCopiedOwnerBoards().catch((err) => {
+    console.error("[admin] board isolate", err);
+  });
   await sweepRoyaltyTrials({ sendMail: true }).catch((err) => {
     console.error("[admin] trial sweep", err);
   });
@@ -99,6 +104,9 @@ export async function GET() {
   if (isEphemeralHost() && !redis) {
     // Blob Hobby is over quota for this project — Redis is required until reset/Pro
     durableHint = missingDurableStorageHelp();
+  } else if (memberRosterUnreadable()) {
+    durableHint =
+      "The saved member list could not be read because the database is over its plan limit. The accounts on this page are the starter file, not the live roster. The other members were not deleted. Do not add, edit, or remove anyone until the database accepts reads again.";
   } else if (!isEphemeralHost()) {
     durableHint = null;
   }
