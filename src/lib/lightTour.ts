@@ -170,6 +170,13 @@ export function deletePin(id: string): Promise<boolean> {
   });
 }
 
+function sameHouse(
+  a: { holiday: TourHoliday; latitude: number; longitude: number },
+  b: { holiday: TourHoliday; latitude: number; longitude: number }
+) {
+  return a.holiday === b.holiday && haversineMeters(a, b) < 30;
+}
+
 export function importPins(
   pins: Array<Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy"> & { createdBy?: string }>,
   createdBy: string
@@ -177,18 +184,26 @@ export function importPins(
   return enqueue(async () => {
     const store = await readLightTour();
     const now = new Date().toISOString();
-    const added = pins.map((pin) => ({
-      ...pin,
-      id: newPinId(),
-      address: clip(pin.address, 180),
-      photoUrl: clip(pin.photoUrl, 400),
-      note: clip(pin.note, 160),
-      createdAt: now,
-      updatedAt: now,
-      createdBy: clip(createdBy, 120) || "admin",
-    }));
-    store.pins = [...added, ...store.pins];
-    await writeStore(store);
+    const added: LightPin[] = [];
+    for (const pin of pins) {
+      const spot = { holiday: pin.holiday, latitude: pin.latitude, longitude: pin.longitude };
+      if (store.pins.some((existing) => sameHouse(existing, spot))) continue;
+      if (added.some((existing) => sameHouse(existing, spot))) continue;
+      added.push({
+        ...pin,
+        id: newPinId(),
+        address: clip(pin.address, 180),
+        photoUrl: clip(pin.photoUrl, 400),
+        note: clip(pin.note, 160),
+        createdAt: now,
+        updatedAt: now,
+        createdBy: clip(createdBy, 120) || "admin",
+      });
+    }
+    if (added.length) {
+      store.pins = [...added, ...store.pins];
+      await writeStore(store);
+    }
     return added;
   });
 }
@@ -269,19 +284,328 @@ function draft(holiday: TourHoliday, latitude: number, longitude: number, note =
   return { holiday, latitude, longitude, address, photoUrl: "", note: clip(note, 160) };
 }
 
-/** Paste "lat, lng optional note" lines, a CSV, or a GeoJSON feature collection. */
-export function parsePinImport(text: string, fallbackHoliday: TourHoliday): DraftPin[] {
-  const raw = text.trim();
-  if (!raw) return [];
-  if (raw.startsWith("{") || raw.startsWith("[")) {
-    try {
-      return parseGeoJson(JSON.parse(raw), fallbackHoliday);
-    } catch {
-      /* fall through to lines */
+type PendingPlace = {
+  holiday: TourHoliday;
+  note: string;
+  address: string;
+  mapUrl: string;
+};
+
+type PinImport = {
+  pins: DraftPin[];
+  pending: PendingPlace[];
+  skipped: number;
+};
+
+function emptyImport(): PinImport {
+  return { pins: [], pending: [], skipped: 0 };
+}
+
+function mergeImports(parts: PinImport[]): PinImport {
+  return {
+    pins: parts.flatMap((part) => part.pins),
+    pending: parts.flatMap((part) => part.pending),
+    skipped: parts.reduce((sum, part) => sum + part.skipped, 0),
+  };
+}
+
+function pair(latRaw: string, lngRaw: string): { latitude: number; longitude: number } | null {
+  const latitude = num(latRaw);
+  const longitude = num(lngRaw);
+  if (latitude == null || longitude == null) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  if (Math.abs(latitude) < 0.01 && Math.abs(longitude) < 0.01) return null;
+  return { latitude, longitude };
+}
+
+function coordsIn(text: string): { latitude: number; longitude: number } | null {
+  const at = text.match(/@(-?\d{1,2}\.\d{2,})\s*,\s*(-?\d{1,3}\.\d{2,})/);
+  if (at) {
+    const hit = pair(at[1], at[2]);
+    if (hit) return hit;
+  }
+  const packed = text.match(/!3d(-?\d{1,2}\.\d{2,})!4d(-?\d{1,3}\.\d{2,})/);
+  if (packed) {
+    const hit = pair(packed[1], packed[2]);
+    if (hit) return hit;
+  }
+  const query = text.match(/[?&](?:q|ll|query|center)=(-?\d{1,2}\.\d{2,})\s*,\s*(-?\d{1,3}\.\d{2,})/i);
+  if (query) {
+    const hit = pair(query[1], query[2]);
+    if (hit) return hit;
+  }
+  const re = /(-?\d{1,2}\.\d{3,})\s*[, ]\s*(-?\d{1,3}\.\d{3,})/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text))) {
+    const before = match.index > 0 ? text[match.index - 1] : "";
+    if (before && /[0-9.]/.test(before)) continue;
+    const hit = pair(match[1], match[2]);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function firstCoords(text: string): { latitude: number; longitude: number } | null {
+  const direct = coordsIn(text);
+  if (direct) return direct;
+  try {
+    return coordsIn(decodeURIComponent(text.replace(/\+/g, " ")));
+  } catch {
+    return null;
+  }
+}
+
+const MAP_URL_RE =
+  /https?:\/\/(?:maps\.app\.goo\.gl\/[^\s<>"')]+|goo\.gl\/maps\/[^\s<>"')]+|maps\.google\.com\/[^\s<>"')]+|(?:www\.)?google\.com\/maps[^\s<>"')]+)/i;
+
+function firstMapUrl(text: string): string {
+  const match = text.match(MAP_URL_RE);
+  if (!match) return "";
+  const url = match[0].replace(/[.,);]+$/, "");
+  if (firstCoords(url)) return "";
+  return url;
+}
+
+const STREET_RE =
+  /\b\d{1,6}\s+(?:[A-Za-z0-9.'’#-]+\s+){1,5}(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Court|Ct|Circle|Cir|Boulevard|Blvd|Way|Place|Pl|Trail|Trl|Parkway|Pkwy|Terrace|Ter|Loop|Path|Run|Cove|Bend|Crossing|Trace|Point|Ridge)\b\.?/i;
+
+function firstAddress(text: string): string {
+  const match = text.replace(/https?:\/\/\S+/g, " ").match(STREET_RE);
+  return match ? clip(match[0].replace(/\s+/g, " ").trim(), 180) : "";
+}
+
+function addressFromMapQuery(text: string): string {
+  const match = text.match(/[?&](?:q|query)=([^&\s<>"']+)/i);
+  if (!match) return "";
+  let decoded = match[1].replace(/\+/g, " ");
+  try {
+    decoded = decodeURIComponent(decoded);
+  } catch {
+    /* The query is still usable with plus signs turned into spaces. */
+  }
+  if (firstCoords(decoded)) return "";
+  return clip(decoded, 180);
+}
+
+function scrubNote(text: string, address: string) {
+  let next = text.replace(/https?:\/\/\S+/g, " ");
+  if (address) next = next.split(address).join(" ");
+  return next.replace(/\s+/g, " ").trim();
+}
+
+function noteFrom(title: string, body: string, address: string) {
+  const fromBody = scrubNote(body, address);
+  if (fromBody && fromBody.toLowerCase() !== address.toLowerCase()) return clip(fromBody, 160);
+  const fromTitle = scrubNote(title, address);
+  if (fromTitle && fromTitle.toLowerCase() !== address.toLowerCase()) return clip(fromTitle, 160);
+  return "";
+}
+
+function holidayFromLabel(value: unknown): TourHoliday | null {
+  const text = String(value || "").trim().toLowerCase();
+  if (/\bhalloween\b/.test(text)) return "halloween";
+  if (/\bchristmas\b/.test(text) || /\bxmas\b/.test(text)) return "christmas";
+  return null;
+}
+
+function hasPlace(text: string) {
+  return !!(firstCoords(text) || firstMapUrl(text) || firstAddress(text) || addressFromMapQuery(text));
+}
+
+function withTitle(imported: PinImport, title: string): PinImport {
+  const fallback = clip(scrubNote(title, ""), 160);
+  if (!fallback) return imported;
+  return {
+    pins: imported.pins.map((pin) => ({ ...pin, note: pin.note || fallback })),
+    pending: imported.pending.map((item) => ({ ...item, note: item.note || fallback })),
+    skipped: imported.skipped,
+  };
+}
+
+function textToPlace(title: string, body: string, holiday: TourHoliday): PinImport {
+  const blocks = body.split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean);
+  const placedBlocks = blocks.filter((block) => hasPlace(block));
+  if (blocks.length >= 2 && placedBlocks.length >= 2) {
+    return withTitle(mergeImports(placedBlocks.map((block) => textToPlace("", block, holiday))), title);
+  }
+  const lines = body.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const placed = lines.filter((line) => hasPlace(line));
+  if (placed.length >= 2) return withTitle(mergeImports(placed.map((line) => textToPlace("", line, holiday))), title);
+  const blob = [title, body].filter(Boolean).join("\n");
+  if (!blob.trim()) return emptyImport();
+  const address = firstAddress(blob) || addressFromMapQuery(blob);
+  const coords = firstCoords(blob);
+  const note = noteFrom(title, body, address);
+  if (coords) {
+    return { pins: [draft(holiday, coords.latitude, coords.longitude, note, address)], pending: [], skipped: 0 };
+  }
+  const mapUrl = firstMapUrl(blob);
+  if (address || mapUrl) return { pins: [], pending: [{ holiday, note, address, mapUrl }], skipped: 0 };
+  return { pins: [], pending: [], skipped: 1 };
+}
+
+type KeepNote = {
+  title?: unknown;
+  textContent?: unknown;
+  listContent?: { text?: unknown }[];
+  labels?: unknown;
+  annotations?: unknown;
+  isTrashed?: unknown;
+  color?: unknown;
+  userEditedTimestampUsec?: unknown;
+  createdTimestampUsec?: unknown;
+  isPinned?: unknown;
+};
+
+function isKeepNote(value: unknown): value is KeepNote {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  if (row.type === "Feature" || row.type === "FeatureCollection" || row.geometry) return false;
+  const hasBody = typeof row.textContent === "string" || Array.isArray(row.listContent);
+  const hasMeta =
+    Array.isArray(row.labels) ||
+    "userEditedTimestampUsec" in row ||
+    "createdTimestampUsec" in row ||
+    "isTrashed" in row ||
+    "isPinned" in row ||
+    "color" in row;
+  return hasBody || (typeof row.title === "string" && hasMeta);
+}
+
+function keepNotesFrom(value: unknown): KeepNote[] | null {
+  if (Array.isArray(value)) {
+    const notes = value.filter(isKeepNote);
+    return notes.length ? notes : null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const row = value as { notes?: unknown };
+  if (Array.isArray(row.notes)) {
+    const notes = row.notes.filter(isKeepNote);
+    if (notes.length) return notes;
+  }
+  return isKeepNote(value) ? [value] : null;
+}
+
+function labelHoliday(labels: unknown, fallback: TourHoliday): TourHoliday {
+  if (!Array.isArray(labels)) return fallback;
+  for (const label of labels) {
+    const name = typeof label === "string" ? label : (label as { name?: unknown })?.name;
+    const hit = holidayFromLabel(name);
+    if (hit) return hit;
+  }
+  return fallback;
+}
+
+function annotationBlob(value: unknown) {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return "";
+      const row = item as { source?: unknown; url?: unknown; title?: unknown; description?: unknown };
+      return [row.source, row.url, row.title, row.description].map((part) => String(part || "")).filter(Boolean).join(" ");
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function keepNoteToImport(note: KeepNote, fallback: TourHoliday): PinImport {
+  if (note.isTrashed === true) return emptyImport();
+  const holiday = labelHoliday(note.labels, fallback);
+  const title = clip(note.title, 180);
+  const list = Array.isArray(note.listContent) ? note.listContent.map((item) => clip(item?.text, 500)).filter(Boolean) : [];
+  const placed = list.filter((line) => hasPlace(line));
+  if (placed.length >= 2) return withTitle(mergeImports(placed.map((line) => textToPlace("", line, holiday))), title);
+  const body = [typeof note.textContent === "string" ? note.textContent : "", ...list, annotationBlob(note.annotations)]
+    .filter(Boolean)
+    .join("\n");
+  return textToPlace(title, body, holiday);
+}
+
+function decodeHtml(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|li|div|h1|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, digits: string) => {
+      const code = Number(digits);
+      return code > 0 && code < 65536 ? String.fromCharCode(code) : "";
+    })
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function htmlGroup(chunk: string, pattern: RegExp) {
+  const match = chunk.match(pattern);
+  return match ? decodeHtml(match[1]) : "";
+}
+
+function parseHtmlNote(chunk: string, fallback: TourHoliday): PinImport {
+  const title =
+    htmlGroup(chunk, /class="heading"[^>]*>([\s\S]*?)<\/div>/i) ||
+    htmlGroup(chunk, /class="title"[^>]*>([\s\S]*?)<\/div>/i) ||
+    htmlGroup(chunk, /<h1[^>]*>([\s\S]*?)<\/h1>/i) ||
+    htmlGroup(chunk, /<title[^>]*>([\s\S]*?)<\/title>/i);
+  const closed = chunk.match(/class="content"[^>]*>([\s\S]*?)<\/div>\s*(?:<div class="(?:labels|chips|archived)"|<\/div>\s*<\/div>\s*<\/body>|$)/i);
+  const loose = chunk.match(/class="content"[^>]*>([\s\S]*)/i)?.[1]?.split(/<div class="(?:labels|archived)"|<\/body>/i)[0];
+  const content = decodeHtml(closed?.[1] || loose || "");
+  const labels = [...chunk.matchAll(/class="[^"]*\blabel\b[^"]*"[^>]*>([\s\S]*?)<\//gi)].map((match) => decodeHtml(match[1]));
+  let holiday = fallback;
+  for (const label of labels) {
+    const hit = holidayFromLabel(label);
+    if (hit) {
+      holiday = hit;
+      break;
     }
   }
+  if (!title && !content) return emptyImport();
+  return textToPlace(title, content, holiday);
+}
+
+function parseKeepHtml(raw: string, fallback: TourHoliday): PinImport | null {
+  if (!/<html[\s>]|class="(?:note|content|heading)"/i.test(raw)) return null;
+  const docs = raw.split(/<html\b/i).filter((part) => /class="(?:heading|content|note|title)"/i.test(part));
+  const chunks = docs.length ? docs : [raw];
+  return mergeImports(chunks.map((chunk) => parseHtmlNote(chunk, fallback)));
+}
+
+function looksLikeGeo(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.some((row) => !!row && typeof row === "object" && (row as { type?: string }).type === "Feature");
+  }
+  if (!value || typeof value !== "object") return false;
+  const row = value as { type?: string; features?: unknown };
+  return row.type === "Feature" || row.type === "FeatureCollection" || Array.isArray(row.features);
+}
+
+/** Coordinates, CSV, GeoJSON, or a Google Keep note with an address or map link. */
+export function collectPinImport(text: string, fallbackHoliday: TourHoliday): PinImport {
+  const raw = text.trim();
+  if (!raw) return emptyImport();
+  if (raw.startsWith("{") || raw.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      const geo = parseGeoJson(parsed, fallbackHoliday);
+      if (geo.length) return { pins: geo, pending: [], skipped: 0 };
+      if (looksLikeGeo(parsed)) return emptyImport();
+      const keep = keepNotesFrom(parsed);
+      if (keep) return mergeImports(keep.map((note) => keepNoteToImport(note, fallbackHoliday)));
+    } catch {
+      /* Plain text that only started with a brace. */
+    }
+  }
+  const html = parseKeepHtml(raw, fallbackHoliday);
+  if (html && (html.pins.length || html.pending.length || html.skipped)) return html;
+
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (!lines.length) return [];
+  if (!lines.length) return emptyImport();
   const header = splitCsv(lines[0]).map((cell) => cell.toLowerCase());
   const latCol = header.findIndex((cell) => cell === "lat" || cell === "latitude" || cell === "y");
   const lonCol = header.findIndex((cell) => cell === "lng" || cell === "lon" || cell === "longitude" || cell === "x");
@@ -292,32 +616,34 @@ export function parsePinImport(text: string, fallbackHoliday: TourHoliday): Draf
     const out: DraftPin[] = [];
     for (const line of lines.slice(1)) {
       const cells = splitCsv(line);
-      const latitude = num(cells[latCol]);
-      const longitude = num(cells[lonCol]);
-      if (latitude == null || longitude == null) continue;
+      const hit = pair(String(cells[latCol] || ""), String(cells[lonCol] || ""));
+      if (!hit) continue;
       out.push(
         draft(
           asHoliday(cells[holidayCol]) || fallbackHoliday,
-          latitude,
-          longitude,
+          hit.latitude,
+          hit.longitude,
           noteCol >= 0 ? cells[noteCol] : "",
           addrCol >= 0 ? cells[addrCol] : ""
         )
       );
     }
-    return out;
+    return { pins: out, pending: [], skipped: 0 };
   }
   const out: DraftPin[] = [];
   for (const line of lines) {
     const match = line.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)(?:\s*[,;]\s*|\s+)?(.*)$/);
     if (!match) continue;
-    const latitude = num(match[1]);
-    const longitude = num(match[2]);
-    if (latitude == null || longitude == null) continue;
-    if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) continue;
-    out.push(draft(fallbackHoliday, latitude, longitude, match[3] || ""));
+    const hit = pair(match[1], match[2]);
+    if (!hit) continue;
+    out.push(draft(fallbackHoliday, hit.latitude, hit.longitude, match[3] || ""));
   }
-  return out;
+  if (out.length) return { pins: out, pending: [], skipped: 0 };
+  return textToPlace("", raw, fallbackHoliday);
+}
+
+export function parsePinImport(text: string, fallbackHoliday: TourHoliday): DraftPin[] {
+  return collectPinImport(text, fallbackHoliday).pins;
 }
 
 function parseGeoJson(value: unknown, fallbackHoliday: TourHoliday): DraftPin[] {
@@ -332,15 +658,14 @@ function parseGeoJson(value: unknown, fallbackHoliday: TourHoliday): DraftPin[] 
     const row = feature as { geometry?: { type?: string; coordinates?: unknown[] }; properties?: Record<string, unknown> };
     const coords = row.geometry?.type === "Point" ? row.geometry.coordinates : null;
     if (!coords || coords.length < 2) continue;
-    const longitude = num(coords[0]);
-    const latitude = num(coords[1]);
-    if (latitude == null || longitude == null) continue;
+    const hit = pair(String(coords[1] ?? ""), String(coords[0] ?? ""));
+    if (!hit) continue;
     const props = row.properties || {};
     out.push(
       draft(
         asHoliday(props.holiday || props.tag) || fallbackHoliday,
-        latitude,
-        longitude,
+        hit.latitude,
+        hit.longitude,
         clip(props.note || props.name || props.title || props.description, 160),
         clip(props.address, 180)
       )
@@ -389,6 +714,159 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
   } catch {
     return "";
   }
+}
+
+const LOOKUP_CAP = 30;
+const LOOKUP_BUDGET_MS = 45_000;
+const VILLAGES_BOX = { minLat: 28.65, maxLat: 29.25, minLng: -82.25, maxLng: -81.7 };
+const NOMINATIM_UA = "TheVillagesEverythingApp/1.0 (holiday-light-tour)";
+
+function nearVillages(latitude: number, longitude: number) {
+  return (
+    latitude >= VILLAGES_BOX.minLat &&
+    latitude <= VILLAGES_BOX.maxLat &&
+    longitude >= VILLAGES_BOX.minLng &&
+    longitude <= VILLAGES_BOX.maxLng
+  );
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normAddr(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function addressSaved(pins: LightPin[], item: PendingPlace) {
+  const addr = normAddr(item.address);
+  if (addr.length < 8) return false;
+  return pins.some((pin) => pin.holiday === item.holiday && normAddr(pin.address).includes(addr));
+}
+
+function allowedMapUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    if (host === "maps.app.goo.gl" || host === "goo.gl" || host === "maps.google.com") return true;
+    return (host === "google.com" || host === "www.google.com") && parsed.pathname.startsWith("/maps");
+  } catch {
+    return false;
+  }
+}
+
+async function resolveMapLink(url: string): Promise<{ latitude: number; longitude: number } | null> {
+  if (!allowedMapUrl(url)) return null;
+  try {
+    const res = await fetch(url, {
+      redirect: "follow",
+      headers: { Accept: "text/html", "User-Agent": NOMINATIM_UA },
+      signal: AbortSignal.timeout(5000),
+    });
+    const fromUrl = firstCoords(res.url || url);
+    if (fromUrl) return fromUrl;
+    const html = (await res.text()).slice(0, 150_000);
+    const at = html.match(/@(-?\d{1,2}\.\d{4,}),(-?\d{1,3}\.\d{4,})/);
+    if (at) {
+      const hit = pair(at[1], at[2]);
+      if (hit) return hit;
+    }
+    const packed = html.match(/!3d(-?\d{1,2}\.\d{4,})!4d(-?\d{1,3}\.\d{4,})/);
+    return packed ? pair(packed[1], packed[2]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function forwardGeocode(
+  query: string
+): Promise<{ latitude: number; longitude: number; address: string } | null> {
+  const q = /the villages/i.test(query) ? query : `${query}, The Villages, Florida`;
+  const url =
+    "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&bounded=1&viewbox=-82.25,29.25,-81.70,28.65&q=" +
+    encodeURIComponent(q);
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": NOMINATIM_UA },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { lat?: string; lon?: string; display_name?: string }[];
+    const row = data[0];
+    const hit = row ? pair(String(row.lat || ""), String(row.lon || "")) : null;
+    if (!hit || !nearVillages(hit.latitude, hit.longitude)) return null;
+    return { ...hit, address: clip(row?.display_name, 180) };
+  } catch {
+    return null;
+  }
+}
+
+export type PinImportResult = {
+  pins: DraftPin[];
+  skipped: number;
+  missed: number;
+  capped: number;
+  already: number;
+};
+
+/** Nominatim allows about one search per second, so address lookups stay in a short batch. */
+export async function placePinImport(text: string, fallbackHoliday: TourHoliday): Promise<PinImportResult> {
+  const found = collectPinImport(text, fallbackHoliday);
+  const store = await readLightTour();
+  const pins = found.pins.filter((pin) => !store.pins.some((existing) => sameHouse(existing, pin)));
+  let already = found.pins.length - pins.length;
+  const seen = new Set<string>();
+  const pending = found.pending.filter((item) => {
+    const key = `${item.holiday}|${normAddr(item.address)}|${item.mapUrl}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    if (addressSaved(store.pins, item)) {
+      already += 1;
+      return false;
+    }
+    return true;
+  });
+  let missed = 0;
+  let capped = 0;
+  let lookups = 0;
+  const started = Date.now();
+  const overBudget = () => lookups >= LOOKUP_CAP || Date.now() - started > LOOKUP_BUDGET_MS;
+
+  for (let index = 0; index < pending.length; index++) {
+    if (pins.length >= 2000 || overBudget()) {
+      capped += pending.length - index;
+      break;
+    }
+    const item = pending[index];
+    let coords: { latitude: number; longitude: number } | null = null;
+    if (item.mapUrl) {
+      if (lookups > 0) await delay(1100);
+      lookups += 1;
+      coords = await resolveMapLink(item.mapUrl);
+    }
+    if (!coords && item.address) {
+      if (overBudget()) {
+        capped += pending.length - index;
+        break;
+      }
+      if (lookups > 0) await delay(1100);
+      lookups += 1;
+      coords = await forwardGeocode(item.address);
+    }
+    if (!coords) {
+      missed += 1;
+      continue;
+    }
+    const spot = { holiday: item.holiday, latitude: coords.latitude, longitude: coords.longitude };
+    if (store.pins.some((existing) => sameHouse(existing, spot)) || pins.some((existing) => sameHouse(existing, spot))) {
+      already += 1;
+      continue;
+    }
+    pins.push(draft(item.holiday, coords.latitude, coords.longitude, item.note, item.address));
+  }
+
+  return { pins, skipped: found.skipped, missed, capped, already };
 }
 
 export function emptyLightStore() {

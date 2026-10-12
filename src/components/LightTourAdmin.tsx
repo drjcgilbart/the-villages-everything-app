@@ -56,6 +56,23 @@ function blankDraft(holiday: TourHoliday): Draft {
   return { holiday, latitude: "", longitude: "", address: "", note: "", photoUrl: "" };
 }
 
+function combineImportFiles(parts: string[]) {
+  const trimmed = parts.map((part) => part.trim()).filter(Boolean);
+  if (trimmed.length <= 1) return trimmed[0] || "";
+  const rows: unknown[] = [];
+  for (const part of trimmed) {
+    if (!(part.startsWith("{") || part.startsWith("["))) return trimmed.join("\n\n");
+    try {
+      const parsed = JSON.parse(part) as unknown;
+      if (Array.isArray(parsed)) rows.push(...parsed);
+      else rows.push(parsed);
+    } catch {
+      return trimmed.join("\n\n");
+    }
+  }
+  return JSON.stringify(rows);
+}
+
 export function LightTourAdmin() {
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -245,7 +262,7 @@ export function LightTourAdmin() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "The import did not finish.");
       setImportText("");
-      setNotice(`Added ${data.added} ${data.added === 1 ? "pin" : "pins"}.`);
+      setNotice(data.message || `Added ${data.added} ${data.added === 1 ? "pin" : "pins"}.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "The import did not finish.");
@@ -254,13 +271,26 @@ export function LightTourAdmin() {
     }
   }
 
-  async function onImportFile(file: File) {
-    if (file.size > 2_000_000) {
-      setError("That file is too large.");
+  async function onImportFiles(files: File[]) {
+    if (!files.length) return;
+    let total = 0;
+    const texts: string[] = [];
+    for (const file of files) {
+      total += file.size;
+      if (file.size > 2_000_000 || total > 2_000_000) {
+        setError("Those files are too large.");
+        return;
+      }
+      texts.push(await file.text());
+    }
+    const combined = combineImportFiles(texts);
+    if (combined.length > 2_000_000) {
+      setError("Those files are too large.");
       return;
     }
-    setImportText(await file.text());
-    setNotice(`${file.name} is ready to import.`);
+    setError("");
+    setImportText(combined);
+    setNotice(files.length === 1 ? `${files[0].name} is ready to import.` : `${files.length} files are ready to import.`);
   }
 
   if (!ready) {
@@ -427,28 +457,30 @@ export function LightTourAdmin() {
         <div className="about-panel lt-card">
           <h2>Bring in saved pins</h2>
           <p className="panel-hint">
-            Paste latitude, longitude lines, a CSV with latitude and longitude columns, or a GeoJSON file of points.
-            They are tagged {HOLIDAY_LABELS[holiday]} unless the file already has a holiday column.
+            Paste a Google Keep note, or choose the Takeout files. A note is placed when it has a street address, a
+            Google Maps link, or a latitude and longitude. A Keep label named Halloween, Christmas, or xmas picks the
+            holiday. Otherwise these pins are tagged {HOLIDAY_LABELS[holiday]}. CSV and GeoJSON points still work.
           </p>
           <div className="field">
-            <label htmlFor="lt-import">Coordinates or file text</label>
+            <label htmlFor="lt-import">Note, coordinates, or file text</label>
             <textarea
               id="lt-import"
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
-              placeholder={"28.908, -81.985 porch lights"}
+              placeholder={"1234 Bailey Ridge Dr\nporch full of pumpkins"}
             />
           </div>
           <div className="field">
-            <label htmlFor="lt-import-file">CSV or GeoJSON</label>
+            <label htmlFor="lt-import-file">Keep, CSV, or GeoJSON</label>
             <input
               id="lt-import-file"
               type="file"
-              accept=".csv,.json,.geojson,text/csv,application/json"
+              multiple
+              accept=".csv,.json,.geojson,.html,.htm,.txt,text/csv,application/json,text/html,text/plain"
               onChange={(e) => {
-                const file = e.target.files?.[0];
+                const files = e.target.files ? [...e.target.files] : [];
                 e.target.value = "";
-                if (file) void onImportFile(file);
+                void onImportFiles(files);
               }}
             />
           </div>

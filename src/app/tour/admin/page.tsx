@@ -1,7 +1,7 @@
 import { LightTourAdmin } from "@/components/LightTourAdmin";
 
 export const metadata = {
-  title: "Holiday Light Tour pins",
+  title: "Holiday Lights Tour pins",
   robots: { index: false, follow: false },
 };
 

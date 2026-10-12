@@ -765,6 +765,15 @@ export const MAIN_TOPICS: {
     image: "/graphics/theme-rec-centers.jpg",
   },
   {
+    href: "/tour",
+    label: "Holiday Lights Tour",
+    icon: "💡",
+    matchPrefixes: ["/tour"],
+    blurb:
+      "A driving tour of decorated houses for Halloween, Christmas, and other holiday lights.",
+    image: "/graphics/best-of-month/house.jpg",
+  },
+  {
     href: "/golf-zone",
     label: "Golf",
     icon: "⛳",

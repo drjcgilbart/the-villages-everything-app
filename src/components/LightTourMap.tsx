@@ -115,7 +115,7 @@ export function LightTourMap({ visitor, line, stops, activeId }: Props) {
       ref={host}
       className="lt-map"
       role="application"
-      aria-label="Holiday light tour map with numbered stops"
+      aria-label="Holiday Lights Tour map with numbered stops"
     />
   );
 }
