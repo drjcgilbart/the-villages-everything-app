@@ -9,6 +9,9 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function importError(placed: PinImportResult) {
+  if (placed.already && placed.missed) {
+    return "Those houses are already on the tour. One more address could not be placed near The Villages.";
+  }
   if (placed.missed) {
     return "No houses could be placed near The Villages. Check the street address, or add a Google Maps link or coordinates.";
   }
@@ -43,15 +46,22 @@ export async function POST(req: Request) {
   if (text.length > 2_000_000) {
     return NextResponse.json({ error: "That file is too large." }, { status: 400 });
   }
+  // Read the sign-in before any map lookup. A long download can drop the request context.
+  const member = await getSessionMember();
   try {
     const placed = await placePinImport(text, holiday);
     if (!placed.pins.length) {
-      if (placed.already && !placed.missed && !placed.capped) {
-        return NextResponse.json({ added: 0, message: "Those houses are already on the tour." });
+      if (placed.already && !placed.capped) {
+        const missed = placed.missed
+          ? " One more address could not be placed near The Villages."
+          : "";
+        return NextResponse.json({
+          added: 0,
+          message: `Those houses are already on the tour.${missed}`,
+        });
       }
       return NextResponse.json({ error: importError(placed) }, { status: 400 });
     }
-    const member = await getSessionMember();
     const pins = await importPins(placed.pins.slice(0, 2000), member?.email || "admin");
     return NextResponse.json({
       added: pins.length,
@@ -60,6 +70,15 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[light-tour] import failed", err);
-    return NextResponse.json({ error: "The import did not finish. Click Import pins again." }, { status: 500 });
+    const detail = err instanceof Error ? err.message.replace(/https?:\/\/\S+/g, "").slice(0, 180) : "";
+    const storage = /could not save|redis|blob|durable/i.test(detail);
+    return NextResponse.json(
+      {
+        error: storage
+          ? "The houses were read, but saving them failed. Click Import pins again in a minute."
+          : "The import did not finish. Click Import pins again.",
+      },
+      { status: 500 }
+    );
   }
 }

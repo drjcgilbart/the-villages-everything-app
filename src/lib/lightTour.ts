@@ -318,6 +318,24 @@ function pair(latRaw: string, lngRaw: string): { latitude: number; longitude: nu
   return { latitude, longitude };
 }
 
+function dmsPart(deg: string, min: string | undefined, sec: string | undefined, hem: string) {
+  const value = Number(deg) + Number(min || 0) / 60 + Number(sec || 0) / 3600;
+  if (!Number.isFinite(value)) return null;
+  return /[sSwW]/.test(hem) ? -value : value;
+}
+
+/** Google Keep labels a dropped pin as 28°46'34.0"N 81°58'56.7"W. */
+function dmsCoords(text: string): { latitude: number; longitude: number } | null {
+  const match = text.match(
+    /(\d{1,3})\s*°\s*(\d{1,2})?\s*['′]?\s*(\d{1,2}(?:\.\d+)?)?\s*["″]?\s*([NnSs])[\s,]+(\d{1,3})\s*°\s*(\d{1,2})?\s*['′]?\s*(\d{1,2}(?:\.\d+)?)?\s*["″]?\s*([EeWw])/
+  );
+  if (!match) return null;
+  const latitude = dmsPart(match[1], match[2], match[3], match[4]);
+  const longitude = dmsPart(match[5], match[6], match[7], match[8]);
+  if (latitude == null || longitude == null) return null;
+  return pair(String(latitude), String(longitude));
+}
+
 function coordsIn(text: string): { latitude: number; longitude: number } | null {
   const at = text.match(/@(-?\d{1,2}\.\d{2,})\s*,\s*(-?\d{1,3}\.\d{2,})/);
   if (at) {
@@ -334,6 +352,8 @@ function coordsIn(text: string): { latitude: number; longitude: number } | null 
     const hit = pair(query[1], query[2]);
     if (hit) return hit;
   }
+  const dms = dmsCoords(text);
+  if (dms) return dms;
   const re = /(-?\d{1,2}\.\d{3,})\s*[, ]\s*(-?\d{1,3}\.\d{3,})/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
@@ -621,6 +641,39 @@ function looksLikeGeo(value: unknown) {
   return row.type === "Feature" || row.type === "FeatureCollection" || Array.isArray(row.features);
 }
 
+const PACKED_RE = /!3d(-?\d{1,2}\.\d{2,})!4d(-?\d{1,3}\.\d{2,})/g;
+const PLACE_PAIR_RE = /\/maps\/place\/(-?\d{1,2}\.\d{3,}),(-?\d{1,3}\.\d{3,})/g;
+const DMS_RE =
+  /(\d{1,3})\s*°\s*(\d{1,2})?\s*['′]?\s*(\d{1,2}(?:\.\d+)?)?\s*["″]?\s*([NnSs])[\s,]+(\d{1,3})\s*°\s*(\d{1,2})?\s*['′]?\s*(\d{1,2}(?:\.\d+)?)?\s*["″]?\s*([EeWw])/g;
+
+function rememberCoord(
+  pins: DraftPin[],
+  holiday: TourHoliday,
+  coords: { latitude: number; longitude: number } | null
+) {
+  if (!coords) return;
+  const spot = { holiday, latitude: coords.latitude, longitude: coords.longitude };
+  if (pins.some((pin) => sameHouse(pin, spot))) return;
+  pins.push(draft(holiday, coords.latitude, coords.longitude));
+}
+
+/** Every coordinate in the paste, even when the note JSON is broken across lines. */
+function looseCoordinatePins(raw: string, holiday: TourHoliday, existing: DraftPin[]): DraftPin[] {
+  PACKED_RE.lastIndex = 0;
+  PLACE_PAIR_RE.lastIndex = 0;
+  DMS_RE.lastIndex = 0;
+  const pins = [...existing];
+  for (const match of raw.matchAll(PACKED_RE)) rememberCoord(pins, holiday, pair(match[1], match[2]));
+  for (const match of raw.matchAll(PLACE_PAIR_RE)) rememberCoord(pins, holiday, pair(match[1], match[2]));
+  for (const match of raw.matchAll(DMS_RE)) {
+    const latitude = dmsPart(match[1], match[2], match[3], match[4]);
+    const longitude = dmsPart(match[5], match[6], match[7], match[8]);
+    if (latitude == null || longitude == null) continue;
+    rememberCoord(pins, holiday, pair(String(latitude), String(longitude)));
+  }
+  return pins.slice(existing.length);
+}
+
 /** Coordinates, CSV, GeoJSON, or a Google Keep note with an address or map link. */
 export function collectPinImport(text: string, fallbackHoliday: TourHoliday): PinImport {
   const raw = text.trim();
@@ -629,10 +682,16 @@ export function collectPinImport(text: string, fallbackHoliday: TourHoliday): Pi
     try {
       const parsed = JSON.parse(raw) as unknown;
       const geo = parseGeoJson(parsed, fallbackHoliday);
-      if (geo.length) return { pins: geo, pending: [], skipped: 0 };
+      if (geo.length) return withLooseCoordinates({ pins: geo, pending: [], skipped: 0 }, raw, fallbackHoliday);
       if (looksLikeGeo(parsed)) return emptyImport();
       const keep = keepNotesFrom(parsed);
-      if (keep) return mergeImports(keep.map((note) => keepNoteToImport(note, fallbackHoliday)));
+      if (keep) {
+        return withLooseCoordinates(
+          mergeImports(keep.map((note) => keepNoteToImport(note, fallbackHoliday))),
+          raw,
+          fallbackHoliday
+        );
+      }
     } catch {
       /* Plain text that only started with a brace. */
     }
@@ -674,8 +733,14 @@ export function collectPinImport(text: string, fallbackHoliday: TourHoliday): Pi
     if (!hit) continue;
     out.push(draft(fallbackHoliday, hit.latitude, hit.longitude, match[3] || ""));
   }
-  if (out.length) return { pins: out, pending: [], skipped: 0 };
-  return textToPlace("", raw, fallbackHoliday);
+  if (out.length) return withLooseCoordinates({ pins: out, pending: [], skipped: 0 }, raw, fallbackHoliday);
+  return withLooseCoordinates(textToPlace("", raw, fallbackHoliday), raw, fallbackHoliday);
+}
+
+function withLooseCoordinates(found: PinImport, raw: string, holiday: TourHoliday): PinImport {
+  const extra = looseCoordinatePins(raw, holiday, found.pins);
+  if (!extra.length) return found;
+  return { ...found, pins: [...found.pins, ...extra] };
 }
 
 export function parsePinImport(text: string, fallbackHoliday: TourHoliday): DraftPin[] {
@@ -805,20 +870,62 @@ function coordsFromMapPage(html: string): { latitude: number; longitude: number 
   return packed ? pair(packed[1], packed[2]) : null;
 }
 
+const MAP_BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+/** Google's place page is large. Reading all of it can kill the import before any house is saved. */
+async function readLimited(res: Response, maxBytes: number): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+  const parts: Uint8Array[] = [];
+  let used = 0;
+  try {
+    while (used < maxBytes) {
+      const step = await reader.read();
+      if (step.done || !step.value) break;
+      parts.push(step.value);
+      used += step.value.byteLength;
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      /* The response is already closed. */
+    }
+  }
+  const merged = new Uint8Array(Math.min(used, maxBytes));
+  let offset = 0;
+  for (const part of parts) {
+    const take = Math.min(part.byteLength, merged.length - offset);
+    if (take <= 0) break;
+    merged.set(part.subarray(0, take), offset);
+    offset += take;
+  }
+  return new TextDecoder().decode(merged);
+}
+
 async function resolveMapLink(url: string): Promise<{ latitude: number; longitude: number } | null> {
   if (!allowedMapUrl(url)) return null;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 3000);
   try {
     const res = await fetch(url, {
       redirect: "follow",
-      headers: { Accept: "text/html", "User-Agent": NOMINATIM_UA },
-      signal: AbortSignal.timeout(4000),
+      headers: {
+        Accept: "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent": MAP_BROWSER_UA,
+      },
+      signal: ac.signal,
     });
     const fromUrl = firstCoords(res.url || url);
     if (fromUrl) return fromUrl;
-    const html = (await res.text()).slice(0, 220_000);
+    const html = await readLimited(res, 80_000);
     return coordsFromMapPage(html);
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -856,7 +963,12 @@ export type PinImportResult = {
 /** Nominatim allows about one search per second, so address lookups stay in a short batch. */
 export async function placePinImport(text: string, fallbackHoliday: TourHoliday): Promise<PinImportResult> {
   const found = collectPinImport(text, fallbackHoliday);
-  const store = await readLightTour();
+  let store = emptyStore();
+  try {
+    store = await readLightTour();
+  } catch {
+    store = emptyStore();
+  }
   const pins = found.pins.filter((pin) => !store.pins.some((existing) => sameHouse(existing, pin)));
   let already = found.pins.length - pins.length;
   const seen = new Set<string>();
