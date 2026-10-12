@@ -22,7 +22,7 @@
         "NSPhotoLibraryUsageDescription": "Allow photo library access so you can upload pictures for Best of the Month, Support Local, Marketplace, and member content.",
         "NSPhotoLibraryAddUsageDescription": "Allow saving photos you capture in the app.",
         "NSMicrophoneUsageDescription": "Allow microphone access if you record short videos for community listings.",
-        "NSLocationWhenInUseUsageDescription": "Optional location can help with nearby village features if you enable them.",
+        "NSLocationWhenInUseUsageDescription": "Your location is used for the Holiday Light Tour driving route and for nearby village features when you allow it.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "config": {
@@ -48,7 +48,9 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_FULL_SCREEN_INTENT",
-        "android.permission.SYSTEM_ALERT_WINDOW"
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "blockedPermissions": [
         "android.permission.CAMERA",

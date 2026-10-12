@@ -54,11 +54,22 @@ function isGateActive(password: string): boolean {
   return envFlag === "1" || envFlag === "true" || envFlag === "on";
 }
 
+function allowsTourLocation(pathname: string) {
+  return pathname === "/tour" || pathname.startsWith("/tour/") || pathname.startsWith("/api/light-tour");
+}
+
 function withSecurity(res: NextResponse, pathname = ""): NextResponse {
   const out = applySecurityHeaders(res);
   // Chrome hides a PDF inside a page when this header is on the file itself.
   if (pathname.startsWith("/api/media/")) {
     out.headers.delete("Cross-Origin-Opener-Policy");
+  }
+  // Location stays off everywhere else. The light tour is the only page that asks for it.
+  if (allowsTourLocation(pathname)) {
+    out.headers.set(
+      "Permissions-Policy",
+      "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=(), browsing-topics=()"
+    );
   }
   return out;
 }

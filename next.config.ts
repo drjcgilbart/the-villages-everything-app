@@ -37,11 +37,20 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
+    const tourLocation = securityHeaders.map((header) =>
+      header.key === "Permissions-Policy"
+        ? { ...header, value: header.value.replace("geolocation=()", "geolocation=(self)") }
+        : header
+    );
     return [
       {
         source: "/:path*",
         headers: securityHeaders,
       },
+      { source: "/tour", headers: tourLocation },
+      { source: "/tour/:path*", headers: tourLocation },
+      { source: "/api/light-tour", headers: tourLocation },
+      { source: "/api/light-tour/:path*", headers: tourLocation },
     ];
   },
   async redirects() {

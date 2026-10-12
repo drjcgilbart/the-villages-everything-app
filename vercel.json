@@ -17,6 +17,42 @@
       ]
     },
     {
+      "source": "/tour",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=(), browsing-topics=()"
+        }
+      ]
+    },
+    {
+      "source": "/tour/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=(), browsing-topics=()"
+        }
+      ]
+    },
+    {
+      "source": "/api/light-tour",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=(), browsing-topics=()"
+        }
+      ]
+    },
+    {
+      "source": "/api/light-tour/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=(), browsing-topics=()"
+        }
+      ]
+    },
+    {
       "source": "/golf-cart-hero",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }

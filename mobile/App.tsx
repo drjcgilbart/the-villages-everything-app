@@ -545,7 +545,7 @@ function Shell() {
         javaScriptEnabled
         domStorageEnabled
         setSupportMultipleWindows={false}
-        geolocationEnabled={false}
+        geolocationEnabled={true}
         startInLoadingState
         applicationNameForUserAgent=" VillagesEverythingApp/1.2"
         injectedJavaScriptBeforeContentLoaded={
