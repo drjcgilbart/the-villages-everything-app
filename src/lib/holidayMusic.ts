@@ -32,6 +32,16 @@ export const HOLIDAY_TRACKS: HolidayTrack[] = [
       "Hector Berlioz, transcribed by Lt. Col. Jack T. Cline — United States Marine Band. Public domain.",
   },
   {
+    id: "danse-macabre",
+    holiday: "halloween",
+    name: "Danse Macabre",
+    emoji: "💀",
+    blurb: "Philadelphia Orchestra with Leopold Stokowski. Death tunes the violin at midnight.",
+    src: "/music/holiday/danse-macabre.mp3",
+    credit:
+      "Camille Saint-Saëns — Philadelphia Orchestra, Leopold Stokowski. Victor 6505, recorded April 29, 1925. Public domain in the United States.",
+  },
+  {
     id: "jingle-bells",
     holiday: "christmas",
     name: "Jingle Bells",

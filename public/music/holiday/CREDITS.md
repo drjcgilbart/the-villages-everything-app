@@ -8,5 +8,6 @@ To add another song later, put the mp3 in this folder and add a row to `HOLIDAY_
 |------|-------------|--------|
 | `mountain-king.mp3` | In the Hall of the Mountain King | Edvard Grieg, performed by the Czech National Symphony Orchestra for the Musopen Kickstarter. Musopen released the recording to the public domain worldwide. |
 | `witches-sabbath.mp3` | A Dream of a Witches' Sabbath | Hector Berlioz, transcribed by Lt. Col. Jack T. Cline, performed by the United States Marine Band. U.S. government work, public domain. |
+| `danse-macabre.mp3` | Danse Macabre | Camille Saint-Saëns, Philadelphia Orchestra, Leopold Stokowski. Victor 6505, recorded April 29, 1925, and first sold in the United States that year. Public domain in the United States since January 1, 2026. This is the shellac recording, so it has the sound of a 1925 record. |
 | `jingle-bells.mp3` | Jingle Bells | United States Air Force Band of Mid-America, with Starlifter and Roots in Blue, 2020. Public-domain music published by the U.S. Air Force. |
 | `merry-christmas.mp3` | We Wish You a Merry Christmas | United States Air Force Band of Mid-America, with Starlifter and Roots in Blue, 2020. Public-domain music published by the U.S. Air Force. |
