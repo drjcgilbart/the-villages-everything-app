@@ -1,4 +1,12 @@
-import { ensureDurableHydrated, readJsonFile, writeJsonFileAsync } from "./dataFs";
+import {
+  cacheDurableJson,
+  durableConfigured,
+  ensureDurableHydrated,
+  isEphemeralHost,
+  pullDurableJson,
+  readJsonFile,
+  writeJsonFileAsync,
+} from "./dataFs";
 import { haversineMeters, type TourHoliday } from "./lightTourShared";
 
 export {
@@ -105,12 +113,45 @@ function normalizePin(raw: unknown): LightPin | null {
   };
 }
 
-export async function readLightTour(): Promise<Store> {
-  await ensureDurableHydrated();
-  const raw = readJsonFile<Partial<Store>>(LIGHT_TOUR_FILE);
+function parseStore(raw: Partial<Store> | null): Store {
   const pins = Array.isArray(raw?.pins) ? raw.pins.map(normalizePin).filter((pin): pin is LightPin => !!pin) : [];
   const tours = Array.isArray(raw?.tours) ? raw.tours.filter((row) => row && typeof row === "object") as LightTourLog[] : [];
   return { pins, tours: tours.slice(-400) };
+}
+
+function parseStoreText(text: string): Store {
+  try {
+    return parseStore(JSON.parse(text) as Partial<Store>);
+  } catch {
+    throw new Error("Could not read the saved Holiday Lights houses.");
+  }
+}
+
+export async function readLightTour(): Promise<Store> {
+  if (isEphemeralHost() && durableConfigured()) {
+    try {
+      const text = await pullDurableJson(LIGHT_TOUR_FILE);
+      if (!text) return emptyStore();
+      cacheDurableJson(LIGHT_TOUR_FILE, text);
+      return parseStoreText(text);
+    } catch {
+      await ensureDurableHydrated();
+      return parseStore(readJsonFile<Partial<Store>>(LIGHT_TOUR_FILE));
+    }
+  }
+  await ensureDurableHydrated();
+  return parseStore(readJsonFile<Partial<Store>>(LIGHT_TOUR_FILE));
+}
+
+/** Writes must see the real saved list. A missed read must not replace it with a shorter one. */
+async function readLightTourForWrite(): Promise<Store> {
+  if (isEphemeralHost() && durableConfigured()) {
+    const text = await pullDurableJson(LIGHT_TOUR_FILE);
+    if (!text) return emptyStore();
+    cacheDurableJson(LIGHT_TOUR_FILE, text);
+    return parseStoreText(text);
+  }
+  return readLightTour();
 }
 
 async function writeStore(store: Store) {
@@ -135,7 +176,7 @@ export function savePin(input: {
   createdBy: string;
 }): Promise<LightPin> {
   return enqueue(async () => {
-    const store = await readLightTour();
+    const store = await readLightTourForWrite();
     const now = new Date().toISOString();
     const id = clip(input.id, 80);
     const existing = id ? store.pins.find((pin) => pin.id === id) : undefined;
@@ -161,7 +202,7 @@ export function savePin(input: {
 
 export function deletePin(id: string): Promise<boolean> {
   return enqueue(async () => {
-    const store = await readLightTour();
+    const store = await readLightTourForWrite();
     const next = store.pins.filter((pin) => pin.id !== id);
     if (next.length === store.pins.length) return false;
     store.pins = next;
@@ -182,7 +223,7 @@ export function importPins(
   createdBy: string
 ): Promise<LightPin[]> {
   return enqueue(async () => {
-    const store = await readLightTour();
+    const store = await readLightTourForWrite();
     const now = new Date().toISOString();
     const added: LightPin[] = [];
     for (const pin of pins) {
@@ -216,7 +257,7 @@ export function logTour(input: {
   completedAt?: string;
 }): Promise<void> {
   return enqueue(async () => {
-    const store = await readLightTour();
+    const store = await readLightTourForWrite();
     const sessionId = clip(input.sessionId, 80);
     const existing = store.tours.find((tour) => tour.sessionId === sessionId && tour.holiday === input.holiday && !tour.completedAt);
     if (existing && input.completedAt) {
@@ -963,12 +1004,7 @@ export type PinImportResult = {
 /** Nominatim allows about one search per second, so address lookups stay in a short batch. */
 export async function placePinImport(text: string, fallbackHoliday: TourHoliday): Promise<PinImportResult> {
   const found = collectPinImport(text, fallbackHoliday);
-  let store = emptyStore();
-  try {
-    store = await readLightTour();
-  } catch {
-    store = emptyStore();
-  }
+  const store = await readLightTourForWrite();
   const pins = found.pins.filter((pin) => !store.pins.some((existing) => sameHouse(existing, pin)));
   let already = found.pins.length - pins.length;
   const seen = new Set<string>();

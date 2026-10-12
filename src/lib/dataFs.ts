@@ -133,7 +133,7 @@ function redisKey(filename: string) {
   return `tvh-data:${path.basename(filename)}`;
 }
 
-async function redisCommand(command: string[]): Promise<unknown> {
+async function redisCommand(command: string[], timeoutMs = 2500): Promise<unknown> {
   const url = redisRestUrl();
   const token = redisRestToken();
   if (!url || !token) {
@@ -147,7 +147,7 @@ async function redisCommand(command: string[]): Promise<unknown> {
     },
     body: JSON.stringify(command),
     cache: "no-store",
-    signal: AbortSignal.timeout(2500),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -170,9 +170,25 @@ export function missingDurableStorageHelp(): string {
   );
 }
 
+function redisWriteRetryable(err: unknown) {
+  const msg = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  return /timeout|aborted|network|econnreset|etimedout|fetch failed|socket/i.test(msg);
+}
+
+/** Writes wait longer than reads. A cold Redis often misses the 2.5s read limit, then answers. */
 async function pushJsonToRedis(filename: string, json: string): Promise<void> {
   if (!redisConfigured() || !DURABLE_JSON.has(filename)) return;
-  await redisCommand(["SET", redisKey(filename), json]);
+  let last: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await redisCommand(["SET", redisKey(filename), json], 8000);
+      return;
+    } catch (err) {
+      last = err;
+      if (!redisWriteRetryable(err) || attempt === 1) break;
+    }
+  }
+  throw last instanceof Error ? last : new Error(String(last));
 }
 
 async function pullJsonFromRedis(filename: string): Promise<string | null> {
@@ -834,17 +850,38 @@ export async function writeJsonFileAsync(
     throw new Error("Invalid data filename");
   }
   const json = JSON.stringify(data, null, 2);
+  const previous = memoryJson.has(base) ? memoryJson.get(base) : undefined;
   memoryJson.set(base, json);
 
   const dir = ensureWritableDirs();
   const p = path.join(dir, base);
-  fs.writeFileSync(/*turbopackIgnore: true*/ p, json, "utf8");
+  try {
+    fs.writeFileSync(/*turbopackIgnore: true*/ p, json, "utf8");
 
-  // Local: disk write is enough (remote optional). Serverless: await Redis/Blob.
-  if (DURABLE_JSON.has(base)) {
-    if (isEphemeralHost() || durableConfigured()) {
-      await syncDurableJson(base, json);
+    // Local: disk write is enough (remote optional). Serverless: await Redis/Blob.
+    if (DURABLE_JSON.has(base)) {
+      if (isEphemeralHost() || durableConfigured()) {
+        await syncDurableJson(base, json);
+      }
     }
+  } catch (err) {
+    // A failed remote save must not linger in memory or /tmp and look already saved.
+    if (previous === undefined) {
+      memoryJson.delete(base);
+      try {
+        fs.unlinkSync(/*turbopackIgnore: true*/ p);
+      } catch {
+        /* nothing to remove */
+      }
+    } else {
+      memoryJson.set(base, previous);
+      try {
+        fs.writeFileSync(/*turbopackIgnore: true*/ p, previous, "utf8");
+      } catch {
+        /* memory still has the previous copy */
+      }
+    }
+    throw err;
   }
 }
 

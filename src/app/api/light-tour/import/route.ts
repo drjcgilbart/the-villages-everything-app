@@ -71,12 +71,13 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("[light-tour] import failed", err);
     const detail = err instanceof Error ? err.message.replace(/https?:\/\/\S+/g, "").slice(0, 180) : "";
-    const storage = /could not save|redis|blob|durable/i.test(detail);
+    const storage = /could not save|could not read|redis|blob|durable/i.test(detail);
     return NextResponse.json(
       {
         error: storage
           ? "The houses were read, but saving them failed. Click Import pins again in a minute."
           : "The import did not finish. Click Import pins again.",
+        detail,
       },
       { status: 500 }
     );
