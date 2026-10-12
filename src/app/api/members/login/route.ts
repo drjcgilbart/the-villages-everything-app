@@ -71,8 +71,14 @@ export async function POST(req: Request) {
     res.cookies.set(cookie.name, cookie.value, cookie);
     return res;
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Login failed";
+    const storage = /storage-v2|durable storage|Redis HTTP|Vercel Blob/i.test(msg);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Login failed" },
+      {
+        error: storage
+          ? "Sign-in could not finish because saved account data is full right now. Wait a minute and try again."
+          : msg,
+      },
       { status: 401 }
     );
   }

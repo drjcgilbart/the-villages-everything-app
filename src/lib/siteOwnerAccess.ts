@@ -1,7 +1,9 @@
 import { getAdminPassword } from "./auth";
 import { cacheDurableJson, pullDurableJson } from "./dataFs";
 import {
+  findMemberSpace,
   loadMemberSpaces,
+  ownerAccessPlan,
   saveMemberSpacesAsync,
   updateMemberSpace,
 } from "./memberSpace";
@@ -32,21 +34,48 @@ function adminPasswordUnlocks(password: string): boolean {
   return secretsMatch(String(password || ""), getAdminPassword());
 }
 
-/** Approve the owner member and unlock Square Royalty (persisted to Redis). */
+function storageSaveFailed(err: unknown) {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /storage-v2|durable storage|Redis HTTP|Vercel Blob/i.test(msg);
+}
+
+/**
+ * Approve the owner and keep Square Royalty.
+ * A full Redis plan or a suspended Blob store must not block sign-in when the
+ * account is already approved. Rewriting both files on every sign-in was also
+ * spending the Redis command limit.
+ */
 export async function grantSiteOwnerFullAccess(member: Member): Promise<Member> {
   if (!isSiteOwnerEmail(member.email)) return member;
   if (member.status === "rejected" || member.status === "suspended") {
     return member;
   }
   await pullOwnerDurable();
-  const approved = ensureApprovedOwnerMember(member.email);
+  const current = getMemberByEmail(member.email) || member;
+  if (current.status === "rejected" || current.status === "suspended") {
+    return current;
+  }
+  const space = findMemberSpace(current.id);
+  if (
+    current.status === "approved" &&
+    space &&
+    ownerAccessPlan(space) === "square_royalty"
+  ) {
+    return current;
+  }
+  const approved = ensureApprovedOwnerMember(current.email);
   updateMemberSpace(approved.id, {
     plan: "square_royalty",
     planExpiresAt: null,
   });
-  await saveYardSaleAsync(loadYardSale());
-  await saveMemberSpacesAsync(loadMemberSpaces());
-  return approved;
+  try {
+    await saveYardSaleAsync(loadYardSale());
+    await saveMemberSpacesAsync(loadMemberSpaces());
+  } catch (err) {
+    if (!storageSaveFailed(err)) throw err;
+    console.error("[owner] sign-in continued without a durable save", err);
+  }
+  return getMemberByEmail(approved.email) || approved;
 }
 
 /**
