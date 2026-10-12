@@ -12,7 +12,7 @@ export type TrackId =
   | "lanai-lullaby";
 
 export type ThemeTrack = {
-  id: TrackId;
+  id: string;
   name: string;
   emoji: string;
   blurb: string;
@@ -81,13 +81,15 @@ export type MusicEngine = {
   stop: () => void;
   stopAll: () => void;
   setVolume: (v: number) => void;
-  setTrack: (id: TrackId | string) => void;
-  getTrackId: () => TrackId;
+  setTrack: (id: string) => void;
+  /** Swap the song list without starting a second player. Unknown ids stay on the first song. */
+  setCatalog: (tracks: readonly ThemeTrack[]) => void;
+  getTrackId: () => string;
   isPlaying: () => boolean;
-  isTrackPlaying: (id: TrackId | string) => boolean;
+  isTrackPlaying: (id: string) => boolean;
   /** When true, the current file repeats. When false, `onEnded` fires so the player can advance. */
   setRepeatOne: (repeat: boolean) => void;
-  setOnEnded: (cb: ((id: TrackId) => void) | null) => void;
+  setOnEnded: (cb: ((id: string) => void) | null) => void;
   dispose: () => void;
 };
 
@@ -127,13 +129,16 @@ function srcMatches(a: HTMLAudioElement, path: string) {
  * the previous track before the next one starts.
  */
 export function createThemeMusicEngine(
-  initialTrack: TrackId = "sunny-morning"
+  initialTrack = "sunny-morning",
+  catalog?: readonly ThemeTrack[]
 ): MusicEngine {
+  let list: ThemeTrack[] = catalog && catalog.length ? [...catalog] : [...THEME_TRACKS];
+  const pick = (id: string) => list.find((t) => t.id === id) || list[0];
   let playing = false;
   let volume = 0.35;
-  let track = getTrack(initialTrack);
+  let track = pick(initialTrack);
   let repeatOne = false;
-  let onEnded: ((id: TrackId) => void) | null = null;
+  let onEnded: ((id: string) => void) | null = null;
 
   function stopAll() {
     sharedGeneration += 1;
@@ -189,8 +194,13 @@ export function createThemeMusicEngine(
       volume = Math.min(1, Math.max(0, v));
       if (sharedAudio) sharedAudio.volume = volume;
     },
-    setTrack(id: TrackId | string) {
-      track = getTrack(id);
+    setTrack(id: string) {
+      track = pick(id);
+    },
+    setCatalog(next: readonly ThemeTrack[]) {
+      if (!next.length) return;
+      list = [...next];
+      track = pick(track.id);
     },
     getTrackId() {
       return track.id;
@@ -198,7 +208,7 @@ export function createThemeMusicEngine(
     isPlaying() {
       return playing && !!sharedAudio && !sharedAudio.paused;
     },
-    isTrackPlaying(id: TrackId | string) {
+    isTrackPlaying(id: string) {
       return playing && !!sharedAudio && !sharedAudio.paused && track.id === id;
     },
     setRepeatOne(repeat: boolean) {

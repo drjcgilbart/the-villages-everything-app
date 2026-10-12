@@ -1,49 +1,89 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
-import {
-  THEME_TRACKS,
-  createThemeMusicEngine,
-  type TrackId,
-} from "@/lib/themeMusic";
+import { THEME_TRACKS, createThemeMusicEngine, type ThemeTrack } from "@/lib/themeMusic";
 
-const STORAGE_VOL = "tvi-theme-vol";
-const STORAGE_OPEN = "tvi-theme-music-open";
-const STORAGE_TRACK = "tvi-theme-track";
-const STORAGE_LOOP = "tvi-theme-loop-ids";
+type Props = {
+  /** Page-specific songs. The site-wide player leaves this empty. */
+  tracks?: readonly ThemeTrack[];
+  /** Keeps this page's volume and song list out of the rest of the site. */
+  storagePrefix?: string;
+  title?: string;
+  note?: string;
+  fabTitle?: string;
+};
 
-const ALL_TRACK_IDS = THEME_TRACKS.map((t) => t.id);
+const SITE_KEYS = {
+  vol: "tvi-theme-vol",
+  open: "tvi-theme-music-open",
+  track: "tvi-theme-track",
+  loop: "tvi-theme-loop-ids",
+};
 
-function parseLoopIds(raw: string | null): TrackId[] {
-  if (!raw) return [...ALL_TRACK_IDS];
+function storageKeys(prefix?: string) {
+  if (!prefix) return SITE_KEYS;
+  return {
+    vol: `${prefix}-vol`,
+    open: `${prefix}-open`,
+    track: `${prefix}-track`,
+    loop: `${prefix}-loop`,
+  };
+}
+
+function parseLoopIds(raw: string | null, list: readonly ThemeTrack[]): string[] {
+  const all = list.map((track) => track.id);
+  if (!raw) return all;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [...ALL_TRACK_IDS];
-    const ids = parsed.filter((id): id is TrackId =>
-      THEME_TRACKS.some((t) => t.id === id)
+    if (!Array.isArray(parsed)) return all;
+    const ids = parsed.filter(
+      (id): id is string => typeof id === "string" && list.some((track) => track.id === id)
     );
-    return ids.length ? ids : [...ALL_TRACK_IDS];
+    return ids.length ? ids : all;
   } catch {
-    return [...ALL_TRACK_IDS];
+    return all;
   }
 }
 
-export function ThemeMusicPlayer() {
+export function ThemeMusicPlayer({
+  tracks,
+  storagePrefix,
+  title = "Theme music",
+  note,
+  fabTitle,
+}: Props = {}) {
+  const pathname = usePathname();
+  const catalog = tracks && tracks.length ? tracks : THEME_TRACKS;
+  const custom = Boolean(tracks && tracks.length);
+  const hideForTour = !custom && pathname === "/tour";
+  const keys = useMemo(() => storageKeys(storagePrefix), [storagePrefix]);
+  const noun = custom ? "song" : "mood";
+  const catalogKey = catalog.map((track) => track.id).join("|");
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
+  const defaultNote =
+    note ||
+    "Optional royalty-free instrumentals. Check the moods to rotate. When a track ends, the next checked one plays so it doesn’t get stale. Check all to hear everything.";
+
   const engineRef = useRef<ReturnType<typeof createThemeMusicEngine> | null>(null);
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.35);
   const [open, setOpen] = useState(false);
-  const [trackId, setTrackId] = useState<TrackId>("sunny-morning");
-  const [loopIds, setLoopIds] = useState<TrackId[]>([...ALL_TRACK_IDS]);
+  const [trackId, setTrackId] = useState(catalog[0]?.id || "sunny-morning");
+  const [loopIds, setLoopIds] = useState<string[]>(catalog.map((track) => track.id));
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [inNativeApp, setInNativeApp] = useState(false);
-  const loopIdsRef = useRef<TrackId[]>(loopIds);
-  const playTrackRef = useRef<(id: TrackId) => Promise<void>>(async () => undefined);
+  const loopIdsRef = useRef<string[]>(loopIds);
+  const trackIdRef = useRef(trackId);
+  const playTrackRef = useRef<(id: string) => Promise<void>>(async () => undefined);
+  const skipCatalog = useRef(true);
 
-  const active = THEME_TRACKS.find((t) => t.id === trackId) || THEME_TRACKS[0];
+  const active = catalog.find((track) => track.id === trackId) || catalog[0];
   loopIdsRef.current = loopIds;
+  trackIdRef.current = trackId;
 
   useEffect(() => {
     setHydrated(true);
@@ -51,73 +91,99 @@ export function ThemeMusicPlayer() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || inNativeApp) return;
+    if (!hydrated || inNativeApp || hideForTour) return;
+    const list = catalogRef.current;
+    const all = list.map((track) => track.id);
 
-    let initial: TrackId = "sunny-morning";
+    let initial = all[0] || "sunny-morning";
     try {
-      const v = localStorage.getItem(STORAGE_VOL);
+      const v = localStorage.getItem(keys.vol);
       if (v != null) setVolume(Math.min(1, Math.max(0, Number(v) || 0.35)));
-      const o = localStorage.getItem(STORAGE_OPEN);
+      const o = localStorage.getItem(keys.open);
       if (o === "1") setOpen(true);
-      const t = localStorage.getItem(STORAGE_TRACK);
-      if (t && THEME_TRACKS.some((x) => x.id === t)) {
-        initial = t as TrackId;
-        setTrackId(initial);
-      }
-      setLoopIds(parseLoopIds(localStorage.getItem(STORAGE_LOOP)));
+      const saved = localStorage.getItem(keys.track);
+      if (saved && list.some((track) => track.id === saved)) initial = saved;
+      setTrackId(initial);
+      setLoopIds(parseLoopIds(localStorage.getItem(keys.loop), list));
     } catch {
       /* ignore */
     }
 
-    engineRef.current = createThemeMusicEngine(initial);
+    engineRef.current = createThemeMusicEngine(initial, list);
     engineRef.current.setOnEnded((endedId) => {
-      const list = loopIdsRef.current.length ? loopIdsRef.current : ALL_TRACK_IDS;
-      if (list.length <= 1) return;
-      const i = list.indexOf(endedId);
-      const next = list[(i + 1 + list.length) % list.length];
+      const rotation = loopIdsRef.current.length ? loopIdsRef.current : catalogRef.current.map((track) => track.id);
+      if (rotation.length <= 1) return;
+      const i = rotation.indexOf(endedId);
+      const next = rotation[(i + 1 + rotation.length) % rotation.length];
       void playTrackRef.current(next);
     });
     return () => {
       engineRef.current?.dispose();
       engineRef.current = null;
     };
-  }, [hydrated, inNativeApp]);
+  }, [hydrated, inNativeApp, hideForTour, keys]);
 
   useEffect(() => {
+    if (skipCatalog.current) {
+      skipCatalog.current = false;
+      return;
+    }
+    const list = catalogRef.current;
+    const eng = engineRef.current;
+    if (!eng || !list.length) return;
+    const ids = list.map((track) => track.id);
+    eng.setCatalog(list);
+    if (!ids.includes(trackIdRef.current)) {
+      eng.stopAll();
+      setPlaying(false);
+      setTrackId(ids[0]);
+      eng.setTrack(ids[0]);
+    }
+    setLoopIds((prev) => {
+      const next = prev.filter((id) => ids.includes(id));
+      return next.length ? next : ids;
+    });
+  }, [catalogKey]);
+
+  useEffect(() => {
+    if (hideForTour) return;
     engineRef.current?.setVolume(volume);
     try {
-      localStorage.setItem(STORAGE_VOL, String(volume));
+      localStorage.setItem(keys.vol, String(volume));
     } catch {
       /* ignore */
     }
-  }, [volume]);
+  }, [volume, keys, hideForTour]);
 
   useEffect(() => {
+    if (hideForTour) return;
     try {
-      localStorage.setItem(STORAGE_OPEN, open ? "1" : "0");
+      localStorage.setItem(keys.open, open ? "1" : "0");
     } catch {
       /* ignore */
     }
     document.body.classList.toggle("theme-music-open", open);
     return () => document.body.classList.remove("theme-music-open");
-  }, [open]);
+  }, [open, keys, hideForTour]);
 
   useEffect(() => {
+    if (hideForTour) return;
     try {
-      localStorage.setItem(STORAGE_TRACK, trackId);
+      localStorage.setItem(keys.track, trackId);
     } catch {
       /* ignore */
     }
-  }, [trackId]);
+  }, [trackId, keys, hideForTour]);
 
   useEffect(() => {
+    if (hideForTour) return;
     try {
-      localStorage.setItem(STORAGE_LOOP, JSON.stringify(loopIds));
+      localStorage.setItem(keys.loop, JSON.stringify(loopIds));
     } catch {
       /* ignore */
     }
     engineRef.current?.setRepeatOne(loopIds.length <= 1);
-  }, [loopIds]);
+  }, [loopIds, keys, hideForTour]);
 
   function stopAll() {
     engineRef.current?.stopAll();
@@ -125,7 +191,7 @@ export function ThemeMusicPlayer() {
     setError(null);
   }
 
-  async function playTrack(id: TrackId) {
+  async function playTrack(id: string) {
     setError(null);
     setTrackId(id);
     const eng = engineRef.current;
@@ -144,7 +210,7 @@ export function ThemeMusicPlayer() {
   }
   playTrackRef.current = playTrack;
 
-  function stopTrack(id: TrackId) {
+  function stopTrack(id: string) {
     const eng = engineRef.current;
     if (!eng) return;
     if (eng.getTrackId() === id) stopAll();
@@ -158,7 +224,7 @@ export function ThemeMusicPlayer() {
     await playTrack(trackId);
   }
 
-  async function selectTrack(id: TrackId) {
+  async function selectTrack(id: string) {
     if (playing && id !== trackId) {
       await playTrack(id);
       return;
@@ -168,33 +234,32 @@ export function ThemeMusicPlayer() {
   }
 
   async function nextTrack(dir: 1 | -1) {
-    const list = loopIds.length ? loopIds : ALL_TRACK_IDS;
+    const list = loopIds.length ? loopIds : catalog.map((track) => track.id);
     const idx = list.indexOf(trackId);
     const from = idx >= 0 ? idx : 0;
     const next = list[(from + dir + list.length) % list.length];
     await selectTrack(next);
   }
 
-  function toggleLoop(id: TrackId) {
+  function toggleLoop(id: string) {
     setLoopIds((prev) => {
       if (prev.includes(id)) {
-        const next = prev.filter((x) => x !== id);
+        const next = prev.filter((item) => item !== id);
         return next.length ? next : prev;
       }
-      return ALL_TRACK_IDS.filter((x) => prev.includes(x) || x === id);
+      return catalog.map((track) => track.id).filter((item) => prev.includes(item) || item === id);
     });
   }
 
   function loopAll() {
-    setLoopIds([...ALL_TRACK_IDS]);
+    setLoopIds(catalog.map((track) => track.id));
   }
 
   function loopThisOnly() {
     setLoopIds([trackId]);
   }
 
-  // Phone app WebView: no floating music control (desktop/browser still has it)
-  if (!hydrated || inNativeApp) return null;
+  if (!hydrated || inNativeApp || hideForTour || !active) return null;
 
   return (
     <div className={`theme-music ${open ? "open" : ""} ${playing ? "playing" : ""}`}>
@@ -206,10 +271,8 @@ export function ThemeMusicPlayer() {
           else if (!open) setOpen(true);
           else void togglePlay();
         }}
-        aria-label={
-          playing ? "Stop all theme music" : open ? "Play theme music" : "Open theme music"
-        }
-        title={playing ? "Stop all music" : "Theme music (optional)"}
+        aria-label={playing ? `Stop ${title}` : open ? `Play ${title}` : `Open ${title}`}
+        title={playing ? "Stop all music" : fabTitle || title}
       >
         <span className="theme-music-icon" aria-hidden="true">
           {playing ? active.emoji : "🎵"}
@@ -218,9 +281,9 @@ export function ThemeMusicPlayer() {
       </button>
 
       {open && (
-        <div className="theme-music-panel" role="region" aria-label="Theme music controls">
+        <div className="theme-music-panel" role="region" aria-label={`${title} controls`}>
           <div className="theme-music-head">
-            <strong>Theme music</strong>
+            <strong>{title}</strong>
             <button
               type="button"
               className="theme-music-close"
@@ -231,124 +294,107 @@ export function ThemeMusicPlayer() {
             </button>
           </div>
           <div className="theme-music-body">
-          <p className="theme-music-note">
-            Optional royalty-free instrumentals. Check the moods to rotate. When a
-            track ends, the next checked one plays so it doesn’t get stale. Check
-            all to hear everything.
-          </p>
+            <p className="theme-music-note">{defaultNote}</p>
 
-          <div className="theme-music-now">
-            <span className="theme-music-now-emoji" aria-hidden="true">
-              {active.emoji}
-            </span>
-            <div>
-              <div className="theme-music-now-name">{active.name}</div>
-              <div className="theme-music-now-blurb">{active.blurb}</div>
+            <div className="theme-music-now">
+              <span className="theme-music-now-emoji" aria-hidden="true">
+                {active.emoji}
+              </span>
+              <div>
+                <div className="theme-music-now-name">{active.name}</div>
+                <div className="theme-music-now-blurb">{active.blurb}</div>
+              </div>
             </div>
-          </div>
 
-          <div className="theme-music-switcher">
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => nextTrack(-1)}
-              aria-label="Previous mood"
-            >
-              ←
-            </button>
-            <label className="theme-music-select-wrap">
-              <span className="sr-only">Mood</span>
-              <select
-                className="theme-music-select"
-                value={trackId}
-                onChange={(e) => selectTrack(e.target.value as TrackId)}
-                aria-label="Choose music mood"
+            <div className="theme-music-switcher">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => nextTrack(-1)}
+                aria-label={`Previous ${noun}`}
               >
-                {THEME_TRACKS.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.emoji} {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => nextTrack(1)}
-              aria-label="Next mood"
-            >
-              →
-            </button>
-          </div>
-
-          <div className="theme-music-loop-bar">
-            <span>
-              Rotate {loopIds.length} of {THEME_TRACKS.length}
-            </span>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={loopAll}>
-              All moods
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={loopThisOnly}>
-              This mood only
-            </button>
-          </div>
-
-          <ul className="theme-music-tracks">
-            {THEME_TRACKS.map((t) => {
-              const on = playing && t.id === trackId;
-              const inLoop = loopIds.includes(t.id);
-              return (
-                <li
-                  key={t.id}
-                  className={`theme-music-track ${on ? "playing" : ""} ${t.id === trackId ? "selected" : ""}`}
+                ←
+              </button>
+              <label className="theme-music-select-wrap">
+                <span className="sr-only">{noun}</span>
+                <select
+                  className="theme-music-select"
+                  value={trackId}
+                  onChange={(e) => selectTrack(e.target.value)}
+                  aria-label={`Choose ${noun}`}
                 >
-                  <label className="theme-music-loop-check">
-                    <input
-                      type="checkbox"
-                      checked={inLoop}
-                      onChange={() => toggleLoop(t.id)}
-                      aria-label={`Include ${t.name} in the rotation`}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="theme-music-track-label"
-                    onClick={() => (on ? stopTrack(t.id) : playTrack(t.id))}
+                  {catalog.map((track) => (
+                    <option key={track.id} value={track.id}>
+                      {track.emoji} {track.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => nextTrack(1)}
+                aria-label={`Next ${noun}`}
+              >
+                →
+              </button>
+            </div>
+
+            <div className="theme-music-loop-bar">
+              <span>
+                Rotate {loopIds.length} of {catalog.length}
+              </span>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={loopAll}>
+                All {noun}s
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={loopThisOnly}>
+                This {noun} only
+              </button>
+            </div>
+
+            <ul className="theme-music-tracks">
+              {catalog.map((track) => {
+                const on = playing && track.id === trackId;
+                const inLoop = loopIds.includes(track.id);
+                return (
+                  <li
+                    key={track.id}
+                    className={`theme-music-track ${on ? "playing" : ""} ${track.id === trackId ? "selected" : ""}`}
                   >
-                    <span aria-hidden="true">{t.emoji}</span>
-                    <span>{t.name}</span>
-                    {on ? <span className="theme-music-live">Playing</span> : null}
-                  </button>
-                  {on ? (
+                    <label className="theme-music-loop-check">
+                      <input
+                        type="checkbox"
+                        checked={inLoop}
+                        onChange={() => toggleLoop(track.id)}
+                        aria-label={`Include ${track.name} in the rotation`}
+                      />
+                    </label>
                     <button
                       type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => stopTrack(t.id)}
+                      className="theme-music-track-label"
+                      onClick={() => (on ? stopTrack(track.id) : playTrack(track.id))}
                     >
-                      Stop
+                      <span aria-hidden="true">{track.emoji}</span>
+                      <span>{track.name}</span>
+                      {on ? <span className="theme-music-live">Playing</span> : null}
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => playTrack(t.id)}
-                    >
-                      Play
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                    {on ? (
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => stopTrack(track.id)}>
+                        Stop
+                      </button>
+                    ) : (
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => playTrack(track.id)}>
+                        Play
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           <div className="theme-music-controls">
-            <button
-              type="button"
-              className="btn btn-sm theme-music-stop-all"
-              onClick={stopAll}
-              disabled={!playing}
-            >
+            <button type="button" className="btn btn-sm theme-music-stop-all" onClick={stopAll} disabled={!playing}>
               Stop all music
             </button>
             <label className="theme-music-vol">

@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
+import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
+import { holidayTracksFor } from "@/lib/holidayMusic";
+import { nextCue, stepsFromPayload, straightCue, type DrivingStep } from "@/lib/tourDirections";
+import { speakTour, speakTourNow, stopTourSpeech } from "@/lib/tourSpeech";
 import {
   DEFAULT_STOPS,
   GEOFENCE_METERS,
@@ -113,6 +117,15 @@ export function LightTour() {
   const stopsRef = useRef<Stop[]>([]);
   const phaseRef = useRef<Phase>("pick");
   const popupButton = useRef<HTMLButtonElement>(null);
+  const voiceOnRef = useRef(true);
+  const cueRef = useRef("");
+  const spokenKeyRef = useRef("");
+  const legRef = useRef<{ stopId: string; fetchedAt: Here; at: number; steps: DrivingStep[] } | null>(null);
+  const legAbort = useRef<AbortController | null>(null);
+  const legBusy = useRef(false);
+  const guideGen = useRef(0);
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [cue, setCue] = useState("");
 
   indexRef.current = index;
   stopsRef.current = stops;
@@ -130,8 +143,30 @@ export function LightTour() {
   }, []);
 
   useEffect(() => {
+    try {
+      if (localStorage.getItem("tvea-light-tour-voice") === "0") {
+        voiceOnRef.current = false;
+        setVoiceOn(false);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "tour" || !voiceOn) return;
+    const id = window.setInterval(() => {
+      const synth = window.speechSynthesis;
+      if (synth?.speaking) synth.resume();
+    }, 8000);
+    return () => window.clearInterval(id);
+  }, [phase, voiceOn]);
+
+  useEffect(() => {
     return () => {
       if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
+      legAbort.current?.abort();
+      stopTourSpeech();
     };
   }, []);
 
@@ -140,11 +175,12 @@ export function LightTour() {
   }, [popup, index]);
 
   const current = stops[index] || null;
+  const musicTracks = useMemo(() => holidayTracksFor(holiday), [holiday]);
   const mapVisitor = useMemo(() => {
     if (!visitor) return null;
     return {
-      latitude: Math.round(visitor.latitude * 10000) / 10000,
-      longitude: Math.round(visitor.longitude * 10000) / 10000,
+      latitude: Math.round(visitor.latitude * 1e5) / 1e5,
+      longitude: Math.round(visitor.longitude * 1e5) / 1e5,
     };
   }, [visitor]);
 
@@ -156,13 +192,107 @@ export function LightTour() {
     if (haversineMeters(here, stop) <= GEOFENCE_METERS) {
       seen.current.add(stop.id);
       setPopup(true);
+      showCue(`You have arrived at stop ${stop.order}.`, `arrive:${stop.id}`);
     }
+  }
+
+  function showCue(text: string, key: string) {
+    cueRef.current = text;
+    setCue((prev) => (prev === text ? prev : text));
+    if (!voiceOnRef.current || !text) return;
+    if (spokenKeyRef.current === key) return;
+    spokenKeyRef.current = key;
+    speakTour(text);
+  }
+
+  async function loadLeg(here: Here, stop: Stop) {
+    const prev = legRef.current;
+    const switched = !prev || prev.stopId !== stop.id;
+    const moved = !prev || haversineMeters(prev.fetchedAt, here) > 75;
+    const old = !prev || Date.now() - prev.at > 20000;
+    if (!switched && !moved && !old) return;
+    if (legBusy.current && !switched) return;
+    legAbort.current?.abort();
+    const ctrl = new AbortController();
+    legAbort.current = ctrl;
+    legBusy.current = true;
+    try {
+      const res = await fetch("/api/light-tour/leg", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          fromLatitude: here.latitude,
+          fromLongitude: here.longitude,
+          toLatitude: stop.latitude,
+          toLongitude: stop.longitude,
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { steps?: unknown } | null;
+      if (ctrl.signal.aborted) return;
+      legRef.current = {
+        stopId: stop.id,
+        fetchedAt: here,
+        at: Date.now(),
+        steps: res.ok ? stepsFromPayload(data?.steps) : [],
+      };
+    } catch {
+      if (ctrl.signal.aborted) return;
+      legRef.current = { stopId: stop.id, fetchedAt: here, at: Date.now(), steps: [] };
+    } finally {
+      if (legAbort.current === ctrl) legBusy.current = false;
+    }
+  }
+
+  async function guide(here: Here) {
+    if (phaseRef.current !== "tour") return;
+    const gen = (guideGen.current += 1);
+    const stop = stopsRef.current[indexRef.current];
+    if (!stop) return;
+    if (haversineMeters(here, stop) <= GEOFENCE_METERS) return;
+    await loadLeg(here, stop);
+    if (gen !== guideGen.current) return;
+    if (phaseRef.current !== "tour" || stopsRef.current[indexRef.current]?.id !== stop.id) return;
+    const leg = legRef.current;
+    const steps = leg && leg.stopId === stop.id ? leg.steps : [];
+    const spoken = steps.length ? nextCue(here, steps, stop.id) : null;
+    if (spoken) {
+      if (spoken.near) showCue(spoken.nearText, spoken.nearKey);
+      else showCue(spoken.text, spoken.key);
+      return;
+    }
+    if (steps.length && leg && Date.now() - leg.at > 8000) {
+      legRef.current = { ...leg, at: 0 };
+    }
+    const straight = straightCue(here, stop);
+    showCue(straight.text, straight.key);
   }
 
   function rememberHere(here: Here) {
     hereRef.current = here;
-    setVisitor((prev) => (prev && haversineMeters(prev, here) < 8 ? prev : here));
+    setVisitor((prev) => (prev && haversineMeters(prev, here) < 5 ? prev : here));
     noteArrival();
+    if (phaseRef.current === "tour") void guide(here);
+  }
+
+  function toggleVoice() {
+    const next = !voiceOnRef.current;
+    voiceOnRef.current = next;
+    setVoiceOn(next);
+    try {
+      localStorage.setItem("tvea-light-tour-voice", next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+    if (!next) {
+      stopTourSpeech();
+      return;
+    }
+    if (phaseRef.current === "tour" && cueRef.current) {
+      spokenKeyRef.current = "voice-on";
+      speakTourNow(cueRef.current);
+    }
   }
 
   async function startingPoint(): Promise<Here> {
@@ -237,8 +367,25 @@ export function LightTour() {
     indexRef.current = 0;
     setPopup(false);
     seen.current = new Set();
+    legRef.current = null;
+    spokenKeyRef.current = "";
     logVisit(false);
-    if (!navigator.geolocation) return;
+    const stop = stopsRef.current[0];
+    const here = hereRef.current;
+    if (voiceOnRef.current) {
+      const away = stop && here ? haversineMeters(here, stop) : stop?.metersFromPrevious || 0;
+      const line = stop
+        ? `Starting the tour. The first house is about ${distanceLabel(away)} away.`
+        : "Starting the tour.";
+      spokenKeyRef.current = "opening";
+      cueRef.current = line;
+      setCue(line);
+      speakTourNow(line);
+    }
+    if (!navigator.geolocation) {
+      if (here) void guide(here);
+      return;
+    }
     if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
     watch.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -247,8 +394,9 @@ export function LightTour() {
       (err) => {
         if (err.code === 1) setError(locationHelp(err));
       },
-      { enableHighAccuracy: true, maximumAge: 4000, timeout: 12000 }
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 12000 }
     );
+    if (here) void guide(here);
     noteArrival();
   }
 
@@ -258,14 +406,32 @@ export function LightTour() {
     if (index >= stops.length - 1) {
       if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
       watch.current = null;
+      legAbort.current?.abort();
       setPhase("done");
       phaseRef.current = "done";
+      setCue("");
+      cueRef.current = "";
+      stopTourSpeech();
+      if (voiceOnRef.current) speakTourNow("You finished the tour.");
       logVisit(true);
       return;
     }
     const next = index + 1;
     indexRef.current = next;
     setIndex(next);
+    legRef.current = null;
+    const nextStop = stopsRef.current[next];
+    if (voiceOnRef.current && nextStop) {
+      const line = `Next stop. ${nextStop.address || "Saved house"}.`;
+      spokenKeyRef.current = `next:${nextStop.id}`;
+      cueRef.current = line;
+      setCue(line);
+      speakTourNow(line);
+    } else {
+      spokenKeyRef.current = "";
+    }
+    const here = hereRef.current;
+    if (here) void guide(here);
   }
 
   useEffect(() => {
@@ -277,6 +443,11 @@ export function LightTour() {
   function resetPick() {
     if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
     watch.current = null;
+    legAbort.current?.abort();
+    legRef.current = null;
+    stopTourSpeech();
+    setCue("");
+    cueRef.current = "";
     setPhase("pick");
     phaseRef.current = "pick";
     setStops([]);
@@ -284,6 +455,20 @@ export function LightTour() {
     setPopup(false);
     setWarning("");
     setError("");
+  }
+
+  function voiceSwitch() {
+    return (
+      <button
+        type="button"
+        className={`lt-chip ${voiceOn ? "is-on" : ""}`}
+        role="switch"
+        aria-checked={voiceOn}
+        onClick={toggleVoice}
+      >
+        Spoken directions
+      </button>
+    );
   }
 
   const sheet = (
@@ -302,6 +487,8 @@ export function LightTour() {
               </li>
             ))}
           </ol>
+          {voiceSwitch()}
+          <p className="panel-hint">Spoken directions start with the tour and use the phone volume.</p>
           <button type="button" className="btn btn-primary lt-go" onClick={startTour}>
             Start tour
           </button>
@@ -317,14 +504,20 @@ export function LightTour() {
             {index + 1} of {stops.length}
           </p>
           <h2>Stop {current.order}</h2>
+          {cue ? (
+            <p className="lt-cue" aria-live="polite">
+              {cue}
+            </p>
+          ) : (
+            <p className="panel-hint">The next turn shows here as soon as the phone has a fix.</p>
+          )}
           <p>{current.address || "Saved house"}</p>
           {current.note ? <p>{current.note}</p> : null}
           {current.photoUrl ? (
             <img src={current.photoUrl} alt={current.note || `Stop ${current.order}`} loading="lazy" className="lt-photo" />
           ) : null}
-          <p className="panel-hint">
-            {distanceLabel(current.metersFromPrevious)} from the previous point. A card pops up within about 150 meters.
-          </p>
+          {voiceSwitch()}
+          <p className="panel-hint">A card pops up within about 150 meters. Spoken directions use the phone volume.</p>
           <button type="button" className="btn btn-primary lt-go" onClick={() => advance(false)}>
             {index >= stops.length - 1 ? "Finish tour" : "Next stop"}
           </button>
@@ -457,7 +650,13 @@ export function LightTour() {
         {phase !== "pick" ? (
           <div className="lt-stage">
             <div>
-              <LightTourMap visitor={mapVisitor} line={line} stops={stops} activeId={current?.id} />
+              <LightTourMap
+                visitor={mapVisitor}
+                line={line}
+                stops={stops}
+                activeId={current?.id}
+                follow={phase === "tour"}
+              />
               {warning ? (
                 <p className="lt-banner" role="status">
                   {warning}
@@ -496,6 +695,13 @@ export function LightTour() {
           </div>
         ) : null}
       </div>
+      <ThemeMusicPlayer
+        tracks={musicTracks}
+        storagePrefix="tvi-holiday"
+        title="Holiday music"
+        fabTitle="Holiday music"
+        note="Real holiday songs for this page. Check the ones to rotate. When a song ends, the next checked song plays."
+      />
     </section>
   );
 }

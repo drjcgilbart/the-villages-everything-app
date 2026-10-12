@@ -18,16 +18,24 @@ type Props = {
   line: [number, number][];
   stops: Stop[];
   activeId?: string;
+  /** During a live tour, keep the green dot in view until the neighbor drags the map. */
+  follow?: boolean;
 };
 
 const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 
-export function LightTourMap({ visitor, line, stops, activeId }: Props) {
+export function LightTourMap({ visitor, line, stops, activeId, follow = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
   const fitted = useRef("");
+  const followRef = useRef(follow);
+  const userPanned = useRef(false);
+  const visitorRef = useRef(visitor);
   const [ready, setReady] = useState(false);
+  const [recenter, setRecenter] = useState(false);
+  followRef.current = follow;
+  visitorRef.current = visitor;
 
   useEffect(() => {
     let cancelled = false;
@@ -97,16 +105,55 @@ export function LightTourMap({ visitor, line, stops, activeId }: Props) {
           bounds.push([stop.latitude, stop.longitude]);
         }
         const routeKey = `${stops.map((stop) => stop.id).join(",")}:${line.length}`;
+        const tracking = followRef.current && !!visitor && showVisitor && !userPanned.current;
         if (bounds.length && fitted.current !== routeKey) {
           fitted.current = routeKey;
-          if (bounds.length > 1) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
-          else map.setView(bounds[0], 15);
+          if (!followRef.current) {
+            if (bounds.length > 1) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+            else map.setView(bounds[0], 15);
+          }
+        }
+        if (tracking && visitor) {
+          const target: [number, number] = [visitor.latitude, visitor.longitude];
+          if (map.getZoom() < 16) map.setView(target, 16, { animate: true });
+          else map.panTo(target, { animate: true });
         }
       });
     };
     timer = window.setTimeout(draw, 180);
     return () => window.clearTimeout(timer);
-  }, [visitor, line, stops, activeId, ready]);
+  }, [visitor, line, stops, activeId, ready, follow]);
+
+  useEffect(() => {
+    if (!follow) return;
+    userPanned.current = false;
+    setRecenter(false);
+  }, [follow]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const onDrag = () => {
+      if (!followRef.current) return;
+      userPanned.current = true;
+      setRecenter(true);
+    };
+    map.on("dragstart", onDrag);
+    return () => {
+      map.off("dragstart", onDrag);
+    };
+  }, [ready]);
+
+  function centerOnVisitor() {
+    const map = mapRef.current;
+    const here = visitorRef.current;
+    userPanned.current = false;
+    setRecenter(false);
+    if (!map || !here) return;
+    const target: [number, number] = [here.latitude, here.longitude];
+    if (map.getZoom() < 16) map.setView(target, 16, { animate: true });
+    else map.panTo(target, { animate: true });
+  }
 
   useEffect(() => {
     return () => {
@@ -117,11 +164,18 @@ export function LightTourMap({ visitor, line, stops, activeId }: Props) {
   }, []);
 
   return (
-    <div
-      ref={host}
-      className="lt-map"
-      role="application"
-      aria-label="Holiday Lights Tour map with numbered stops"
-    />
+    <div className="lt-map-wrap">
+      <div
+        ref={host}
+        className="lt-map"
+        role="application"
+        aria-label="Holiday Lights Tour map with numbered stops"
+      />
+      {recenter && follow ? (
+        <button type="button" className="lt-recenter" onClick={centerOnVisitor}>
+          Center on me
+        </button>
+      ) : null}
+    </div>
   );
 }

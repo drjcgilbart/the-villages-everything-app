@@ -21,3 +21,5 @@ https://creativecommons.org/licenses/by/4.0/
 **Parade of Golf Carts:** Scott Joplin & Scott Hayden, arranged by Col. John R. Bourgeois, performed by the United States Marine Band (Center for the Arts, George Mason University, May 1994). Work of the U.S. federal government; public domain.
 
 To swap in your own free tracks later, replace the MP3 files (keep the same filenames) or update paths in `src/lib/themeMusic.ts`.
+
+Holiday Lights Tour songs are separate. See `public/music/holiday/CREDITS.md`.
