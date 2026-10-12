@@ -7222,10 +7222,23 @@ button.ms-wx-card-btn > h4 {
   align-items: flex-start;
 }
 
-.admin-portal-tabs button {
+.admin-portal-tabs button,
+.admin-portal-tabs a {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.admin-portal-tabs a {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.5rem 0.95rem;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  color: var(--muted);
+  text-decoration: none;
 }
 
 .admin-tab-badge {

@@ -204,6 +204,9 @@ export function AdminPortal() {
               All pending
               {pendingTotal > 0 ? ` (${pendingTotal})` : ""}
             </button>
+            <Link href="/tour/admin" className="btn btn-ghost btn-sm">
+              Holiday Lights
+            </Link>
             <Link href="/studio" className="btn btn-ghost btn-sm">
               Creator Studio
             </Link>
@@ -348,6 +351,7 @@ export function AdminPortal() {
           >
             Site access
           </button>
+          <Link href="/tour/admin">Holiday Lights</Link>
         </div>
 
         {tab === "pending" && (
