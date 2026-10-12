@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
 import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
 import { holidayTracksFor } from "@/lib/holidayMusic";
+import { isNativeAppShell } from "@/lib/nativeAppShell";
 import { nextCue, stepsFromPayload, straightCue, type DrivingStep } from "@/lib/tourDirections";
 import { speakTour, speakTourNow, stopTourSpeech } from "@/lib/tourSpeech";
 import {
@@ -54,30 +55,31 @@ function sessionId() {
   }
 }
 
-function readFix(timeout: number): Promise<GeolocationPosition> {
+function readFix(timeout: number, accurate: boolean): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error("This browser does not share location."));
       return;
     }
     navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
+      // A precise fix fails on many Android phones when only approximate location is allowed.
+      enableHighAccuracy: accurate,
       timeout,
-      maximumAge: 0,
+      maximumAge: accurate ? 0 : 15000,
     });
   });
 }
 
-/** A first fix is sometimes 0, 0. Ask once more before giving up. */
+/** Network location first. A precise fix is optional, and a hard deny stops there. */
 async function readLocation(): Promise<GeolocationPosition> {
-  const first = await readFix(12000);
-  const here = { latitude: first.coords.latitude, longitude: first.coords.longitude };
-  if (!tourStartProblem(here)) return first;
   try {
-    return await readFix(20000);
-  } catch {
-    return first;
+    const rough = await readFix(12000, false);
+    const here = { latitude: rough.coords.latitude, longitude: rough.coords.longitude };
+    if (!tourStartProblem(here)) return rough;
+  } catch (err) {
+    if (geoCode(err) === 1) throw err;
   }
+  return readFix(15000, true);
 }
 
 function stopsFromText(text: string) {
@@ -99,11 +101,23 @@ const VILLAGES_START = {
   longitude: VILLAGES_CENTER.longitude,
 };
 
-const BLOCKED_LOCATION_NOTE =
-  "This computer did not share a location, so the route starts in the middle of The Villages. On a phone, allow location and it starts where you are.";
-
 function geoCode(err: unknown) {
-  return err && typeof err === "object" && "code" in err ? Number((err as { code: number }).code) : 0;
+  if (!err || typeof err !== "object") return 0;
+  const code = Number((err as { code?: unknown }).code);
+  if (code === 1 || code === 2 || code === 3) return code;
+  const name = String((err as { name?: unknown }).name || "");
+  if (name === "NotAllowedError" || name === "GeolocationPositionError" || name === "PositionError") return 1;
+  return 0;
+}
+
+function blockedLocationNote() {
+  if (typeof navigator !== "undefined" && isNativeAppShell()) {
+    return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow.";
+  }
+  if (typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    return "Location is blocked on this phone, so the route starts in the middle of The Villages. Tap the lock icon in the address bar, set Location to Allow, then build the route again.";
+  }
+  return "This computer did not share a location, so the route starts in the middle of The Villages. On a phone, allow location and it starts where you are.";
 }
 
 export function LightTour() {
@@ -325,12 +339,12 @@ export function LightTour() {
       if (!problem) return { here, note: "" };
       // A desktop sometimes reports the ocean at 0, 0 instead of a real fix.
       if (Math.abs(here.latitude) < 0.05 && Math.abs(here.longitude) < 0.05) {
-        return { here: VILLAGES_START, note: BLOCKED_LOCATION_NOTE };
+        return { here: VILLAGES_START, note: blockedLocationNote() };
       }
       throw new Error(problem);
     } catch (err) {
       if (geoCode(err) || (err instanceof Error && err.message === "This browser does not share location.")) {
-        return { here: VILLAGES_START, note: BLOCKED_LOCATION_NOTE };
+        return { here: VILLAGES_START, note: blockedLocationNote() };
       }
       throw err;
     }
@@ -413,16 +427,28 @@ export function LightTour() {
       if (here) void guide(here);
       return;
     }
-    if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
-    watch.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        rememberHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-      },
-      (err) => {
-        if (err.code === 1) setError(locationHelp(err));
-      },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 12000 }
-    );
+    let triedPrecise = false;
+    const followPhone = (accurate: boolean) => {
+      if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
+      watch.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          rememberHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+          if (!accurate && !triedPrecise) {
+            triedPrecise = true;
+            followPhone(true);
+          }
+        },
+        (err) => {
+          if (accurate) {
+            followPhone(false);
+            return;
+          }
+          if (err.code === 1) setError(locationHelp(err));
+        },
+        { enableHighAccuracy: accurate, maximumAge: accurate ? 2000 : 15000, timeout: 20000 }
+      );
+    };
+    followPhone(false);
     if (here) void guide(here);
     noteArrival();
   }
@@ -630,7 +656,7 @@ export function LightTour() {
             </button>
             <p className="panel-hint">
               The tour uses your location to find the nearest houses and a driving route. Allow location when the phone
-              asks. If this computer will not share location, the route starts in the middle of The Villages.
+              asks. If location is blocked, the route still starts in the middle of The Villages.
             </p>
             {useMine ? null : (
               <div className="lt-coords">
