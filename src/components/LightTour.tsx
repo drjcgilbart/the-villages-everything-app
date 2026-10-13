@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
 import { LightTourSubmit } from "./LightTourSubmit";
 import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
@@ -729,9 +728,6 @@ export function LightTour({
             {addHouseButton}
             <p className="panel-hint">
               Any member can add a house. The free plan is enough. It stays off the tour until it is approved.
-            </p>
-            <p className="panel-hint">
-              <Link href="/tour/admin">Drop pins</Link> is for the site owner.
             </p>
           </div>
         ) : null}
