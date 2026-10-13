@@ -7,6 +7,20 @@ import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/dev
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 
 type Here = { latitude: number; longitude: number };
+type Notice = { title: string; body: string; tone: "wait" | "ok" | "bad" };
+
+function sendFailure(err: unknown): string {
+  if (err instanceof Error) {
+    if (err.name === "AbortError" || err.name === "TimeoutError") {
+      return "This is taking too long, so nothing was confirmed. Look under Waiting for approval before you send it again.";
+    }
+    if (/failed to fetch|load failed|network/i.test(err.message)) {
+      return "The phone could not reach the site. Nothing was sent. Try again when the signal is steady.";
+    }
+    return err.message;
+  }
+  return "The house did not send.";
+}
 
 export function LightTourSubmit({
   open,
@@ -31,8 +45,10 @@ export function LightTourSubmit({
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const addressRef = useRef<HTMLInputElement>(null);
   const wasOpen = useRef(false);
+  const sending = useRef(false);
 
   useEffect(() => {
     if (!preview.startsWith("blob:")) return;
@@ -62,7 +78,18 @@ export function LightTourSubmit({
     setError("");
     setSent(false);
     setBusy(false);
+    setNotice(null);
+    sending.current = false;
   }, [open, holiday]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -119,13 +146,35 @@ export function LightTourSubmit({
   }
 
   async function send() {
+    if (sending.current) return;
+    const place = address.trim();
+    if (!place && !here) {
+      setNotice({
+        title: "Not sent",
+        body: "Type the street address, or tap Use where I am, and then send it again.",
+        tone: "bad",
+      });
+      return;
+    }
+    sending.current = true;
     setError("");
     setBusy(true);
+    setNotice({
+      title: "Sending for approval",
+      body: place
+        ? `Sending ${place} now. Stay on this screen until it finishes.`
+        : "Sending this house now. Stay on this screen until it finishes.",
+      tone: "wait",
+    });
+    const ac = new AbortController();
+    const timer = window.setTimeout(() => ac.abort(), 25000);
     try {
       const res = await fetch("/api/light-tour/submit", {
         method: "POST",
         credentials: "same-origin",
+        cache: "no-store",
         headers: { "Content-Type": "application/json" },
+        signal: ac.signal,
         body: JSON.stringify({
           holiday: picked,
           address,
@@ -135,12 +184,27 @@ export function LightTourSubmit({
           longitude: here?.longitude,
         }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: { error?: string } = {};
+      try {
+        data = text ? (JSON.parse(text) as { error?: string }) : {};
+      } catch {
+        data = { error: "The house did not send. The server did not answer clearly." };
+      }
       if (!res.ok) throw new Error(data.error || "The house did not send.");
       setSent(true);
+      setNotice({
+        title: "Sent for approval",
+        body: "This house was sent. It stays off the public tour until it is approved. On the admin page, look for Waiting for approval.",
+        tone: "ok",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "The house did not send.");
+      const message = sendFailure(err);
+      setError(message);
+      setNotice({ title: "Not sent", body: message, tone: "bad" });
     } finally {
+      window.clearTimeout(timer);
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -259,8 +323,16 @@ export function LightTourSubmit({
             <button
               type="button"
               className="btn btn-primary lt-go"
-              disabled={busy || (!address.trim() && !here)}
-              onClick={() => void send()}
+              disabled={busy}
+              onPointerUp={(event) => {
+                if (event.pointerType !== "touch") return;
+                event.preventDefault();
+                void send();
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                void send();
+              }}
             >
               {busy ? "Sending…" : "Send for approval"}
             </button>
@@ -270,6 +342,28 @@ export function LightTourSubmit({
           </>
         )}
       </div>
+      {notice ? (
+        <div className="lt-pop-scrim lt-pop-front">
+          <div className="lt-pop" role="alertdialog" aria-modal="true" aria-labelledby="lt-send-title">
+            <h3 id="lt-send-title">{notice.title}</h3>
+            <p>{notice.body}</p>
+            {notice.tone === "wait" ? (
+              <p className="panel-hint">Please wait.</p>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary lt-go"
+                onClick={() => {
+                  if (notice.tone === "ok") onClose();
+                  else setNotice(null);
+                }}
+              >
+                {notice.tone === "ok" ? "Done" : "Back to the form"}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
