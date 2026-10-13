@@ -517,6 +517,8 @@ export async function submitBomEntryAsync(input: {
   imageUrl: string;
   fileType: BomFileType;
   monthKey?: string;
+  /** Admin adds go live immediately. Neighbor nominations stay pending. */
+  status?: "pending" | "approved";
 }): Promise<BomEntry> {
   const data = await loadBomAsync();
   const title = String(input.title || "").trim().slice(0, 80);
@@ -525,6 +527,7 @@ export async function submitBomEntryAsync(input: {
   if (submitterName.length < 2) throw new Error("Please enter your name");
   if (!input.imageUrl) throw new Error("Please upload a JPG or PDF");
   if (!isBomCategory(input.category)) throw new Error("Invalid category");
+  const status = input.status === "approved" ? "approved" : "pending";
 
   const entry: BomEntry = {
     id: uid("bom"),
@@ -536,14 +539,16 @@ export async function submitBomEntryAsync(input: {
     submitterName,
     imageUrl: input.imageUrl,
     fileType: input.fileType,
-    status: "pending",
+    status,
     monthKey: input.monthKey || bomMonthKey(),
     createdAt: new Date().toISOString(),
     votes: 0,
   };
   data.entries.unshift(entry);
   // Write pending hash FIRST so admin sees it even if full-file save races
-  await bomPendingQueueSet(entry.id, JSON.stringify(entry));
+  if (status === "pending") {
+    await bomPendingQueueSet(entry.id, JSON.stringify(entry));
+  }
   await saveBomAsync(data);
   return entry;
 }
@@ -577,7 +582,7 @@ export async function setBomEntryStatusAsync(
   return data.entries[idx];
 }
 
-/** Admin: edit text (and optional category/status) on pending or approved entries. */
+/** Admin: edit text, photo, category, or status on pending or approved entries. */
 export async function updateBomEntryAsync(
   id: string,
   patch: {
@@ -586,6 +591,8 @@ export async function updateBomEntryAsync(
     submitterName?: string;
     category?: string;
     status?: "approved" | "rejected" | "pending";
+    imageUrl?: string;
+    fileType?: BomFileType;
   }
 ): Promise<BomEntry> {
   const data = await loadBomAsync();
@@ -626,6 +633,15 @@ export async function updateBomEntryAsync(
     status = patch.status;
   }
 
+  let imageUrl = cur.imageUrl;
+  let fileType = cur.fileType;
+  if (patch.imageUrl !== undefined) {
+    const next = String(patch.imageUrl || "").trim().slice(0, 400);
+    if (!next) throw new Error("Please upload a JPG or PDF");
+    imageUrl = next;
+    fileType = patch.fileType === "pdf" ? "pdf" : "image";
+  }
+
   data.entries[idx] = {
     ...cur,
     title,
@@ -633,6 +649,8 @@ export async function updateBomEntryAsync(
     submitterName,
     category,
     status,
+    imageUrl,
+    fileType,
   };
   await saveBomAsync(data);
   return data.entries[idx];

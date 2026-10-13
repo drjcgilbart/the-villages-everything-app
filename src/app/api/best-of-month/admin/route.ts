@@ -5,10 +5,13 @@ import {
   durableConfigured,
   redisConfigured,
 } from "@/lib/dataFs";
+import { getSessionMember } from "@/lib/memberAuth";
 import {
   ensurePastMonthsTabulatedAsync,
+  isBomCategory,
   loadBomAsync,
   setBomEntryStatusAsync,
+  submitBomEntryAsync,
   updateBomEntryAsync,
   deleteBomEntryAsync,
   tabulateMonth,
@@ -17,9 +20,23 @@ import {
   previousMonthKey,
   saveBomAsync,
 } from "@/lib/bestOfMonth";
+import type { BomFileType } from "@/lib/bestOfMonthTypes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+function safeMedia(value: unknown) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (text.startsWith("/api/media/")) return text.slice(0, 400);
+  try {
+    const url = new URL(text);
+    if (url.protocol === "https:") return text.slice(0, 400);
+  } catch {
+    return "";
+  }
+  return "";
+}
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -29,10 +46,12 @@ export async function GET() {
     let data = await loadBomAsync();
     data = await ensurePastMonthsTabulatedAsync(data);
     const pending = data.entries.filter((e) => e.status === "pending");
+    const member = await getSessionMember();
     return NextResponse.json({
       entries: data.entries,
       results: data.results,
       monthKey: bomMonthKey(),
+      myName: member?.name || "",
       pending,
       pendingCount: pending.length,
       blobConfigured: blobConfigured(),
@@ -75,17 +94,54 @@ export async function POST(req: Request) {
     }
 
     if (action === "update") {
+      const imageUrl = body.imageUrl === undefined ? undefined : safeMedia(body.imageUrl);
+      if (body.imageUrl !== undefined && !imageUrl) {
+        return NextResponse.json({ error: "Please upload a JPG or PDF" }, { status: 400 });
+      }
+      const fileType: BomFileType | undefined =
+        body.fileType === undefined
+          ? undefined
+          : body.fileType === "pdf"
+            ? "pdf"
+            : "image";
       const entry = await updateBomEntryAsync(String(body.id || ""), {
         title: body.title,
         description: body.description,
         submitterName: body.submitterName,
         category: body.category,
         status: body.status,
+        imageUrl,
+        fileType,
       });
       return NextResponse.json({
         ok: true,
         entry,
         message: "Entry updated.",
+      });
+    }
+
+    if (action === "create") {
+      const category = String(body.category || "");
+      if (!isBomCategory(category)) {
+        return NextResponse.json({ error: "Pick a category." }, { status: 400 });
+      }
+      const imageUrl = safeMedia(body.imageUrl);
+      if (!imageUrl) {
+        return NextResponse.json({ error: "Please upload a JPG or PDF" }, { status: 400 });
+      }
+      const entry = await submitBomEntryAsync({
+        category,
+        title: body.title,
+        description: body.description,
+        submitterName: body.submitterName,
+        imageUrl,
+        fileType: body.fileType === "pdf" ? "pdf" : "image",
+        status: "approved",
+      });
+      return NextResponse.json({
+        ok: true,
+        entry,
+        message: "Added. It is live on Best of the Month.",
       });
     }
 

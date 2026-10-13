@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { BomCategory, BomEntry } from "@/lib/bestOfMonthTypes";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import type { BomCategory, BomEntry, BomFileType } from "@/lib/bestOfMonthTypes";
 import {
   BOM_CATEGORIES,
   BOM_CATEGORY_META,
 } from "@/lib/bestOfMonthTypes";
+import { prepareBomUploadFile } from "@/lib/bomUploadClient";
 
 type EditDraft = {
   title: string;
@@ -20,6 +21,214 @@ type StorageInfo = {
   blob: boolean;
   durable: boolean;
 };
+
+function formatMonth(key: string) {
+  const [y, m] = key.split("-").map(Number);
+  if (!y || !m) return key;
+  return new Date(y, m - 1, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+async function uploadBomFile(file: File): Promise<{ url: string; fileType: BomFileType }> {
+  const prepared = await prepareBomUploadFile(file);
+  const body = new FormData();
+  body.set("file", prepared.file);
+  const res = await fetch("/api/best-of-month/upload", {
+    method: "POST",
+    credentials: "same-origin",
+    body,
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string; fileType?: string };
+  if (!res.ok || !data.url) throw new Error(data.error || "The photo did not upload.");
+  return { url: data.url, fileType: data.fileType === "pdf" ? "pdf" : "image" };
+}
+
+function AdminBomAddForm({
+  defaultName,
+  monthKey,
+  onSaved,
+  onCancel,
+}: {
+  defaultName: string;
+  monthKey: string;
+  onSaved: (message: string) => void;
+  onCancel: () => void;
+}) {
+  const [category, setCategory] = useState<BomCategory>("pet");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitterName, setSubmitterName] = useState(defaultName);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setSubmitterName((current) => current || defaultName);
+  }, [defaultName]);
+
+  useEffect(() => {
+    if (!preview.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  function pickFile(next: File | null) {
+    setFile(next);
+    setPreview((current) => {
+      if (current.startsWith("blob:")) URL.revokeObjectURL(current);
+      return next && next.type.startsWith("image/") ? URL.createObjectURL(next) : "";
+    });
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const nextTitle = title.trim();
+    const who = submitterName.trim();
+    if (nextTitle.length < 2) {
+      setError("Enter a name or title.");
+      return;
+    }
+    if (who.length < 2) {
+      setError("Enter the name that should show on the entry.");
+      return;
+    }
+    if (!file) {
+      setError("Choose a JPG or PDF.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const uploaded = await uploadBomFile(file);
+      const res = await fetch("/api/best-of-month/admin", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          category,
+          title: nextTitle,
+          description,
+          submitterName: who,
+          imageUrl: uploaded.url,
+          fileType: uploaded.fileType,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (!res.ok) throw new Error(data.error || "The entry did not save.");
+      onSaved(data.message || "Added. It is live on Best of the Month.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The entry did not save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="form-grid about-panel" onSubmit={(event) => void submit(event)} style={{ marginBottom: "1rem" }}>
+      <h3 style={{ marginTop: 0 }}>Add an entry</h3>
+      <p style={{ color: "var(--muted)", marginTop: 0 }}>
+        Same fields as a neighbor nomination
+        {monthKey ? ` for ${formatMonth(monthKey)}` : ""}. This one is published right away. You can edit or delete it
+        afterward.
+      </p>
+      <div className="form-row">
+        <div className="field">
+          <label htmlFor="bom-admin-cat">Category</label>
+          <select
+            id="bom-admin-cat"
+            value={category}
+            disabled={busy}
+            onChange={(event) => setCategory(event.target.value as BomCategory)}
+          >
+            {BOM_CATEGORIES.map((item) => (
+              <option key={item} value={item}>
+                {BOM_CATEGORY_META[item].label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="bom-admin-title">Name / title</label>
+          <input
+            id="bom-admin-title"
+            value={title}
+            maxLength={80}
+            disabled={busy}
+            placeholder="Pet name, car, cart, villager…"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="bom-admin-desc">Short description (optional)</label>
+        <textarea
+          id="bom-admin-desc"
+          rows={2}
+          maxLength={500}
+          disabled={busy}
+          placeholder="Why should they win?"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+      </div>
+      <div className="form-row">
+        <div className="field">
+          <label htmlFor="bom-admin-by">Submitted by</label>
+          <input
+            id="bom-admin-by"
+            value={submitterName}
+            maxLength={60}
+            disabled={busy}
+            placeholder="Your name, or the neighbor’s name"
+            onChange={(event) => setSubmitterName(event.target.value)}
+          />
+          {defaultName ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={busy}
+              style={{ marginTop: "0.45rem" }}
+              onClick={() => setSubmitterName(defaultName)}
+            >
+              Use my name
+            </button>
+          ) : null}
+        </div>
+        <div className="field">
+          <label htmlFor="bom-admin-file">JPG or PDF</label>
+          <input
+            id="bom-admin-file"
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
+            disabled={busy}
+            onChange={(event) => pickFile(event.target.files?.[0] || null)}
+          />
+          {file ? (
+            <p style={{ margin: "0.35rem 0 0", color: "var(--muted)" }}>
+              Selected: {file.name}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      {preview ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={preview} alt="Selected photo preview" style={{ maxWidth: "220px", borderRadius: 12 }} />
+      ) : null}
+      {error ? <div className="msg msg-err">{error}</div> : null}
+      <div className="hero-actions">
+        <button type="submit" className="btn btn-primary" disabled={busy}>
+          {busy ? "Adding…" : "Add and publish"}
+        </button>
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
 
 export function AdminBestOfMonthPanel() {
   const [entries, setEntries] = useState<BomEntry[]>([]);
@@ -36,6 +245,10 @@ export function AdminBestOfMonthPanel() {
   const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [myName, setMyName] = useState("");
+  const [monthKey, setMonthKey] = useState("");
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -106,6 +319,8 @@ export function AdminBestOfMonthPanel() {
       }
 
       setEntries(list);
+      if (typeof data.myName === "string") setMyName(data.myName);
+      if (typeof data.monthKey === "string") setMonthKey(data.monthKey);
       if (data.blobConfigured !== undefined || data.redisConfigured !== undefined) {
         setStorage({
           redis: Boolean(data.redisConfigured),
@@ -139,6 +354,7 @@ export function AdminBestOfMonthPanel() {
 
   function startEdit(e: BomEntry) {
     setEditingId(e.id);
+    setEditFile(null);
     setDraft({
       title: e.title,
       description: e.description || "",
@@ -152,6 +368,7 @@ export function AdminBestOfMonthPanel() {
   function cancelEdit() {
     setEditingId(null);
     setDraft(null);
+    setEditFile(null);
   }
 
   async function act(action: string, id?: string, extra?: Record<string, unknown>) {
@@ -188,6 +405,7 @@ export function AdminBestOfMonthPanel() {
     setBusy(true);
     setMsg(null);
     try {
+      const uploaded = editFile ? await uploadBomFile(editFile) : null;
       const res = await fetch("/api/best-of-month/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -200,6 +418,7 @@ export function AdminBestOfMonthPanel() {
           submitterName: draft.submitterName,
           category: draft.category,
           status: andApprove ? "approved" : draft.status,
+          ...(uploaded ? { imageUrl: uploaded.url, fileType: uploaded.fileType } : {}),
         }),
       });
       const data = await res.json();
@@ -229,9 +448,8 @@ export function AdminBestOfMonthPanel() {
   return (
     <div>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        Approve Best of the Month entries, edit titles/descriptions any time,
-        or delete posts. Voting is one per category per visitor each month.
-        This list auto-refreshes every 12 seconds.
+        Add an entry yourself, or approve ones neighbors sent. Edit or delete any entry. Entries you add go live right
+        away. Voting is one per category per visitor each month. This list auto-refreshes every 12 seconds.
       </p>
 
       {storage && !storage.durable && (
@@ -312,7 +530,29 @@ export function AdminBestOfMonthPanel() {
         >
           Tabulate previous month now
         </button>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          disabled={busy}
+          onClick={() => setAdding((open) => !open)}
+        >
+          {adding ? "Close add form" : "Add an entry"}
+        </button>
       </div>
+
+      {adding ? (
+        <AdminBomAddForm
+          defaultName={myName}
+          monthKey={monthKey}
+          onCancel={() => setAdding(false)}
+          onSaved={(message) => {
+            setMsg(message);
+            setAdding(false);
+            setFilter("approved");
+            void load();
+          }}
+        />
+      ) : null}
 
       {visible.length === 0 ? (
         <div className="empty-state">
@@ -434,6 +674,23 @@ export function AdminBestOfMonthPanel() {
                         placeholder="Optional description"
                       />
                     </div>
+                    <div className="field">
+                      <label htmlFor={`bom-edit-file-${e.id}`}>
+                        Replace photo or PDF
+                      </label>
+                      <input
+                        id={`bom-edit-file-${e.id}`}
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
+                        disabled={busy}
+                        onChange={(ev) => setEditFile(ev.target.files?.[0] || null)}
+                      />
+                      <p style={{ margin: "0.35rem 0 0", color: "var(--muted)" }}>
+                        {editFile
+                          ? `New file: ${editFile.name}`
+                          : "Leave this empty to keep the current photo."}
+                      </p>
+                    </div>
                     <div className="hero-actions">
                       <button
                         type="button"
@@ -553,7 +810,7 @@ export function AdminBestOfMonthPanel() {
                       disabled={busy}
                       onClick={() => startEdit(e)}
                     >
-                      Edit text
+                      Edit
                     </button>
                     {e.status !== "approved" && (
                       <button
