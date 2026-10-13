@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { rateLimitResponse } from "@/lib/authRateLimit";
+import { getSessionMember } from "@/lib/memberAuth";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { saveUploadFile } from "@/lib/dataFs";
 
@@ -12,8 +13,23 @@ const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 export async function POST(req: Request) {
   const blocked = rejectIfCrossOrigin(req);
   if (blocked) return blocked;
+  const member = await getSessionMember();
   if (!(await isAdminAuthenticated())) {
-    return NextResponse.json({ error: "Sign in on the Admin page first." }, { status: 401 });
+    if (!member) {
+      return NextResponse.json(
+        { error: "Become a member first. The free Porch Waver plan is enough." },
+        { status: 401 }
+      );
+    }
+    if (member.status === "pending") {
+      return NextResponse.json(
+        { error: "Your membership is pending admin approval." },
+        { status: 403 }
+      );
+    }
+    if (member.status !== "approved") {
+      return NextResponse.json({ error: "Membership is not active." }, { status: 403 });
+    }
   }
   const limited = rateLimitResponse(req, "light-tour-upload", 40, 15 * 60 * 1000);
   if (limited) return limited;

@@ -17246,6 +17246,10 @@ html.privacy-mode [data-privacy-block]::after {
   box-shadow: var(--shadow);
 }
 
+.lt-pop.lt-pop-form {
+  max-height: min(92vh, 46rem);
+}
+
 .lt-pop h3 {
   margin: 0.2rem 0 0.6rem;
   font-family: var(--font-display), Georgia, serif;

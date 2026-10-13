@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
-import { holidayFrom, publicPin, readLightTour, DEFAULT_STOPS, MAX_STOPS } from "@/lib/lightTour";
+import { holidayFrom, isPendingPin, publicPin, readLightTour, DEFAULT_STOPS, MAX_STOPS } from "@/lib/lightTour";
 import { tourStartProblem } from "@/lib/lightTourShared";
 import { buildDrivingRoute } from "@/lib/lightTourRoute";
 
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const far = tourStartProblem({ latitude, longitude });
   if (far) return NextResponse.json({ error: far }, { status: 400 });
   const store = await readLightTour();
-  const pins = store.pins.filter((pin) => pin.holiday === holiday).map(publicPin);
+  const pins = store.pins.filter((pin) => pin.holiday === holiday && !isPendingPin(pin)).map(publicPin);
   if (!pins.length) {
     return NextResponse.json({
       stops: [],

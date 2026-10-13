@@ -6,6 +6,7 @@ import { rejectIfCrossOrigin } from "@/lib/security";
 import {
   deletePin,
   holidayFrom,
+  isPendingPin,
   publicPin,
   readLightTour,
   reverseGeocode,
@@ -47,7 +48,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Sign in on the Admin page first." }, { status: 401 });
   }
   const store = await readLightTour();
-  const pins = holiday ? store.pins.filter((pin) => pin.holiday === holiday) : store.pins;
+  const pins = (holiday ? store.pins.filter((pin) => pin.holiday === holiday) : store.pins).filter(
+    (pin) => admin || !isPendingPin(pin)
+  );
   return NextResponse.json({
     pins: admin ? pins : pins.map(publicPin),
   });
@@ -105,6 +108,7 @@ export async function PUT(req: Request) {
   let address = String(body?.address ?? existing.address).trim();
   const moved = Math.abs(existing.latitude - latitude) > 0.00001 || Math.abs(existing.longitude - longitude) > 0.00001;
   if (moved && !String(body?.address || "").trim()) address = await reverseGeocode(latitude, longitude);
+  const status = body?.status === "pending" || body?.status === "approved" ? body.status : undefined;
   const pin = await savePin({
     id,
     holiday,
@@ -114,6 +118,7 @@ export async function PUT(req: Request) {
     photoUrl: body?.photoUrl === undefined ? existing.photoUrl : safePhoto(body.photoUrl),
     note: body?.note === undefined ? existing.note : String(body.note),
     createdBy: existing.createdBy,
+    status,
   });
   return NextResponse.json({ pin });
 }

@@ -16,6 +16,7 @@ type AdminPin = {
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
+  status?: "pending" | "approved";
 };
 
 type Draft = {
@@ -54,6 +55,69 @@ function locationHelp(err: unknown) {
 
 function blankDraft(holiday: TourHoliday): Draft {
   return { holiday, latitude: "", longitude: "", address: "", note: "", photoUrl: "" };
+}
+
+function WaitingHouses({
+  pins,
+  busy,
+  pendingDelete,
+  onApprove,
+  onEdit,
+  onAskRemove,
+  onRemove,
+}: {
+  pins: AdminPin[];
+  busy: boolean;
+  pendingDelete: string | null;
+  onApprove: (pin: AdminPin) => void;
+  onEdit: (pin: AdminPin) => void;
+  onAskRemove: (id: string | null) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="about-panel lt-card">
+      <h2>Waiting for approval ({pins.length})</h2>
+      <p className="panel-hint">
+        Members send these from the tour page. They stay off the map until you approve them.
+      </p>
+      {pins.length === 0 ? <p className="lt-empty">No houses are waiting.</p> : null}
+      <ul className="lt-list">
+        {pins.map((pin) => (
+          <li key={pin.id} className="lt-pin">
+            <strong>{pin.address || `${pin.latitude.toFixed(5)}, ${pin.longitude.toFixed(5)}`}</strong>
+            <span>{HOLIDAY_LABELS[pin.holiday]}</span>
+            {pin.note ? <span>{pin.note}</span> : null}
+            {pin.createdBy ? <span>Sent by {pin.createdBy}</span> : null}
+            {pin.photoUrl ? (
+              <img src={pin.photoUrl} alt={pin.note || pin.address || "House"} loading="lazy" className="lt-photo" />
+            ) : null}
+            <div className="lt-pin-actions">
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onApprove(pin)}>
+                Approve
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => onEdit(pin)}>
+                Edit
+              </button>
+              {pendingDelete === pin.id ? (
+                <>
+                  <button type="button" className="btn btn-primary" disabled={busy} onClick={() => onRemove(pin.id)}>
+                    Remove house
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={() => onAskRemove(null)}>
+                    Keep
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="btn btn-ghost" onClick={() => onAskRemove(pin.id)}>
+                  Remove
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function combineImportFiles(parts: string[]) {
@@ -110,7 +174,7 @@ export function LightTourAdmin() {
   const mapStops = useMemo(
     () =>
       pins
-        .filter((pin) => pin.holiday === holiday)
+        .filter((pin) => pin.holiday === holiday && pin.status !== "pending")
         .map((pin, index) => ({ ...pin, order: index + 1 })),
     [pins, holiday]
   );
@@ -245,7 +309,39 @@ export function LightTourAdmin() {
       photoUrl: pin.photoUrl,
     });
     setNotice("");
-    window.scrollTo({ top: 0, behavior: "auto" });
+    window.setTimeout(() => {
+      document.getElementById("lt-pin-draft")?.scrollIntoView({ behavior: "auto", block: "start" });
+    }, 50);
+  }
+
+  async function approvePin(pin: AdminPin) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/light-tour/pins", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: pin.id,
+          holiday: pin.holiday,
+          latitude: pin.latitude,
+          longitude: pin.longitude,
+          address: pin.address,
+          note: pin.note,
+          photoUrl: pin.photoUrl,
+          status: "approved",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "The house did not approve.");
+      setNotice("House approved. It is on the tour.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The house did not approve.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function runImport() {
@@ -346,6 +442,18 @@ export function LightTourAdmin() {
           </p>
         ) : null}
 
+        {pins.some((pin) => pin.status === "pending") ? (
+          <WaitingHouses
+            pins={pins.filter((pin) => pin.status === "pending")}
+            busy={busy}
+            pendingDelete={pendingDelete}
+            onApprove={(pin) => void approvePin(pin)}
+            onEdit={editPin}
+            onAskRemove={setPendingDelete}
+            onRemove={(id) => void removePin(id)}
+          />
+        ) : null}
+
         <div className="lt-chips" role="radiogroup" aria-label="Holiday for new pins">
           {TOUR_HOLIDAYS.map((item) => (
             <button
@@ -364,7 +472,7 @@ export function LightTourAdmin() {
         <LightTourMap visitor={null} line={[]} stops={mapStops} />
 
         {draft ? (
-          <div className="about-panel lt-card">
+          <div id="lt-pin-draft" className="about-panel lt-card">
             <h2>{draft.id ? "Edit pin" : "New pin"}</h2>
             <div className="lt-chips" role="radiogroup" aria-label="Pin holiday">
               {TOUR_HOLIDAYS.map((item) => (
@@ -511,7 +619,7 @@ export function LightTourAdmin() {
         </div>
 
         {TOUR_HOLIDAYS.map((item) => {
-          const group = pins.filter((pin) => pin.holiday === item);
+          const group = pins.filter((pin) => pin.holiday === item && pin.status !== "pending");
           const visible = group.slice(0, shown[item]);
           return (
             <div key={item} className="about-panel lt-card">

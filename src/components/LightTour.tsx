@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
+import { LightTourSubmit } from "./LightTourSubmit";
 import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
 import { holidayTracksFor } from "@/lib/holidayMusic";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
@@ -120,7 +121,11 @@ function blockedLocationNote() {
   return "This computer did not share a location, so the route starts in the middle of The Villages. On a phone, allow location and it starts where you are.";
 }
 
-export function LightTour() {
+export function LightTour({
+  memberStatus = null,
+}: {
+  memberStatus?: "pending" | "approved" | "rejected" | "suspended" | null;
+}) {
   const [holiday, setHoliday] = useState<TourHoliday>("halloween");
   const [countText, setCountText] = useState(String(DEFAULT_STOPS));
   const [useMine, setUseMine] = useState(true);
@@ -136,6 +141,7 @@ export function LightTour() {
   const [busy, setBusy] = useState(false);
   const [index, setIndex] = useState(0);
   const [popup, setPopup] = useState(false);
+  const [houseOpen, setHouseOpen] = useState(false);
   const [offline, setOffline] = useState(false);
   const seen = useRef(new Set<string>());
   const watch = useRef<number | null>(null);
@@ -151,12 +157,14 @@ export function LightTour() {
   const legAbort = useRef<AbortController | null>(null);
   const legBusy = useRef(false);
   const guideGen = useRef(0);
+  const houseOpenRef = useRef(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [cue, setCue] = useState("");
 
   indexRef.current = index;
   stopsRef.current = stops;
   phaseRef.current = phase;
+  houseOpenRef.current = houseOpen;
 
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine);
@@ -212,7 +220,7 @@ export function LightTour() {
   }, [visitor]);
 
   function noteArrival() {
-    if (phaseRef.current !== "tour") return;
+    if (phaseRef.current !== "tour" || houseOpenRef.current) return;
     const here = hereRef.current;
     const stop = stopsRef.current[indexRef.current];
     if (!here || !stop || seen.current.has(stop.id)) return;
@@ -516,6 +524,17 @@ export function LightTour() {
     if (speak) speakTourNow("Tour ended.");
   }
 
+  function openHouseForm() {
+    setPopup(false);
+    setHouseOpen(true);
+  }
+
+  const addHouseButton = (
+    <button type="button" className="btn btn-ghost lt-go" onClick={openHouseForm}>
+      Add a lit house
+    </button>
+  );
+
   function voiceSwitch() {
     return (
       <button
@@ -554,6 +573,7 @@ export function LightTour() {
           <button type="button" className="btn btn-ghost lt-go" onClick={resetPick}>
             Change holiday
           </button>
+          {addHouseButton}
         </div>
       ) : null}
 
@@ -588,6 +608,7 @@ export function LightTour() {
           <button type="button" className="btn btn-ghost lt-go" onClick={endTour}>
             End tour
           </button>
+          {addHouseButton}
         </div>
       ) : null}
 
@@ -603,6 +624,7 @@ export function LightTour() {
           <button type="button" className="btn btn-ghost lt-go" onClick={resetPick}>
             Switch holiday
           </button>
+          {addHouseButton}
         </div>
       ) : null}
     </>
@@ -704,6 +726,10 @@ export function LightTour() {
             <button type="button" className="btn btn-primary lt-go" disabled={busy || offline} onClick={() => void buildRoute()}>
               {busy ? "Finding houses…" : "Build my route"}
             </button>
+            {addHouseButton}
+            <p className="panel-hint">
+              Any member can add a house. The free plan is enough. It stays off the tour until it is approved.
+            </p>
             <p className="panel-hint">
               <Link href="/tour/admin">Drop pins</Link> is for the site owner.
             </p>
@@ -760,6 +786,13 @@ export function LightTour() {
             </div>
           </div>
         ) : null}
+        <LightTourSubmit
+          open={houseOpen}
+          holiday={holiday}
+          canSubmit={memberStatus === "approved"}
+          pendingMember={memberStatus === "pending"}
+          onClose={() => setHouseOpen(false)}
+        />
       </div>
       <ThemeMusicPlayer
         tracks={musicTracks}

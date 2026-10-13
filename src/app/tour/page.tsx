@@ -1,4 +1,7 @@
 import { LightTour } from "@/components/LightTour";
+import { getSessionMember } from "@/lib/memberAuth";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Holiday Lights Tour",
@@ -6,7 +9,8 @@ export const metadata = {
     "A self-guided driving tour of decorated houses in The Villages. The map follows the phone and speaks the turns.",
 };
 
-export default function HolidayLightTourPage() {
+export default async function HolidayLightTourPage() {
+  const member = await getSessionMember();
   return (
     <>
       <div className="page-hero">
@@ -20,7 +24,7 @@ export default function HolidayLightTourPage() {
           </p>
         </div>
       </div>
-      <LightTour />
+      <LightTour memberStatus={member?.status ?? null} />
     </>
   );
 }

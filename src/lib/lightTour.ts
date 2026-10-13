@@ -35,6 +35,8 @@ function enqueue<T>(work: () => Promise<T>): Promise<T> {
   return run;
 }
 
+export type PinStatus = "pending" | "approved";
+
 export type LightPin = {
   id: string;
   holiday: TourHoliday;
@@ -46,6 +48,8 @@ export type LightPin = {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  /** Missing on houses saved before member submissions. Those stay on the tour. */
+  status: PinStatus;
 };
 
 export type LightTourLog = {
@@ -59,7 +63,7 @@ export type LightTourLog = {
 
 type Store = { pins: LightPin[]; tours: LightTourLog[] };
 
-export type PublicPin = Omit<LightPin, "createdBy">;
+export type PublicPin = Omit<LightPin, "createdBy" | "status">;
 
 function emptyStore(): Store {
   return { pins: [], tours: [] };
@@ -86,8 +90,12 @@ export function holidayFrom(value: unknown): TourHoliday | null {
 }
 
 export function publicPin(pin: LightPin): PublicPin {
-  const { createdBy: _createdBy, ...rest } = pin;
+  const { createdBy: _createdBy, status: _status, ...rest } = pin;
   return rest;
+}
+
+export function isPendingPin(pin: { status?: string }) {
+  return pin.status === "pending";
 }
 
 function normalizePin(raw: unknown): LightPin | null {
@@ -111,6 +119,7 @@ function normalizePin(raw: unknown): LightPin | null {
     createdAt: clip(row.createdAt, 40) || new Date().toISOString(),
     updatedAt: clip(row.updatedAt, 40) || new Date().toISOString(),
     createdBy: clip(row.createdBy, 120) || "admin",
+    status: row.status === "pending" ? "pending" : "approved",
   };
 }
 
@@ -195,6 +204,7 @@ export function savePin(input: {
   photoUrl?: string;
   note?: string;
   createdBy: string;
+  status?: PinStatus;
 }): Promise<LightPin> {
   return enqueue(async () => {
     const store = await readLightTourForWrite();
@@ -212,6 +222,7 @@ export function savePin(input: {
       createdAt: existing?.createdAt || now,
       updatedAt: now,
       createdBy: existing?.createdBy || clip(input.createdBy, 120) || "admin",
+      status: input.status ?? existing?.status ?? "approved",
     };
     store.pins = existing
       ? store.pins.map((row) => (row.id === pin.id ? pin : row))
@@ -232,6 +243,80 @@ export function deletePin(id: string): Promise<boolean> {
   });
 }
 
+export async function submitMemberHouse(input: {
+  holiday: TourHoliday;
+  address: string;
+  note: string;
+  photoUrl: string;
+  latitude: number | null;
+  longitude: number | null;
+  createdBy: string;
+}): Promise<LightPin> {
+  let address = clip(input.address, 180);
+  const gpsLat = input.latitude;
+  const gpsLng = input.longitude;
+  const gpsOk = gpsLat != null && gpsLng != null && nearVillages(gpsLat, gpsLng);
+  let pointLat: number | null = null;
+  let pointLng: number | null = null;
+  if (address) {
+    const hit = await forwardGeocode(address);
+    if (hit) {
+      pointLat = hit.latitude;
+      pointLng = hit.longitude;
+    } else if (gpsOk && gpsLat != null && gpsLng != null) {
+      pointLat = gpsLat;
+      pointLng = gpsLng;
+    } else {
+      throw new Error(
+        "That address was not found near The Villages. Include the street and city, or tap Use where I am while you are parked there."
+      );
+    }
+  } else if (gpsOk && gpsLat != null && gpsLng != null) {
+    pointLat = gpsLat;
+    pointLng = gpsLng;
+    address = await reverseGeocode(pointLat, pointLng);
+    if (!address) throw new Error("Add the street address.");
+  } else if (gpsLat != null && gpsLng != null) {
+    throw new Error("That spot is outside The Villages area. Type a street address in The Villages instead.");
+  } else {
+    throw new Error("Add the street address, or tap Use where I am.");
+  }
+  if (pointLat == null || pointLng == null) {
+    throw new Error("Add the street address, or tap Use where I am.");
+  }
+  const savedLat = pointLat;
+  const savedLng = pointLng;
+  const savedAddress = address;
+  const holiday = input.holiday;
+  const photoUrl = clip(input.photoUrl, 400);
+  const note = clip(input.note, 160);
+  const createdBy = clip(input.createdBy, 120) || "member";
+  return enqueue(async () => {
+    const store = await readLightTourForWrite();
+    const spot = { holiday, latitude: savedLat, longitude: savedLng };
+    if (store.pins.some((existing) => sameHouse(existing, spot))) {
+      throw new Error("That house is already saved or waiting for approval.");
+    }
+    const now = new Date().toISOString();
+    const pin: LightPin = {
+      id: newPinId(),
+      holiday,
+      latitude: savedLat,
+      longitude: savedLng,
+      address: savedAddress,
+      photoUrl,
+      note,
+      createdAt: now,
+      updatedAt: now,
+      createdBy,
+      status: "pending",
+    };
+    store.pins = [pin, ...store.pins];
+    await writeStore(store);
+    return pin;
+  });
+}
+
 function sameHouse(
   a: { holiday: TourHoliday; latitude: number; longitude: number },
   b: { holiday: TourHoliday; latitude: number; longitude: number }
@@ -240,7 +325,7 @@ function sameHouse(
 }
 
 export function importPins(
-  pins: Array<Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy"> & { createdBy?: string }>,
+  pins: Array<Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy" | "status"> & { createdBy?: string }>,
   createdBy: string
 ): Promise<LightPin[]> {
   return enqueue(async () => {
@@ -260,6 +345,7 @@ export function importPins(
         createdAt: now,
         updatedAt: now,
         createdBy: clip(createdBy, 120) || "admin",
+        status: "approved",
       });
     }
     if (added.length) {
@@ -340,7 +426,7 @@ export function straightLineDurations(
   );
 }
 
-type DraftPin = Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy">;
+type DraftPin = Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy" | "status">;
 
 function draft(holiday: TourHoliday, latitude: number, longitude: number, note = "", address = ""): DraftPin {
   return { holiday, latitude, longitude, address, photoUrl: "", note: clip(note, 160) };
