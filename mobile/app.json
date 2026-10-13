@@ -31,7 +31,7 @@
     },
     "android": {
       "package": "com.thevillageseverythingapp.app",
-      "versionCode": 10,
+      "versionCode": 11,
       "usesCleartextTraffic": false,
       "adaptiveIcon": {
         "backgroundColor": "#0c4a6e",
