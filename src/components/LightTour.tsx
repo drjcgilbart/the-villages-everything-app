@@ -510,6 +510,12 @@ export function LightTour() {
     setError("");
   }
 
+  function endTour() {
+    const speak = voiceOnRef.current;
+    resetPick();
+    if (speak) speakTourNow("Tour ended.");
+  }
+
   function voiceSwitch() {
     return (
       <button
@@ -579,6 +585,9 @@ export function LightTour() {
               Skip
             </button>
           ) : null}
+          <button type="button" className="btn btn-ghost lt-go" onClick={endTour}>
+            End tour
+          </button>
         </div>
       ) : null}
 
@@ -745,6 +754,9 @@ export function LightTour() {
                   Skip
                 </button>
               ) : null}
+              <button type="button" className="btn btn-ghost lt-go" onClick={endTour}>
+                End tour
+              </button>
             </div>
           </div>
         ) : null}
