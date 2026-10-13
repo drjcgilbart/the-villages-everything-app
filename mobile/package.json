@@ -8,6 +8,7 @@
     "expo-constants": "^57.0.9",
     "expo-iap": "^5.6.3",
     "expo-linking": "^57.0.5",
+    "expo-location": "~57.0.21",
     "expo-network": "^57.0.1",
     "expo-splash-screen": "^57.0.5",
     "expo-status-bar": "~57.0.1",

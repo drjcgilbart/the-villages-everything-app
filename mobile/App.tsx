@@ -25,6 +25,7 @@ import type {
   WebViewProgressEvent,
 } from "react-native-webview/lib/WebViewTypes";
 import * as Linking from "expo-linking";
+import * as Location from "expo-location";
 import * as Network from "expo-network";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
@@ -138,6 +139,69 @@ function isOurSite(url: string): boolean {
   }
 }
 
+function locationRequestId(value: unknown): string {
+  if (typeof value !== "string" || !/^[\w-]{1,48}$/.test(value)) return "";
+  return value;
+}
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+/** Approximate when that is all the phone allowed. Precise when it is allowed. */
+function readingAccuracy(permission: Location.LocationPermissionResponse): Location.LocationAccuracy | null {
+  if (permission.status !== "granted") return null;
+  if (Platform.OS === "android" && permission.android?.accuracy !== "fine") return Location.Accuracy.Balanced;
+  if (Platform.OS === "ios" && permission.ios?.accuracy === "reduced") return Location.Accuracy.Balanced;
+  return Location.Accuracy.High;
+}
+
+async function readPhoneFix(
+  accuracy: Location.LocationAccuracy,
+): Promise<{ latitude: number; longitude: number } | null> {
+  const attempts =
+    accuracy === Location.Accuracy.High
+      ? [Location.Accuracy.High, Location.Accuracy.Balanced]
+      : [Location.Accuracy.Balanced];
+  for (const level of attempts) {
+    try {
+      const pos = await withTimeout(
+        Location.getCurrentPositionAsync({
+          accuracy: level,
+          mayShowUserSettingsDialog: level === attempts[0],
+        }),
+        level === Location.Accuracy.High ? 12000 : 10000,
+      );
+      if (Number.isFinite(pos.coords.latitude) && Number.isFinite(pos.coords.longitude)) {
+        return { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      }
+    } catch {
+      /* A precise reading often fails when the phone is set to approximate location. */
+    }
+  }
+  try {
+    const last = await Location.getLastKnownPositionAsync({ maxAge: 120000, requiredAccuracy: 500 });
+    if (last && Number.isFinite(last.coords.latitude) && Number.isFinite(last.coords.longitude)) {
+      return { latitude: last.coords.latitude, longitude: last.coords.longitude };
+    }
+  } catch {
+    /* No cached fix. */
+  }
+  return null;
+}
+
 function isExternalAppUrl(url: string): boolean {
   const lower = url.toLowerCase();
   return (
@@ -162,6 +226,9 @@ function Shell() {
   const pendingOpen = useRef<string | null>(null);
   const pendingDone = useRef<string | null>(null);
   const pendingPurchases = useRef<Map<string, Purchase>>(new Map());
+  const locationChain = useRef<Promise<void>>(Promise.resolve());
+  const locationSub = useRef<Location.LocationSubscription | null>(null);
+  const watchRequest = useRef("");
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -328,6 +395,118 @@ function Shell() {
     const queued = pendingToWeb.current.splice(0);
     for (const detail of queued) injectToWeb(detail);
   }, [injectToWeb]);
+
+  const postLocation = useCallback(
+    (detail: {
+      requestId: string;
+      watch?: boolean;
+      ok: boolean;
+      code?: number;
+      latitude?: number;
+      longitude?: number;
+    }) => {
+      const json = JSON.stringify(detail);
+      webRef.current?.injectJavaScript(
+        `window.dispatchEvent(new CustomEvent("tvea-native-location",{detail:${json}}));true;`,
+      );
+    },
+    [],
+  );
+
+  const enqueueLocation = useCallback((task: () => Promise<void>) => {
+    locationChain.current = locationChain.current.then(task, task);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      locationSub.current?.remove();
+      locationSub.current = null;
+    };
+  }, []);
+
+  // Asked by the page only. A startup request races the notification prompt and the second dialog is skipped.
+  const ensureForegroundLocation = useCallback(async () => {
+    const servicesOn = await Location.hasServicesEnabledAsync();
+    if (!servicesOn) return null;
+    const current = await Location.getForegroundPermissionsAsync();
+    if (current.status === "granted") return current;
+    return Location.requestForegroundPermissionsAsync();
+  }, []);
+
+  const sendNativeLocation = useCallback(
+    async (requestId: string) => {
+      try {
+        const permission = await ensureForegroundLocation();
+        const accuracy = permission ? readingAccuracy(permission) : null;
+        if (!permission || permission.status !== "granted" || accuracy == null) {
+          postLocation({ requestId, ok: false, code: 1 });
+          return;
+        }
+        const point = await readPhoneFix(accuracy);
+        if (!point) {
+          postLocation({ requestId, ok: false, code: 2 });
+          return;
+        }
+        postLocation({ requestId, ok: true, latitude: point.latitude, longitude: point.longitude });
+      } catch {
+        postLocation({ requestId, ok: false, code: 2 });
+      }
+    },
+    [ensureForegroundLocation, postLocation],
+  );
+
+  const stopNativeLocationWatch = useCallback((requestId: string) => {
+    if (watchRequest.current !== requestId) return;
+    watchRequest.current = "";
+    locationSub.current?.remove();
+    locationSub.current = null;
+  }, []);
+
+  const startNativeLocationWatch = useCallback(
+    async (requestId: string) => {
+      watchRequest.current = requestId;
+      locationSub.current?.remove();
+      locationSub.current = null;
+      try {
+        const permission = await ensureForegroundLocation();
+        if (watchRequest.current !== requestId) return;
+        const accuracy = permission ? readingAccuracy(permission) : null;
+        if (!permission || permission.status !== "granted" || accuracy == null) {
+          postLocation({ requestId, watch: true, ok: false, code: 1 });
+          return;
+        }
+        const sub = await Location.watchPositionAsync(
+          {
+            accuracy,
+            timeInterval: 5000,
+            distanceInterval: 20,
+            mayShowUserSettingsDialog: false,
+          },
+          (pos) => {
+            if (watchRequest.current !== requestId) return;
+            if (!Number.isFinite(pos.coords.latitude) || !Number.isFinite(pos.coords.longitude)) return;
+            postLocation({
+              requestId,
+              watch: true,
+              ok: true,
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            });
+          },
+        );
+        if (watchRequest.current !== requestId) {
+          sub.remove();
+          return;
+        }
+        locationSub.current = sub;
+      } catch {
+        if (watchRequest.current === requestId) {
+          postLocation({ requestId, watch: true, ok: false, code: 2 });
+        }
+      }
+    },
+    [ensureForegroundLocation, postLocation],
+  );
 
   useEffect(() => {
     if (Platform.OS !== "ios") return;
@@ -550,8 +729,8 @@ function Shell() {
         applicationNameForUserAgent=" VillagesEverythingApp/1.2"
         injectedJavaScriptBeforeContentLoaded={
           Platform.OS === "ios"
-            ? "window.VillagesAppleIAP=true;true;"
-            : "window.VillagesAndroidAlarm=true;true;"
+            ? "window.VillagesAppleIAP=true;window.__TVEA_NATIVE_LOCATION__=true;true;"
+            : "window.VillagesAndroidAlarm=true;window.__TVEA_NATIVE_LOCATION__=true;true;"
         }
         onMessage={(event: WebViewMessageEvent) => {
           const raw = event.nativeEvent.data;
@@ -581,6 +760,7 @@ function Shell() {
             appAccountToken?: string;
             transactionId?: string;
             at?: number;
+            requestId?: string;
           };
           let msg: ShellMsg | null = null;
           try {
@@ -589,6 +769,23 @@ function Shell() {
             return;
           }
           if (!msg) return;
+          if (
+            msg.type === "tvea-location" ||
+            msg.type === "tvea-location-watch" ||
+            msg.type === "tvea-location-watch-stop"
+          ) {
+            const requestId = locationRequestId(msg.requestId);
+            if (!requestId) return;
+            if (msg.type === "tvea-location-watch-stop") {
+              stopNativeLocationWatch(requestId);
+              return;
+            }
+            const kind = msg.type;
+            enqueueLocation(() =>
+              kind === "tvea-location-watch" ? startNativeLocationWatch(requestId) : sendNativeLocation(requestId),
+            );
+            return;
+          }
           if (msg.type === "tvea-alarm" && Platform.OS === "android") {
             if (msg.action === "start") {
               startAndroidAlarm(Number(msg.seconds) || 30, String(msg.tone || "chime"), String(msg.uri || ""));

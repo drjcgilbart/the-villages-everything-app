@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
+import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/deviceLocation";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 
 type AdminPin = {
@@ -31,24 +32,12 @@ type Draft = {
 
 const PAGE = 15;
 
-function readLocation(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("This browser does not share location."));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 5000,
-    });
-  });
-}
-
 function locationHelp(err: unknown) {
-  const code = err && typeof err === "object" && "code" in err ? Number((err as { code: number }).code) : 0;
-  if (code === 1) {
-    return "Location is blocked. Allow location for this site in the browser or phone settings, then try again.";
+  if (geoErrorCode(err) === 1) {
+    return locationBlockedText("You can type the latitude and longitude instead.");
+  }
+  if (err instanceof Error && err.message === "This browser does not share location.") {
+    return "This browser does not share location. You can type the latitude and longitude instead.";
   }
   return "Location did not come through. You can type the latitude and longitude instead.";
 }
@@ -209,11 +198,11 @@ export function LightTourAdmin() {
     setNotice("");
     setDraft(blankDraft(holiday));
     try {
-      const pos = await readLocation();
+      const pos = await readDeviceLocation();
       setDraft({
         ...blankDraft(holiday),
-        latitude: pos.coords.latitude.toFixed(6),
-        longitude: pos.coords.longitude.toFixed(6),
+        latitude: pos.latitude.toFixed(6),
+        longitude: pos.longitude.toFixed(6),
       });
     } catch (err) {
       setError(locationHelp(err));
@@ -223,13 +212,13 @@ export function LightTourAdmin() {
   async function useHere() {
     setError("");
     try {
-      const pos = await readLocation();
+      const pos = await readDeviceLocation();
       setDraft((current) =>
         current
           ? {
               ...current,
-              latitude: pos.coords.latitude.toFixed(6),
-              longitude: pos.coords.longitude.toFixed(6),
+              latitude: pos.latitude.toFixed(6),
+              longitude: pos.longitude.toFixed(6),
               address: "",
             }
           : current

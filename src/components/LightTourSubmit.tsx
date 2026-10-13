@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { prepareUploadImageFile } from "@/lib/browserImage";
+import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/deviceLocation";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 
 type Here = { latitude: number; longitude: number };
@@ -76,23 +77,19 @@ export function LightTourSubmit({
 
   async function useHere() {
     setError("");
-    if (!navigator.geolocation) {
-      setError("This browser does not share location. Type the street address instead.");
-      return;
-    }
     setBusy(true);
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 12000,
-          maximumAge: 5000,
-        });
-      });
-      setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+      const point = await readDeviceLocation();
+      setHere(point);
       setHereNote("Using where you are now. Add the street address if you know it.");
-    } catch {
-      setError("Location did not come through. Type the street address instead.");
+    } catch (err) {
+      if (geoErrorCode(err) === 1) {
+        setError(locationBlockedText("Or type the street address."));
+      } else if (err instanceof Error && err.message === "This browser does not share location.") {
+        setError("This browser does not share location. Type the street address instead.");
+      } else {
+        setError("Location did not come through. Type the street address instead.");
+      }
     } finally {
       setBusy(false);
     }

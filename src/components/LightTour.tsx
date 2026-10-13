@@ -5,6 +5,12 @@ import { LightTourMap } from "./LightTourMap";
 import { LightTourSubmit } from "./LightTourSubmit";
 import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
 import { holidayTracksFor } from "@/lib/holidayMusic";
+import {
+  geoErrorCode,
+  nativeLocationReady,
+  readDeviceLocation,
+  watchNativeLocation,
+} from "@/lib/deviceLocation";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import { nextCue, stepsFromPayload, straightCue, type DrivingStep } from "@/lib/tourDirections";
 import { speakTour, speakTourNow, stopTourSpeech } from "@/lib/tourSpeech";
@@ -55,33 +61,6 @@ function sessionId() {
   }
 }
 
-function readFix(timeout: number, accurate: boolean): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("This browser does not share location."));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      // A precise fix fails on many Android phones when only approximate location is allowed.
-      enableHighAccuracy: accurate,
-      timeout,
-      maximumAge: accurate ? 0 : 15000,
-    });
-  });
-}
-
-/** Network location first. A precise fix is optional, and a hard deny stops there. */
-async function readLocation(): Promise<GeolocationPosition> {
-  try {
-    const rough = await readFix(12000, false);
-    const here = { latitude: rough.coords.latitude, longitude: rough.coords.longitude };
-    if (!tourStartProblem(here)) return rough;
-  } catch (err) {
-    if (geoCode(err) === 1) throw err;
-  }
-  return readFix(15000, true);
-}
-
 function stopsFromText(text: string) {
   const n = Math.round(Number(text));
   if (!Number.isFinite(n) || n < 1) return DEFAULT_STOPS;
@@ -101,18 +80,9 @@ const VILLAGES_START = {
   longitude: VILLAGES_CENTER.longitude,
 };
 
-function geoCode(err: unknown) {
-  if (!err || typeof err !== "object") return 0;
-  const code = Number((err as { code?: unknown }).code);
-  if (code === 1 || code === 2 || code === 3) return code;
-  const name = String((err as { name?: unknown }).name || "");
-  if (name === "NotAllowedError" || name === "GeolocationPositionError" || name === "PositionError") return 1;
-  return 0;
-}
-
 function blockedLocationNote() {
   if (typeof navigator !== "undefined" && isNativeAppShell()) {
-    return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow.";
+    return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. On Android, turn Precise on too.";
   }
   if (typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
     return "Location is blocked on this phone, so the route starts in the middle of The Villages. Tap the lock icon in the address bar, set Location to Allow, then build the route again.";
@@ -144,6 +114,7 @@ export function LightTour({
   const [offline, setOffline] = useState(false);
   const seen = useRef(new Set<string>());
   const watch = useRef<number | null>(null);
+  const nativeStop = useRef<(() => void) | null>(null);
   const hereRef = useRef<Here | null>(null);
   const indexRef = useRef(0);
   const stopsRef = useRef<Stop[]>([]);
@@ -199,6 +170,8 @@ export function LightTour({
   useEffect(() => {
     return () => {
       if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
+      nativeStop.current?.();
+      nativeStop.current = null;
       legAbort.current?.abort();
       stopTourSpeech();
     };
@@ -340,8 +313,7 @@ export function LightTour({
       return { here: typed, note: "" };
     }
     try {
-      const pos = await readLocation();
-      const here = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      const here = await readDeviceLocation((point) => !tourStartProblem(point));
       const problem = tourStartProblem(here);
       if (!problem) return { here, note: "" };
       // A desktop sometimes reports the ocean at 0, 0 instead of a real fix.
@@ -350,7 +322,7 @@ export function LightTour({
       }
       throw new Error(problem);
     } catch (err) {
-      if (geoCode(err) || (err instanceof Error && err.message === "This browser does not share location.")) {
+      if (geoErrorCode(err) || (err instanceof Error && err.message === "This browser does not share location.")) {
         return { here: VILLAGES_START, note: blockedLocationNote() };
       }
       throw err;
@@ -430,42 +402,54 @@ export function LightTour({
       setCue(line);
       speakTourNow(line);
     }
-    if (!navigator.geolocation) {
-      if (here) void guide(here);
-      return;
-    }
-    let triedPrecise = false;
-    const followPhone = (accurate: boolean) => {
-      if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
-      watch.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          rememberHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-          if (!accurate && !triedPrecise) {
-            triedPrecise = true;
-            followPhone(true);
-          }
-        },
+    stopFollow();
+    if (nativeLocationReady()) {
+      nativeStop.current = watchNativeLocation(
+        (point) => rememberHere(point),
         (err) => {
-          if (accurate) {
-            followPhone(false);
-            return;
-          }
-          if (err.code === 1) setError(locationHelp(err));
+          if (geoErrorCode(err) === 1) setError(locationHelp(err));
         },
-        { enableHighAccuracy: accurate, maximumAge: accurate ? 2000 : 15000, timeout: 20000 }
       );
-    };
-    followPhone(false);
+    } else if (navigator.geolocation) {
+      let triedPrecise = false;
+      const followPhone = (accurate: boolean) => {
+        if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
+        watch.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            rememberHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+            if (!accurate && !triedPrecise) {
+              triedPrecise = true;
+              followPhone(true);
+            }
+          },
+          (err) => {
+            if (accurate) {
+              followPhone(false);
+              return;
+            }
+            if (err.code === 1) setError(locationHelp(err));
+          },
+          { enableHighAccuracy: accurate, maximumAge: accurate ? 2000 : 15000, timeout: 20000 },
+        );
+      };
+      followPhone(false);
+    }
     if (here) void guide(here);
     noteArrival();
+  }
+
+  function stopFollow() {
+    if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
+    watch.current = null;
+    nativeStop.current?.();
+    nativeStop.current = null;
   }
 
   function advance(fromPopup = false) {
     setPopup(false);
     if (!fromPopup && current) seen.current.add(current.id);
     if (index >= stops.length - 1) {
-      if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
-      watch.current = null;
+      stopFollow();
       legAbort.current?.abort();
       setPhase("done");
       phaseRef.current = "done";
@@ -501,8 +485,7 @@ export function LightTour({
   }, [index, phase]);
 
   function resetPick() {
-    if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
-    watch.current = null;
+    stopFollow();
     legAbort.current?.abort();
     legRef.current = null;
     stopTourSpeech();
