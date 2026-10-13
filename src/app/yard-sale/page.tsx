@@ -1,28 +1,14 @@
 import { PageHeroMascot } from "@/components/PageHeroMascot";
 import { YardListingCard } from "@/components/YardListingCard";
 import { YardSalePostForm } from "@/components/YardSalePostForm";
-import { memberRosterUnreadable, settleDurableHydrate } from "@/lib/dataFs";
 import { withSellerBadges } from "@/lib/memberBadges";
 import { getSessionMember } from "@/lib/memberAuth";
-import { getApprovedListings, listingWithSeller, loadYardSale } from "@/lib/yardSale";
+import { getApprovedListings, listingWithSeller } from "@/lib/yardSale";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Marketplace" };
 
 export default async function YardSalePage() {
-  await settleDurableHydrate();
-  const roster = loadYardSale();
-  console.info(
-    "[roster-check]",
-    memberRosterUnreadable() ? "unreadable" : "readable",
-    "members",
-    roster.members.length,
-    "listings",
-    roster.listings.length
-  );
-  for (const person of roster.members) {
-    console.info("[roster-member]", person.status, person.name, person.email);
-  }
   const member = await getSessionMember();
   const posterName =
     member && member.status === "approved" ? member.name : "";
