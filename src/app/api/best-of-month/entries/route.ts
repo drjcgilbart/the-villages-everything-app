@@ -14,6 +14,7 @@ import {
   getResultsForFeaturedMonth,
   isBomCategory,
   listApprovedForMonth,
+  publicBomEntry,
   setBomEntryStatusAsync,
   submitBomEntryAsync,
   voterChoicesThisMonth,
@@ -45,7 +46,7 @@ export async function GET() {
   const byCategory = Object.fromEntries(
     BOM_CATEGORIES.map((cat) => [
       cat,
-      listApprovedForMonth(data, monthKey, cat),
+      listApprovedForMonth(data, monthKey, cat).map(publicBomEntry),
     ])
   ) as Record<BomCategory, ReturnType<typeof listApprovedForMonth>>;
 
@@ -58,11 +59,15 @@ export async function GET() {
             {
               ...c,
               winner: c.winnerEntryId
-                ? data.entries.find((e) => e.id === c.winnerEntryId) || null
+                ? (() => {
+                    const found = data.entries.find((e) => e.id === c.winnerEntryId);
+                    return found ? publicBomEntry(found) : null;
+                  })()
                 : null,
               honorableMentions: c.honorableMentionIds
                 .map((id) => data.entries.find((e) => e.id === id))
-                .filter(Boolean),
+                .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+                .map(publicBomEntry),
             },
           ];
         })

@@ -12,6 +12,7 @@ type EditDraft = {
   title: string;
   description: string;
   submitterName: string;
+  showSubmitterName: boolean;
   category: BomCategory;
   status: BomEntry["status"];
 };
@@ -60,6 +61,7 @@ function AdminBomAddForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [submitterName, setSubmitterName] = useState(defaultName);
+  const [showSubmitterName, setShowSubmitterName] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
@@ -112,6 +114,7 @@ function AdminBomAddForm({
           title: nextTitle,
           description,
           submitterName: who,
+          showSubmitterName,
           imageUrl: uploaded.url,
           fileType: uploaded.fileType,
         }),
@@ -185,6 +188,15 @@ function AdminBomAddForm({
             placeholder="Your name, or the neighbor’s name"
             onChange={(event) => setSubmitterName(event.target.value)}
           />
+          <label className="checkbox-row" style={{ marginTop: "0.55rem" }}>
+            <input
+              type="checkbox"
+              checked={showSubmitterName}
+              disabled={busy}
+              onChange={(event) => setShowSubmitterName(event.target.checked)}
+            />
+            Show this name on the entry
+          </label>
           {defaultName ? (
             <button
               type="button"
@@ -359,6 +371,7 @@ export function AdminBestOfMonthPanel() {
       title: e.title,
       description: e.description || "",
       submitterName: e.submitterName,
+      showSubmitterName: e.showSubmitterName !== false,
       category: e.category,
       status: e.status,
     });
@@ -416,6 +429,7 @@ export function AdminBestOfMonthPanel() {
           title: draft.title,
           description: draft.description,
           submitterName: draft.submitterName,
+          showSubmitterName: draft.showSubmitterName,
           category: draft.category,
           status: andApprove ? "approved" : draft.status,
           ...(uploaded ? { imageUrl: uploaded.url, fileType: uploaded.fileType } : {}),
@@ -616,6 +630,20 @@ export function AdminBestOfMonthPanel() {
                           maxLength={60}
                           required
                         />
+                        <label className="checkbox-row" style={{ marginTop: "0.55rem" }}>
+                          <input
+                            id={`bom-edit-show-${e.id}`}
+                            type="checkbox"
+                            checked={draft.showSubmitterName}
+                            onChange={(ev) =>
+                              setDraft({
+                                ...draft,
+                                showSubmitterName: ev.target.checked,
+                              })
+                            }
+                          />
+                          Show this name on the entry
+                        </label>
                       </div>
                     </div>
                     <div className="form-row">
@@ -730,6 +758,7 @@ export function AdminBestOfMonthPanel() {
                       }}
                     >
                       by {e.submitterName}
+                      {e.showSubmitterName === false ? " · hidden on the public entry" : ""}
                       {e.description ? ` — ${e.description}` : ""}
                     </p>
                     <p

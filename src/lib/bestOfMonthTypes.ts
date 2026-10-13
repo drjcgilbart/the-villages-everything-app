@@ -71,6 +71,8 @@ export type BomEntry = {
   title: string;
   description?: string;
   submitterName: string;
+  /** Absent or true shows the name on the public entry. Only an admin can turn this off. */
+  showSubmitterName?: boolean;
   imageUrl: string;
   fileType: BomFileType;
   status: BomEntryStatus;

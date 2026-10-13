@@ -25,6 +25,12 @@ import type { BomFileType } from "@/lib/bestOfMonthTypes";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+function showNameFlag(value: unknown): boolean | undefined {
+  if (value === false) return false;
+  if (value === true) return true;
+  return undefined;
+}
+
 function safeMedia(value: unknown) {
   const text = String(value || "").trim();
   if (!text) return "";
@@ -112,6 +118,7 @@ export async function POST(req: Request) {
         status: body.status,
         imageUrl,
         fileType,
+        showSubmitterName: showNameFlag(body.showSubmitterName),
       });
       return NextResponse.json({
         ok: true,
@@ -137,6 +144,7 @@ export async function POST(req: Request) {
         imageUrl,
         fileType: body.fileType === "pdf" ? "pdf" : "image",
         status: "approved",
+        showSubmitterName: showNameFlag(body.showSubmitterName),
       });
       return NextResponse.json({
         ok: true,

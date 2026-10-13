@@ -453,6 +453,12 @@ export function getEntryById(
   return data.entries.find((e) => e.id === id);
 }
 
+/** Neighbors still must send a name. The admin chooses whether the public entry shows it. */
+export function publicBomEntry(entry: BomEntry): BomEntry {
+  if (entry.showSubmitterName !== false) return entry;
+  return { ...entry, submitterName: "" };
+}
+
 export function listApprovedForMonth(
   data: BomData,
   monthKey: string,
@@ -519,6 +525,7 @@ export async function submitBomEntryAsync(input: {
   monthKey?: string;
   /** Admin adds go live immediately. Neighbor nominations stay pending. */
   status?: "pending" | "approved";
+  showSubmitterName?: boolean;
 }): Promise<BomEntry> {
   const data = await loadBomAsync();
   const title = String(input.title || "").trim().slice(0, 80);
@@ -540,6 +547,7 @@ export async function submitBomEntryAsync(input: {
     imageUrl: input.imageUrl,
     fileType: input.fileType,
     status,
+    showSubmitterName: input.showSubmitterName === false ? false : undefined,
     monthKey: input.monthKey || bomMonthKey(),
     createdAt: new Date().toISOString(),
     votes: 0,
@@ -593,6 +601,7 @@ export async function updateBomEntryAsync(
     status?: "approved" | "rejected" | "pending";
     imageUrl?: string;
     fileType?: BomFileType;
+    showSubmitterName?: boolean;
   }
 ): Promise<BomEntry> {
   const data = await loadBomAsync();
@@ -633,6 +642,11 @@ export async function updateBomEntryAsync(
     status = patch.status;
   }
 
+  let showSubmitterName = cur.showSubmitterName;
+  if (typeof patch.showSubmitterName === "boolean") {
+    showSubmitterName = patch.showSubmitterName ? undefined : false;
+  }
+
   let imageUrl = cur.imageUrl;
   let fileType = cur.fileType;
   if (patch.imageUrl !== undefined) {
@@ -649,6 +663,7 @@ export async function updateBomEntryAsync(
     submitterName,
     category,
     status,
+    showSubmitterName,
     imageUrl,
     fileType,
   };

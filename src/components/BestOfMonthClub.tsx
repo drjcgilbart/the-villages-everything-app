@@ -390,7 +390,9 @@ export function BestOfMonthClub() {
                   <EntryMedia entry={block.winner} large />
                   <h3>{block.winner.title}</h3>
                   <p className="bom-muted">
-                    Submitted by {block.winner.submitterName} ·{" "}
+                    {block.winner.submitterName ? (
+                      <>Submitted by {block.winner.submitterName} · </>
+                    ) : null}
                     <strong>{block.winner.votes}</strong> votes
                   </p>
                   {block.honorableMentions?.length > 0 && (
@@ -484,9 +486,9 @@ export function BestOfMonthClub() {
                               Show more
                             </button>
                           ) : null}
-                          <p className="bom-muted">
-                            by {entry.submitterName}
-                          </p>
+                          {entry.submitterName ? (
+                            <p className="bom-muted">by {entry.submitterName}</p>
+                          ) : null}
                           <p className="bom-vote-count">
                             <strong>{entry.votes}</strong> vote
                             {entry.votes === 1 ? "" : "s"}
@@ -562,7 +564,7 @@ export function BestOfMonthClub() {
                 <p className="bom-muted">No description provided.</p>
               )}
               <p className="bom-muted">
-                Submitted by {detail.submitterName} ·{" "}
+                {detail.submitterName ? <>Submitted by {detail.submitterName} · </> : null}
                 <strong>{detail.votes}</strong> vote
                 {detail.votes === 1 ? "" : "s"}
               </p>
