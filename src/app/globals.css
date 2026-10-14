@@ -17106,6 +17106,56 @@ html.privacy-mode [data-privacy-block]::after {
   margin-top: 0;
 }
 
+.lt-fold.about-panel {
+  padding: 0;
+}
+
+.lt-fold-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1.35rem 1.5rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.lt-fold-summary::-webkit-details-marker {
+  display: none;
+}
+
+.lt-fold-summary h2 {
+  margin: 0;
+  flex: 1;
+}
+
+.lt-fold-arrow {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 3px solid var(--palm-deep);
+  border-bottom: 3px solid var(--palm-deep);
+  transform: rotate(-45deg);
+  flex: none;
+}
+
+.lt-fold[open] > .lt-fold-summary .lt-fold-arrow {
+  transform: rotate(45deg);
+}
+
+.lt-fold[open] > .lt-fold-summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.lt-fold-body {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.lt-fold-group + .lt-fold-group {
+  margin-top: 1.15rem;
+  padding-top: 1.05rem;
+  border-top: 1px solid var(--line);
+}
+
 .lt-chips {
   display: flex;
   flex-wrap: wrap;

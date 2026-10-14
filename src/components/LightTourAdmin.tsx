@@ -545,16 +545,20 @@ export function LightTourAdmin() {
         <p className="panel-hint">
           <Link href="/tour">Back to the tour</Link>
         </p>
-        <div className="about-panel lt-card">
-          <h2>Terms acceptances ({acceptances.length})</h2>
+        {termsNote ? (
+          <p className="lt-error" role="alert">
+            {termsNote}
+          </p>
+        ) : null}
+        <details className="about-panel lt-card lt-fold">
+          <summary className="lt-fold-summary">
+            <span className="lt-fold-arrow" aria-hidden="true" />
+            <h2>Terms acceptances ({acceptances.length})</h2>
+          </summary>
+          <div className="lt-fold-body">
           <p className="panel-hint">
             Newest first. Each line is the membership that tapped Accept after that inbox was confirmed. The name and email come from the account. The time is Eastern.
           </p>
-          {termsNote ? (
-            <p className="lt-error" role="alert">
-              {termsNote}
-            </p>
-          ) : null}
           {acceptances.length === 0 ? <p className="lt-empty">No one has accepted yet.</p> : null}
           <ul className="lt-terms-log">
             {acceptances.map((row, index) => {
@@ -582,7 +586,8 @@ export function LightTourAdmin() {
               );
             })}
           </ul>
-        </div>
+          </div>
+        </details>
         {error ? (
           <p className="lt-error" role="alert">
             {error}
@@ -788,11 +793,17 @@ export function LightTourAdmin() {
           </button>
         </div>
 
+        <details className="about-panel lt-card lt-fold">
+          <summary className="lt-fold-summary">
+            <span className="lt-fold-arrow" aria-hidden="true" />
+            <h2>Pinned houses ({pins.filter((pin) => pin.status !== "pending").length})</h2>
+          </summary>
+          <div className="lt-fold-body">
         {TOUR_HOLIDAYS.map((item) => {
           const group = pins.filter((pin) => pin.holiday === item && pin.status !== "pending");
           const visible = group.slice(0, shown[item]);
           return (
-            <div key={item} className="about-panel lt-card">
+            <div key={item} className="lt-fold-group">
               <h2>
                 {HOLIDAY_LABELS[item]} ({group.length})
               </h2>
@@ -849,6 +860,8 @@ export function LightTourAdmin() {
             </div>
           );
         })}
+          </div>
+        </details>
 
         <button type="button" className="btn btn-primary lt-drop" onClick={() => void dropPin()}>
           Drop pin
