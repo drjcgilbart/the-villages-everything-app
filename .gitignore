@@ -38,6 +38,7 @@ yarn-error.log*
 /data/uploads/*
 !/data/uploads/.gitkeep
 /data/content.json
+/data/light-tour-terms.json
 
 # vercel
 .vercel

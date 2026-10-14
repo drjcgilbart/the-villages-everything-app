@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HolidayLightsTermsSection } from "@/components/HolidayLightsTermsSection";
 import { MAIN_TOPICS } from "@/lib/topics";
 import { SITE } from "@/lib/content";
 
@@ -97,6 +98,8 @@ export function Footer() {
           </a>
         </p>
 
+        <HolidayLightsTermsSection id="holiday-lights-terms" className="footer-terms" />
+
         <p className="footer-note">
           Original site graphics created for this project (not stock photos). Not
           affiliated with The Villages® brand or developer. Just one person
@@ -110,6 +113,10 @@ export function Footer() {
           <Link href="/terms" className="text-link">
             Terms of Use (EULA)
           </Link>
+          {" · "}
+          <a href="#holiday-lights-terms" className="text-link">
+            Terms of Service
+          </a>
           {" · "}
           <Link href="/safety" className="text-link">
             Safety

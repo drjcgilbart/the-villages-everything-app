@@ -28,6 +28,8 @@ import {
   type TourHoliday,
 } from "@/lib/lightTourShared";
 import { buildTourSheetPdf } from "@/lib/tourSheetPdf";
+import { guestTermsUserId } from "@/lib/holidayLightsTerms";
+import { HolidayLightsTermsGate } from "./HolidayLightsTermsGate";
 
 type Stop = {
   id: string;
@@ -140,11 +142,38 @@ export function LightTour({
   const [sheetMode, setSheetMode] = useState<"" | "print" | "save">("");
   const [sheetError, setSheetError] = useState("");
   const sheetLock = useRef(false);
+  const [termsState, setTermsState] = useState<"checking" | "needed" | "accepted">("checking");
+  const [termsBusy, setTermsBusy] = useState(false);
+  const [termsError, setTermsError] = useState("");
+  const [readingTerms, setReadingTerms] = useState(false);
 
   indexRef.current = index;
   stopsRef.current = stops;
   phaseRef.current = phase;
   houseOpenRef.current = houseOpen;
+
+  useEffect(() => {
+    let cancel = false;
+    const visitorId = guestTermsUserId();
+    const slow = window.setTimeout(() => {
+      if (!cancel) setTermsState((state) => (state === "checking" ? "needed" : state));
+    }, 8000);
+    void fetch(`/api/light-tour/terms?visitorId=${encodeURIComponent(visitorId)}`, {
+      credentials: "same-origin",
+    })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => null)) as { accepted?: boolean } | null;
+        if (cancel) return;
+        setTermsState(res.ok && data?.accepted ? "accepted" : "needed");
+      })
+      .catch(() => {
+        if (!cancel) setTermsState("needed");
+      });
+    return () => {
+      cancel = true;
+      window.clearTimeout(slow);
+    };
+  }, []);
 
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine);
@@ -357,7 +386,31 @@ export function LightTour({
     }
   }
 
+  async function acceptTerms() {
+    setTermsBusy(true);
+    setTermsError("");
+    try {
+      const res = await fetch("/api/light-tour/terms", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitorId: guestTermsUserId() }),
+      });
+      const data = (await res.json().catch(() => null)) as { accepted?: boolean; error?: string } | null;
+      if (!res.ok || !data?.accepted) {
+        setTermsError(data?.error || "The acceptance did not save. Stay on this screen and try again.");
+        return;
+      }
+      setTermsState("accepted");
+    } catch {
+      setTermsError("The acceptance did not save. Stay on this screen and try again.");
+    } finally {
+      setTermsBusy(false);
+    }
+  }
+
   async function buildRoute() {
+    if (termsState !== "accepted") return;
     setError("");
     setSheetError("");
     setEmpty(false);
@@ -372,8 +425,14 @@ export function LightTour({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           start.address
-            ? { holiday, address: start.address, count: stopCount }
-            : { holiday, latitude: start.here.latitude, longitude: start.here.longitude, count: stopCount }
+            ? { holiday, address: start.address, count: stopCount, visitorId: guestTermsUserId() }
+            : {
+                holiday,
+                latitude: start.here.latitude,
+                longitude: start.here.longitude,
+                count: stopCount,
+                visitorId: guestTermsUserId(),
+              }
         ),
       });
       const data = await res.json();
@@ -418,6 +477,7 @@ export function LightTour({
   }
 
   function startTour() {
+    if (termsState !== "accepted") return;
     setPhase("tour");
     phaseRef.current = "tour";
     setIndex(0);
@@ -657,6 +717,16 @@ export function LightTour({
     setHouseOpen(true);
   }
 
+  function viewTermsLink() {
+    return (
+      <p className="lt-view-terms">
+        <button type="button" className="text-link" onClick={() => setReadingTerms(true)}>
+          View Terms
+        </button>
+      </p>
+    );
+  }
+
   const addHouseButton = (
     <button type="button" className="btn btn-ghost lt-go" onClick={openHouseForm}>
       Add a lit house
@@ -699,6 +769,7 @@ export function LightTour({
       {phase === "route" ? (
         <div className="about-panel lt-card">
           <h2>{stops.length} {stops.length === 1 ? "stop" : "stops"}</h2>
+          {viewTermsLink()}
           <ol className="lt-list">
             {stops.map((stop) => (
               <li key={stop.id}>
@@ -740,6 +811,7 @@ export function LightTour({
             <p className="panel-hint">The next turn shows here as soon as the phone has a fix.</p>
           )}
           <p>{current.address || "Saved house"}</p>
+          {viewTermsLink()}
           {current.note ? <p>{current.note}</p> : null}
           {current.photoUrl ? (
             <img src={current.photoUrl} alt={current.note || `Stop ${current.order}`} loading="lazy" className="lt-photo" />
@@ -768,6 +840,7 @@ export function LightTour({
       {phase === "done" ? (
         <div className="about-panel lt-card lt-done">
           <h2>Tour complete</h2>
+          {viewTermsLink()}
           <p>
             You finished {stops.length} {stops.length === 1 ? "stop" : "stops"} on the {HOLIDAY_LABELS[holiday]} route.
           </p>
@@ -785,9 +858,23 @@ export function LightTour({
     </>
   );
 
+  if (termsState !== "accepted") {
+    return (
+      <section className="section">
+        <HolidayLightsTermsGate
+          mode={termsState === "checking" ? "checking" : "needed"}
+          busy={termsBusy}
+          error={termsError}
+          onAccept={() => void acceptTerms()}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="section">
       <div className="shell lt-wrap">
+        {viewTermsLink()}
         {offline ? (
           <p className="lt-banner" role="status">
             You are offline. The map and the next route need a connection.
@@ -1002,6 +1089,9 @@ export function LightTour({
         variant="tour"
         note="Real holiday songs for this page. Check the ones to rotate. When a song ends, the next checked song plays."
       />
+      {readingTerms ? (
+        <HolidayLightsTermsGate mode="reading" onBack={() => setReadingTerms(false)} />
+      ) : null}
     </section>
   );
 }

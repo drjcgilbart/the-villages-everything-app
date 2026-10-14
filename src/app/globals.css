@@ -11051,6 +11051,35 @@ button.text-link {
   color: var(--muted);
 }
 
+.footer-terms {
+  scroll-margin-top: 5.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+}
+
+.footer-terms h2 {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.15rem;
+}
+
+.footer-terms p {
+  margin: 0;
+  max-width: 46rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.holiday-terms-panel {
+  margin-top: 1rem;
+}
+
+.holiday-terms-panel p {
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
 .themes-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -17474,6 +17503,48 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   margin: 0.2rem 0 0.6rem;
   font-family: var(--font-display), Georgia, serif;
   font-size: 1.45rem;
+}
+
+.lt-terms-gate {
+  z-index: 5000;
+  align-items: center;
+}
+
+.lt-terms-gate .lt-pop {
+  width: min(36rem, 100%);
+  max-height: min(88dvh, 44rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lt-terms-copy {
+  margin: 0 0 0.85rem;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+
+.lt-terms-footlink {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+}
+
+.lt-terms-footlink a {
+  font-weight: 800;
+  color: var(--palm-deep);
+}
+
+.lt-terms-gate .lt-go {
+  width: 100%;
+  flex: none;
+}
+
+.lt-view-terms {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
 }
 
 .lt-live {

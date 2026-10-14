@@ -12,6 +12,7 @@ import {
 } from "@/lib/lightTour";
 import { tourStartProblem } from "@/lib/lightTourShared";
 import { buildDrivingRoute } from "@/lib/lightTourRoute";
+import { hasHolidayLightsAcceptance, termsUserIdForRequest } from "@/lib/holidayLightsTermsStore";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,6 +23,13 @@ export async function POST(req: Request) {
   const limited = rateLimitResponse(req, "light-tour-route", 30, 10 * 60 * 1000);
   if (limited) return limited;
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const termsUserId = await termsUserIdForRequest(body?.visitorId);
+  if (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId))) {
+    return NextResponse.json(
+      { error: "Accept the Holiday Lights terms before a route can start." },
+      { status: 403 }
+    );
+  }
   const holiday = holidayFrom(body?.holiday);
   let latitude = Number(body?.latitude);
   let longitude = Number(body?.longitude);

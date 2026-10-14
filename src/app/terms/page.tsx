@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { HolidayLightsTermsSection } from "@/components/HolidayLightsTermsSection";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
@@ -36,6 +37,7 @@ export default function TermsPage() {
             <Link href="/privacy">Privacy Policy</Link>
           </p>
         </div>
+        <HolidayLightsTermsSection className="about-panel holiday-terms-panel" />
       </div>
     </div>
   );
