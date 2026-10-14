@@ -2,7 +2,7 @@
   "expo": {
     "name": "The Villages Everything App",
     "slug": "the-villages-everything-app",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.thevillageseverythingapp.app",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow camera access so you can take photos for Best of the Month, Support Local, Marketplace, and member uploads.",
         "NSPhotoLibraryUsageDescription": "Allow photo library access so you can upload pictures for Best of the Month, Support Local, Marketplace, and member content.",
