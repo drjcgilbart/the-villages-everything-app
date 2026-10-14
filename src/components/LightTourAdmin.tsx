@@ -533,18 +533,23 @@ export function LightTourAdmin() {
 
         <p className="panel-hint">
           Drag a number onto the house. The middle of the number is the GPS point. Letting go saves it. The street
-          address stays the same.
+          address stays the same. Double-click a number to edit that house. The scroll wheel still zooms the map.
         </p>
         <LightTourMap
           visitor={null}
           line={[]}
           stops={mapStops}
+          activeId={draft?.id}
           onMoveStop={(id, latitude, longitude) => void movePin(id, latitude, longitude)}
+          onOpenStop={(id) => {
+            const pin = pinsRef.current.find((row) => row.id === id);
+            if (pin) editPin(pin);
+          }}
         />
 
         {draft ? (
           <div id="lt-pin-draft" className="about-panel lt-card">
-            <h2>{draft.id ? "Edit pin" : "New pin"}</h2>
+            <h2>{draft.id ? `Edit pin ${mapStops.find((stop) => stop.id === draft.id)?.order ?? ""}`.trim() : "New pin"}</h2>
             <div className="lt-chips" role="radiogroup" aria-label="Pin holiday">
               {TOUR_HOLIDAYS.map((item) => (
                 <button
@@ -699,9 +704,14 @@ export function LightTourAdmin() {
               </h2>
               {group.length === 0 ? <p className="lt-empty">No pins yet.</p> : null}
               <ul className="lt-list">
-                {visible.map((pin) => (
+                {visible.map((pin) => {
+                  const order = item === holiday ? group.findIndex((row) => row.id === pin.id) + 1 : 0;
+                  return (
                   <li key={pin.id} className="lt-pin">
-                    <strong>{pin.address || `${pin.latitude.toFixed(5)}, ${pin.longitude.toFixed(5)}`}</strong>
+                    <strong className="lt-pin-title">
+                      {order > 0 ? <span className="lt-pin-num">{order}</span> : null}
+                      <span>{pin.address || `${pin.latitude.toFixed(5)}, ${pin.longitude.toFixed(5)}`}</span>
+                    </strong>
                     {pin.note ? <span>{pin.note}</span> : null}
                     <span>
                       {pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}
@@ -730,7 +740,8 @@ export function LightTourAdmin() {
                       )}
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
               {visible.length < group.length ? (
                 <button

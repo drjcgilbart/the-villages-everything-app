@@ -22,11 +22,13 @@ type Props = {
   follow?: boolean;
   /** Admin only. Called with the pin id and the new GPS point after a drag. */
   onMoveStop?: (id: string, latitude: number, longitude: number) => void;
+  /** Admin only. Called when a pin is double-clicked so its edit card can open. */
+  onOpenStop?: (id: string) => void;
 };
 
 const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 
-export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop }: Props) {
+export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
@@ -35,12 +37,15 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
   const userPanned = useRef(false);
   const visitorRef = useRef(visitor);
   const moveRef = useRef(onMoveStop);
+  const openRef = useRef(onOpenStop);
   const [ready, setReady] = useState(false);
   const [recenter, setRecenter] = useState(false);
   const draggable = Boolean(onMoveStop);
+  const editable = Boolean(onOpenStop);
   followRef.current = follow;
   visitorRef.current = visitor;
   moveRef.current = onMoveStop;
+  openRef.current = onOpenStop;
 
   useEffect(() => {
     let cancelled = false;
@@ -105,17 +110,26 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
             iconAnchor: [16, 16],
           });
           const canDrag = Boolean(moveRef.current);
+          const canOpen = Boolean(openRef.current);
           const marker = L.marker([stop.latitude, stop.longitude], {
             icon,
             keyboard: true,
             draggable: canDrag,
             autoPan: canDrag,
-            title: canDrag ? `Stop ${stop.order}. Drag to move this house.` : `Stop ${stop.order}`,
+            title: canOpen
+              ? `Stop ${stop.order}. Drag to move this house. Double-click to edit.`
+              : `Stop ${stop.order}`,
           }).addTo(group);
           if (canDrag) {
             marker.on("dragend", () => {
               const at = marker.getLatLng();
               moveRef.current?.(stop.id, at.lat, at.lng);
+            });
+          }
+          if (canOpen) {
+            marker.on("dblclick", (event) => {
+              L.DomEvent.stop(event);
+              openRef.current?.(stop.id);
             });
           }
           const detail = [stop.address, stop.note].filter(Boolean).join(" — ");
@@ -140,7 +154,7 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
     };
     timer = window.setTimeout(draw, 180);
     return () => window.clearTimeout(timer);
-  }, [visitor, line, stops, activeId, ready, follow, draggable]);
+  }, [visitor, line, stops, activeId, ready, follow, draggable, editable]);
 
   useEffect(() => {
     if (!follow) return;
@@ -189,7 +203,7 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
         role="application"
         aria-label={
           draggable
-            ? "Holiday Lights map. Drag a number to move that house."
+            ? "Holiday Lights map. Drag a number to move that house. Double-click a number to edit it."
             : "Holiday Lights Tour map with numbered stops"
         }
       />

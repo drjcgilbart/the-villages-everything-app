@@ -17178,6 +17178,25 @@ html.privacy-mode [data-privacy-block]::after {
   overflow-wrap: anywhere;
 }
 
+.lt-pin-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lt-pin-num {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: #fff8ee;
+  color: #1c2430;
+  border: 2px solid #0c4a6e;
+  font-weight: 800;
+}
+
 .lt-list span {
   color: var(--muted);
 }
