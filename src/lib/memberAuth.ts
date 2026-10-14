@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
-import { getMemberById } from "./yardSale";
+import { getMemberById, hydrateYardSale } from "./yardSale";
 import { cookieSecure } from "./security";
 
 const COOKIE = "tvi_member";
@@ -60,6 +60,9 @@ export async function getSessionMemberId() {
 export async function getSessionMember() {
   const id = await getSessionMemberId();
   if (!id) return null;
+  // A cold instance only has the starter file in the bundle. The header
+  // hydrates first, so it can show a name while this lookup still misses.
+  if (!getMemberById(id)) await hydrateYardSale();
   return getMemberById(id);
 }
 

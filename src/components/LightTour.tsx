@@ -141,7 +141,8 @@ export function LightTour({
   const [sheetMode, setSheetMode] = useState<"" | "print" | "save">("");
   const [sheetError, setSheetError] = useState("");
   const sheetLock = useRef(false);
-  const [termsState, setTermsState] = useState<"checking" | "signin" | "blocked" | "confirm" | "needed" | "accepted">("checking");
+  const [termsTry, setTermsTry] = useState(0);
+  const [termsState, setTermsState] = useState<"checking" | "signin" | "blocked" | "confirm" | "needed" | "unavailable" | "accepted">("checking");
   const [termsBusy, setTermsBusy] = useState(false);
   const [termsError, setTermsError] = useState("");
   const [termsNotice, setTermsNotice] = useState("");
@@ -156,10 +157,13 @@ export function LightTour({
 
   useEffect(() => {
     let cancel = false;
+    let settled = false;
     const slow = window.setTimeout(() => {
-      if (!cancel) setTermsState((state) => (state === "checking" ? "signin" : state));
-    }, 8000);
-    void fetch("/api/light-tour/terms", { credentials: "same-origin" })
+      if (cancel || settled) return;
+      setTermsError("The membership check did not finish. Try again.");
+      setTermsState("unavailable");
+    }, 12000);
+    void fetch("/api/light-tour/terms", { credentials: "include", cache: "no-store" })
       .then(async (res) => {
         const data = (await res.json().catch(() => null)) as {
           accepted?: boolean;
@@ -168,14 +172,18 @@ export function LightTour({
           email?: string;
           status?: string;
           emailVerified?: boolean;
+          error?: string;
         } | null;
         if (cancel) return;
+        settled = true;
         setTermsName(data?.name || "");
         setTermsEmail(data?.email || "");
         if (!res.ok || !data) {
-          setTermsState("signin");
+          setTermsError(data?.error || "The membership check did not finish. Try again.");
+          setTermsState("unavailable");
           return;
         }
+        setTermsError("");
         if (data.accepted) setTermsState("accepted");
         else if (!data.signedIn) setTermsState("signin");
         else if (data.status === "rejected" || data.status === "suspended") setTermsState("blocked");
@@ -183,13 +191,16 @@ export function LightTour({
         else setTermsState("needed");
       })
       .catch(() => {
-        if (!cancel) setTermsState("signin");
+        if (cancel) return;
+        settled = true;
+        setTermsError("The membership check did not finish. Try again.");
+        setTermsState("unavailable");
       });
     return () => {
       cancel = true;
       window.clearTimeout(slow);
     };
-  }, []);
+  }, [termsTry]);
 
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine);
@@ -295,7 +306,7 @@ export function LightTour({
     try {
       const res = await fetch("/api/light-tour/leg", {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         signal: ctrl.signal,
         body: JSON.stringify({
@@ -408,7 +419,7 @@ export function LightTour({
     try {
       const res = await fetch("/api/light-tour/terms", {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: "{}",
       });
@@ -447,7 +458,7 @@ export function LightTour({
       setCountText(String(stopCount));
       const res = await fetch("/api/light-tour/route", {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           start.address
@@ -489,7 +500,7 @@ export function LightTour({
   function logVisit(completed: boolean) {
     void fetch("/api/light-tour/tours", {
       method: "POST",
-      credentials: "same-origin",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sessionId: sessionId(),
@@ -743,7 +754,8 @@ export function LightTour({
     try {
       const res = await fetch("/api/members/verify/send", {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
+        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: "{}",
       });
@@ -958,6 +970,12 @@ export function LightTour({
             notice={termsNotice}
             onAccept={() => void acceptTerms()}
             onSendEmail={() => void sendConfirmationEmail()}
+            onRetry={() => {
+              setTermsError("");
+              setTermsNotice("");
+              setTermsState("checking");
+              setTermsTry((n) => n + 1);
+            }}
           />
           {addHouseButton}
           <p className="panel-hint">

@@ -317,6 +317,8 @@ export function updateMemberDetails(
     name,
     email,
     emailVerifiedAt: emailChanged ? null : prev.emailVerifiedAt,
+    emailVerifyTokenHash: emailChanged ? null : prev.emailVerifyTokenHash,
+    emailVerifyExpiresAt: emailChanged ? null : prev.emailVerifyExpiresAt,
     phone:
       input.phone !== undefined
         ? String(input.phone).trim().slice(0, 40) || undefined
@@ -335,6 +337,29 @@ export function updateMemberDetails(
 
 export function getMemberById(id: string) {
   return loadYardSale().members.find((m) => m.id === id) || null;
+}
+
+/** Stores the current confirmation link on the membership, which is the record that already persists. */
+export async function saveMemberEmailChallenge(memberId: string, tokenHash: string, expiresAt: string) {
+  await hydrateYardSale();
+  const data = loadYardSale();
+  const idx = data.members.findIndex((m) => m.id === memberId);
+  if (idx < 0) return null;
+  data.members[idx] = {
+    ...data.members[idx],
+    emailVerifyTokenHash: tokenHash,
+    emailVerifyExpiresAt: expiresAt,
+  };
+  await saveYardSaleAsync(data);
+  return data.members[idx];
+}
+
+export async function memberByEmailChallenge(tokenHash: string) {
+  await hydrateYardSale();
+  const member = loadYardSale().members.find((item) => item.emailVerifyTokenHash === tokenHash) || null;
+  if (!member) return { member: null as Member | null, expired: false };
+  const expires = Date.parse(member.emailVerifyExpiresAt || "");
+  return { member, expired: !Number.isFinite(expires) || expires < Date.now() };
 }
 
 /** Records that this member opened the confirmation link for the email on the account. */

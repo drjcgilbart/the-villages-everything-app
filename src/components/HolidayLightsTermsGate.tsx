@@ -34,10 +34,11 @@ export function HolidayLightsTermsGate({
   accountEmail = "",
   onAccept,
   onSendEmail,
+  onRetry,
   onBack,
   inline = false,
 }: {
-  mode: "checking" | "signin" | "blocked" | "confirm" | "needed" | "reading";
+  mode: "checking" | "signin" | "blocked" | "confirm" | "needed" | "unavailable" | "reading";
   busy?: boolean;
   error?: string;
   notice?: string;
@@ -45,6 +46,7 @@ export function HolidayLightsTermsGate({
   accountEmail?: string;
   onAccept?: () => void;
   onSendEmail?: () => void;
+  onRetry?: () => void;
   onBack?: () => void;
   /** On the tour page, so adding a house stays usable underneath. */
   inline?: boolean;
@@ -104,6 +106,10 @@ export function HolidayLightsTermsGate({
             Sign in to build a route
           </Link>
         </>
+      ) : mode === "unavailable" ? (
+        <button type="button" className="btn btn-primary lt-go" onClick={onRetry}>
+          Try again
+        </button>
       ) : mode === "blocked" ? (
         <>
           <p className="lt-terms-account">This membership is not active, so the route and the printout stay closed.</p>

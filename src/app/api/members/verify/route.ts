@@ -12,9 +12,12 @@ export async function POST(req: Request) {
   const limited = rateLimitResponse(req, "member-email-verify", 10, 15 * 60 * 1000);
   if (limited) return limited;
   const body = (await req.json().catch(() => null)) as { token?: unknown } | null;
+  const queryToken = new URL(req.url).searchParams.get("token") || "";
   try {
-    const member = await confirmMemberEmail(String(body?.token || ""));
-    return NextResponse.json({ ok: true, email: member.email });
+    const member = await confirmMemberEmail(String(body?.token || queryToken));
+    const res = NextResponse.json({ ok: true, email: member.email });
+    res.headers.set("Cache-Control", "private, no-store, max-age=0");
+    return res;
   } catch (err) {
     const status =
       err && typeof err === "object" && "status" in err ? Number((err as { status: number }).status) : 400;

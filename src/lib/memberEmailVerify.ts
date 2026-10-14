@@ -10,7 +10,13 @@ import {
   writeJsonFileAsync,
 } from "./dataFs";
 import { isSiteOwnerEmail } from "./siteOwner";
-import { getMemberById, markMemberEmailVerified } from "./yardSale";
+import {
+  getMemberById,
+  hydrateYardSale,
+  markMemberEmailVerified,
+  memberByEmailChallenge,
+  saveMemberEmailChallenge,
+} from "./yardSale";
 import type { Member } from "./yardSaleTypes";
 
 export const MEMBER_EMAIL_VERIFY_FILE = "member-email-verify.json";
@@ -90,16 +96,18 @@ async function pullText(): Promise<string | null> {
   }
 }
 
-async function readStore(): Promise<Store> {
+async function readStore(): Promise<{ store: Store; found: boolean }> {
   if (isEphemeralHost() && durableConfigured()) {
     const text = await pullText();
     if (text) {
       cacheDurableJson(MEMBER_EMAIL_VERIFY_FILE, text);
-      return parseStore(text);
+      return { store: parseStore(text), found: true };
     }
-    return { tokens: [] };
+    return { store: { tokens: [] }, found: false };
   }
-  return parseStore(readJsonFile<Store>(MEMBER_EMAIL_VERIFY_FILE));
+  const local = readJsonFile<Store>(MEMBER_EMAIL_VERIFY_FILE);
+  if (!local) return { store: { tokens: [] }, found: false };
+  return { store: parseStore(local), found: true };
 }
 
 async function writeStore(store: Store) {
@@ -136,22 +144,34 @@ function letter(member: Member, url: string) {
   return { subject, text, html };
 }
 
+const LINK_MISSING = "This link is not on file. Open Holiday Lights and send a new one.";
+const LINK_EXPIRED = "This link has expired. Open Holiday Lights and send a new one.";
+const LINK_UNREADABLE = "The confirmation list did not load. Press the button again.";
+const LINK_EMPTY = "The confirmation did not include the link. Press the button again.";
+
 /** Sends a fresh link. A mail-scanner fetch of the link does not confirm the inbox. */
 export function sendMemberVerificationEmail(memberId: string) {
   return enqueue(async () => {
+    await hydrateYardSale();
     const member = getMemberById(memberId);
     if (!member) return { ok: false as const, error: "Member not found" };
     if (memberEmailIsVerified(member)) return { ok: true as const, already: true };
     const raw = crypto.randomBytes(32).toString("base64url");
-    const store = await readStore();
-    store.tokens = store.tokens.filter((row) => row.memberId !== member.id);
-    store.tokens.push({
-      memberId: member.id,
-      tokenHash: hashToken(raw),
-      expiresAt: new Date(Date.now() + TOKEN_MS).toISOString(),
-      usedAt: "",
-    });
-    await writeStore(store);
+    const tokenHash = hashToken(raw);
+    const expiresAt = new Date(Date.now() + TOKEN_MS).toISOString();
+    const saved = await saveMemberEmailChallenge(member.id, tokenHash, expiresAt);
+    if (!saved) return { ok: false as const, error: "Member not found" };
+    try {
+      const loaded = await readStore();
+      // A missed read looks empty. Writing it would erase links already on file.
+      if (loaded.found) {
+        loaded.store.tokens = loaded.store.tokens.filter((row) => row.memberId !== member.id);
+        loaded.store.tokens.push({ memberId: member.id, tokenHash, expiresAt, usedAt: "" });
+        await writeStore(loaded.store);
+      }
+    } catch (err) {
+      console.error("[email-verify] token file", err);
+    }
     const url = `${siteBase()}/yard-sale/verify?token=${encodeURIComponent(raw)}`;
     const sent = await sendOutboundEmail({ to: member.email, ...letter(member, url) });
     if (!sent.ok) return { ok: false as const, error: memberMailError(sent) };
@@ -163,26 +183,41 @@ export function confirmMemberEmail(rawToken: string) {
   return enqueue(async () => {
     const raw = clip(rawToken, 200);
     if (!/^[A-Za-z0-9_-]{20,200}$/.test(raw)) {
-      throw Object.assign(new Error("This link has expired or was already used. Sign in and send a new one from Holiday Lights."), {
-        status: 400,
-      });
+      throw Object.assign(new Error(LINK_EMPTY), { status: 400 });
     }
     const tokenHash = hashToken(raw);
-    const store = await readStore();
-    const row = store.tokens.find((item) => item.tokenHash === tokenHash);
-    const expired = !row || row.usedAt || Date.parse(row.expiresAt) < Date.now();
-    if (!row || expired) {
-      throw Object.assign(new Error("This link has expired or was already used. Sign in and send a new one from Holiday Lights."), {
-        status: 400,
-      });
+    const challenge = await memberByEmailChallenge(tokenHash);
+    if (challenge.member && !challenge.expired) {
+      const member = await markMemberEmailVerified(challenge.member.id);
+      if (!member) throw Object.assign(new Error(LINK_MISSING), { status: 400 });
+      return member;
     }
-    row.usedAt = new Date().toISOString();
-    await writeStore(store);
+    if (challenge.expired) {
+      throw Object.assign(new Error(LINK_EXPIRED), { status: 400 });
+    }
+    let loaded: { store: Store; found: boolean };
+    try {
+      loaded = await readStore();
+    } catch (err) {
+      console.error("[email-verify] read", err);
+      throw Object.assign(new Error(LINK_UNREADABLE), { status: 503 });
+    }
+    const row = loaded.store.tokens.find((item) => item.tokenHash === tokenHash);
+    if (!row) {
+      throw Object.assign(new Error(LINK_MISSING), { status: 400 });
+    }
+    if (Date.parse(row.expiresAt) < Date.now()) {
+      throw Object.assign(new Error(LINK_EXPIRED), { status: 400 });
+    }
     const member = await markMemberEmailVerified(row.memberId);
-    if (!member) {
-      throw Object.assign(new Error("This link has expired or was already used. Sign in and send a new one from Holiday Lights."), {
-        status: 400,
-      });
+    if (!member) throw Object.assign(new Error(LINK_MISSING), { status: 400 });
+    if (!row.usedAt) {
+      row.usedAt = new Date().toISOString();
+      try {
+        await writeStore(loaded.store);
+      } catch (err) {
+        console.error("[email-verify] used stamp", err);
+      }
     }
     return member;
   });

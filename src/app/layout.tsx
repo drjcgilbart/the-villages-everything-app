@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
+import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Header } from "@/components/Header";
@@ -72,6 +73,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full`}>
       <body id="top" className="min-h-full flex flex-col antialiased">
+        <Script id="canonical-host" strategy="beforeInteractive">{`
+          if (location.hostname === "thevillageseverythingapp.com") {
+            var nextHost = new URL(location.href);
+            nextHost.hostname = "www.thevillageseverythingapp.com";
+            location.replace(nextHost.href);
+          }
+        `}</Script>
         <AlarmPopup />
         <AlarmScheduleSync />
         <NativeAppBoot />

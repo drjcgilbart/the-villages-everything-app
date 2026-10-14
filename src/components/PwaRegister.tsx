@@ -11,6 +11,12 @@ import {
 /** Registers the tiny service worker so Chrome/Edge can install the site as an app. */
 export function PwaRegister() {
   useEffect(() => {
+    if (window.location.hostname === "thevillageseverythingapp.com") {
+      const nextHost = new URL(window.location.href);
+      nextHost.hostname = "www.thevillageseverythingapp.com";
+      window.location.replace(nextHost.href);
+      return;
+    }
     if (isNativeAppShell()) return;
     if (!("serviceWorker" in navigator)) return;
 

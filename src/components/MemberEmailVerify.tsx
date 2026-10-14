@@ -16,15 +16,16 @@ export function MemberEmailVerify() {
     setBusy(true);
     setError("");
     try {
-      const res = await fetch("/api/members/verify", {
+      const res = await fetch(`/api/members/verify?token=${encodeURIComponent(token)}`, {
         method: "POST",
-        credentials: "same-origin",
+        credentials: "include",
+        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
       const data = (await res.json().catch(() => null)) as { ok?: boolean; email?: string; error?: string } | null;
       if (!res.ok || !data?.ok) {
-        setError(data?.error || "This link has expired or was already used.");
+        setError(data?.error || "The confirmation did not finish. Press the button again.");
         return;
       }
       setEmail(data.email || "");
@@ -40,9 +41,9 @@ export function MemberEmailVerify() {
     return (
       <div className="about-panel">
         <h2>Email confirmed</h2>
-        <p>This inbox is confirmed{email ? ` for ${email}` : ""}. Sign in, then accept the Holiday Lights warning before a route or a printout.</p>
-        <Link href="/yard-sale/login?next=/tour" className="btn btn-primary">
-          Sign in
+        <p>This inbox is confirmed{email ? ` for ${email}` : ""}. Go back to Holiday Lights and tap Accept.</p>
+        <Link href="/tour" className="btn btn-primary">
+          Back to Holiday Lights
         </Link>
       </div>
     );
@@ -53,8 +54,8 @@ export function MemberEmailVerify() {
       <div className="about-panel">
         <h2>Confirm your email</h2>
         <p>Open the link from the confirmation email. That page has the button that confirms the inbox.</p>
-        <Link href="/yard-sale/login?next=/tour" className="btn btn-primary">
-          Sign in
+        <Link href="/tour" className="btn btn-primary">
+          Back to Holiday Lights
         </Link>
       </div>
     );

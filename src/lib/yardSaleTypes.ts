@@ -18,6 +18,9 @@ export type Member = {
   approvedAt?: string | null;
   /** Set when the member opens the confirmation link for this email address. */
   emailVerifiedAt?: string | null;
+  /** sha256 of the current confirmation link. Never send this to the browser. */
+  emailVerifyTokenHash?: string | null;
+  emailVerifyExpiresAt?: string | null;
   notes?: string;
   adminLog?: AdminLogEntry[];
 };

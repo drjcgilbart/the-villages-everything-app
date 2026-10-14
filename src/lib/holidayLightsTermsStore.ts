@@ -11,7 +11,7 @@ import {
 } from "./dataFs";
 import { HOLIDAY_LIGHTS_TERMS, HOLIDAY_LIGHTS_TERMS_VERSION, tourDeviceFromUserAgent } from "./holidayLightsTerms";
 import { memberEmailIsVerified } from "./memberEmailVerify";
-import { getMemberById, markMemberEmailVerified } from "./yardSale";
+import { getMemberById, hydrateYardSale, markMemberEmailVerified } from "./yardSale";
 
 export const HOLIDAY_LIGHTS_TERMS_FILE = "light-tour-terms.json";
 
@@ -143,6 +143,7 @@ export async function listHolidayLightsAcceptances() {
 
 export function recordHolidayLightsAcceptance(req: Request): Promise<HolidayLightsAcceptance> {
   return enqueue(async () => {
+    await hydrateYardSale();
     const member = await getSessionMember();
     if (!member?.id) {
       throw Object.assign(new Error("Sign in before accepting."), { status: 401 });
