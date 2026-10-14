@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { tourStartProblem } from "@/lib/lightTourShared";
+import { hasHolidayLightsAcceptance, termsUserIdForRequest } from "@/lib/holidayLightsTermsStore";
 import type { DrivingStep } from "@/lib/tourDirections";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,13 @@ export async function POST(req: Request) {
   if (blocked) return blocked;
   const limited = rateLimitResponse(req, "light-tour-leg", 120, 10 * 60 * 1000);
   if (limited) return limited;
+  const termsUserId = await termsUserIdForRequest();
+  if (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId))) {
+    return NextResponse.json(
+      { error: "Accept the Holiday Lights terms before a route can start." },
+      { status: 403 }
+    );
+  }
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const from = { latitude: Number(body?.fromLatitude), longitude: Number(body?.fromLongitude) };
   const to = { latitude: Number(body?.toLatitude), longitude: Number(body?.toLongitude) };

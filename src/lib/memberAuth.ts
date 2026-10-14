@@ -77,3 +77,13 @@ export async function requireApprovedMember() {
   }
   return member;
 }
+
+/** A pending or approved account. Used for houses the member sent, not for driving routes. */
+export async function requireHouseMember() {
+  const member = await getSessionMember();
+  if (!member) throw Object.assign(new Error("Please sign in"), { code: 401 });
+  if (member.status !== "pending" && member.status !== "approved") {
+    throw Object.assign(new Error("Membership is not active"), { code: 403 });
+  }
+  return member;
+}

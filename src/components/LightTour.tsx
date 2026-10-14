@@ -641,7 +641,7 @@ export function LightTour({
   }
 
   async function saveSheet(notice = "") {
-    if (sheetLock.current) return;
+    if (termsState !== "accepted" || sheetLock.current) return;
     sheetLock.current = true;
     setSheetMode("save");
     setSheetError("");
@@ -657,7 +657,7 @@ export function LightTour({
   }
 
   function printSheet() {
-    if (sheetLock.current) return;
+    if (termsState !== "accepted" || sheetLock.current) return;
     const preview = window.open("about:blank", "_blank");
     if (!preview) {
       void saveSheet("The print window was blocked, so the sheet was saved instead.");
@@ -875,17 +875,53 @@ export function LightTour({
     </>
   );
 
+  const houseForm = (
+    <LightTourSubmit
+      open={houseOpen}
+      holiday={holiday}
+      canSubmit
+      pendingMember={false}
+      house={editing}
+      onClose={() => {
+        setHouseOpen(false);
+        setEditing(null);
+      }}
+      onSaved={() => setHouseTick((tick) => tick + 1)}
+    />
+  );
+
+  const yourHouses =
+    memberStatus === "approved" || memberStatus === "pending" ? (
+      <LightTourMine
+        reloadKey={houseTick}
+        onEdit={(house) => {
+          setPopup(false);
+          setEditing(house);
+          setHouseOpen(true);
+        }}
+      />
+    ) : null;
+
   if (termsState !== "accepted") {
     return (
       <section className="section">
-        <HolidayLightsTermsGate
-          mode={termsState}
-          busy={termsBusy}
-          error={termsError}
-          accountName={termsName}
-          accountEmail={termsEmail}
-          onAccept={() => void acceptTerms()}
-        />
+        <div className="shell lt-wrap">
+          <HolidayLightsTermsGate
+            inline
+            mode={termsState}
+            busy={termsBusy}
+            error={termsError}
+            accountName={termsName}
+            accountEmail={termsEmail}
+            onAccept={() => void acceptTerms()}
+          />
+          {addHouseButton}
+          <p className="panel-hint">
+            Anyone can add a house. It stays off the tour until it is approved. Building a route and printing the sheet need a membership. The free plan is enough.
+          </p>
+          {yourHouses}
+          {houseForm}
+        </div>
       </section>
     );
   }
@@ -1004,7 +1040,7 @@ export function LightTour({
             </button>
             {addHouseButton}
             <p className="panel-hint">
-              Any member can add a house. The free plan is enough. It stays off the tour until it is approved.
+              Anyone can add a house. It stays off the tour until it is approved.
             </p>
           </div>
         ) : null}
@@ -1077,28 +1113,8 @@ export function LightTour({
             </div>
           </div>
         ) : null}
-        {memberStatus === "approved" ? (
-          <LightTourMine
-            reloadKey={houseTick}
-            onEdit={(house) => {
-              setPopup(false);
-              setEditing(house);
-              setHouseOpen(true);
-            }}
-          />
-        ) : null}
-        <LightTourSubmit
-          open={houseOpen}
-          holiday={holiday}
-          canSubmit={memberStatus === "approved"}
-          pendingMember={memberStatus === "pending"}
-          house={editing}
-          onClose={() => {
-            setHouseOpen(false);
-            setEditing(null);
-          }}
-          onSaved={() => setHouseTick((tick) => tick + 1)}
-        />
+        {yourHouses}
+        {houseForm}
       </div>
       <ThemeMusicPlayer
         tracks={musicTracks}

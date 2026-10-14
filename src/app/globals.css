@@ -17574,9 +17574,14 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   border-top: 0;
 }
 
-.lt-terms-gate .lt-go {
+.lt-terms-gate .lt-go,
+.lt-terms-inline .lt-go {
   width: 100%;
   flex: none;
+}
+
+.lt-terms-inline {
+  margin-bottom: 0.85rem;
 }
 
 .lt-view-terms {

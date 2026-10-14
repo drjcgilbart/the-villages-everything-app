@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { originAllowed } from "@/lib/security";
+import { hasHolidayLightsAcceptance, termsUserIdForRequest } from "@/lib/holidayLightsTermsStore";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,6 +40,13 @@ export async function GET(req: Request) {
   }
   const limited = rateLimitResponse(req, "light-tour-tile", 240, 10 * 60 * 1000);
   if (limited) return limited;
+  const termsUserId = await termsUserIdForRequest();
+  if (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId))) {
+    return NextResponse.json(
+      { error: "Accept the Holiday Lights terms before a route can start." },
+      { status: 403 }
+    );
+  }
 
   const url = new URL(req.url);
   const z = readInt(url.searchParams.get("z"));

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { holidayFrom, submitMemberHouse } from "@/lib/lightTour";
-import { requireApprovedMember } from "@/lib/memberAuth";
+import { getSessionMember } from "@/lib/memberAuth";
 import { rejectIfCrossOrigin } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -26,15 +26,6 @@ function safePhoto(value: unknown) {
   return "";
 }
 
-function memberMessage(err: unknown) {
-  const code = err && typeof err === "object" && "code" in err ? Number((err as { code: number }).code) : 401;
-  if (code === 401) {
-    return { error: "Become a member first. The free Porch Waver plan is enough.", status: 401 };
-  }
-  const msg = err instanceof Error ? err.message : "Membership is not active.";
-  return { error: msg, status: 403 };
-}
-
 function saveMessage(err: unknown) {
   const msg = err instanceof Error ? err.message : "The house could not be saved.";
   if (/storage-v2|durable storage|Redis HTTP|Vercel Blob|starter file/i.test(msg)) {
@@ -48,13 +39,8 @@ export async function POST(req: Request) {
   if (blocked) return blocked;
   const limited = rateLimitResponse(req, "light-tour-submit", 20, 15 * 60 * 1000);
   if (limited) return limited;
-  let member;
-  try {
-    member = await requireApprovedMember();
-  } catch (err) {
-    const refused = memberMessage(err);
-    return NextResponse.json({ error: refused.error }, { status: refused.status });
-  }
+  const member = await getSessionMember();
+  const canOwn = member?.status === "pending" || member?.status === "approved";
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const holiday = holidayFrom(body?.holiday);
   if (!holiday) {
@@ -68,18 +54,18 @@ export async function POST(req: Request) {
       photoUrl: safePhoto(body?.photoUrl),
       latitude: num(body?.latitude),
       longitude: num(body?.longitude),
-      createdBy: `${member.name} · ${member.email}`,
-      ownerId: member.id,
+      createdBy: member ? `${member.name} · ${member.email}` : "Neighbor",
+      ownerId: canOwn && member ? member.id : "",
     });
     void notifyAdminOfApprovalRequest({
       topic: "Holiday Lights",
       title: pin.address || "New house",
-      submittedBy: member.name,
+      submittedBy: member?.name || "Neighbor",
       details: {
         Holiday: pin.holiday,
         Address: pin.address,
         Note: pin.note,
-        Email: member.email,
+        Email: member?.email || "No account",
       },
     }).catch(() => undefined);
     return NextResponse.json({ ok: true, id: pin.id });

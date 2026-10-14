@@ -7,7 +7,7 @@ import {
   readLightTour,
   updateOwnedHouse,
 } from "@/lib/lightTour";
-import { requireApprovedMember } from "@/lib/memberAuth";
+import { requireHouseMember } from "@/lib/memberAuth";
 import { rejectIfCrossOrigin } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +54,7 @@ function saveMessage(err: unknown) {
 export async function GET() {
   let member;
   try {
-    member = await requireApprovedMember();
+    member = await requireHouseMember();
   } catch (err) {
     const refused = memberMessage(err);
     return NextResponse.json({ error: refused.error }, { status: refused.status });
@@ -83,7 +83,7 @@ export async function PUT(req: Request) {
   if (limited) return limited;
   let member;
   try {
-    member = await requireApprovedMember();
+    member = await requireHouseMember();
   } catch (err) {
     const refused = memberMessage(err);
     return NextResponse.json({ error: refused.error }, { status: refused.status });
@@ -119,7 +119,7 @@ export async function DELETE(req: Request) {
   if (limited) return limited;
   let member;
   try {
-    member = await requireApprovedMember();
+    member = await requireHouseMember();
   } catch (err) {
     const refused = memberMessage(err);
     return NextResponse.json({ error: refused.error }, { status: refused.status });

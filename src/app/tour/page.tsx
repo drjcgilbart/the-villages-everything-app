@@ -18,9 +18,9 @@ export default async function HolidayLightTourPage() {
           <span className="kicker">Self-guided</span>
           <h1>Holiday Lights Tour</h1>
           <p>
-            Pick a holiday, share where you are, and follow a driving route of decorated houses. On a phone, the map
-            stays with you and the turns are spoken out loud. A card pops up when you get close, with the address,
-            photo, and note.
+            Members build a driving route and a printout after they accept the warning. The free plan is enough. On a
+            phone, the map stays with you and the turns are spoken out loud. Anyone can add a lit house. It stays off
+            the tour until it is approved.
           </p>
         </div>
       </div>
