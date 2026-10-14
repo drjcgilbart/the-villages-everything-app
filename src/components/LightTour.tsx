@@ -571,20 +571,31 @@ export function LightTour({
     sheetLock.current = true;
     setSheetMode("print");
     setSheetError("");
+    try {
+      preview.document.open();
+      preview.document.write(
+        "<!doctype html><title>Holiday Lights Tour</title><p style=\"font:20px sans-serif;padding:24px\">Making the sheet…</p>"
+      );
+      preview.document.close();
+    } catch {
+      /* The tab can still receive the sheet. */
+    }
     void (async () => {
       try {
         const bytes = await sheetBytes();
-        const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "application/pdf" }));
-        const doc = preview.document;
-        doc.open();
-        doc.write(
-          `<!doctype html><html><head><title>Holiday Lights Tour</title></head><body style="margin:0">` +
-            `<iframe id="sheet" title="Holiday Lights Tour" src="${url}" style="border:0;width:100%;height:100vh"></iframe>` +
-            `<script>var done=false;function go(){if(done)return;done=true;setTimeout(function(){try{window.focus();window.print();}catch(e){}},400);}` +
-            `document.getElementById("sheet").addEventListener("load",go);setTimeout(go,1200);</script></body></html>`
-        );
-        doc.close();
-        window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+        const file = new File([new Uint8Array(bytes)], "holiday-lights-tour.pdf", { type: "application/pdf" });
+        const url = URL.createObjectURL(file);
+        // The tab has to be the PDF itself. Printing a page that only frames the file prints a blank sheet.
+        preview.location.replace(url);
+        window.setTimeout(() => {
+          try {
+            preview.focus();
+            preview.print();
+          } catch {
+            /* The sheet stays open in that tab. */
+          }
+        }, 1200);
+        window.setTimeout(() => URL.revokeObjectURL(url), 300000);
       } catch (err) {
         setSheetError(err instanceof Error ? err.message : "The sheet did not build.");
         preview.close();
@@ -799,9 +810,9 @@ export function LightTour({
                   <input
                     id="lt-start-address"
                     type="text"
-                    autoComplete="street-address"
+                    autoComplete="off"
                     value={typedAddress}
-                    placeholder="6467 Glover Ln, The Villages, FL 34762"
+                    placeholder="1234 Example St, The Villages, FL 32159"
                     onChange={(e) => setTypedAddress(e.target.value)}
                   />
                 </div>
