@@ -29,18 +29,22 @@ export function HolidayLightsTermsGate({
   mode,
   busy = false,
   error = "",
+  notice = "",
   accountName = "",
   accountEmail = "",
   onAccept,
+  onSendEmail,
   onBack,
   inline = false,
 }: {
-  mode: "checking" | "signin" | "blocked" | "needed" | "reading";
+  mode: "checking" | "signin" | "blocked" | "confirm" | "needed" | "reading";
   busy?: boolean;
   error?: string;
+  notice?: string;
   accountName?: string;
   accountEmail?: string;
   onAccept?: () => void;
+  onSendEmail?: () => void;
   onBack?: () => void;
   /** On the tour page, so adding a house stays usable underneath. */
   inline?: boolean;
@@ -106,6 +110,17 @@ export function HolidayLightsTermsGate({
           <Link className="btn btn-primary lt-go" href="/yard-sale/login?next=/tour">
             Use a different sign-in
           </Link>
+        </>
+      ) : mode === "confirm" ? (
+        <>
+          <p className="lt-terms-account">
+            Confirm {accountEmail || "the email on your membership"}. Open the link and press Confirm my email. Then
+            come back here and tap Accept. The warning is saved only after that inbox is confirmed.
+          </p>
+          <button type="button" className="btn btn-primary lt-go" disabled={busy} onClick={onSendEmail}>
+            {busy ? "Sending…" : "Send the confirmation email"}
+          </button>
+          {notice ? <p className="panel-hint">{notice}</p> : null}
         </>
       ) : (
         <>

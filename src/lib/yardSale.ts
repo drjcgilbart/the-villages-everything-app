@@ -311,10 +311,12 @@ export function updateMemberDetails(
   if (password && password.length < 8) {
     throw new Error("Password must be at least 8 characters");
   }
+  const emailChanged = email !== prev.email;
   data.members[idx] = {
     ...prev,
     name,
     email,
+    emailVerifiedAt: emailChanged ? null : prev.emailVerifiedAt,
     phone:
       input.phone !== undefined
         ? String(input.phone).trim().slice(0, 40) || undefined
@@ -333,6 +335,22 @@ export function updateMemberDetails(
 
 export function getMemberById(id: string) {
   return loadYardSale().members.find((m) => m.id === id) || null;
+}
+
+/** Records that this member opened the confirmation link for the email on the account. */
+export async function markMemberEmailVerified(memberId: string) {
+  await hydrateYardSale();
+  const data = loadYardSale();
+  const idx = data.members.findIndex((m) => m.id === memberId);
+  if (idx < 0) return null;
+  if (!data.members[idx].emailVerifiedAt) {
+    data.members[idx] = {
+      ...data.members[idx],
+      emailVerifiedAt: new Date().toISOString(),
+    };
+    await saveYardSaleAsync(data);
+  }
+  return data.members[idx];
 }
 
 export function getMemberByEmail(email: string) {
@@ -369,6 +387,7 @@ export function ensureApprovedOwnerMember(
       status: "approved",
       createdAt: now,
       approvedAt: now,
+      emailVerifiedAt: now,
       notes: "Site owner",
     };
     data.members.push(member);
@@ -383,6 +402,7 @@ export function ensureApprovedOwnerMember(
     ...existing,
     status: "approved",
     approvedAt: existing.approvedAt || now,
+    emailVerifiedAt: existing.emailVerifiedAt || now,
     notes: existing.notes || "Site owner",
   };
   saveYardSale(data);

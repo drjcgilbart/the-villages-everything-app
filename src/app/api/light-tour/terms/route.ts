@@ -3,6 +3,7 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { getSessionMember } from "@/lib/memberAuth";
+import { memberEmailIsVerified } from "@/lib/memberEmailVerify";
 import {
   hasHolidayLightsAcceptance,
   listHolidayLightsAcceptances,
@@ -43,6 +44,7 @@ export async function GET(req: Request) {
     name: member?.name || "",
     email: member?.email || "",
     status: member?.status || "",
+    emailVerified: member ? memberEmailIsVerified(member) : false,
   });
 }
 

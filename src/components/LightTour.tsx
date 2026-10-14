@@ -141,9 +141,10 @@ export function LightTour({
   const [sheetMode, setSheetMode] = useState<"" | "print" | "save">("");
   const [sheetError, setSheetError] = useState("");
   const sheetLock = useRef(false);
-  const [termsState, setTermsState] = useState<"checking" | "signin" | "blocked" | "needed" | "accepted">("checking");
+  const [termsState, setTermsState] = useState<"checking" | "signin" | "blocked" | "confirm" | "needed" | "accepted">("checking");
   const [termsBusy, setTermsBusy] = useState(false);
   const [termsError, setTermsError] = useState("");
+  const [termsNotice, setTermsNotice] = useState("");
   const [termsName, setTermsName] = useState("");
   const [termsEmail, setTermsEmail] = useState("");
   const [readingTerms, setReadingTerms] = useState(false);
@@ -166,6 +167,7 @@ export function LightTour({
           name?: string;
           email?: string;
           status?: string;
+          emailVerified?: boolean;
         } | null;
         if (cancel) return;
         setTermsName(data?.name || "");
@@ -177,6 +179,7 @@ export function LightTour({
         if (data.accepted) setTermsState("accepted");
         else if (!data.signedIn) setTermsState("signin");
         else if (data.status === "rejected" || data.status === "suspended") setTermsState("blocked");
+        else if (!data.emailVerified) setTermsState("confirm");
         else setTermsState("needed");
       })
       .catch(() => {
@@ -413,6 +416,11 @@ export function LightTour({
       if (res.status === 401) {
         setTermsState("signin");
         setTermsError(data?.error || "Sign in before accepting.");
+        return;
+      }
+      if (res.status === 403 && /confirm your email/i.test(data?.error || "")) {
+        setTermsState("confirm");
+        setTermsError(data?.error || "Confirm your email before accepting.");
         return;
       }
       if (!res.ok || !data?.accepted) {
@@ -728,6 +736,40 @@ export function LightTour({
     if (speak) speakTourNow("Tour ended.");
   }
 
+  async function sendConfirmationEmail() {
+    setTermsBusy(true);
+    setTermsError("");
+    setTermsNotice("");
+    try {
+      const res = await fetch("/api/members/verify/send", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = (await res.json().catch(() => null)) as { already?: boolean; email?: string; error?: string } | null;
+      if (res.status === 401) {
+        setTermsState("signin");
+        setTermsError(data?.error || "Sign in before we can send the confirmation email.");
+        return;
+      }
+      if (!res.ok) {
+        setTermsError(data?.error || "The confirmation email did not send.");
+        return;
+      }
+      if (data?.already) {
+        setTermsNotice("This email is already confirmed. You can accept the warning.");
+        setTermsState("needed");
+        return;
+      }
+      setTermsNotice(`The link was sent to ${data?.email || termsEmail}. It is good for 48 hours.`);
+    } catch {
+      setTermsError("The confirmation email did not send.");
+    } finally {
+      setTermsBusy(false);
+    }
+  }
+
   function openHouseForm() {
     setPopup(false);
     setEditing(null);
@@ -913,7 +955,9 @@ export function LightTour({
             error={termsError}
             accountName={termsName}
             accountEmail={termsEmail}
+            notice={termsNotice}
             onAccept={() => void acceptTerms()}
+            onSendEmail={() => void sendConfirmationEmail()}
           />
           {addHouseButton}
           <p className="panel-hint">

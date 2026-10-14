@@ -81,6 +81,8 @@ function membersWithPlans() {
       notes: full?.notes || "",
       approvedAt: full?.approvedAt || null,
       hasPassword: Boolean(full?.passwordHash),
+      emailVerified: Boolean(full?.emailVerifiedAt) || isSiteOwnerEmail(full?.email),
+      emailVerifiedAt: full?.emailVerifiedAt || null,
     };
   });
 }

@@ -10,6 +10,8 @@ import {
   writeJsonFileAsync,
 } from "./dataFs";
 import { HOLIDAY_LIGHTS_TERMS, HOLIDAY_LIGHTS_TERMS_VERSION, tourDeviceFromUserAgent } from "./holidayLightsTerms";
+import { memberEmailIsVerified } from "./memberEmailVerify";
+import { getMemberById, markMemberEmailVerified } from "./yardSale";
 
 export const HOLIDAY_LIGHTS_TERMS_FILE = "light-tour-terms.json";
 
@@ -22,6 +24,7 @@ export type HolidayLightsAcceptance = {
   acceptedAt: string;
   termsVersion: string;
   termsHash: string;
+  emailVerifiedAt: string;
   ip: string;
   userAgent: string;
 };
@@ -74,6 +77,7 @@ function parseStore(raw: unknown): Store {
       acceptedAt,
       termsVersion: clip(item.termsVersion, 40),
       termsHash: clip(item.termsHash, 64),
+      emailVerifiedAt: clip(item.emailVerifiedAt, 40),
       ip: clip(item.ip, 64),
       userAgent: clip(item.userAgent, 240),
     });
@@ -124,8 +128,12 @@ export async function termsUserIdForRequest() {
 export async function hasHolidayLightsAcceptance(userId: string) {
   const id = clip(userId, 80);
   if (!id || id.startsWith("guest-")) return false;
+  const member = getMemberById(id);
+  if (!member || !memberEmailIsVerified(member)) return false;
   const store = await readForWrite();
-  return store.acceptances.some((row) => row.userId === id && coversCurrentTerms(row));
+  return store.acceptances.some(
+    (row) => row.userId === id && Boolean(row.emailVerifiedAt) && coversCurrentTerms(row)
+  );
 }
 
 export async function listHolidayLightsAcceptances() {
@@ -142,17 +150,27 @@ export function recordHolidayLightsAcceptance(req: Request): Promise<HolidayLigh
     if (member.status === "rejected" || member.status === "suspended") {
       throw Object.assign(new Error("This membership is not active, so the tour stays closed."), { status: 403 });
     }
+    if (!memberEmailIsVerified(member)) {
+      throw Object.assign(new Error("Confirm your email before accepting."), { status: 403 });
+    }
+    const verified = member.emailVerifiedAt
+      ? member
+      : (await markMemberEmailVerified(member.id)) || member;
+    if (!verified.emailVerifiedAt) {
+      throw Object.assign(new Error("Confirm your email before accepting."), { status: 403 });
+    }
     const userAgent = req.headers.get("user-agent") || "";
     const { deviceType, appVersion } = tourDeviceFromUserAgent(userAgent);
     const record: HolidayLightsAcceptance = {
-      userId: clip(member.id, 80),
-      memberName: clip(member.name, 80),
-      memberEmail: clip(member.email, 120),
+      userId: clip(verified.id, 80),
+      memberName: clip(verified.name, 80),
+      memberEmail: clip(verified.email, 120),
       deviceType,
       appVersion,
       acceptedAt: new Date().toISOString(),
       termsVersion: HOLIDAY_LIGHTS_TERMS_VERSION,
       termsHash: holidayLightsTermsHash(),
+      emailVerifiedAt: clip(verified.emailVerifiedAt, 40),
       ip: clientIp(req),
       userAgent: clip(userAgent, 240),
     };

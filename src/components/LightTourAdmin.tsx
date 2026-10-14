@@ -41,6 +41,7 @@ type TermsAcceptance = {
   appVersion: string;
   acceptedAt: string;
   termsVersion: string;
+  emailVerifiedAt: string;
   ip: string;
   userAgent: string;
 };
@@ -547,7 +548,7 @@ export function LightTourAdmin() {
         <div className="about-panel lt-card">
           <h2>Terms acceptances ({acceptances.length})</h2>
           <p className="panel-hint">
-            Newest first. Each line is the membership that tapped Accept. The name and email come from that account, not from a box the person typed. The time is Eastern.
+            Newest first. Each line is the membership that tapped Accept after that inbox was confirmed. The name and email come from the account. The time is Eastern.
           </p>
           {termsNote ? (
             <p className="lt-error" role="alert">
@@ -562,6 +563,13 @@ export function LightTourAdmin() {
                 <li key={`${row.userId}-${row.acceptedAt}-${index}`}>
                   <strong>{named ? row.memberName || "Member" : "Not tied to an account"}</strong>
                   {named ? <span>{row.memberEmail}</span> : <span>This older record is only a device id. It does not unlock the tour.</span>}
+                  {named ? (
+                    <span>
+                      {row.emailVerifiedAt
+                        ? `Email confirmed ${acceptedWhen(row.emailVerifiedAt)}`
+                        : "Email was not confirmed. This line does not unlock the tour."}
+                    </span>
+                  ) : null}
                   <span>{acceptedWhen(row.acceptedAt)}</span>
                   <span>
                     {deviceLabel(row.deviceType)}

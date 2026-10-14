@@ -16,6 +16,8 @@ export type Member = {
   status: MemberStatus;
   createdAt: string;
   approvedAt?: string | null;
+  /** Set when the member opens the confirmation link for this email address. */
+  emailVerifiedAt?: string | null;
   notes?: string;
   adminLog?: AdminLogEntry[];
 };

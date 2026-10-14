@@ -39,6 +39,7 @@ yarn-error.log*
 !/data/uploads/.gitkeep
 /data/content.json
 /data/light-tour-terms.json
+/data/member-email-verify.json
 
 # vercel
 .vercel

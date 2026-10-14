@@ -53,6 +53,7 @@ const DURABLE_JSON = new Set([
   "range-gallery.json",
   "light-tour.json",
   "light-tour-terms.json",
+  "member-email-verify.json",
 ]);
 
 /**

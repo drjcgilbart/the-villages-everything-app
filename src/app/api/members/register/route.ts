@@ -7,6 +7,7 @@ import {
   getMemberById,
   hydrateYardSale,
   loadYardSale,
+  markMemberEmailVerified,
   registerMember,
   saveYardSaleAsync,
   toPublicMember,
@@ -14,6 +15,7 @@ import {
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { grantSiteOwnerFullAccess } from "@/lib/siteOwnerAccess";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
+import { sendMemberVerificationEmail } from "@/lib/memberEmailVerify";
 import { isolateAllCopiedOwnerBoards, seedNewMemberBoards } from "@/lib/memberBoards";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,17 @@ export async function POST(req: Request) {
       }
     }
     await saveYardSaleAsync(loadYardSale());
+    let mailNote = "";
+    if (isSiteOwnerEmail(member.email)) {
+      await markMemberEmailVerified(member.id);
+    } else {
+      const sent = await sendMemberVerificationEmail(member.id);
+      mailNote = sent.ok
+        ? sent.already
+          ? ""
+          : " Check that inbox and confirm the email before you build a Holiday Lights route."
+        : " The confirmation email did not send. After you sign in, open Holiday Lights and use Send the confirmation email.";
+    }
     if (!isSiteOwnerEmail(member.email)) {
       await seedNewMemberBoards(member.id);
       await isolateAllCopiedOwnerBoards();
@@ -79,10 +92,10 @@ export async function POST(req: Request) {
     const message = ownerReady
       ? "Site owner is approved with full My Space access. Open My Space."
       : householdJoined
-      ? "You’re in on this browser. Open My Space — your boards are yours, on that household plan."
+      ? `You’re in on this browser. Open My Space — your boards are yours, on that household plan.${mailNote}`
       : updatedPending
-        ? "Thanks! Your membership request is on file (or was updated). You can sign in with this password while pending; posting listings still needs admin approval."
-        : "Thanks! Your membership request was submitted. You’ll be able to post listings after the admin approves you.";
+        ? `Thanks! Your membership request is on file (or was updated). You can sign in with this password while pending; posting listings still needs admin approval.${mailNote}`
+        : `Thanks! Your membership request was submitted. You’ll be able to post listings after the admin approves you.${mailNote}`;
     const res = NextResponse.json({
       ok: true,
       member: publicMember,

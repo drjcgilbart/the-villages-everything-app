@@ -33,6 +33,8 @@ type AdminMember = PublicMember & {
   notes?: string;
   approvedAt?: string | null;
   hasPassword?: boolean;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
 };
 
 type TierOpt = { id: string; label: string; shortLabel: string; rank: number };
@@ -712,6 +714,12 @@ function MemberAdminRow({
           {m.email}
           {m.phone ? ` · ${m.phone}` : ""}
           {m.village ? ` · ${m.village}` : ""}
+          {" · "}
+          {m.emailVerified
+            ? m.emailVerifiedAt
+              ? `Email confirmed ${formatDate(m.emailVerifiedAt)}`
+              : "Email confirmed"
+            : "Email not confirmed"}
           {" · "}
           {formatDate(m.createdAt)}
           {m.planLabel ? (
