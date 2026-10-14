@@ -26,6 +26,7 @@ import type {
 } from "react-native-webview/lib/WebViewTypes";
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
+import * as Speech from "expo-speech";
 import * as Network from "expo-network";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
@@ -228,6 +229,7 @@ function Shell() {
   const pendingPurchases = useRef<Map<string, Purchase>>(new Map());
   const locationChain = useRef<Promise<void>>(Promise.resolve());
   const locationSub = useRef<Location.LocationSubscription | null>(null);
+  const speechGen = useRef(0);
   const watchRequest = useRef("");
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -730,7 +732,7 @@ function Shell() {
         injectedJavaScriptBeforeContentLoaded={
           Platform.OS === "ios"
             ? "window.VillagesAppleIAP=true;window.__TVEA_NATIVE_LOCATION__=true;true;"
-            : "window.VillagesAndroidAlarm=true;window.__TVEA_NATIVE_LOCATION__=true;true;"
+            : "window.VillagesAndroidAlarm=true;window.__TVEA_NATIVE_LOCATION__=true;window.__TVEA_NATIVE_SPEECH__=true;true;"
         }
         onMessage={(event: WebViewMessageEvent) => {
           const raw = event.nativeEvent.data;
@@ -761,6 +763,8 @@ function Shell() {
             transactionId?: string;
             at?: number;
             requestId?: string;
+            text?: string;
+            token?: number;
           };
           let msg: ShellMsg | null = null;
           try {
@@ -804,6 +808,38 @@ function Shell() {
           }
           if (msg.type === "tvea-alarm-done-ack" && Platform.OS === "android") {
             ackAndroidDone(Number(msg.at));
+            return;
+          }
+          if (msg.type === "tvea-speak" || msg.type === "tvea-speak-stop") {
+            const token = Number(msg.token) || 0;
+            const gen = ++speechGen.current;
+            try {
+              Speech.stop();
+            } catch {
+              /* Nothing was speaking. */
+            }
+            if (msg.type === "tvea-speak-stop") return;
+            const text = String(msg.text || "").trim().slice(0, 500);
+            if (!text) return;
+            setTimeout(() => {
+              if (gen !== speechGen.current) return;
+              Speech.speak(text, {
+                language: "en-US",
+                rate: 1,
+                onDone: () => {
+                  if (gen !== speechGen.current) return;
+                  webRef.current?.injectJavaScript(
+                    `window.dispatchEvent(new CustomEvent("tvea-native-speech-done",{detail:{token:${token}}}));true;`,
+                  );
+                },
+                onError: () => {
+                  if (gen !== speechGen.current) return;
+                  webRef.current?.injectJavaScript(
+                    `window.dispatchEvent(new CustomEvent("tvea-native-speech-done",{detail:{token:${token}}}));true;`,
+                  );
+                },
+              });
+            }, 60);
             return;
           }
           if (Platform.OS !== "ios") return;

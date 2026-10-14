@@ -76,6 +76,8 @@ export function ThemeMusicPlayer({
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [inNativeApp, setInNativeApp] = useState(false);
+  // The site-wide player stays off the phone apps. A page that brings its own songs, such as Holiday Lights, still shows the on/off control.
+  const hideNativeSitePlayer = inNativeApp && !custom;
   const loopIdsRef = useRef<string[]>(loopIds);
   const trackIdRef = useRef(trackId);
   const playTrackRef = useRef<(id: string) => Promise<void>>(async () => undefined);
@@ -91,7 +93,7 @@ export function ThemeMusicPlayer({
   }, []);
 
   useEffect(() => {
-    if (!hydrated || inNativeApp || hideForTour) return;
+    if (!hydrated || hideNativeSitePlayer || hideForTour) return;
     const list = catalogRef.current;
     const all = list.map((track) => track.id);
 
@@ -121,7 +123,7 @@ export function ThemeMusicPlayer({
       engineRef.current?.dispose();
       engineRef.current = null;
     };
-  }, [hydrated, inNativeApp, hideForTour, keys]);
+  }, [hydrated, hideNativeSitePlayer, hideForTour, keys]);
 
   useEffect(() => {
     if (skipCatalog.current) {
@@ -259,7 +261,7 @@ export function ThemeMusicPlayer({
     setLoopIds([trackId]);
   }
 
-  if (!hydrated || inNativeApp || hideForTour || !active) return null;
+  if (!hydrated || hideNativeSitePlayer || hideForTour || !active) return null;
 
   return (
     <div className={`theme-music ${open ? "open" : ""} ${playing ? "playing" : ""}`}>

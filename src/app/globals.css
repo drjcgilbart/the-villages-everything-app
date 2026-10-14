@@ -17394,4 +17394,8 @@ html.privacy-mode [data-privacy-block]::after {
   .lt-coords {
     grid-template-columns: 1fr;
   }
+
+  .lt-wrap {
+    padding-bottom: 4.75rem;
+  }
 }

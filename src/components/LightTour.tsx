@@ -307,7 +307,9 @@ export function LightTour({
     if (phaseRef.current === "tour" && cueRef.current) {
       spokenKeyRef.current = "voice-on";
       speakTourNow(cueRef.current);
+      return;
     }
+    speakTourNow("Spoken directions are on.");
   }
 
   async function startingPoint(): Promise<{ here: Here; note: string; address: string }> {
