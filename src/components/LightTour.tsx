@@ -26,6 +26,7 @@ import {
   tourStartProblem,
   type TourHoliday,
 } from "@/lib/lightTourShared";
+import { buildTourSheetPdf } from "@/lib/tourSheetPdf";
 
 type Stop = {
   id: string;
@@ -133,6 +134,9 @@ export function LightTour({
   const houseOpenRef = useRef(false);
   const [voiceOn, setVoiceOn] = useState(true);
   const [cue, setCue] = useState("");
+  const [sheetMode, setSheetMode] = useState<"" | "print" | "save">("");
+  const [sheetError, setSheetError] = useState("");
+  const sheetLock = useRef(false);
 
   indexRef.current = index;
   stopsRef.current = stops;
@@ -334,6 +338,7 @@ export function LightTour({
 
   async function buildRoute() {
     setError("");
+    setSheetError("");
     setEmpty(false);
     setBusy(true);
     try {
@@ -501,6 +506,103 @@ export function LightTour({
     setPopup(false);
     setWarning("");
     setError("");
+    setSheetError("");
+  }
+
+  async function sheetBytes() {
+    return buildTourSheetPdf({
+      stops: stopsRef.current.map((stop) => ({
+        order: stop.order,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        address: stop.address,
+        note: stop.note,
+      })),
+      line,
+    });
+  }
+
+  function downloadSheet(bytes: Uint8Array) {
+    const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "holiday-lights-tour.pdf";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  async function saveSheet(notice = "") {
+    if (sheetLock.current) return;
+    sheetLock.current = true;
+    setSheetMode("save");
+    setSheetError("");
+    try {
+      downloadSheet(await sheetBytes());
+      setSheetError(notice);
+    } catch (err) {
+      setSheetError(err instanceof Error ? err.message : "The sheet did not build.");
+    } finally {
+      sheetLock.current = false;
+      setSheetMode("");
+    }
+  }
+
+  function printSheet() {
+    if (sheetLock.current) return;
+    const preview = window.open("about:blank", "_blank");
+    if (!preview) {
+      void saveSheet("The print window was blocked, so the sheet was saved instead.");
+      return;
+    }
+    sheetLock.current = true;
+    setSheetMode("print");
+    setSheetError("");
+    void (async () => {
+      try {
+        const bytes = await sheetBytes();
+        const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "application/pdf" }));
+        const doc = preview.document;
+        doc.open();
+        doc.write(
+          `<!doctype html><html><head><title>Holiday Lights Tour</title></head><body style="margin:0">` +
+            `<iframe id="sheet" title="Holiday Lights Tour" src="${url}" style="border:0;width:100%;height:100vh"></iframe>` +
+            `<script>var done=false;function go(){if(done)return;done=true;setTimeout(function(){try{window.focus();window.print();}catch(e){}},400);}` +
+            `document.getElementById("sheet").addEventListener("load",go);setTimeout(go,1200);</script></body></html>`
+        );
+        doc.close();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } catch (err) {
+        setSheetError(err instanceof Error ? err.message : "The sheet did not build.");
+        preview.close();
+      } finally {
+        sheetLock.current = false;
+        setSheetMode("");
+      }
+    })();
+  }
+
+  function sheetActions() {
+    if (!stops.length) return null;
+    const busySheet = sheetMode !== "";
+    return (
+      <>
+        <p className="panel-hint">This map and these houses go on the route sheet.</p>
+        <button type="button" className="btn btn-ghost lt-go" disabled={busySheet} onClick={printSheet}>
+          {sheetMode === "print" ? "Making the sheet…" : "Print this sheet"}
+        </button>
+        <button type="button" className="btn btn-ghost lt-go" disabled={busySheet} onClick={() => void saveSheet()}>
+          {sheetMode === "save" ? "Making the sheet…" : "Save this sheet"}
+        </button>
+        {sheetError ? (
+          <p className="lt-error" role="alert">
+            {sheetError}
+          </p>
+        ) : null}
+      </>
+    );
   }
 
   function endTour() {
@@ -551,6 +653,7 @@ export function LightTour({
               </li>
             ))}
           </ol>
+          {sheetActions()}
           {voiceSwitch()}
           <p className="panel-hint">Spoken directions start with the tour and use the phone volume.</p>
           <button type="button" className="btn btn-primary lt-go" onClick={startTour}>
@@ -581,6 +684,7 @@ export function LightTour({
           {current.photoUrl ? (
             <img src={current.photoUrl} alt={current.note || `Stop ${current.order}`} loading="lazy" className="lt-photo" />
           ) : null}
+          {sheetActions()}
           {voiceSwitch()}
           <p className="panel-hint">A card pops up within about 150 meters. Spoken directions use the phone volume.</p>
           <button type="button" className="btn btn-primary lt-go" onClick={() => advance(false)}>
@@ -604,6 +708,7 @@ export function LightTour({
           <p>
             You finished {stops.length} {stops.length === 1 ? "stop" : "stops"} on the {HOLIDAY_LABELS[holiday]} route.
           </p>
+          {sheetActions()}
           <button type="button" className="btn btn-primary lt-go" onClick={resetPick}>
             Start a new tour
           </button>
