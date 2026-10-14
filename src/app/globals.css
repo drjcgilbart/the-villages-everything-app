@@ -17268,24 +17268,44 @@ html.privacy-mode [data-privacy-block]::after {
   align-items: flex-end;
   background: transparent;
   pointer-events: none;
-  padding: 0.55rem 0.55rem 0.7rem;
+  padding: 0.4rem 0.45rem 0.5rem;
 }
 
 .lt-pop-arrive .lt-pop {
   pointer-events: auto;
   width: min(100%, 28rem);
   max-height: none;
-  padding: 0.7rem 0.8rem 0.75rem;
+  padding: 0.45rem 0.6rem 0.5rem;
+}
+
+.lt-pop-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.lt-pop-line .lt-pop-kicker {
+  flex: none;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .lt-pop-arrive h3 {
-  font-size: 1.15rem;
-  margin: 0.05rem 0 0.25rem;
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.lt-pop-arrive p {
-  margin: 0;
-  font-size: 0.9rem;
+.lt-pop-arrive .lt-pop-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -17293,50 +17313,144 @@ html.privacy-mode [data-privacy-block]::after {
 
 .lt-pop-actions {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.55rem;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
 }
 
 .lt-pop-arrive .lt-pop-actions .lt-go {
   width: auto;
   flex: 1;
-  min-height: 2.55rem;
+  min-height: 2.3rem;
   margin-top: 0;
-  padding: 0.35rem 0.45rem;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.92rem;
+}
+
+.lt-pop-music.is-on {
+  background: var(--palm);
+  border-color: var(--palm-deep);
+  color: #fff;
+}
+
+.lt-map-col {
+  position: relative;
+  min-width: 0;
+  z-index: 1;
+}
+
+/* Android draws the map tiles over a fixed Music button. This one sits on the map instead. */
+.lt-music-fab {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  top: 0.65rem;
+  right: 0.65rem;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(145deg, var(--gold), var(--sunset));
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(28, 36, 48, 0.28);
+  cursor: pointer;
+}
+
+.lt-music-fab.is-on {
+  background: linear-gradient(145deg, var(--palm), #2a8f63);
+}
+
+.lt-tour-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.lt-tour-tools .lt-chip {
+  margin: 0;
 }
 
 @media (max-width: 960px) {
+  /* The fixed corner note stays off phone-width screens. The map button is the one that shows. */
   .theme-music-tour {
-    top: 42%;
-    right: 0.65rem;
-    bottom: auto;
-    left: auto;
-    height: auto;
-    z-index: 4500;
+    display: none !important;
   }
 
-  .theme-music-tour .theme-music-fab {
+  .lt-music-fab {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: auto;
-    min-height: 44px;
-    height: auto;
-    padding: 0.35rem 0.85rem;
-    gap: 0.35rem;
   }
 
-  .theme-music-tour .theme-music-fab-label {
-    display: inline;
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: #fff;
+  body.lt-touring .nav-first-hint:not(.nav-close-hint),
+  body.lt-touring .hub-header-top > .site-search {
+    display: none !important;
   }
 
-  .theme-music-tour .theme-music-panel {
-    max-height: min(46vh, 22rem);
-    overflow: auto;
+  .lt-pop-scrim.lt-pop-arrive {
+    padding: 0.28rem 0.35rem 0.35rem;
   }
+
+  .lt-pop-arrive .lt-pop {
+    padding: 0.32rem 0.45rem 0.38rem;
+    border-radius: 14px;
+  }
+
+  .lt-pop-arrive .lt-pop-note {
+    display: none;
+  }
+
+  .lt-pop-arrive .lt-pop-actions {
+    margin-top: 0.28rem;
+    gap: 0.28rem;
+  }
+
+  .lt-pop-arrive .lt-pop-actions .lt-go {
+    min-height: 2.05rem;
+    padding: 0.12rem 0.2rem;
+    font-size: 0.84rem;
+  }
+}
+
+/* The installed apps use the same tighter tour screen, even when the WebView reports a wide page. */
+html[data-app-shell="native"] .theme-music-tour {
+  display: none !important;
+}
+
+html[data-app-shell="native"] .lt-music-fab {
+  display: inline-flex;
+}
+
+html[data-app-shell="native"] body.lt-touring .nav-first-hint:not(.nav-close-hint),
+html[data-app-shell="native"] body.lt-touring .hub-header-top > .site-search {
+  display: none !important;
+}
+
+html[data-app-shell="native"] .lt-pop-scrim.lt-pop-arrive {
+  padding: 0.28rem 0.35rem 0.35rem;
+}
+
+html[data-app-shell="native"] .lt-pop-arrive .lt-pop {
+  padding: 0.32rem 0.45rem 0.38rem;
+  border-radius: 14px;
+}
+
+html[data-app-shell="native"] .lt-pop-arrive .lt-pop-note {
+  display: none;
+}
+
+html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions {
+  margin-top: 0.28rem;
+  gap: 0.28rem;
+}
+
+html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
+  min-height: 2.05rem;
+  padding: 0.12rem 0.2rem;
+  font-size: 0.84rem;
 }
 
 .lt-pop {

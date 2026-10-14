@@ -15,6 +15,7 @@ import {
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import { nextCue, stepsFromPayload, straightCue, type DrivingStep } from "@/lib/tourDirections";
 import { speakTour, speakTourNow, stopTourSpeech } from "@/lib/tourSpeech";
+import { TOUR_MUSIC_STATE_EVENT, TOUR_MUSIC_TOGGLE_EVENT } from "@/lib/themeMusic";
 import {
   DEFAULT_STOPS,
   GEOFENCE_METERS,
@@ -134,6 +135,7 @@ export function LightTour({
   const guideGen = useRef(0);
   const houseOpenRef = useRef(false);
   const [voiceOn, setVoiceOn] = useState(true);
+  const [musicOn, setMusicOn] = useState(false);
   const [cue, setCue] = useState("");
   const [sheetMode, setSheetMode] = useState<"" | "print" | "save">("");
   const [sheetError, setSheetError] = useState("");
@@ -164,6 +166,20 @@ export function LightTour({
     } catch {
       /* ignore */
     }
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle("lt-touring", phase === "tour");
+    return () => document.body.classList.remove("lt-touring");
+  }, [phase]);
+
+  useEffect(() => {
+    const onState = (event: Event) => {
+      const detail = (event as CustomEvent<{ playing?: boolean }>).detail;
+      setMusicOn(Boolean(detail?.playing));
+    };
+    window.addEventListener(TOUR_MUSIC_STATE_EVENT, onState);
+    return () => window.removeEventListener(TOUR_MUSIC_STATE_EVENT, onState);
   }, []);
 
   useEffect(() => {
@@ -661,6 +677,23 @@ export function LightTour({
     );
   }
 
+  function toggleHolidayMusic() {
+    window.dispatchEvent(new Event(TOUR_MUSIC_TOGGLE_EVENT));
+  }
+
+  function musicSwitch(label = musicOn ? "Stop music" : "Music") {
+    return (
+      <button
+        type="button"
+        className={`lt-chip ${musicOn ? "is-on" : ""}`}
+        aria-pressed={musicOn}
+        onClick={toggleHolidayMusic}
+      >
+        {label}
+      </button>
+    );
+  }
+
   const sheet = (
     <>
       {phase === "route" ? (
@@ -678,8 +711,11 @@ export function LightTour({
             ))}
           </ol>
           {sheetActions()}
-          {voiceSwitch()}
-          <p className="panel-hint">Spoken directions start with the tour and use the phone volume.</p>
+          <div className="lt-tour-tools">
+            {voiceSwitch()}
+            {musicSwitch()}
+          </div>
+          <p className="panel-hint">Spoken directions start with the tour and use the phone volume. Music uses the same volume.</p>
           <button type="button" className="btn btn-primary lt-go" onClick={startTour}>
             Start tour
           </button>
@@ -709,8 +745,11 @@ export function LightTour({
             <img src={current.photoUrl} alt={current.note || `Stop ${current.order}`} loading="lazy" className="lt-photo" />
           ) : null}
           {sheetActions()}
-          {voiceSwitch()}
-          <p className="panel-hint">A card pops up within about 150 meters. Spoken directions use the phone volume.</p>
+          <div className="lt-tour-tools">
+            {voiceSwitch()}
+            {musicSwitch()}
+          </div>
+          <p className="panel-hint">A card pops up within about 150 meters. Spoken directions and music use the phone volume.</p>
           <button type="button" className="btn btn-primary lt-go" onClick={() => advance(false)}>
             {index >= stops.length - 1 ? "Finish tour" : "Next stop"}
           </button>
@@ -733,6 +772,7 @@ export function LightTour({
             You finished {stops.length} {stops.length === 1 ? "stop" : "stops"} on the {HOLIDAY_LABELS[holiday]} route.
           </p>
           {sheetActions()}
+          {musicOn ? <div className="lt-tour-tools">{musicSwitch()}</div> : null}
           <button type="button" className="btn btn-primary lt-go" onClick={resetPick}>
             Start a new tour
           </button>
@@ -852,6 +892,7 @@ export function LightTour({
                 {error}
               </p>
             ) : null}
+            {musicOn ? <div className="lt-tour-tools">{musicSwitch()}</div> : null}
             <button type="button" className="btn btn-primary lt-go" disabled={busy || offline} onClick={() => void buildRoute()}>
               {busy ? "Finding houses…" : "Build my route"}
             </button>
@@ -864,7 +905,7 @@ export function LightTour({
 
         {phase !== "pick" ? (
           <div className="lt-stage">
-            <div>
+            <div className="lt-map-col">
               <LightTourMap
                 visitor={mapVisitor}
                 line={line}
@@ -872,6 +913,15 @@ export function LightTour({
                 activeId={current?.id}
                 follow={phase === "tour"}
               />
+              <button
+                type="button"
+                className={`lt-music-fab ${musicOn ? "is-on" : ""}`}
+                aria-pressed={musicOn}
+                onClick={toggleHolidayMusic}
+              >
+                <span aria-hidden="true">{musicOn ? "⏸" : "🎵"}</span>
+                {musicOn ? "Stop" : "Music"}
+              </button>
               {warning ? (
                 <p className="lt-banner" role="status">
                   {warning}
@@ -890,11 +940,13 @@ export function LightTour({
         {popup && current ? (
           <div className="lt-pop-scrim lt-pop-arrive">
             <div className="lt-pop" role="dialog" aria-modal="false" aria-labelledby="lt-pop-title">
-              <p className="panel-hint">
-                Stop {current.order} of {stops.length}
-              </p>
-              <h3 id="lt-pop-title">{current.address || "Saved house"}</h3>
-              {current.note ? <p>{current.note}</p> : null}
+              <div className="lt-pop-line">
+                <p className="panel-hint lt-pop-kicker">
+                  Stop {current.order} of {stops.length}
+                </p>
+                <h3 id="lt-pop-title">{current.address || "Saved house"}</h3>
+              </div>
+              {current.note ? <p className="lt-pop-note">{current.note}</p> : null}
               <div className="lt-pop-actions">
                 <button ref={popupButton} type="button" className="btn btn-primary lt-go" onClick={() => advance(true)}>
                   {index >= stops.length - 1 ? "Finish" : "Next"}
@@ -906,6 +958,14 @@ export function LightTour({
                 ) : null}
                 <button type="button" className="btn btn-ghost lt-go" onClick={endTour}>
                   End
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-ghost lt-go lt-pop-music ${musicOn ? "is-on" : ""}`}
+                  aria-pressed={musicOn}
+                  onClick={toggleHolidayMusic}
+                >
+                  {musicOn ? "Stop" : "Music"}
                 </button>
               </div>
             </div>

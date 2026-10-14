@@ -21,6 +21,11 @@ export type ThemeTrack = {
   credit: string;
 };
 
+/** Holiday Lights buttons ask the tour player to start or stop. Play stays inside that tap. */
+export const TOUR_MUSIC_TOGGLE_EVENT = "tvea-holiday-music";
+/** The tour player tells those buttons whether a song is on. */
+export const TOUR_MUSIC_STATE_EVENT = "tvea-holiday-music-state";
+
 export const THEME_TRACKS: ThemeTrack[] = [
   {
     id: "sunny-morning",

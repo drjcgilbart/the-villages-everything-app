@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
-import { THEME_TRACKS, createThemeMusicEngine, type ThemeTrack } from "@/lib/themeMusic";
+import {
+  THEME_TRACKS,
+  TOUR_MUSIC_STATE_EVENT,
+  TOUR_MUSIC_TOGGLE_EVENT,
+  createThemeMusicEngine,
+  type ThemeTrack,
+} from "@/lib/themeMusic";
 
 type Props = {
   /** Page-specific songs. The site-wide player leaves this empty. */
@@ -228,6 +234,23 @@ export function ThemeMusicPlayer({
     }
     await playTrack(trackId);
   }
+
+  const togglePlayRef = useRef(togglePlay);
+  togglePlayRef.current = togglePlay;
+
+  useEffect(() => {
+    if (variant !== "tour") return;
+    const onToggle = () => {
+      void togglePlayRef.current();
+    };
+    window.addEventListener(TOUR_MUSIC_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(TOUR_MUSIC_TOGGLE_EVENT, onToggle);
+  }, [variant]);
+
+  useEffect(() => {
+    if (variant !== "tour") return;
+    window.dispatchEvent(new CustomEvent(TOUR_MUSIC_STATE_EVENT, { detail: { playing } }));
+  }, [playing, variant]);
 
   async function selectTrack(id: string) {
     if (playing && id !== trackId) {
