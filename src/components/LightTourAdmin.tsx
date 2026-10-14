@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
 import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/deviceLocation";
@@ -138,6 +138,13 @@ export function LightTourAdmin() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const pinsRef = useRef(pins);
+  const draftRef = useRef(draft);
+  const holidayRef = useRef(holiday);
+  const moveToken = useRef(new Map<string, number>());
+  pinsRef.current = pins;
+  draftRef.current = draft;
+  holidayRef.current = holiday;
 
   async function load() {
     const res = await fetch("/api/light-tour/pins?admin=1", { credentials: "same-origin" });
@@ -225,6 +232,72 @@ export function LightTourAdmin() {
       );
     } catch (err) {
       setError(locationHelp(err));
+    }
+  }
+
+  async function movePin(id: string, latitude: number, longitude: number) {
+    const pin = pinsRef.current.find((row) => row.id === id);
+    if (!pin) return;
+    const token = (moveToken.current.get(id) || 0) + 1;
+    moveToken.current.set(id, token);
+    const form = draftRef.current?.id === id ? draftRef.current : null;
+    const order =
+      pinsRef.current
+        .filter((row) => row.holiday === holidayRef.current && row.status !== "pending")
+        .findIndex((row) => row.id === id) + 1;
+    const label = order > 0 ? `Pin ${order}` : "Pin";
+    setPins((current) => current.map((row) => (row.id === id ? { ...row, latitude, longitude } : row)));
+    setDraft((current) =>
+      current?.id === id ? { ...current, latitude: latitude.toFixed(6), longitude: longitude.toFixed(6) } : current
+    );
+    setError("");
+    setNotice(`${label} moved to ${latitude.toFixed(6)}, ${longitude.toFixed(6)}.`);
+    try {
+      const res = await fetch("/api/light-tour/pins", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          holiday: form?.holiday || pin.holiday,
+          latitude,
+          longitude,
+          address: form ? form.address : pin.address,
+          note: form ? form.note : pin.note,
+          photoUrl: form ? form.photoUrl : pin.photoUrl,
+          status: pin.status,
+          keepAddress: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (moveToken.current.get(id) !== token) return;
+      if (!res.ok) throw new Error(data.error || "The pin did not move.");
+      const saved = data.pin as AdminPin | undefined;
+      if (saved?.id) {
+        setPins((current) => current.map((row) => (row.id === id ? { ...row, ...saved } : row)));
+        setDraft((current) => {
+          if (current?.id !== id) return current;
+          return {
+            ...current,
+            latitude: Number(saved.latitude).toFixed(6),
+            longitude: Number(saved.longitude).toFixed(6),
+            address: current.address || saved.address || "",
+          };
+        });
+        setNotice(
+          `${label} is saved at ${Number(saved.latitude).toFixed(6)}, ${Number(saved.longitude).toFixed(6)}.`
+        );
+      }
+    } catch (err) {
+      if (moveToken.current.get(id) !== token) return;
+      setPins((current) =>
+        current.map((row) => (row.id === id ? { ...row, latitude: pin.latitude, longitude: pin.longitude } : row))
+      );
+      setDraft((current) =>
+        current?.id === id ? { ...current, latitude: String(pin.latitude), longitude: String(pin.longitude) } : current
+      );
+      setNotice("");
+      setError(err instanceof Error ? err.message : "The pin did not move.");
     }
   }
 
@@ -458,7 +531,16 @@ export function LightTourAdmin() {
           ))}
         </div>
 
-        <LightTourMap visitor={null} line={[]} stops={mapStops} />
+        <p className="panel-hint">
+          Drag a number onto the house. The middle of the number is the GPS point. Letting go saves it. The street
+          address stays the same.
+        </p>
+        <LightTourMap
+          visitor={null}
+          line={[]}
+          stops={mapStops}
+          onMoveStop={(id, latitude, longitude) => void movePin(id, latitude, longitude)}
+        />
 
         {draft ? (
           <div id="lt-pin-draft" className="about-panel lt-card">

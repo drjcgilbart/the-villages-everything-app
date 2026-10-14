@@ -17281,6 +17281,15 @@ html.privacy-mode [data-privacy-block]::after {
   border: 0;
 }
 
+.lt-map .lt-marker.leaflet-marker-draggable {
+  cursor: grab;
+}
+
+.lt-map .lt-marker.leaflet-marker-dragging,
+.lt-map.leaflet-dragging .lt-marker.leaflet-marker-draggable {
+  cursor: grabbing;
+}
+
 .lt-marker span {
   display: grid;
   place-items: center;

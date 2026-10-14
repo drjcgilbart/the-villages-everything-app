@@ -105,9 +105,10 @@ export async function PUT(req: Request) {
   const store = await readLightTour();
   const existing = store.pins.find((pin) => pin.id === id);
   if (!existing) return NextResponse.json({ error: "That pin is gone." }, { status: 404 });
+  const keepAddress = body?.keepAddress === true;
   let address = String(body?.address ?? existing.address).trim();
   const moved = Math.abs(existing.latitude - latitude) > 0.00001 || Math.abs(existing.longitude - longitude) > 0.00001;
-  if (moved && !String(body?.address || "").trim()) address = await reverseGeocode(latitude, longitude);
+  if (!keepAddress && moved && !String(body?.address || "").trim()) address = await reverseGeocode(latitude, longitude);
   const status = body?.status === "pending" || body?.status === "approved" ? body.status : undefined;
   const pin = await savePin({
     id,
