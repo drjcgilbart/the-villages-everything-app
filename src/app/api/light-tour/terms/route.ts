@@ -79,6 +79,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "The acceptance did not save.";
-    return json({ error: message }, { status: errorStatus(err) });
+    return json({ error: message }, errorStatus(err));
   }
 }
