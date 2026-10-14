@@ -48,6 +48,8 @@ export type LightPin = {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  /** Member id when a neighbor sent the house. Admin houses leave this blank. */
+  ownerId: string;
   /** Missing on houses saved before member submissions. Those stay on the tour. */
   status: PinStatus;
 };
@@ -63,7 +65,7 @@ export type LightTourLog = {
 
 type Store = { pins: LightPin[]; tours: LightTourLog[] };
 
-export type PublicPin = Omit<LightPin, "createdBy" | "status">;
+export type PublicPin = Omit<LightPin, "createdBy" | "ownerId" | "status">;
 
 function emptyStore(): Store {
   return { pins: [], tours: [] };
@@ -90,8 +92,21 @@ export function holidayFrom(value: unknown): TourHoliday | null {
 }
 
 export function publicPin(pin: LightPin): PublicPin {
-  const { createdBy: _createdBy, status: _status, ...rest } = pin;
+  const { createdBy: _createdBy, ownerId: _ownerId, status: _status, ...rest } = pin;
   return rest;
+}
+
+export function memberOwnsPin(
+  pin: { ownerId?: string; createdBy?: string },
+  member: { id: string; email: string }
+) {
+  if (pin.ownerId && pin.ownerId === member.id) return true;
+  const email = member.email.trim().toLowerCase();
+  if (!email) return false;
+  return String(pin.createdBy || "")
+    .trim()
+    .toLowerCase()
+    .endsWith(` · ${email}`);
 }
 
 export function isPendingPin(pin: { status?: string }) {
@@ -119,6 +134,7 @@ function normalizePin(raw: unknown): LightPin | null {
     createdAt: clip(row.createdAt, 40) || new Date().toISOString(),
     updatedAt: clip(row.updatedAt, 40) || new Date().toISOString(),
     createdBy: clip(row.createdBy, 120) || "admin",
+    ownerId: clip(row.ownerId, 80),
     status: row.status === "pending" ? "pending" : "approved",
   };
 }
@@ -222,6 +238,7 @@ export function savePin(input: {
       createdAt: existing?.createdAt || now,
       updatedAt: now,
       createdBy: existing?.createdBy || clip(input.createdBy, 120) || "admin",
+      ownerId: clip(existing?.ownerId, 80),
       status: input.status ?? existing?.status ?? "approved",
     };
     store.pins = existing
@@ -243,16 +260,11 @@ export function deletePin(id: string): Promise<boolean> {
   });
 }
 
-export async function submitMemberHouse(input: {
-  holiday: TourHoliday;
+async function resolveHousePoint(input: {
   address: string;
-  note: string;
-  photoUrl: string;
   latitude: number | null;
   longitude: number | null;
-  createdBy: string;
-  status?: PinStatus;
-}): Promise<LightPin> {
+}): Promise<{ latitude: number; longitude: number; address: string }> {
   let address = clip(input.address, 180);
   const gpsLat = input.latitude;
   const gpsLng = input.longitude;
@@ -285,17 +297,30 @@ export async function submitMemberHouse(input: {
   if (pointLat == null || pointLng == null) {
     throw new Error("Add the street address, or tap Use where I am.");
   }
-  const savedLat = pointLat;
-  const savedLng = pointLng;
-  const savedAddress = address;
+  return { latitude: pointLat, longitude: pointLng, address };
+}
+
+export async function submitMemberHouse(input: {
+  holiday: TourHoliday;
+  address: string;
+  note: string;
+  photoUrl: string;
+  latitude: number | null;
+  longitude: number | null;
+  createdBy: string;
+  ownerId?: string;
+  status?: PinStatus;
+}): Promise<LightPin> {
+  const point = await resolveHousePoint(input);
   const holiday = input.holiday;
   const photoUrl = clip(input.photoUrl, 400);
   const note = clip(input.note, 160);
   const createdBy = clip(input.createdBy, 120) || "member";
+  const ownerId = clip(input.ownerId, 80);
   const status: PinStatus = input.status === "approved" ? "approved" : "pending";
   return enqueue(async () => {
     const store = await readLightTourForWrite();
-    const spot = { holiday, latitude: savedLat, longitude: savedLng };
+    const spot = { holiday, latitude: point.latitude, longitude: point.longitude };
     if (store.pins.some((existing) => sameHouse(existing, spot))) {
       throw new Error(
         status === "approved"
@@ -307,14 +332,15 @@ export async function submitMemberHouse(input: {
     const pin: LightPin = {
       id: newPinId(),
       holiday,
-      latitude: savedLat,
-      longitude: savedLng,
-      address: savedAddress,
+      latitude: point.latitude,
+      longitude: point.longitude,
+      address: point.address,
       photoUrl,
       note,
       createdAt: now,
       updatedAt: now,
       createdBy,
+      ownerId,
       status,
     };
     store.pins = [pin, ...store.pins];
@@ -330,8 +356,79 @@ function sameHouse(
   return a.holiday === b.holiday && haversineMeters(a, b) < 30;
 }
 
+function notYours() {
+  return Object.assign(new Error("That house is not yours."), { code: 404 });
+}
+
+/** The neighbor who added the house can change the photo, note, address, or holiday. Status stays put. */
+export async function updateOwnedHouse(input: {
+  id: string;
+  memberId: string;
+  email: string;
+  holiday: TourHoliday;
+  address: string;
+  note: string;
+  photoUrl: string;
+  latitude: number | null;
+  longitude: number | null;
+}): Promise<LightPin> {
+  const id = clip(input.id, 80);
+  const member = { id: input.memberId, email: input.email };
+  const current = (await readLightTour()).pins.find((pin) => pin.id === id);
+  if (!current || !memberOwnsPin(current, member)) throw notYours();
+  const typed = clip(input.address, 180);
+  const addressSame = typed.toLowerCase() === current.address.trim().toLowerCase();
+  const gpsOk = input.latitude != null && input.longitude != null && nearVillages(input.latitude, input.longitude);
+  const point =
+    addressSame && typed && !gpsOk
+      ? { latitude: current.latitude, longitude: current.longitude, address: current.address }
+      : await resolveHousePoint({
+          address: typed,
+          latitude: input.latitude,
+          longitude: input.longitude,
+        });
+  const holiday = input.holiday;
+  const photoUrl = clip(input.photoUrl, 400);
+  const note = clip(input.note, 160);
+  return enqueue(async () => {
+    const store = await readLightTourForWrite();
+    const existing = store.pins.find((pin) => pin.id === id);
+    if (!existing || !memberOwnsPin(existing, member)) throw notYours();
+    const spot = { holiday, latitude: point.latitude, longitude: point.longitude };
+    if (store.pins.some((row) => row.id !== id && sameHouse(row, spot))) {
+      throw new Error("That house is already saved or waiting for approval.");
+    }
+    const pin: LightPin = {
+      ...existing,
+      holiday,
+      latitude: point.latitude,
+      longitude: point.longitude,
+      address: point.address,
+      photoUrl,
+      note,
+      updatedAt: new Date().toISOString(),
+      ownerId: existing.ownerId || input.memberId,
+    };
+    store.pins = store.pins.map((row) => (row.id === id ? pin : row));
+    await writeStore(store);
+    return pin;
+  });
+}
+
+export function deleteOwnedHouse(id: string, member: { id: string; email: string }): Promise<boolean> {
+  const pinId = clip(id, 80);
+  return enqueue(async () => {
+    const store = await readLightTourForWrite();
+    const existing = store.pins.find((pin) => pin.id === pinId);
+    if (!existing || !memberOwnsPin(existing, member)) return false;
+    store.pins = store.pins.filter((pin) => pin.id !== pinId);
+    await writeStore(store);
+    return true;
+  });
+}
+
 export function importPins(
-  pins: Array<Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy" | "status"> & { createdBy?: string }>,
+  pins: Array<Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy" | "ownerId" | "status"> & { createdBy?: string }>,
   createdBy: string
 ): Promise<LightPin[]> {
   return enqueue(async () => {
@@ -351,6 +448,7 @@ export function importPins(
         createdAt: now,
         updatedAt: now,
         createdBy: clip(createdBy, 120) || "admin",
+        ownerId: "",
         status: "approved",
       });
     }
@@ -432,7 +530,7 @@ export function straightLineDurations(
   );
 }
 
-type DraftPin = Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy" | "status">;
+type DraftPin = Omit<LightPin, "id" | "createdAt" | "updatedAt" | "createdBy" | "ownerId" | "status">;
 
 function draft(holiday: TourHoliday, latitude: number, longitude: number, note = "", address = ""): DraftPin {
   return { holiday, latitude, longitude, address, photoUrl: "", note: clip(note, 160) };

@@ -5,25 +5,27 @@ import Link from "next/link";
 import { prepareUploadImageFile } from "@/lib/browserImage";
 import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/deviceLocation";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
+import type { MemberHouse } from "./LightTourMine";
 
 type Here = { latitude: number; longitude: number };
 type Notice = { title: string; body: string; tone: "wait" | "ok" | "bad" };
 
-function sendFailure(err: unknown, direct: boolean): string {
+function sendFailure(err: unknown, saving: boolean, editing: boolean): string {
   if (err instanceof Error) {
     if (err.name === "AbortError" || err.name === "TimeoutError") {
-      return direct
+      if (editing) return "This is taking too long, so nothing was confirmed. Check Your houses before you save it again.";
+      return saving
         ? "This is taking too long, so nothing was confirmed. Check the house list before you add it again."
         : "This is taking too long, so nothing was confirmed. Look under Waiting for approval before you send it again.";
     }
     if (/failed to fetch|load failed|network/i.test(err.message)) {
-      return direct
+      return saving
         ? "The phone could not reach the site. Nothing was saved. Try again when the signal is steady."
         : "The phone could not reach the site. Nothing was sent. Try again when the signal is steady.";
     }
     return err.message;
   }
-  return direct ? "The house did not save." : "The house did not send.";
+  return saving ? "The house did not save." : "The house did not send.";
 }
 
 export function LightTourSubmit({
@@ -34,6 +36,7 @@ export function LightTourSubmit({
   onClose,
   direct = false,
   onSaved,
+  house = null,
 }: {
   open: boolean;
   holiday: TourHoliday;
@@ -43,6 +46,8 @@ export function LightTourSubmit({
   /** Admin page: the same card saves the house on the tour now. */
   direct?: boolean;
   onSaved?: (savedHoliday: TourHoliday) => void;
+  /** The signed-in neighbor is changing a house they already sent. */
+  house?: MemberHouse | null;
 }) {
   const [picked, setPicked] = useState<TourHoliday>(holiday);
   const [address, setAddress] = useState("");
@@ -77,11 +82,11 @@ export function LightTourSubmit({
     }
     if (wasOpen.current) return;
     wasOpen.current = true;
-    setPicked(holiday);
-    setAddress("");
-    setNote("");
-    setPhotoUrl("");
-    setPreview("");
+    setPicked(house?.holiday || holiday);
+    setAddress(house?.address || "");
+    setNote(house?.note || "");
+    setPhotoUrl(house?.photoUrl || "");
+    setPreview(house?.photoUrl || "");
     setHere(null);
     setHereNote("");
     setError("");
@@ -89,7 +94,7 @@ export function LightTourSubmit({
     setBusy(false);
     setNotice(null);
     sending.current = false;
-  }, [open, holiday]);
+  }, [open, holiday, house]);
 
   useEffect(() => {
     if (!open) return;
@@ -154,15 +159,19 @@ export function LightTourSubmit({
     }
   }
 
+  const saving = direct || Boolean(house);
+
   async function send() {
     if (sending.current) return;
     const place = address.trim();
     if (!place && !here) {
       setNotice({
-        title: direct ? "Not saved" : "Not sent",
+        title: saving ? "Not saved" : "Not sent",
         body: direct
           ? "Type the street address, or tap Use where I am, and then tap OK again."
-          : "Type the street address, or tap Use where I am, and then send it again.",
+          : house
+            ? "Type the street address, or tap Use where I am, and then tap Save again."
+            : "Type the street address, or tap Use where I am, and then send it again.",
         tone: "bad",
       });
       return;
@@ -171,26 +180,25 @@ export function LightTourSubmit({
     setError("");
     setBusy(true);
     setNotice({
-      title: direct ? "Saving" : "Sending for approval",
-      body: direct
-        ? place
-          ? `Saving ${place} now. Stay on this screen until it finishes.`
-          : "Saving this house now. Stay on this screen until it finishes."
-        : place
-          ? `Sending ${place} now. Stay on this screen until it finishes.`
+      title: saving ? "Saving" : "Sending for approval",
+      body: place
+        ? `${saving ? "Saving" : "Sending"} ${place} now. Stay on this screen until it finishes.`
+        : saving
+          ? "Saving this house now. Stay on this screen until it finishes."
           : "Sending this house now. Stay on this screen until it finishes.",
       tone: "wait",
     });
     const ac = new AbortController();
     const timer = window.setTimeout(() => ac.abort(), 25000);
     try {
-      const res = await fetch(direct ? "/api/light-tour/add" : "/api/light-tour/submit", {
-        method: "POST",
+      const res = await fetch(house ? "/api/light-tour/mine" : direct ? "/api/light-tour/add" : "/api/light-tour/submit", {
+        method: house ? "PUT" : "POST",
         credentials: "same-origin",
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
         signal: ac.signal,
         body: JSON.stringify({
+          id: house?.id,
           holiday: picked,
           address,
           note,
@@ -205,25 +213,29 @@ export function LightTourSubmit({
         data = text ? (JSON.parse(text) as { error?: string }) : {};
       } catch {
         data = {
-          error: direct
+          error: saving
             ? "The house did not save. The server did not answer clearly."
             : "The house did not send. The server did not answer clearly.",
         };
       }
-      if (!res.ok) throw new Error(data.error || (direct ? "The house did not save." : "The house did not send."));
+      if (!res.ok) throw new Error(data.error || (saving ? "The house did not save." : "The house did not send."));
       setSent(true);
       onSaved?.(picked);
       setNotice({
-        title: direct ? "Added" : "Sent for approval",
-        body: direct
-          ? "This house is on the tour."
-          : "This house was sent. It stays off the public tour until it is approved. On the admin page, look for Waiting for approval.",
+        title: house ? "Saved" : direct ? "Added" : "Sent for approval",
+        body: house
+          ? house.status === "approved"
+            ? "This house stays on the tour."
+            : "This house stays off the tour until it is approved."
+          : direct
+            ? "This house is on the tour."
+            : "This house was sent. It stays off the public tour until it is approved. On the admin page, look for Waiting for approval.",
         tone: "ok",
       });
     } catch (err) {
-      const message = sendFailure(err, direct);
+      const message = sendFailure(err, saving, Boolean(house));
       setError(message);
-      setNotice({ title: direct ? "Not saved" : "Not sent", body: message, tone: "bad" });
+      setNotice({ title: saving ? "Not saved" : "Not sent", body: message, tone: "bad" });
     } finally {
       window.clearTimeout(timer);
       sending.current = false;
@@ -234,7 +246,7 @@ export function LightTourSubmit({
   return (
     <div className="lt-pop-scrim">
       <div className="lt-pop lt-pop-form" role="dialog" aria-modal="true" aria-labelledby="lt-add-title">
-        <h3 id="lt-add-title">Add a lit house</h3>
+        <h3 id="lt-add-title">{house ? "Edit your house" : "Add a lit house"}</h3>
         {!canSubmit ? (
           <>
             <p>
@@ -256,7 +268,15 @@ export function LightTourSubmit({
           </>
         ) : sent ? (
           <>
-            <p>{direct ? "Added. This house is on the tour." : "Sent. The house stays off the tour until the admin approves it."}</p>
+            <p>
+              {house
+                ? house.status === "approved"
+                  ? "Saved. This house stays on the tour."
+                  : "Saved. This house stays off the tour until it is approved."
+                : direct
+                  ? "Added. This house is on the tour."
+                  : "Sent. The house stays off the tour until the admin approves it."}
+            </p>
             <button type="button" className="btn btn-primary lt-go" onClick={onClose}>
               Done
             </button>
@@ -264,11 +284,12 @@ export function LightTourSubmit({
         ) : (
           <>
             <p>
-              Share a house with cool holiday lights. Pick the holiday, type the address, add a short note, and a photo
-              if you have one.{" "}
-              {direct
-                ? "It goes on the tour right away."
-                : "It does not show on the tour until the admin approves it."}
+              {house
+                ? house.status === "approved"
+                  ? "Change the address, note, or photo. It stays on the tour."
+                  : "Change the address, note, or photo. It stays off the tour until it is approved."
+                : "Share a house with cool holiday lights. Pick the holiday, type the address, add a short note, and a photo if you have one. "}
+              {house ? null : direct ? "It goes on the tour right away." : "It does not show on the tour until the admin approves it."}
             </p>
             <div className="lt-chips" role="radiogroup" aria-label="Holiday">
               {TOUR_HOLIDAYS.map((item) => (
@@ -339,7 +360,24 @@ export function LightTourSubmit({
                 />
               </label>
             </div>
+            {direct ? null : (
+              <p className="panel-hint">A large photo is made smaller before it is saved.</p>
+            )}
             {preview ? <img src={preview} alt="House photo" className="lt-photo" /> : null}
+            {photoUrl || preview ? (
+              <button
+                type="button"
+                className="btn btn-ghost lt-go"
+                disabled={busy}
+                onClick={() => {
+                  if (preview.startsWith("blob:")) URL.revokeObjectURL(preview);
+                  setPhotoUrl("");
+                  setPreview("");
+                }}
+              >
+                Remove photo
+              </button>
+            ) : null}
             {error ? (
               <p className="lt-error" role="alert">
                 {error}
@@ -359,7 +397,7 @@ export function LightTourSubmit({
                 void send();
               }}
             >
-              {busy ? (direct ? "Saving…" : "Sending…") : direct ? "OK" : "Send for approval"}
+              {busy ? (saving ? "Saving…" : "Sending…") : house ? "Save" : direct ? "OK" : "Send for approval"}
             </button>
             <button type="button" className="btn btn-ghost lt-go" disabled={busy} onClick={onClose}>
               Cancel

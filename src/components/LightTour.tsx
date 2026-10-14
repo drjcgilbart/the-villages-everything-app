@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LightTourMap } from "./LightTourMap";
+import { LightTourMine, type MemberHouse } from "./LightTourMine";
 import { LightTourSubmit } from "./LightTourSubmit";
 import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
 import { holidayTracksFor } from "@/lib/holidayMusic";
@@ -111,6 +112,8 @@ export function LightTour({
   const [index, setIndex] = useState(0);
   const [popup, setPopup] = useState(false);
   const [houseOpen, setHouseOpen] = useState(false);
+  const [editing, setEditing] = useState<MemberHouse | null>(null);
+  const [houseTick, setHouseTick] = useState(0);
   const [offline, setOffline] = useState(false);
   const seen = useRef(new Set<string>());
   const watch = useRef<number | null>(null);
@@ -508,6 +511,7 @@ export function LightTour({
 
   function openHouseForm() {
     setPopup(false);
+    setEditing(null);
     setHouseOpen(true);
   }
 
@@ -765,12 +769,27 @@ export function LightTour({
             </div>
           </div>
         ) : null}
+        {memberStatus === "approved" ? (
+          <LightTourMine
+            reloadKey={houseTick}
+            onEdit={(house) => {
+              setPopup(false);
+              setEditing(house);
+              setHouseOpen(true);
+            }}
+          />
+        ) : null}
         <LightTourSubmit
           open={houseOpen}
           holiday={holiday}
           canSubmit={memberStatus === "approved"}
           pendingMember={memberStatus === "pending"}
-          onClose={() => setHouseOpen(false)}
+          house={editing}
+          onClose={() => {
+            setHouseOpen(false);
+            setEditing(null);
+          }}
+          onSaved={() => setHouseTick((tick) => tick + 1)}
         />
       </div>
       <ThemeMusicPlayer

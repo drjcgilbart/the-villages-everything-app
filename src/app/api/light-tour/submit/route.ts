@@ -69,6 +69,7 @@ export async function POST(req: Request) {
       latitude: num(body?.latitude),
       longitude: num(body?.longitude),
       createdBy: `${member.name} · ${member.email}`,
+      ownerId: member.id,
     });
     void notifyAdminOfApprovalRequest({
       topic: "Holiday Lights",
