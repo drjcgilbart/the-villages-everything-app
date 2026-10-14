@@ -13,6 +13,8 @@ type Props = {
   title?: string;
   note?: string;
   fabTitle?: string;
+  /** Tour pages keep a labeled control on the map. The site player stays a corner note. */
+  variant?: "site" | "tour";
 };
 
 const SITE_KEYS = {
@@ -53,6 +55,7 @@ export function ThemeMusicPlayer({
   title = "Theme music",
   note,
   fabTitle,
+  variant = "site",
 }: Props = {}) {
   const pathname = usePathname();
   const catalog = tracks && tracks.length ? tracks : THEME_TRACKS;
@@ -264,7 +267,7 @@ export function ThemeMusicPlayer({
   if (!hydrated || hideNativeSitePlayer || hideForTour || !active) return null;
 
   return (
-    <div className={`theme-music ${open ? "open" : ""} ${playing ? "playing" : ""}`}>
+    <div className={`theme-music ${variant === "tour" ? "theme-music-tour" : ""} ${open ? "open" : ""} ${playing ? "playing" : ""}`}>
       <button
         type="button"
         className="theme-music-fab"
@@ -279,6 +282,7 @@ export function ThemeMusicPlayer({
         <span className="theme-music-icon" aria-hidden="true">
           {playing ? active.emoji : "🎵"}
         </span>
+        {variant === "tour" ? <span className="theme-music-fab-label">{playing ? "Stop" : "Music"}</span> : null}
         {playing && <span className="theme-music-pulse" aria-hidden="true" />}
       </button>
 

@@ -11741,6 +11741,10 @@ body.theme-music-open .mascot-quip-popup {
   transition: transform 0.15s ease;
 }
 
+.theme-music-fab-label {
+  display: none;
+}
+
 .theme-music-fab:hover {
   transform: scale(1.05);
 }
@@ -17258,6 +17262,81 @@ html.privacy-mode [data-privacy-block]::after {
 .lt-pop-front {
   z-index: 4200;
   align-items: center;
+}
+
+.lt-pop-scrim.lt-pop-arrive {
+  align-items: flex-end;
+  background: transparent;
+  pointer-events: none;
+  padding: 0.55rem 0.55rem 0.7rem;
+}
+
+.lt-pop-arrive .lt-pop {
+  pointer-events: auto;
+  width: min(100%, 28rem);
+  max-height: none;
+  padding: 0.7rem 0.8rem 0.75rem;
+}
+
+.lt-pop-arrive h3 {
+  font-size: 1.15rem;
+  margin: 0.05rem 0 0.25rem;
+}
+
+.lt-pop-arrive p {
+  margin: 0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lt-pop-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.lt-pop-arrive .lt-pop-actions .lt-go {
+  width: auto;
+  flex: 1;
+  min-height: 2.55rem;
+  margin-top: 0;
+  padding: 0.35rem 0.45rem;
+}
+
+@media (max-width: 960px) {
+  .theme-music-tour {
+    top: 42%;
+    right: 0.65rem;
+    bottom: auto;
+    left: auto;
+    height: auto;
+    z-index: 4500;
+  }
+
+  .theme-music-tour .theme-music-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-height: 44px;
+    height: auto;
+    padding: 0.35rem 0.85rem;
+    gap: 0.35rem;
+  }
+
+  .theme-music-tour .theme-music-fab-label {
+    display: inline;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .theme-music-tour .theme-music-panel {
+    max-height: min(46vh, 22rem);
+    overflow: auto;
+  }
 }
 
 .lt-pop {

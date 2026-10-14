@@ -888,27 +888,26 @@ export function LightTour({
         ) : null}
 
         {popup && current ? (
-          <div className="lt-pop-scrim">
-            <div className="lt-pop" role="dialog" aria-modal="true" aria-labelledby="lt-pop-title">
+          <div className="lt-pop-scrim lt-pop-arrive">
+            <div className="lt-pop" role="dialog" aria-modal="false" aria-labelledby="lt-pop-title">
               <p className="panel-hint">
                 Stop {current.order} of {stops.length}
               </p>
               <h3 id="lt-pop-title">{current.address || "Saved house"}</h3>
-              {current.photoUrl ? (
-                <img src={current.photoUrl} alt={current.note || current.address || "House"} loading="lazy" className="lt-photo" />
-              ) : null}
               {current.note ? <p>{current.note}</p> : null}
-              <button ref={popupButton} type="button" className="btn btn-primary lt-go" onClick={() => advance(true)}>
-                {index >= stops.length - 1 ? "Finish tour" : "Next"}
-              </button>
-              {index < stops.length - 1 ? (
-                <button type="button" className="btn btn-ghost lt-go" onClick={() => advance(true)}>
-                  Skip
+              <div className="lt-pop-actions">
+                <button ref={popupButton} type="button" className="btn btn-primary lt-go" onClick={() => advance(true)}>
+                  {index >= stops.length - 1 ? "Finish" : "Next"}
                 </button>
-              ) : null}
-              <button type="button" className="btn btn-ghost lt-go" onClick={endTour}>
-                End tour
-              </button>
+                {index < stops.length - 1 ? (
+                  <button type="button" className="btn btn-ghost lt-go" onClick={() => advance(true)}>
+                    Skip
+                  </button>
+                ) : null}
+                <button type="button" className="btn btn-ghost lt-go" onClick={endTour}>
+                  End
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -940,6 +939,7 @@ export function LightTour({
         storagePrefix="tvi-holiday"
         title="Holiday music"
         fabTitle="Holiday music"
+        variant="tour"
         note="Real holiday songs for this page. Check the ones to rotate. When a song ends, the next checked song plays."
       />
     </section>
