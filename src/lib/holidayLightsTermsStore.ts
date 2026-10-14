@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { getSessionMember } from "./memberAuth";
 import {
   cacheDurableJson,
@@ -8,16 +9,26 @@ import {
   readJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
-import { isGuestTermsUserId, tourDeviceFromUserAgent } from "./holidayLightsTerms";
+import { HOLIDAY_LIGHTS_TERMS, HOLIDAY_LIGHTS_TERMS_VERSION, tourDeviceFromUserAgent } from "./holidayLightsTerms";
 
 export const HOLIDAY_LIGHTS_TERMS_FILE = "light-tour-terms.json";
 
 export type HolidayLightsAcceptance = {
   userId: string;
+  memberName: string;
+  memberEmail: string;
   deviceType: string;
   appVersion: string;
   acceptedAt: string;
+  termsVersion: string;
+  termsHash: string;
+  ip: string;
+  userAgent: string;
 };
+
+export function holidayLightsTermsHash() {
+  return crypto.createHash("sha256").update(HOLIDAY_LIGHTS_TERMS).digest("hex");
+}
 
 type Store = { acceptances: HolidayLightsAcceptance[] };
 
@@ -56,9 +67,15 @@ function parseStore(raw: unknown): Store {
     if (!userId || !acceptedAt) continue;
     acceptances.push({
       userId,
+      memberName: clip(item.memberName, 80),
+      memberEmail: clip(item.memberEmail, 120),
       deviceType: clip(item.deviceType, 40) || "unknown",
       appVersion: clip(item.appVersion, 40) || "web",
       acceptedAt,
+      termsVersion: clip(item.termsVersion, 40),
+      termsHash: clip(item.termsHash, 64),
+      ip: clip(item.ip, 64),
+      userAgent: clip(item.userAgent, 240),
     });
   }
   return { acceptances: acceptances.slice(-4000) };
@@ -85,33 +102,60 @@ async function readForWrite(): Promise<Store> {
   return parseStore(readJsonFile<Store>(HOLIDAY_LIGHTS_TERMS_FILE));
 }
 
-/** Signed-in members are recorded by account id. Everyone else uses a guest id stored on that device. */
-export async function termsUserIdForRequest(visitorId: unknown) {
+function clientIp(req: Request) {
+  const forwarded = req.headers.get("x-forwarded-for") || "";
+  const first = forwarded.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "";
+  return clip(first, 64);
+}
+
+function coversCurrentTerms(row: HolidayLightsAcceptance) {
+  if (row.termsHash) return row.termsHash === holidayLightsTermsHash();
+  return (row.termsVersion || HOLIDAY_LIGHTS_TERMS_VERSION) === HOLIDAY_LIGHTS_TERMS_VERSION;
+}
+
+/** The signed-in membership is the only identity. A typed name is never accepted. */
+export async function termsUserIdForRequest() {
   const member = await getSessionMember();
-  if (member?.id) return clip(member.id, 80);
-  const visitor = clip(visitorId, 80);
-  if (!isGuestTermsUserId(visitor)) return "";
-  return visitor.toLowerCase();
+  if (!member?.id) return "";
+  if (member.status === "rejected" || member.status === "suspended") return "";
+  return clip(member.id, 80);
 }
 
 export async function hasHolidayLightsAcceptance(userId: string) {
   const id = clip(userId, 80);
-  if (!id) return false;
+  if (!id || id.startsWith("guest-")) return false;
   const store = await readForWrite();
-  return store.acceptances.some((row) => row.userId === id);
+  return store.acceptances.some((row) => row.userId === id && coversCurrentTerms(row));
 }
 
-export function recordHolidayLightsAcceptance(userId: string, req: Request): Promise<HolidayLightsAcceptance> {
-  const id = clip(userId, 80);
-  if (!id) throw new Error("Need a user id.");
-  const { deviceType, appVersion } = tourDeviceFromUserAgent(req.headers.get("user-agent") || "");
-  const record: HolidayLightsAcceptance = {
-    userId: id,
-    deviceType,
-    appVersion,
-    acceptedAt: new Date().toISOString(),
-  };
+export async function listHolidayLightsAcceptances() {
+  const store = await readForWrite();
+  return [...store.acceptances].reverse().slice(0, 200);
+}
+
+export function recordHolidayLightsAcceptance(req: Request): Promise<HolidayLightsAcceptance> {
   return enqueue(async () => {
+    const member = await getSessionMember();
+    if (!member?.id) {
+      throw Object.assign(new Error("Sign in before accepting."), { status: 401 });
+    }
+    if (member.status === "rejected" || member.status === "suspended") {
+      throw Object.assign(new Error("This membership is not active, so the tour stays closed."), { status: 403 });
+    }
+    const userAgent = req.headers.get("user-agent") || "";
+    const { deviceType, appVersion } = tourDeviceFromUserAgent(userAgent);
+    const record: HolidayLightsAcceptance = {
+      userId: clip(member.id, 80),
+      memberName: clip(member.name, 80),
+      memberEmail: clip(member.email, 120),
+      deviceType,
+      appVersion,
+      acceptedAt: new Date().toISOString(),
+      termsVersion: HOLIDAY_LIGHTS_TERMS_VERSION,
+      termsHash: holidayLightsTermsHash(),
+      ip: clientIp(req),
+      userAgent: clip(userAgent, 240),
+    };
     const store = await readForWrite();
     store.acceptances.push(record);
     await writeJsonFileAsync(HOLIDAY_LIGHTS_TERMS_FILE, {

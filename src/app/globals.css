@@ -17537,6 +17537,43 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   color: var(--palm-deep);
 }
 
+.lt-terms-account,
+.lt-terms-who {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.lt-terms-who {
+  margin: 0 0 0.2rem;
+  font-weight: 800;
+}
+
+.lt-terms-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lt-terms-log li {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.lt-terms-log strong,
+.lt-terms-log span {
+  display: block;
+}
+
+.lt-terms-log span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.lt-terms-log li:first-child {
+  border-top: 0;
+}
+
 .lt-terms-gate .lt-go {
   width: 100%;
   flex: none;

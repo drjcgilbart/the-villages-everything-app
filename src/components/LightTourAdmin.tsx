@@ -33,6 +33,41 @@ type Draft = {
 
 const PAGE = 15;
 
+type TermsAcceptance = {
+  userId: string;
+  memberName: string;
+  memberEmail: string;
+  deviceType: string;
+  appVersion: string;
+  acceptedAt: string;
+  termsVersion: string;
+  ip: string;
+  userAgent: string;
+};
+
+function acceptedWhen(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const clock = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `${clock} ET`;
+}
+
+function deviceLabel(deviceType: string) {
+  if (deviceType === "android-app") return "Android app";
+  if (deviceType === "ios-app") return "iPhone app";
+  if (deviceType === "android-web") return "Android browser";
+  if (deviceType === "ios-web") return "iPhone browser";
+  if (deviceType === "desktop-web") return "Computer browser";
+  return "Unknown device";
+}
+
 function locationHelp(err: unknown) {
   if (geoErrorCode(err) === 1) {
     return locationBlockedText("You can type the latitude and longitude instead.");
@@ -140,6 +175,8 @@ export function LightTourAdmin() {
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [houseOpen, setHouseOpen] = useState(false);
+  const [acceptances, setAcceptances] = useState<TermsAcceptance[]>([]);
+  const [termsNote, setTermsNote] = useState("");
   const pinsRef = useRef(pins);
   const draftRef = useRef(draft);
   const holidayRef = useRef(holiday);
@@ -160,6 +197,18 @@ export function LightTourAdmin() {
     setPins(data.pins || []);
     setSignedIn(true);
     setReady(true);
+    try {
+      const termsRes = await fetch("/api/light-tour/terms?admin=1", { credentials: "same-origin" });
+      const termsData = (await termsRes.json().catch(() => null)) as { acceptances?: TermsAcceptance[]; error?: string } | null;
+      if (!termsRes.ok) {
+        setTermsNote(termsData?.error || "The acceptance list did not load.");
+        return;
+      }
+      setAcceptances(termsData?.acceptances || []);
+      setTermsNote("");
+    } catch {
+      setTermsNote("The acceptance list did not load.");
+    }
   }
 
   useEffect(() => {
@@ -495,6 +544,37 @@ export function LightTourAdmin() {
         <p className="panel-hint">
           <Link href="/tour">Back to the tour</Link>
         </p>
+        <div className="about-panel lt-card">
+          <h2>Terms acceptances ({acceptances.length})</h2>
+          <p className="panel-hint">
+            Newest first. Each line is the membership that tapped Accept. The name and email come from that account, not from a box the person typed. The time is Eastern.
+          </p>
+          {termsNote ? (
+            <p className="lt-error" role="alert">
+              {termsNote}
+            </p>
+          ) : null}
+          {acceptances.length === 0 ? <p className="lt-empty">No one has accepted yet.</p> : null}
+          <ul className="lt-terms-log">
+            {acceptances.map((row, index) => {
+              const named = Boolean(row.memberEmail) && !row.userId.startsWith("guest-");
+              return (
+                <li key={`${row.userId}-${row.acceptedAt}-${index}`}>
+                  <strong>{named ? row.memberName || "Member" : "Not tied to an account"}</strong>
+                  {named ? <span>{row.memberEmail}</span> : <span>This older record is only a device id. It does not unlock the tour.</span>}
+                  <span>{acceptedWhen(row.acceptedAt)}</span>
+                  <span>
+                    {deviceLabel(row.deviceType)}
+                    {row.appVersion ? ` · app ${row.appVersion}` : ""}
+                    {row.termsVersion ? ` · terms ${row.termsVersion}` : ""}
+                    {row.ip ? ` · IP ${row.ip}` : ""}
+                  </span>
+                  <span>Account {row.userId}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
         {error ? (
           <p className="lt-error" role="alert">
             {error}

@@ -28,7 +28,6 @@ import {
   type TourHoliday,
 } from "@/lib/lightTourShared";
 import { buildTourSheetPdf } from "@/lib/tourSheetPdf";
-import { guestTermsUserId } from "@/lib/holidayLightsTerms";
 import { HolidayLightsTermsGate } from "./HolidayLightsTermsGate";
 
 type Stop = {
@@ -142,9 +141,11 @@ export function LightTour({
   const [sheetMode, setSheetMode] = useState<"" | "print" | "save">("");
   const [sheetError, setSheetError] = useState("");
   const sheetLock = useRef(false);
-  const [termsState, setTermsState] = useState<"checking" | "needed" | "accepted">("checking");
+  const [termsState, setTermsState] = useState<"checking" | "signin" | "blocked" | "needed" | "accepted">("checking");
   const [termsBusy, setTermsBusy] = useState(false);
   const [termsError, setTermsError] = useState("");
+  const [termsName, setTermsName] = useState("");
+  const [termsEmail, setTermsEmail] = useState("");
   const [readingTerms, setReadingTerms] = useState(false);
 
   indexRef.current = index;
@@ -154,20 +155,32 @@ export function LightTour({
 
   useEffect(() => {
     let cancel = false;
-    const visitorId = guestTermsUserId();
     const slow = window.setTimeout(() => {
-      if (!cancel) setTermsState((state) => (state === "checking" ? "needed" : state));
+      if (!cancel) setTermsState((state) => (state === "checking" ? "signin" : state));
     }, 8000);
-    void fetch(`/api/light-tour/terms?visitorId=${encodeURIComponent(visitorId)}`, {
-      credentials: "same-origin",
-    })
+    void fetch("/api/light-tour/terms", { credentials: "same-origin" })
       .then(async (res) => {
-        const data = (await res.json().catch(() => null)) as { accepted?: boolean } | null;
+        const data = (await res.json().catch(() => null)) as {
+          accepted?: boolean;
+          signedIn?: boolean;
+          name?: string;
+          email?: string;
+          status?: string;
+        } | null;
         if (cancel) return;
-        setTermsState(res.ok && data?.accepted ? "accepted" : "needed");
+        setTermsName(data?.name || "");
+        setTermsEmail(data?.email || "");
+        if (!res.ok || !data) {
+          setTermsState("signin");
+          return;
+        }
+        if (data.accepted) setTermsState("accepted");
+        else if (!data.signedIn) setTermsState("signin");
+        else if (data.status === "rejected" || data.status === "suspended") setTermsState("blocked");
+        else setTermsState("needed");
       })
       .catch(() => {
-        if (!cancel) setTermsState("needed");
+        if (!cancel) setTermsState("signin");
       });
     return () => {
       cancel = true;
@@ -394,9 +407,14 @@ export function LightTour({
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visitorId: guestTermsUserId() }),
+        body: "{}",
       });
       const data = (await res.json().catch(() => null)) as { accepted?: boolean; error?: string } | null;
+      if (res.status === 401) {
+        setTermsState("signin");
+        setTermsError(data?.error || "Sign in before accepting.");
+        return;
+      }
       if (!res.ok || !data?.accepted) {
         setTermsError(data?.error || "The acceptance did not save. Stay on this screen and try again.");
         return;
@@ -425,13 +443,12 @@ export function LightTour({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           start.address
-            ? { holiday, address: start.address, count: stopCount, visitorId: guestTermsUserId() }
+            ? { holiday, address: start.address, count: stopCount }
             : {
                 holiday,
                 latitude: start.here.latitude,
                 longitude: start.here.longitude,
                 count: stopCount,
-                visitorId: guestTermsUserId(),
               }
         ),
       });
@@ -862,9 +879,11 @@ export function LightTour({
     return (
       <section className="section">
         <HolidayLightsTermsGate
-          mode={termsState === "checking" ? "checking" : "needed"}
+          mode={termsState}
           busy={termsBusy}
           error={termsError}
+          accountName={termsName}
+          accountEmail={termsEmail}
           onAccept={() => void acceptTerms()}
         />
       </section>

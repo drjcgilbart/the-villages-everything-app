@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const limited = rateLimitResponse(req, "light-tour-route", 30, 10 * 60 * 1000);
   if (limited) return limited;
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
-  const termsUserId = await termsUserIdForRequest(body?.visitorId);
+  const termsUserId = await termsUserIdForRequest();
   if (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId))) {
     return NextResponse.json(
       { error: "Accept the Holiday Lights terms before a route can start." },

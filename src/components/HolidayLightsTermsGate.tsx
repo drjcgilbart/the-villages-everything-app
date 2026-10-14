@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { HOLIDAY_LIGHTS_TERMS, HOLIDAY_LIGHTS_TERMS_HREF } from "@/lib/holidayLightsTerms";
 
 function trapTab(event: ReactKeyboardEvent) {
@@ -28,12 +29,16 @@ export function HolidayLightsTermsGate({
   mode,
   busy = false,
   error = "",
+  accountName = "",
+  accountEmail = "",
   onAccept,
   onBack,
 }: {
-  mode: "checking" | "needed" | "reading";
+  mode: "checking" | "signin" | "blocked" | "needed" | "reading";
   busy?: boolean;
   error?: string;
+  accountName?: string;
+  accountEmail?: string;
   onAccept?: () => void;
   onBack?: () => void;
 }) {
@@ -93,10 +98,33 @@ export function HolidayLightsTermsGate({
               <button type="button" className="btn btn-primary lt-go" onClick={onBack}>
                 Back to the tour
               </button>
+            ) : mode === "signin" ? (
+              <>
+                <p className="lt-terms-account">
+                  Sign in with your membership. The acceptance is saved under that account’s name and email.
+                </p>
+                <Link className="btn btn-primary lt-go" href="/yard-sale/login?next=/tour">
+                  Sign in to accept
+                </Link>
+              </>
+            ) : mode === "blocked" ? (
+              <>
+                <p className="lt-terms-account">This membership is not active, so the tour stays closed.</p>
+                <Link className="btn btn-primary lt-go" href="/yard-sale/login?next=/tour">
+                  Use a different sign-in
+                </Link>
+              </>
             ) : (
-              <button type="button" className="btn btn-primary lt-go" disabled={busy} onClick={onAccept}>
-                {busy ? "Saving…" : "Accept"}
-              </button>
+              <>
+                <p className="lt-terms-account">
+                  Saved under the name and email on your membership. You do not type a separate name.
+                </p>
+                {accountName ? <p className="lt-terms-who">{accountName}</p> : null}
+                {accountEmail ? <p className="lt-terms-who">{accountEmail}</p> : null}
+                <button type="button" className="btn btn-primary lt-go" disabled={busy} onClick={onAccept}>
+                  {busy ? "Saving…" : "Accept"}
+                </button>
+              </>
             )}
             {error ? (
               <p className="lt-error" role="alert">
