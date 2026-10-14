@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
+import { LightTourSubmit } from "./LightTourSubmit";
 import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/deviceLocation";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 
@@ -138,6 +139,7 @@ export function LightTourAdmin() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [houseOpen, setHouseOpen] = useState(false);
   const pinsRef = useRef(pins);
   const draftRef = useRef(draft);
   const holidayRef = useRef(holiday);
@@ -516,6 +518,10 @@ export function LightTourAdmin() {
           />
         ) : null}
 
+        <button type="button" className="btn btn-ghost lt-go" onClick={() => setHouseOpen(true)}>
+          Add a lit house
+        </button>
+
         <div className="lt-chips" role="radiogroup" aria-label="Holiday for new pins">
           {TOUR_HOLIDAYS.map((item) => (
             <button
@@ -759,6 +765,20 @@ export function LightTourAdmin() {
         <button type="button" className="btn btn-primary lt-drop" onClick={() => void dropPin()}>
           Drop pin
         </button>
+        <LightTourSubmit
+          open={houseOpen}
+          holiday={holiday}
+          canSubmit
+          pendingMember={false}
+          direct
+          onClose={() => setHouseOpen(false)}
+          onSaved={(savedHoliday) => {
+            setHoliday(savedHoliday);
+            void load().catch((err) => {
+              setError(err instanceof Error ? err.message : "Pins did not load.");
+            });
+          }}
+        />
       </div>
     </section>
   );

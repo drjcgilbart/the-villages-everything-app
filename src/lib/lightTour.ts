@@ -251,6 +251,7 @@ export async function submitMemberHouse(input: {
   latitude: number | null;
   longitude: number | null;
   createdBy: string;
+  status?: PinStatus;
 }): Promise<LightPin> {
   let address = clip(input.address, 180);
   const gpsLat = input.latitude;
@@ -291,11 +292,16 @@ export async function submitMemberHouse(input: {
   const photoUrl = clip(input.photoUrl, 400);
   const note = clip(input.note, 160);
   const createdBy = clip(input.createdBy, 120) || "member";
+  const status: PinStatus = input.status === "approved" ? "approved" : "pending";
   return enqueue(async () => {
     const store = await readLightTourForWrite();
     const spot = { holiday, latitude: savedLat, longitude: savedLng };
     if (store.pins.some((existing) => sameHouse(existing, spot))) {
-      throw new Error("That house is already saved or waiting for approval.");
+      throw new Error(
+        status === "approved"
+          ? "That house is already on the tour."
+          : "That house is already saved or waiting for approval."
+      );
     }
     const now = new Date().toISOString();
     const pin: LightPin = {
@@ -309,7 +315,7 @@ export async function submitMemberHouse(input: {
       createdAt: now,
       updatedAt: now,
       createdBy,
-      status: "pending",
+      status,
     };
     store.pins = [pin, ...store.pins];
     await writeStore(store);
