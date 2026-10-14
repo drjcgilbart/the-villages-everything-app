@@ -84,12 +84,12 @@ const VILLAGES_START = {
 
 function blockedLocationNote() {
   if (typeof navigator !== "undefined" && isNativeAppShell()) {
-    return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. On Android, turn Precise on too.";
+    return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. On Android, turn Precise on too. Or turn off Use my location and type your street address.";
   }
   if (typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
-    return "Location is blocked on this phone, so the route starts in the middle of The Villages. Tap the lock icon in the address bar, set Location to Allow, then build the route again.";
+    return "Location is blocked on this phone, so the route starts in the middle of The Villages. Tap the lock icon in the address bar, set Location to Allow, then build the route again. Or turn off Use my location and type your street address.";
   }
-  return "This computer did not share a location, so the route starts in the middle of The Villages. On a phone, allow location and it starts where you are.";
+  return "This computer did not share a location, so the route starts in the middle of The Villages. Turn off Use my location and type your street address.";
 }
 
 export function LightTour({
@@ -100,6 +100,7 @@ export function LightTour({
   const [holiday, setHoliday] = useState<TourHoliday>("halloween");
   const [countText, setCountText] = useState(String(DEFAULT_STOPS));
   const [useMine, setUseMine] = useState(true);
+  const [typedAddress, setTypedAddress] = useState("");
   const [typedLat, setTypedLat] = useState("");
   const [typedLng, setTypedLng] = useState("");
   const [phase, setPhase] = useState<Phase>("pick");
@@ -309,28 +310,30 @@ export function LightTour({
     }
   }
 
-  async function startingPoint(): Promise<{ here: Here; note: string }> {
+  async function startingPoint(): Promise<{ here: Here; note: string; address: string }> {
     if (!useMine) {
+      const address = typedAddress.trim();
+      if (address) return { here: VILLAGES_START, note: "", address };
       if (!typedLat.trim() || !typedLng.trim()) {
-        throw new Error("Type a latitude and longitude, or turn Use my location back on.");
+        throw new Error("Type your street address, or a latitude and longitude.");
       }
       const typed = { latitude: Number(typedLat), longitude: Number(typedLng) };
       const typedProblem = tourStartProblem(typed);
       if (typedProblem) throw new Error(typedProblem);
-      return { here: typed, note: "" };
+      return { here: typed, note: "", address: "" };
     }
     try {
       const here = await readDeviceLocation((point) => !tourStartProblem(point));
       const problem = tourStartProblem(here);
-      if (!problem) return { here, note: "" };
+      if (!problem) return { here, note: "", address: "" };
       // A desktop sometimes reports the ocean at 0, 0 instead of a real fix.
       if (Math.abs(here.latitude) < 0.05 && Math.abs(here.longitude) < 0.05) {
-        return { here: VILLAGES_START, note: blockedLocationNote() };
+        return { here: VILLAGES_START, note: blockedLocationNote(), address: "" };
       }
       throw new Error(problem);
     } catch (err) {
       if (geoErrorCode(err) || (err instanceof Error && err.message === "This browser does not share location.")) {
-        return { here: VILLAGES_START, note: blockedLocationNote() };
+        return { here: VILLAGES_START, note: blockedLocationNote(), address: "" };
       }
       throw err;
     }
@@ -343,18 +346,26 @@ export function LightTour({
     setBusy(true);
     try {
       const start = await startingPoint();
-      const here = start.here;
       const stopCount = stopsFromText(countText);
       setCountText(String(stopCount));
-      rememberHere(here);
       const res = await fetch("/api/light-tour/route", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ holiday, latitude: here.latitude, longitude: here.longitude, count: stopCount }),
+        body: JSON.stringify(
+          start.address
+            ? { holiday, address: start.address, count: stopCount }
+            : { holiday, latitude: start.here.latitude, longitude: start.here.longitude, count: stopCount }
+        ),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "The route did not load.");
+      const reported = data.start as { latitude?: number; longitude?: number } | undefined;
+      const here =
+        reported && Number.isFinite(Number(reported.latitude)) && Number.isFinite(Number(reported.longitude))
+          ? { latitude: Number(reported.latitude), longitude: Number(reported.longitude) }
+          : start.here;
+      rememberHere(here);
       setStops(data.stops || []);
       setLine(data.line || []);
       setWarning([start.note, data.warning].filter(Boolean).join(" "));
@@ -777,32 +788,46 @@ export function LightTour({
               Use my location
             </button>
             <p className="panel-hint">
-              The tour uses your location to find the nearest houses and a driving route. Allow location when the phone
-              asks. If location is blocked, the route still starts in the middle of The Villages.
+              {useMine
+                ? "The tour uses your location to find the nearest houses and a driving route. Allow location when the phone asks. If location is blocked, the route still starts in the middle of The Villages."
+                : "Type the street address where the tour should start. Include the city and ZIP."}
             </p>
             {useMine ? null : (
-              <div className="lt-coords">
+              <>
                 <div className="field">
-                  <label htmlFor="lt-lat">Latitude</label>
+                  <label htmlFor="lt-start-address">Starting address</label>
                   <input
-                    id="lt-lat"
-                    inputMode="decimal"
-                    value={typedLat}
-                    placeholder="28.908"
-                    onChange={(e) => setTypedLat(e.target.value)}
+                    id="lt-start-address"
+                    type="text"
+                    autoComplete="street-address"
+                    value={typedAddress}
+                    placeholder="6467 Glover Ln, The Villages, FL 34762"
+                    onChange={(e) => setTypedAddress(e.target.value)}
                   />
                 </div>
-                <div className="field">
-                  <label htmlFor="lt-lng">Longitude</label>
-                  <input
-                    id="lt-lng"
-                    inputMode="decimal"
-                    value={typedLng}
-                    placeholder="-81.985"
-                    onChange={(e) => setTypedLng(e.target.value)}
-                  />
+                <div className="lt-coords">
+                  <div className="field">
+                    <label htmlFor="lt-lat">Latitude</label>
+                    <input
+                      id="lt-lat"
+                      inputMode="decimal"
+                      value={typedLat}
+                      placeholder="28.908"
+                      onChange={(e) => setTypedLat(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="lt-lng">Longitude</label>
+                    <input
+                      id="lt-lng"
+                      inputMode="decimal"
+                      value={typedLng}
+                      placeholder="-81.985"
+                      onChange={(e) => setTypedLng(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
             {empty ? (
               <p className="lt-empty">

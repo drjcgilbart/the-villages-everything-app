@@ -1181,6 +1181,90 @@ async function resolveMapLink(url: string): Promise<{ latitude: number; longitud
   }
 }
 
+const STREET_WORDS = new Set([
+  "fl",
+  "florida",
+  "the",
+  "villages",
+  "village",
+  "lady",
+  "lake",
+  "sumterville",
+  "wildwood",
+  "oxford",
+  "summerfield",
+  "ln",
+  "lane",
+  "way",
+  "dr",
+  "drive",
+  "st",
+  "street",
+  "ct",
+  "court",
+  "ave",
+  "avenue",
+  "rd",
+  "road",
+  "blvd",
+  "cir",
+  "circle",
+  "pl",
+  "place",
+  "ter",
+  "terrace",
+  "of",
+  "and",
+]);
+
+function streetKey(value: string): { num: string; street: string[] } | null {
+  const tokens = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const num = tokens.find((token) => /^\d{2,6}$/.test(token)) || "";
+  const street = tokens.filter(
+    (token) => token !== num && !STREET_WORDS.has(token) && !/^\d{5}$/.test(token) && token.length >= 4
+  );
+  if (!num || !street.length) return null;
+  return { num, street };
+}
+
+/** A saved house can stand in when the map search does not know that street. */
+function locateSavedHouse(
+  query: string,
+  pins: { address: string; latitude: number; longitude: number }[]
+): { latitude: number; longitude: number } | null {
+  const wanted = streetKey(query);
+  if (!wanted) return null;
+  let best: { latitude: number; longitude: number; score: number } | null = null;
+  for (const pin of pins) {
+    const have = streetKey(pin.address);
+    if (!have || have.num !== wanted.num) continue;
+    const shared = wanted.street.filter((token) => have.street.includes(token));
+    if (!shared.length) continue;
+    const score = shared.join("").length;
+    if (!best || score > best.score) {
+      best = { latitude: pin.latitude, longitude: pin.longitude, score };
+    }
+  }
+  return best ? { latitude: best.latitude, longitude: best.longitude } : null;
+}
+
+/** Street address to a starting point near The Villages. */
+export async function locateTourAddress(
+  address: string,
+  pins: { address: string; latitude: number; longitude: number }[] = []
+): Promise<{ latitude: number; longitude: number } | null> {
+  const query = clip(address, 180);
+  if (query.length < 5) return null;
+  const hit = await forwardGeocode(query);
+  if (hit) return { latitude: hit.latitude, longitude: hit.longitude };
+  return locateSavedHouse(query, pins);
+}
+
 export async function forwardGeocode(
   query: string
 ): Promise<{ latitude: number; longitude: number; address: string } | null> {
