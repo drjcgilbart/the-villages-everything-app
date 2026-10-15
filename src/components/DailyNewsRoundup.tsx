@@ -1,46 +1,27 @@
+"use client";
+
+import { useRef, useState } from "react";
 import { formatDate } from "@/lib/format";
-import {
-  newsVideoUrl,
-  type ChannelYoutubeVideo,
-} from "@/lib/channelYoutube";
+import type { ChannelYoutubeVideo } from "@/lib/channelYoutube";
+import { isChannelShort, isDailyNewsRoundup } from "@/lib/newsVideoMatch";
 import { SITE_BRAND } from "@/lib/siteBrand";
 
 function thumb(videoId: string) {
   return `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
 }
 
-function RoundupCard({
-  video,
-  lead = false,
-}: {
-  video: ChannelYoutubeVideo;
-  lead?: boolean;
-}) {
-  const href = newsVideoUrl(video);
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={lead ? "news-roundup-lead" : "news-roundup-card"}
-    >
-      <span className="video-thumb-wrap">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={thumb(video.videoId)} alt="" className="video-thumb" />
-        <span className="play-badge" aria-hidden="true">
-          ▶
-        </span>
-      </span>
-      <span className="news-roundup-copy">
-        <span className="card-meta">
-          <span className="pill pill-video">Watch on YouTube</span>
-          <time dateTime={video.publishedAt}>{formatDate(video.publishedAt)}</time>
-        </span>
-        <strong>{video.title}</strong>
-        {lead ? <em>Latest roundup</em> : null}
-      </span>
-    </a>
-  );
+function embedSrc(videoId: string, autoplay: boolean) {
+  const params = new URLSearchParams({
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1",
+  });
+  if (autoplay) params.set("autoplay", "1");
+  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params}`;
+}
+
+function shortTitle(title: string) {
+  return title.replace(/\s*#shorts\b/i, "").trim();
 }
 
 export function DailyNewsRoundup({
@@ -52,8 +33,22 @@ export function DailyNewsRoundup({
   shorts: ChannelYoutubeVideo[];
   loadFailed: boolean;
 }) {
-  const [latest, ...earlier] = roundups;
+  const [latest] = roundups;
   const channel = SITE_BRAND.youtube;
+  const playerRef = useRef<HTMLDivElement>(null);
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const playing =
+    [...roundups, ...shorts].find((video) => video.videoId === pickedId) || latest || null;
+  const playingShort = playing ? isChannelShort(playing) && !isDailyNewsRoundup(playing.title) : false;
+  const roundupList =
+    roundups.length > 1 || (latest && playing && playing.videoId !== latest.videoId)
+      ? roundups
+      : [];
+
+  function pick(video: ChannelYoutubeVideo) {
+    setPickedId(video.videoId);
+    playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <section className="section" id="daily-roundup">
@@ -63,8 +58,8 @@ export function DailyNewsRoundup({
             <h2>Daily news roundup</h2>
             <p>
               The latest roundup from {channel.title}, plus the shorts that go
-              with it. A new upload on YouTube shows up here on its own. Older
-              roundups stay on this page.
+              with it. Press play here. You stay on this page. A new upload
+              shows up on its own, and older roundups stay.
             </p>
           </div>
           <a
@@ -77,26 +72,67 @@ export function DailyNewsRoundup({
           </a>
         </div>
 
-        {loadFailed && !latest && shorts.length === 0 ? (
+        {loadFailed && !playing && shorts.length === 0 ? (
           <p className="lt-error" role="alert">
             The roundup list did not load. Open the channel on YouTube.
           </p>
         ) : null}
 
-        {!latest && shorts.length === 0 && !loadFailed ? (
+        {!playing && shorts.length === 0 && !loadFailed ? (
           <div className="empty-state">
             The next daily roundup will show up here after it is posted on YouTube.
           </div>
         ) : null}
 
-        {latest ? <RoundupCard video={latest} lead /> : null}
+        {playing ? (
+          <div
+            ref={playerRef}
+            className={playingShort ? "news-roundup-lead is-short" : "news-roundup-lead"}
+          >
+            <div className={playingShort ? "fd-video-frame news-roundup-short-frame" : "fd-video-frame"}>
+              <iframe
+                key={playing.videoId}
+                src={embedSrc(playing.videoId, pickedId === playing.videoId)}
+                title={playing.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+            <div className="news-roundup-copy">
+              <span className="card-meta">
+                <span className="pill pill-video">{playingShort ? "Short" : "Roundup"}</span>
+                <time dateTime={playing.publishedAt}>{formatDate(playing.publishedAt)}</time>
+              </span>
+              <strong>{playingShort ? shortTitle(playing.title) : playing.title}</strong>
+              <em>Plays on this page</em>
+            </div>
+          </div>
+        ) : null}
 
-        {earlier.length > 0 ? (
+        {roundupList.length > 0 ? (
           <>
-            <h3 className="news-roundup-subhead">Earlier roundups</h3>
+            <h3 className="news-roundup-subhead">Roundups</h3>
             <div className="news-roundup-grid">
-              {earlier.map((video) => (
-                <RoundupCard key={video.videoId} video={video} />
+              {roundupList.map((video) => (
+                <button
+                  key={video.videoId}
+                  type="button"
+                  className={video.videoId === playing?.videoId ? "news-roundup-card is-on" : "news-roundup-card"}
+                  onClick={() => pick(video)}
+                  aria-pressed={video.videoId === playing?.videoId}
+                >
+                  <span className="video-thumb-wrap">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={thumb(video.videoId)} alt="" className="video-thumb" />
+                    <span className="play-badge" aria-hidden="true">
+                      ▶
+                    </span>
+                  </span>
+                  <span className="news-roundup-copy">
+                    <time dateTime={video.publishedAt}>{formatDate(video.publishedAt)}</time>
+                    <strong>{video.title}</strong>
+                  </span>
+                </button>
               ))}
             </div>
           </>
@@ -107,19 +143,19 @@ export function DailyNewsRoundup({
             <h3 className="news-roundup-subhead">Shorts</h3>
             <div className="news-shorts-row">
               {shorts.map((video) => (
-                <a
+                <button
                   key={video.videoId}
-                  href={newsVideoUrl(video)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="news-short-card"
+                  type="button"
+                  className={video.videoId === playing?.videoId ? "news-short-card is-on" : "news-short-card"}
+                  onClick={() => pick(video)}
+                  aria-pressed={video.videoId === playing?.videoId}
                 >
                   <span className="news-short-thumb">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={thumb(video.videoId)} alt="" />
                   </span>
-                  <strong>{video.title.replace(/\s*#shorts\b/i, "")}</strong>
-                </a>
+                  <strong>{shortTitle(video.title)}</strong>
+                </button>
               ))}
             </div>
           </>

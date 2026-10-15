@@ -5,8 +5,11 @@
 
 import { fetchChannelRss } from "./realEstateYoutube";
 import { readJsonFile, writeJsonFileAsync } from "./dataFs";
+import { isChannelShort, isDailyNewsRoundup } from "./newsVideoMatch";
 import { SITE_BRAND } from "./siteBrand";
 import type { Video } from "./types";
+
+export { isChannelShort, isDailyNewsRoundup };
 
 export type ChannelYoutubeVideo = {
   videoId: string;
@@ -37,20 +40,6 @@ const MAX_KEEP = 200;
 /** Roundups stay on Local News after newer uploads push them off the RSS feed. */
 const MAX_NEWS_ROUNDUPS = 500;
 const MAX_NEWS_SHORTS = 400;
-
-/** Daily desk titles. Shorts are detected separately and are not required to match. */
-export function isDailyNewsRoundup(title: string): boolean {
-  const t = title.trim();
-  return (
-    /^the villages news\b/i.test(t) ||
-    /^the week ahead\b/i.test(t) ||
-    /^this weekend in the villages\b/i.test(t)
-  );
-}
-
-export function isChannelShort(video: { title: string; short?: boolean }): boolean {
-  return Boolean(video.short) || /#shorts\b/i.test(video.title);
-}
 
 function emptyCache(): ChannelYoutubeCache {
   return {
