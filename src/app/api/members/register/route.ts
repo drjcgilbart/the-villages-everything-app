@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { acceptHouseholdInvite } from "@/lib/household";
 import { memberCookieOptions } from "@/lib/memberAuth";
 import { loadMemberSpaces, saveMemberSpacesAsync } from "@/lib/memberSpace";
@@ -15,7 +14,11 @@ import {
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { grantSiteOwnerFullAccess } from "@/lib/siteOwnerAccess";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
-import { sendMemberVerificationEmail } from "@/lib/memberEmailVerify";
+import {
+  memberEmailIsVerified,
+  notifyAdminOfConfirmedMemberRequest,
+  sendMemberVerificationEmail,
+} from "@/lib/memberEmailVerify";
 import { isolateAllCopiedOwnerBoards, seedNewMemberBoards } from "@/lib/memberBoards";
 
 export const dynamic = "force-dynamic";
@@ -48,16 +51,14 @@ export async function POST(req: Request) {
       }
     }
     await saveYardSaleAsync(loadYardSale());
-    let mailNote = "";
+    const stored = getMemberById(member.id);
+    const wasVerified = stored ? memberEmailIsVerified(stored) : false;
+    let mailFailed = false;
     if (isSiteOwnerEmail(member.email)) {
       await markMemberEmailVerified(member.id);
-    } else {
+    } else if (!wasVerified) {
       const sent = await sendMemberVerificationEmail(member.id);
-      mailNote = sent.ok
-        ? sent.already
-          ? ""
-          : " Check that inbox and confirm the email before you build a Holiday Lights route."
-        : " The confirmation email did not send. After you sign in, open Holiday Lights and use Send the confirmation email.";
+      mailFailed = !sent.ok;
     }
     if (!isSiteOwnerEmail(member.email)) {
       await seedNewMemberBoards(member.id);
@@ -72,30 +73,28 @@ export async function POST(req: Request) {
     const ownerReady = isSiteOwnerEmail(member.email);
     const updatedPending =
       !ownerReady && member.status === "pending" && !householdJoined;
-    if (updatedPending) {
-      await notifyAdminOfApprovalRequest({
-        topic: "Members",
-        title: member.name,
-        submittedBy: member.name,
-        createdAt: member.createdAt,
-        details: {
-          name: member.name,
-          email: member.email,
-          phone: member.phone,
-          village: member.village,
-          status: member.status,
-        },
-      });
-    }
     const fresh = getMemberById(member.id);
+    const confirmed = fresh ? memberEmailIsVerified(fresh) : wasVerified;
+    if (updatedPending && confirmed && fresh) {
+      await notifyAdminOfConfirmedMemberRequest(fresh);
+    }
     const publicMember = fresh ? toPublicMember(fresh) : member;
+    const waitingNote = mailFailed
+      ? " The confirmation email did not send. Sign in and press Send the confirmation email. The request stays off the admin list until the inbox is confirmed."
+      : " Open that email and press Confirm my email. The request goes to the admin only after that. You can sign in with this password while you wait.";
     const message = ownerReady
       ? "Site owner is approved with full My Space access. Open My Space."
       : householdJoined
-      ? `You’re in on this browser. Open My Space — your boards are yours, on that household plan.${mailNote}`
-      : updatedPending
-        ? `Thanks! Your membership request is on file (or was updated). You can sign in with this password while pending; posting listings still needs admin approval.${mailNote}`
-        : `Thanks! Your membership request was submitted. You’ll be able to post listings after the admin approves you.${mailNote}`;
+      ? `You’re in on this browser. Open My Space — your boards are yours, on that household plan.${
+          confirmed ? "" : waitingNote
+        }`
+      : updatedPending && confirmed
+        ? "Thanks! This email is already confirmed, so the request is with the admin. You can sign in while it is pending. Posting listings still needs admin approval."
+        : updatedPending
+          ? `Thanks! Your membership request is saved.${waitingNote} Posting listings still needs admin approval after that.`
+          : `Thanks! Your membership request was submitted.${
+              confirmed ? " You’ll be able to post listings after the admin approves you." : waitingNote
+            }`;
     const res = NextResponse.json({
       ok: true,
       member: publicMember,

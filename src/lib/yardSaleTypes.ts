@@ -34,6 +34,8 @@ export type PublicMember = {
   village?: string;
   status: MemberStatus;
   createdAt: string;
+  /** True after Confirm my email, or for a site-owner address. */
+  emailVerified?: boolean;
 };
 
 export type ListingStatus =

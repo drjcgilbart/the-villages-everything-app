@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { sendOutboundEmail } from "./adminNotify";
+import { notifyAdminOfApprovalRequest, sendOutboundEmail } from "./adminNotify";
 import {
   cacheDurableJson,
   durableConfigured,
@@ -125,6 +125,29 @@ function memberMailError(sent: { ok: false; error?: string; skipped?: boolean })
   return "The confirmation email could not be sent right now. Try again in a few minutes.";
 }
 
+/** Admin hears about a sign-up only after Confirm my email. */
+export async function notifyAdminOfConfirmedMemberRequest(member: Member) {
+  if (member.status !== "pending" || isSiteOwnerEmail(member.email)) return;
+  try {
+    await notifyAdminOfApprovalRequest({
+      topic: "Members",
+      title: member.name,
+      submittedBy: member.name,
+      createdAt: member.createdAt,
+      details: {
+        name: member.name,
+        email: member.email,
+        phone: member.phone || "",
+        village: member.village || "",
+        status: member.status,
+        emailConfirmed: "yes",
+      },
+    });
+  } catch (err) {
+    console.error("[email-verify] admin notify", err);
+  }
+}
+
 function letter(member: Member, url: string) {
   const rawFirst = member.name.trim().split(/\s+/)[0] || "Neighbor";
   const first = rawFirst.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -135,17 +158,17 @@ function letter(member: Member, url: string) {
     `Confirm the email on your membership by opening this link and pressing Confirm my email:`,
     url,
     ``,
-    `The link is good for 48 hours. This shows the inbox can receive mail. The Holiday Lights warning is a separate Accept on the tour page.`,
+    `The link is good for 48 hours. Pressing the button confirms this inbox. A membership that is still waiting is sent to the admin only after that. The Holiday Lights warning is a separate Accept on the tour page.`,
     ``,
     `If you did not create this account, you can ignore this email.`,
   ].join("\n");
   const safeUrl = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  const html = `<p>Hello ${first},</p><p>Confirm the email on your membership. Open the link, then press <strong>Confirm my email</strong>.</p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link is good for 48 hours. This shows the inbox can receive mail. The Holiday Lights warning is a separate Accept on the tour page.</p><p>If you did not create this account, you can ignore this email.</p>`;
+  const html = `<p>Hello ${first},</p><p>Confirm the email on your membership. Open the link, then press <strong>Confirm my email</strong>.</p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link is good for 48 hours. Pressing the button confirms this inbox. A membership that is still waiting is sent to the admin only after that. The Holiday Lights warning is a separate Accept on the tour page.</p><p>If you did not create this account, you can ignore this email.</p>`;
   return { subject, text, html };
 }
 
-const LINK_MISSING = "This link is not on file. Open Holiday Lights and send a new one.";
-const LINK_EXPIRED = "This link has expired. Open Holiday Lights and send a new one.";
+const LINK_MISSING = "This link is not on file. Sign in and press Send the confirmation email.";
+const LINK_EXPIRED = "This link has expired. Sign in and press Send the confirmation email.";
 const LINK_UNREADABLE = "The confirmation list did not load. Press the button again.";
 const LINK_EMPTY = "The confirmation did not include the link. Press the button again.";
 
@@ -188,8 +211,10 @@ export function confirmMemberEmail(rawToken: string) {
     const tokenHash = hashToken(raw);
     const challenge = await memberByEmailChallenge(tokenHash);
     if (challenge.member && !challenge.expired) {
+      const wasVerified = memberEmailIsVerified(challenge.member);
       const member = await markMemberEmailVerified(challenge.member.id);
       if (!member) throw Object.assign(new Error(LINK_MISSING), { status: 400 });
+      if (!wasVerified) await notifyAdminOfConfirmedMemberRequest(member);
       return member;
     }
     if (challenge.expired) {
@@ -209,8 +234,11 @@ export function confirmMemberEmail(rawToken: string) {
     if (Date.parse(row.expiresAt) < Date.now()) {
       throw Object.assign(new Error(LINK_EXPIRED), { status: 400 });
     }
+    const prior = getMemberById(row.memberId);
+    const wasVerified = prior ? memberEmailIsVerified(prior) : false;
     const member = await markMemberEmailVerified(row.memberId);
     if (!member) throw Object.assign(new Error(LINK_MISSING), { status: 400 });
+    if (!wasVerified) await notifyAdminOfConfirmedMemberRequest(member);
     if (!row.usedAt) {
       row.usedAt = new Date().toISOString();
       try {

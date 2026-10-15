@@ -25,6 +25,7 @@ import {
 } from "@/lib/memberSpace";
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
 import { deleteMemberAccount } from "@/lib/memberDelete";
+import { memberEmailIsVerified } from "@/lib/memberEmailVerify";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import {
   appendAdminLog,
@@ -320,6 +321,15 @@ export async function POST(req: Request) {
       const id = String(body.id || "");
       const mem = getMemberById(id);
       const becameApproved = mem?.status === "pending";
+      if (becameApproved && mem && !memberEmailIsVerified(mem)) {
+        return NextResponse.json(
+          {
+            error:
+              "This person has not confirmed their email yet. Approve stays off until they press Confirm my email.",
+          },
+          { status: 400 }
+        );
+      }
       if (becameApproved) {
         setMemberStatus(id, "approved");
       }
@@ -407,6 +417,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
     const before = getMemberById(String(body.id || ""));
+    if (
+      status === "approved" &&
+      before?.status === "pending" &&
+      !memberEmailIsVerified(before)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This person has not confirmed their email yet. Approve stays off until they press Confirm my email.",
+        },
+        { status: 400 }
+      );
+    }
     const member = setMemberStatus(body.id, status, body.notes);
     if (status === "approved" && before && !isSiteOwnerEmail(before.email)) {
       await seedNewMemberBoards(String(body.id || ""));

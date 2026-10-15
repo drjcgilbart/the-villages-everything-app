@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { isSiteOwnerEmail } from "./siteOwner";
 import { getMemberById, hydrateYardSale } from "./yardSale";
 import { cookieSecure } from "./security";
 
@@ -70,8 +71,13 @@ export async function requireApprovedMember() {
   const member = await getSessionMember();
   if (!member) throw Object.assign(new Error("Please sign in"), { code: 401 });
   if (member.status === "pending") {
+    const verified = Boolean(member.emailVerifiedAt) || isSiteOwnerEmail(member.email);
     throw Object.assign(
-      new Error("Your membership is pending admin approval"),
+      new Error(
+        verified
+          ? "Your membership is pending admin approval"
+          : "Confirm the email on this account. The request goes to the admin after that."
+      ),
       { code: 403 }
     );
   }

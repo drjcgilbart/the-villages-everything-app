@@ -418,6 +418,8 @@ export function AdminMembersPanel() {
   }
 
   const pendingMembers = members.filter((m) => m.status === "pending");
+  const readyMembers = pendingMembers.filter((m) => m.emailVerified);
+  const waitingEmail = pendingMembers.filter((m) => !m.emailVerified);
   const topTierPending = members.filter(
     (m) => m.topTierNomination?.status === "pending"
   );
@@ -496,8 +498,12 @@ export function AdminMembersPanel() {
 
       <div className="dining-summary-stats" style={{ marginBottom: "1.25rem" }}>
         <div className="stat">
-          <strong>{pendingMembers.length}</strong>
-          <span>Pending sign-ups</span>
+          <strong>{readyMembers.length}</strong>
+          <span>Ready to approve</span>
+        </div>
+        <div className="stat">
+          <strong>{waitingEmail.length}</strong>
+          <span>Waiting on email</span>
         </div>
         <div className="stat">
           <strong>{topTierPending.length}</strong>
@@ -576,14 +582,49 @@ export function AdminMembersPanel() {
         </>
       )}
 
-      {pendingMembers.length > 0 && (
+      {waitingEmail.length > 0 && (
+        <>
+          <h3>
+            Waiting on email{" "}
+            <span className="pill">{waitingEmail.length}</span>
+          </h3>
+          <p className="panel-hint">
+            These people asked to join, but they have not pressed Confirm my email.
+            Approve stays off until that inbox is confirmed.
+          </p>
+          <div className="admin-list" style={{ marginBottom: "1.5rem" }}>
+            {waitingEmail.map((m) => (
+              <MemberAdminRow
+                key={m.id}
+                m={m}
+                tiers={tiers}
+                busy={busy}
+                onStatus={setMemberStatus}
+                onPlan={setMemberPlan}
+                onLoofah={toggleGoldenLoofah}
+                onPassword={resetMemberPassword}
+                onDelete={deleteMember}
+                onWelcome={sendWelcome}
+                onSaveDetails={saveMemberDetails}
+                onTopTier={topTierAction}
+                onTrial={trialAction}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {readyMembers.length > 0 && (
         <>
           <h3>
             Sign-up requests{" "}
-            <span className="pill pill-yard">{pendingMembers.length} pending</span>
+            <span className="pill pill-yard">{readyMembers.length} pending</span>
           </h3>
+          <p className="panel-hint">
+            These inboxes are confirmed. Approve or reject them here.
+          </p>
           <div className="admin-list" style={{ marginBottom: "1.5rem" }}>
-            {pendingMembers.map((m) => (
+            {readyMembers.map((m) => (
               <MemberAdminRow
                 key={m.id}
                 m={m}
@@ -614,8 +655,8 @@ export function AdminMembersPanel() {
       <div className="admin-list">
         {members.length === 0 && (
           <p className="panel-hint">
-            No membership requests yet. When someone joins via Marketplace / Hub
-            membership, they&apos;ll appear here for approval.
+            No membership requests yet. After someone joins and presses Confirm my
+            email, they show up here for approval.
           </p>
         )}
         {members.map((m) => (
@@ -884,7 +925,7 @@ function MemberAdminRow({
             Grant free month
           </button>
         )}
-        {nom?.status === "pending" && (
+        {nom?.status === "pending" && (m.status !== "pending" || m.emailVerified) && (
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -903,7 +944,7 @@ function MemberAdminRow({
         >
           {m.goldenLoofah ? "Remove Loofah" : "Grant Loofah"}
         </button>
-        {m.status !== "approved" && (
+        {m.status !== "approved" && (m.status !== "pending" || m.emailVerified) && (
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -912,6 +953,9 @@ function MemberAdminRow({
           >
             Approve
           </button>
+        )}
+        {m.status === "pending" && !m.emailVerified && (
+          <span className="panel-hint">Waiting for email confirmation</span>
         )}
         {m.status !== "rejected" && m.status !== "pending" && (
           <button

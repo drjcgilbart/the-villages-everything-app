@@ -74,6 +74,31 @@ export function MemberDashboard() {
     setListings([]);
   }
 
+  async function resendConfirmation() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/verify/send", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string; already?: boolean } | null;
+      if (!res.ok) {
+        flash("err", data?.error || "The confirmation email did not send.");
+        return;
+      }
+      flash(
+        "ok",
+        data?.already
+          ? "This inbox is already confirmed."
+          : "Confirmation email sent. Open it and press Confirm my email."
+      );
+    } catch {
+      flash("err", "The confirmation email did not send.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function uploadReady(file: File, kind: "image" | "video") {
     const fd = new FormData();
     fd.append("file", file);
@@ -220,6 +245,7 @@ export function MemberDashboard() {
   }
 
   if (member.status === "pending") {
+    const emailVerified = Boolean(member.emailVerified);
     return (
       <div className="admin-card">
         <h2 style={{ marginTop: 0 }} className="member-name">
@@ -228,12 +254,27 @@ export function MemberDashboard() {
         <p className="member-name">
           Hi{" "}
           <span className="member-name-text">{member.name}</span>
-          <MemberBadgesRow badges={badges} /> — your request is waiting for admin
-          approval. You&apos;ll be able to post listings once approved.
+          <MemberBadgesRow badges={badges} />
+          {emailVerified
+            ? " — your email is confirmed. The request is waiting for admin approval. You’ll be able to post listings once approved."
+            : " — open the confirmation email and press Confirm my email. The request goes to the admin only after that."}
         </p>
-        <button type="button" className="btn btn-ghost" onClick={logout}>
-          Sign out
-        </button>
+        {msg && <div className={`msg msg-${msg.kind}`}>{msg.text}</div>}
+        <div className="hero-actions">
+          {!emailVerified && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busy}
+              onClick={() => void resendConfirmation()}
+            >
+              {busy ? "Sending…" : "Send the confirmation email"}
+            </button>
+          )}
+          <button type="button" className="btn btn-ghost" onClick={logout}>
+            Sign out
+          </button>
+        </div>
       </div>
     );
   }

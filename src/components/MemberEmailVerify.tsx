@@ -41,10 +41,19 @@ export function MemberEmailVerify() {
     return (
       <div className="about-panel">
         <h2>Email confirmed</h2>
-        <p>This inbox is confirmed{email ? ` for ${email}` : ""}. Go back to Holiday Lights and tap Accept.</p>
-        <Link href="/tour" className="btn btn-primary">
-          Back to Holiday Lights
-        </Link>
+        <p>
+          This inbox is confirmed{email ? ` for ${email}` : ""}. If this was a new
+          membership request, it is now with the admin. Holiday Lights still needs
+          its own Accept on the tour page.
+        </p>
+        <div className="hero-actions">
+          <Link href="/yard-sale/login?next=/my-space" className="btn btn-primary">
+            Sign in
+          </Link>
+          <Link href="/tour" className="btn btn-ghost">
+            Back to Holiday Lights
+          </Link>
+        </div>
       </div>
     );
   }
@@ -53,9 +62,9 @@ export function MemberEmailVerify() {
     return (
       <div className="about-panel">
         <h2>Confirm your email</h2>
-        <p>Open the link from the confirmation email. That page has the button that confirms the inbox.</p>
-        <Link href="/tour" className="btn btn-primary">
-          Back to Holiday Lights
+        <p>Open the link from the confirmation email. That page has the button that confirms the inbox. After you sign in, Send the confirmation email can send a new link.</p>
+        <Link href="/yard-sale/login?next=/my-space" className="btn btn-primary">
+          Sign in
         </Link>
       </div>
     );

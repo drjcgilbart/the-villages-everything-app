@@ -55,7 +55,7 @@ export function MemberJoinForm(props: { householdToken?: string }) {
         kind: "ok",
         text:
           data.message ||
-          "Request submitted! You can sign in with this password. Admin still reviews the request before the full member tools unlock.",
+          "Request saved. Open the confirmation email and press Confirm my email. The admin sees the request only after that.",
       });
       setPassword("");
       if (data.householdJoined) {
@@ -144,7 +144,7 @@ export function MemberJoinForm(props: { householdToken?: string }) {
         </Link>
         {invite
           ? " with the invited email to join this household."
-          : " — you can re-submit while still pending to set a new password. After you’re approved, you can try Square Royalty free for one month."}
+          : ". While the request is still pending you can re-submit to set a new password. Confirm the email before the admin can approve it. After you’re approved, you can try Square Royalty free for one month."}
       </p>
     </div>
   );

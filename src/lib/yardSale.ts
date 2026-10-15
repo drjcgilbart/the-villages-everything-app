@@ -11,6 +11,7 @@ import {
   writeJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
+import { isSiteOwnerEmail } from "./siteOwner";
 import {
   LISTING_MAX_REFRESHES,
   contactChoiceError,
@@ -67,6 +68,7 @@ export function toPublicMember(m: Member): PublicMember {
     village: m.village,
     status: m.status,
     createdAt: m.createdAt,
+    emailVerified: Boolean(m.emailVerifiedAt) || isSiteOwnerEmail(m.email),
   };
 }
 

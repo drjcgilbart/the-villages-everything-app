@@ -24,7 +24,7 @@ export default async function YardSaleJoinPage({
           <p>
             {householdToken
               ? "Create your own login. Your My Space boards stay on your account — they are not shared with the paying neighbor."
-              : "Request membership to use My Space, favorites, and the rest of the Hub. The site admin reviews each request before your account is approved."}
+              : "Request membership to use My Space, favorites, and the rest of the Hub. A confirmation email goes out right away. The site admin reviews the request only after you press Confirm my email."}
           </p>
         </div>
       </div>
