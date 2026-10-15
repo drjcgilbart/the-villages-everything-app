@@ -12,6 +12,8 @@ export type ChannelYoutubeVideo = {
   videoId: string;
   title: string;
   publishedAt: string;
+  /** YouTube Short. Older cache rows omit this and are detected from the title. */
+  short?: boolean;
 };
 
 export type ChannelYoutubeCache = {
@@ -20,6 +22,11 @@ export type ChannelYoutubeCache = {
   lastError: string | null;
   channelId: string;
   videos: ChannelYoutubeVideo[];
+  /**
+   * Daily roundups and Shorts kept after they leave the 15-item RSS window.
+   * The reboot Videos page still uses `videos`.
+   */
+  newsKeep?: ChannelYoutubeVideo[];
 };
 
 const CACHE_FILE = "channel-youtube.json";
@@ -27,6 +34,23 @@ const CACHE_FILE = "channel-youtube.json";
 const STALE_HOURS = 1;
 /** Keep history after videos fall off the ~15-item RSS window. */
 const MAX_KEEP = 200;
+/** Roundups stay on Local News after newer uploads push them off the RSS feed. */
+const MAX_NEWS_ROUNDUPS = 500;
+const MAX_NEWS_SHORTS = 400;
+
+/** Daily desk titles. Shorts are detected separately and are not required to match. */
+export function isDailyNewsRoundup(title: string): boolean {
+  const t = title.trim();
+  return (
+    /^the villages news\b/i.test(t) ||
+    /^the week ahead\b/i.test(t) ||
+    /^this weekend in the villages\b/i.test(t)
+  );
+}
+
+export function isChannelShort(video: { title: string; short?: boolean }): boolean {
+  return Boolean(video.short) || /#shorts\b/i.test(video.title);
+}
 
 function emptyCache(): ChannelYoutubeCache {
   return {
@@ -49,6 +73,9 @@ export function loadChannelYoutubeCache(): ChannelYoutubeCache {
     videos: Array.isArray(raw.videos)
       ? raw.videos.filter((v) => v?.videoId && v?.title)
       : [],
+    newsKeep: Array.isArray(raw.newsKeep)
+      ? raw.newsKeep.filter((v) => v?.videoId && v?.title)
+      : [],
   };
 }
 
@@ -57,6 +84,10 @@ export function isChannelYoutubeStale(
   maxAgeHours = STALE_HOURS
 ): boolean {
   if (!cache.updatedAt || !cache.videos.length) return true;
+  const hasNewsInRecent = cache.videos.some(
+    (v) => isDailyNewsRoundup(v.title) || isChannelShort(v)
+  );
+  if (hasNewsInRecent && !(cache.newsKeep && cache.newsKeep.length)) return true;
   const age = Date.now() - new Date(cache.updatedAt).getTime();
   return Number.isNaN(age) || age > maxAgeHours * 3600_000;
 }
@@ -73,11 +104,42 @@ function mergeVideos(
       videoId: v.videoId,
       title: v.title || prev?.title || "Untitled video",
       publishedAt: v.publishedAt || prev?.publishedAt || new Date().toISOString(),
+      short: Boolean(v.short || prev?.short),
     });
   }
   return [...byId.values()]
     .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)))
     .slice(0, MAX_KEEP);
+}
+
+function byNewest(a: ChannelYoutubeVideo, b: ChannelYoutubeVideo) {
+  return String(b.publishedAt).localeCompare(String(a.publishedAt));
+}
+
+/** Roundups and Shorts survive after they fall off the recent-upload window. */
+function mergeNewsKeep(
+  previousKeep: ChannelYoutubeVideo[],
+  previousVideos: ChannelYoutubeVideo[],
+  incoming: ChannelYoutubeVideo[]
+): ChannelYoutubeVideo[] {
+  const byId = new Map<string, ChannelYoutubeVideo>();
+  for (const v of [...previousKeep, ...previousVideos, ...incoming]) {
+    if (!isDailyNewsRoundup(v.title) && !isChannelShort(v)) continue;
+    const prev = byId.get(v.videoId);
+    byId.set(v.videoId, {
+      videoId: v.videoId,
+      title: v.title || prev?.title || "Untitled video",
+      publishedAt: v.publishedAt || prev?.publishedAt || new Date().toISOString(),
+      short: Boolean(v.short || prev?.short),
+    });
+  }
+  const all = [...byId.values()];
+  const roundups = all.filter((v) => isDailyNewsRoundup(v.title)).sort(byNewest).slice(0, MAX_NEWS_ROUNDUPS);
+  const shorts = all
+    .filter((v) => !isDailyNewsRoundup(v.title) && isChannelShort(v))
+    .sort(byNewest)
+    .slice(0, MAX_NEWS_SHORTS);
+  return [...roundups, ...shorts].sort(byNewest);
 }
 
 export async function refreshChannelYoutube(opts?: {
@@ -93,6 +155,7 @@ export async function refreshChannelYoutube(opts?: {
       videoId: e.videoId,
       title: e.title,
       publishedAt: e.publishedAt,
+      short: Boolean(e.short),
     }));
     const next: ChannelYoutubeCache = {
       updatedAt: new Date().toISOString(),
@@ -100,6 +163,7 @@ export async function refreshChannelYoutube(opts?: {
       lastError: incoming.length ? null : "YouTube RSS returned no videos",
       channelId,
       videos: mergeVideos(prev.videos, incoming),
+      newsKeep: mergeNewsKeep(prev.newsKeep || [], prev.videos, incoming),
     };
     await writeJsonFileAsync(CACHE_FILE, next);
     return next;
@@ -147,4 +211,21 @@ export function getChannelSiteVideos(
 ): Video[] {
   const c = cache || loadChannelYoutubeCache();
   return c.videos.map(channelVideoToSiteVideo);
+}
+
+export function newsRoundups(cache: ChannelYoutubeCache): ChannelYoutubeVideo[] {
+  const source = cache.newsKeep?.length ? cache.newsKeep : cache.videos;
+  return source.filter((v) => isDailyNewsRoundup(v.title)).sort(byNewest);
+}
+
+export function newsShorts(cache: ChannelYoutubeCache): ChannelYoutubeVideo[] {
+  const source = cache.newsKeep?.length ? cache.newsKeep : cache.videos;
+  return source.filter((v) => !isDailyNewsRoundup(v.title) && isChannelShort(v)).sort(byNewest);
+}
+
+export function newsVideoUrl(video: ChannelYoutubeVideo): string {
+  if (isChannelShort(video) && !isDailyNewsRoundup(video.title)) {
+    return `https://www.youtube.com/shorts/${encodeURIComponent(video.videoId)}`;
+  }
+  return `https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}`;
 }

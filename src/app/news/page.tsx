@@ -1,6 +1,12 @@
 import Link from "next/link";
+import { DailyNewsRoundup } from "@/components/DailyNewsRoundup";
 import { NewsHubMemberTools } from "@/components/HubMemberToolSlots";
 import { PageHeroMascot } from "@/components/PageHeroMascot";
+import {
+  ensureChannelYoutubeFresh,
+  newsRoundups,
+  newsShorts,
+} from "@/lib/channelYoutube";
 import {
   NEWS_BEATS,
   NEWS_CREATORS,
@@ -11,10 +17,14 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Local News",
   description:
-    "Curated current events for The Villages, Florida — local news outlets, YouTube creators like Skip Smith, Gary Abbott, Jerry & Linda, and Michael & Tiffany, plus live channel feeds.",
+    "Curated current events for The Villages, Florida — the daily news roundup, local news outlets, YouTube creators like Skip Smith, Gary Abbott, Jerry & Linda, and Michael & Tiffany, plus live channel feeds.",
 };
 
-export default function NewsPage() {
+export default async function NewsPage() {
+  const channel = await ensureChannelYoutubeFresh();
+  const roundups = newsRoundups(channel);
+  const shorts = newsShorts(channel);
+
   return (
     <>
       <div className="page-hero page-hero-graphic">
@@ -32,7 +42,10 @@ export default function NewsPage() {
               sources and the entertaining narrators.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
-              <a href="#creators" className="btn btn-primary">
+              <a href="#daily-roundup" className="btn btn-primary">
+                Daily roundup
+              </a>
+              <a href="#creators" className="btn btn-ghost">
                 YouTube creators
               </a>
               <a href="#outlets" className="btn btn-ghost">
@@ -52,6 +65,12 @@ export default function NewsPage() {
           />
         </div>
       </div>
+
+      <DailyNewsRoundup
+        roundups={roundups}
+        shorts={shorts}
+        loadFailed={Boolean(channel.lastError) && roundups.length === 0}
+      />
 
       <NewsHubMemberTools />
 

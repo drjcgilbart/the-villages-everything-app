@@ -80,6 +80,8 @@ type RssEntry = {
   videoId: string;
   title: string;
   publishedAt: string;
+  /** True when the upload link is a YouTube Short. */
+  short?: boolean;
 };
 
 function emptyCache(): RealEstateYoutubeCache {
@@ -182,12 +184,18 @@ function parseAtomEntries(xml: string): RssEntry[] {
       chunk.match(/<published>([^<]+)<\/published>/i)?.[1]?.trim() ||
       chunk.match(/<updated>([^<]+)<\/updated>/i)?.[1]?.trim() ||
       new Date().toISOString();
+    const decodedTitle = decodeXmlEntities(title);
+    const alternate =
+      chunk.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i)?.[1] ||
+      chunk.match(/<link[^>]*href="([^"]+)"[^>]*rel="alternate"/i)?.[1] ||
+      "";
 
     if (videoId) {
       entries.push({
         videoId,
-        title: decodeXmlEntities(title),
+        title: decodedTitle,
         publishedAt,
+        short: /\/shorts\//i.test(alternate) || /#shorts\b/i.test(decodedTitle),
       });
     }
   }
