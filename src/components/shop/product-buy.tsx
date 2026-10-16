@@ -18,13 +18,25 @@ export function ProductBuy({ product }: { product: Product }) {
   const chosen = single ? sizes[0] : sizes.find((v) => v.size === size) ?? null;
   const [added, setAdded] = useState<string | null>(null);
   const { add } = useCart();
-  const image = colors.find((c) => c.id === color)?.image ?? product.image;
+  const [view, setView] = useState<"front" | "back">("front");
+  const current = colors.find((c) => c.id === color);
+  const image = (view === "back" && current?.backImage) || current?.image || product.image;
   const colorLabel = colors.find((c) => c.id === color)?.label;
 
   return (
     <div className="shop-product">
       <div className="shop-pimg-wrap">
-        <Image className="shop-pimg" src={image} alt={`${product.name}${colorLabel ? ` in ${colorLabel}` : ""} mockup`} width={1000} height={1000} sizes="(max-width: 760px) 100vw, 50vw" priority />
+        <Image className="shop-pimg" src={image} alt={`${product.name}${colorLabel ? ` in ${colorLabel}` : ""} mockup${view === "back" ? ", back view" : ""}`} width={1000} height={1000} sizes="(max-width: 760px) 100vw, 50vw" priority />
+        {current?.backImage ? (
+          <div className="shop-views" role="group" aria-label="View">
+            {(["front", "back"] as const).map((v) => (
+              <button key={v} type="button" className="shop-view" aria-pressed={view === v} onClick={() => setView(v)}>
+                <Image src={v === "back" ? current.backImage! : current.image} alt="" width={120} height={120} />
+                <span>{v === "front" ? "Front" : "Back"}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="shop-buy">
         {colors.length > 1 ? (

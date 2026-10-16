@@ -11,7 +11,7 @@ export type Variant = {
   printfulVariantId: number;
 };
 
-export type ColorOption = { id: string; label: string; hex: string; image: string };
+export type ColorOption = { id: string; label: string; hex: string; image: string; backImage?: string };
 export type PrintFile = { type: string; path: string }; // path under /public
 
 export type ProductType = "tees" | "hats" | "mugs" | "totes" | "golf-towels" | "stickers";
@@ -140,13 +140,13 @@ export const PRODUCTS: Product[] = [
     name: "Cart Path Only",
     tagline: "Embroidered dad hat",
     description:
-      "The one rule everybody knows, stitched on a relaxed cotton dad hat with a tiny golf ball, plus a small Everything App mark on the side. Shade for your eyes, a reminder for your cart.",
+      "The one rule everybody knows, stitched on a relaxed cotton dad hat with a tiny golf ball, plus a small The Villages Everything App mark on the back above the strap. Shade for your eyes, a reminder for your cart.",
     priceCents: 3000,
     image: "/shop/mock/hat-cart-path-only--khaki.png",
     colors: [
-      { id: "khaki", label: "Khaki", hex: "#c8b07e", image: "/shop/mock/hat-cart-path-only--khaki.png" },
-      { id: "stone", label: "Stone", hex: "#d9d2c2", image: "/shop/mock/hat-cart-path-only--stone.png" },
-      { id: "white", label: "White", hex: "#f6f6f4", image: "/shop/mock/hat-cart-path-only--white.png" },
+      { id: "khaki", label: "Khaki", hex: "#c8b07e", image: "/shop/mock/hat-cart-path-only--khaki.png", backImage: "/shop/mock/hat-cart-path-only-back--khaki.png" },
+      { id: "stone", label: "Stone", hex: "#d9d2c2", image: "/shop/mock/hat-cart-path-only--stone.png", backImage: "/shop/mock/hat-cart-path-only-back--stone.png" },
+      { id: "white", label: "White", hex: "#f6f6f4", image: "/shop/mock/hat-cart-path-only--white.png", backImage: "/shop/mock/hat-cart-path-only-back--white.png" },
     ],
     printfulProduct: "Yupoong 6245CM Classic Dad Hat (catalog product 206), embroidery front",
     variants: [
@@ -156,12 +156,12 @@ export const PRODUCTS: Product[] = [
     ],
     files: [
       { type: "embroidery_front", path: "/shop/print/hat-cart-path-only.png" },
-      // Small "Everything App" brand mark on the left side panel, one thread.
-      { type: "embroidery_left", path: "/shop/print/hat-cart-path-only-left.png" },
+      // Small "The Villages Everything App" mark on the back, above the strap. One thread.
+      { type: "embroidery_back", path: "/shop/print/hat-cart-path-only-back.png" },
     ],
     options: [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] },
-      { id: "thread_colors_left", value: ["#01784E"] },
+      { id: "thread_colors_back", value: ["#01784E"] },
     ],
     taxCode: CLOTHING,
   },

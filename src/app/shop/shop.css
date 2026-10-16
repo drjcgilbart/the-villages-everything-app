@@ -101,3 +101,7 @@
 .shop-chip:hover { border-color: var(--palm); }
 .shop-chip[aria-current="page"] { border-color: var(--palm); background: var(--palm); color: white; }
 .shop-count { margin: 0 0 6px; }
+.shop-views { display: flex; gap: 10px; padding: 10px; background: white; border-top: 1px solid var(--line); }
+.shop-view { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border-radius: 14px; border: 2px solid var(--line); background: white; font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer; min-height: 44px; }
+.shop-view img { width: 72px; height: 72px; object-fit: contain; border-radius: 10px; background: var(--cream); }
+.shop-view[aria-pressed="true"] { border-color: var(--palm); color: var(--palm); }
