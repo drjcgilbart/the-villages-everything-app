@@ -42,6 +42,7 @@ const UTILITY_NAV: UtilityItem[] = [
       "/yard-sale/dashboard",
     ],
   },
+  { href: "/shop", label: "Shop", matchPrefixes: ["/shop"] },
 ];
 
 const WEB_MEMBERSHIP: UtilityItem = { href: "/donate", label: "Support" };
