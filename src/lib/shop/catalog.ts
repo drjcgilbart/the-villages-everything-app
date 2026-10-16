@@ -140,7 +140,7 @@ export const PRODUCTS: Product[] = [
     name: "Cart Path Only",
     tagline: "Embroidered dad hat",
     description:
-      "The one rule everybody knows, stitched on a relaxed cotton dad hat with a tiny golf ball, plus our golf-ball mascot and The Villages Everything App wordmark on the back above the strap. Shade for your eyes, a reminder for your cart.",
+      "The one rule everybody knows, stitched on a relaxed cotton dad hat next to our golf-ball mascot badge, plus The Villages Everything App wordmark on the back above the strap. Shade for your eyes, a reminder for your cart.",
     priceCents: 3000,
     image: "/shop/mock/hat-cart-path-only--khaki.png",
     colors: [
@@ -156,12 +156,12 @@ export const PRODUCTS: Product[] = [
     ],
     files: [
       { type: "embroidery_front", path: "/shop/print/hat-cart-path-only.png" },
-      // Back, above the strap: golf-ball mascot badge + homepage wordmark (Fraunces 700; "everything" italic). Multi-color.
+      // Back, above the strap: homepage wordmark only, centered (Fraunces 700; "everything" italic). Front carries the mascot badge.
       { type: "embroidery_back", path: "/shop/print/hat-cart-path-only-back.png" },
     ],
     options: [
-      { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] },
-      { id: "thread_colors_back", value: ["#000000", "#E25C27", "#01784E", "#7BA35A", "#FFCC00", "#FFFFFF"] },
+      { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
+      { id: "thread_colors_back", value: ["#000000", "#E25C27"] },
     ],
     taxCode: CLOTHING,
   },
