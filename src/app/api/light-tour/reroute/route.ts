@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAdminAuthenticated } from "@/lib/auth";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { MAX_STOPS, tourStartProblem } from "@/lib/lightTourShared";
@@ -28,8 +29,10 @@ export async function POST(req: Request) {
   if (blocked) return blocked;
   const limited = rateLimitResponse(req, "light-tour-reroute", 40, 10 * 60 * 1000);
   if (limited) return limited;
-  const termsUserId = await termsUserIdForRequest();
-  if (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId))) {
+  // Admins can navigate to any pin from the pin map without the member terms flow.
+  const admin = await isAdminAuthenticated();
+  const termsUserId = admin ? "" : await termsUserIdForRequest();
+  if (!admin && (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId)))) {
     return NextResponse.json(
       { error: "Accept the Holiday Lights terms before a route can start." },
       { status: 403 }

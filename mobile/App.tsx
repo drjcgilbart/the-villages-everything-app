@@ -406,6 +406,7 @@ function Shell() {
       code?: number;
       latitude?: number;
       longitude?: number;
+      accuracy?: number;
     }) => {
       const json = JSON.stringify(detail);
       webRef.current?.injectJavaScript(
@@ -480,8 +481,8 @@ function Shell() {
         const sub = await Location.watchPositionAsync(
           {
             accuracy,
-            timeInterval: 5000,
-            distanceInterval: 20,
+            timeInterval: 2000,
+            distanceInterval: 5,
             mayShowUserSettingsDialog: false,
           },
           (pos) => {
@@ -493,6 +494,7 @@ function Shell() {
               ok: true,
               latitude: pos.coords.latitude,
               longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy ?? undefined,
             });
           },
         );

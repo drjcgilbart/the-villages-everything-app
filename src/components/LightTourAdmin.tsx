@@ -12,6 +12,7 @@ import {
   watchNativeLocation,
 } from "@/lib/deviceLocation";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
+import { usePinNavigation } from "@/lib/usePinNavigation";
 
 type AdminPin = {
   id: string;
@@ -189,6 +190,9 @@ export function LightTourAdmin() {
   const draftRef = useRef(draft);
   const holidayRef = useRef(holiday);
   const moveToken = useRef(new Map<string, number>());
+  const nav = usePinNavigation();
+  const navFeed = useRef(nav.feed);
+  navFeed.current = nav.feed;
   pinsRef.current = pins;
   draftRef.current = draft;
   holidayRef.current = holiday;
@@ -230,15 +234,17 @@ export function LightTourAdmin() {
     let stopNative: (() => void) | null = null;
     let webWatch: number | null = null;
     if (nativeLocationReady()) {
-      stopNative = watchNativeLocation((point) => setMe({ ...point }));
+      stopNative = watchNativeLocation((point, accuracy) => {
+        setMe({ ...point, accuracy });
+        navFeed.current(point, accuracy);
+      });
     } else if (typeof navigator !== "undefined" && navigator.geolocation) {
       webWatch = navigator.geolocation.watchPosition(
-        (pos) =>
-          setMe({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-          }),
+        (pos) => {
+          const point = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+          setMe({ ...point, accuracy: pos.coords.accuracy });
+          navFeed.current(point, pos.coords.accuracy);
+        },
         () => undefined,
         { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
       );
@@ -734,7 +740,7 @@ export function LightTourAdmin() {
         </p>
         <LightTourMap
           visitor={null}
-          line={[]}
+          line={nav.line}
           stops={mapStops}
           activeId={draft?.id}
           me={me}
@@ -751,7 +757,24 @@ export function LightTourAdmin() {
             const pin = pinsRef.current.find((row) => row.id === id);
             if (pin) editPin(pin);
           }}
+          onGoToStop={(id) => {
+            const stop = mapStops.find((row) => row.id === id);
+            if (!stop) return;
+            nav.start(
+              { id: stop.id, latitude: stop.latitude, longitude: stop.longitude, label: `pin ${stop.order}` },
+              me ? { latitude: me.latitude, longitude: me.longitude } : null,
+            );
+            if (!me) showToast("Waiting for your location to start directions.");
+          }}
         />
+        {nav.target ? (
+          <div className={`lt-nav-bar${nav.arrived ? " is-arrived" : ""}`} role="status" aria-live="polite">
+            <span className="lt-nav-cue">{nav.cue || `Directions to ${nav.target.label}.`}</span>
+            <button type="button" className="lt-nav-stop" onClick={nav.stop}>
+              {nav.arrived ? "Done" : "Stop"}
+            </button>
+          </div>
+        ) : null}
 
         {draft ? (
           <div id="lt-pin-draft" className="about-panel lt-card">
