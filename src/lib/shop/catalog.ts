@@ -140,7 +140,7 @@ export const PRODUCTS: Product[] = [
     name: "Cart Path Only",
     tagline: "Embroidered dad hat",
     description:
-      "The one rule everybody knows, stitched on a relaxed cotton dad hat with a tiny golf ball. Shade for your eyes, a reminder for your cart.",
+      "The one rule everybody knows, stitched on a relaxed cotton dad hat with a tiny golf ball, plus a small Everything App mark on the side. Shade for your eyes, a reminder for your cart.",
     priceCents: 3000,
     image: "/shop/mock/hat-cart-path-only--khaki.png",
     colors: [
@@ -154,8 +154,15 @@ export const PRODUCTS: Product[] = [
       { sku: "hat-cpo-stone", label: "Stone / One size", color: "stone", size: "One size", printfulVariantId: 7859 },
       { sku: "hat-cpo-white", label: "White / One size", color: "white", size: "One size", printfulVariantId: 7853 },
     ],
-    files: [{ type: "embroidery_front", path: "/shop/print/hat-cart-path-only.png" }],
-    options: [{ id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] }],
+    files: [
+      { type: "embroidery_front", path: "/shop/print/hat-cart-path-only.png" },
+      // Small "Everything App" brand mark on the left side panel, one thread.
+      { type: "embroidery_left", path: "/shop/print/hat-cart-path-only-left.png" },
+    ],
+    options: [
+      { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] },
+      { id: "thread_colors_left", value: ["#01784E"] },
+    ],
     taxCode: CLOTHING,
   },
   {
