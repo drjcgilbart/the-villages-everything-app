@@ -28,6 +28,7 @@ import {
   type TourHoliday,
 } from "@/lib/lightTourShared";
 import { buildTourSheetPdf } from "@/lib/tourSheetPdf";
+import { freshOffRouteState, offRouteFix } from "@/lib/tourOffRoute";
 import { HolidayLightsTermsGate } from "./HolidayLightsTermsGate";
 
 type Stop = {
@@ -135,6 +136,9 @@ export function LightTour({
   const legBusy = useRef(false);
   const guideGen = useRef(0);
   const houseOpenRef = useRef(false);
+  const lineRef = useRef<[number, number][]>([]);
+  const offRoute = useRef(freshOffRouteState());
+  const rerouteAbort = useRef<AbortController | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
   const [musicOn, setMusicOn] = useState(false);
   const [cue, setCue] = useState("");
@@ -253,6 +257,7 @@ export function LightTour({
       nativeStop.current?.();
       nativeStop.current = null;
       legAbort.current?.abort();
+      rerouteAbort.current?.abort();
       stopTourSpeech();
     };
   }, []);
@@ -260,6 +265,10 @@ export function LightTour({
   useEffect(() => {
     if (popup) popupButton.current?.focus();
   }, [popup, index]);
+
+  useEffect(() => {
+    lineRef.current = line;
+  }, [line]);
 
   const current = stops[index] || null;
   const musicTracks = useMemo(() => holidayTracksFor(holiday), [holiday]);
@@ -356,11 +365,94 @@ export function LightTour({
     showCue(straight.text, straight.key);
   }
 
-  function rememberHere(here: Here) {
+  function rememberHere(here: Here, accuracy?: number) {
     hereRef.current = here;
     setVisitor((prev) => (prev && haversineMeters(prev, here) < 5 ? prev : here));
     noteArrival();
-    if (phaseRef.current === "tour") void guide(here);
+    if (phaseRef.current === "tour") {
+      void guide(here);
+      checkOffRoute(here, accuracy);
+    }
+  }
+
+  /** Debounced off-route check on every live GPS fix. */
+  function checkOffRoute(here: Here, accuracy?: number) {
+    const stop = stopsRef.current[indexRef.current];
+    if (!stop || houseOpenRef.current) return;
+    // Pulling up to a house can leave the street line. That is not a wrong turn.
+    if (haversineMeters(here, stop) <= GEOFENCE_METERS) {
+      offRoute.current.misses = 0;
+      return;
+    }
+    if (offRouteFix(offRoute.current, here, lineRef.current, Date.now(), accuracy)) {
+      void reroute(here);
+    }
+  }
+
+  /** Redraw the line from here through the remaining stops, same order. */
+  async function reroute(here: Here) {
+    const state = offRoute.current;
+    const atIndex = indexRef.current;
+    const ahead = stopsRef.current.slice(atIndex);
+    if (!ahead.length) return;
+    state.busy = true;
+    state.lastRerouteAt = Date.now();
+    rerouteAbort.current?.abort();
+    const ctrl = new AbortController();
+    rerouteAbort.current = ctrl;
+    const next = ahead[0];
+    showCue(`Rerouting. Heading back to stop ${next.order}.`, `reroute:${state.lastRerouteAt}`);
+    try {
+      const res = await fetch("/api/light-tour/reroute", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          from: { latitude: here.latitude, longitude: here.longitude },
+          stops: ahead.map((stop) => ({ latitude: stop.latitude, longitude: stop.longitude })),
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { line?: unknown } | null;
+      if (ctrl.signal.aborted || !res.ok) return;
+      if (phaseRef.current !== "tour" || indexRef.current !== atIndex) return;
+      const fresh = Array.isArray(data?.line)
+        ? (data.line as unknown[]).filter(
+            (pair): pair is [number, number] =>
+              Array.isArray(pair) && pair.length >= 2 && Number.isFinite(pair[0]) && Number.isFinite(pair[1]),
+          )
+        : [];
+      if (fresh.length < 2) return;
+      // The new line starts at the driver, so the next fix is back on the route.
+      // That, plus the cooldown, is what stops a reroute loop.
+      lineRef.current = fresh;
+      setLine(fresh);
+      state.misses = 0;
+      state.segment = 0;
+      legRef.current = null;
+      const latest = hereRef.current || here;
+      void guide(latest);
+    } catch {
+      /* Network miss: keep the old line. The cooldown stops a retry storm. */
+    } finally {
+      if (rerouteAbort.current === ctrl) {
+        state.busy = false;
+        state.lastRerouteAt = Date.now();
+      }
+    }
+  }
+
+  /** Map locate button: a fresh fix when the map has none yet. */
+  async function locateMe(): Promise<Here | null> {
+    if (hereRef.current) return hereRef.current;
+    try {
+      const point = await readDeviceLocation();
+      rememberHere(point);
+      return point;
+    } catch (err) {
+      setError(locationHelp(err));
+      return null;
+    }
   }
 
   function toggleVoice() {
@@ -522,6 +614,7 @@ export function LightTour({
     seen.current = new Set();
     legRef.current = null;
     spokenKeyRef.current = "";
+    offRoute.current = freshOffRouteState();
     logVisit(false);
     const stop = stopsRef.current[0];
     const here = hereRef.current;
@@ -549,7 +642,10 @@ export function LightTour({
         if (watch.current != null) navigator.geolocation.clearWatch(watch.current);
         watch.current = navigator.geolocation.watchPosition(
           (pos) => {
-            rememberHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+            rememberHere(
+              { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+              pos.coords.accuracy,
+            );
             if (!accurate && !triedPrecise) {
               triedPrecise = true;
               followPhone(true);
@@ -584,6 +680,7 @@ export function LightTour({
     if (index >= stops.length - 1) {
       stopFollow();
       legAbort.current?.abort();
+      rerouteAbort.current?.abort();
       setPhase("done");
       phaseRef.current = "done";
       setCue("");
@@ -597,6 +694,7 @@ export function LightTour({
     indexRef.current = next;
     setIndex(next);
     legRef.current = null;
+    offRoute.current.misses = 0;
     const nextStop = stopsRef.current[next];
     if (voiceOnRef.current && nextStop) {
       const line = `Next stop. ${nextStop.address || "Saved house"}.`;
@@ -620,6 +718,8 @@ export function LightTour({
   function resetPick() {
     stopFollow();
     legAbort.current?.abort();
+    rerouteAbort.current?.abort();
+    offRoute.current = freshOffRouteState();
     legRef.current = null;
     stopTourSpeech();
     setCue("");
@@ -1116,6 +1216,7 @@ export function LightTour({
                 stops={stops}
                 activeId={current?.id}
                 follow={phase === "tour"}
+                onLocate={locateMe}
               />
               <button
                 type="button"

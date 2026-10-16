@@ -163,3 +163,17 @@ export async function buildDrivingRoute(input: {
     available,
   };
 }
+
+/**
+ * Redraw the driving line from where the driver is now through the stops that
+ * are still ahead, in the same order. Used when the driver leaves the route.
+ */
+export async function drivingLineThrough(points: Point[]): Promise<{
+  line: [number, number][];
+  legs: { meters: number; seconds: number }[];
+  fallback: boolean;
+}> {
+  const driven = await osrmLine(points);
+  if (driven) return { ...driven, fallback: false };
+  return { ...straightLine(points), fallback: true };
+}

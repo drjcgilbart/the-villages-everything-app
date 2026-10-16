@@ -24,14 +24,29 @@ type Props = {
   onMoveStop?: (id: string, latitude: number, longitude: number) => void;
   /** Admin only. Called when a pin is double-clicked so its edit card can open. */
   onOpenStop?: (id: string) => void;
+  /**
+   * Shows the round locate button (bottom right). Called when the map has no
+   * position yet; resolves with a fresh fix or null.
+   */
+  onLocate?: () => Promise<{ latitude: number; longitude: number } | null>;
+  /**
+   * Live "you are here" blue dot with an accuracy ring. Drawn on its own layer so
+   * GPS ticks never redraw (or interrupt dragging) the numbered pins.
+   */
+  me?: { latitude: number; longitude: number; accuracy?: number } | null;
 };
 
 const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 
-export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop }: Props) {
+export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
+  const meLayer = useRef<{
+    ring: import("leaflet").Circle;
+    dot: import("leaflet").CircleMarker;
+  } | null>(null);
+  const meNow = useRef<{ latitude: number; longitude: number } | null>(null);
   const fitted = useRef("");
   const followRef = useRef(follow);
   const userPanned = useRef(false);
@@ -40,6 +55,7 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
   const openRef = useRef(onOpenStop);
   const [ready, setReady] = useState(false);
   const [recenter, setRecenter] = useState(false);
+  const [locating, setLocating] = useState(false);
   const draggable = Boolean(onMoveStop);
   const editable = Boolean(onOpenStop);
   followRef.current = follow;
@@ -178,13 +194,80 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
 
   function centerOnVisitor() {
     const map = mapRef.current;
-    const here = visitorRef.current;
+    const here = visitorRef.current || meNow.current;
     userPanned.current = false;
     setRecenter(false);
     if (!map || !here) return;
     const target: [number, number] = [here.latitude, here.longitude];
     if (map.getZoom() < 16) map.setView(target, 16, { animate: true });
     else map.panTo(target, { animate: true });
+  }
+
+  useEffect(() => {
+    meNow.current = me ? { latitude: me.latitude, longitude: me.longitude } : null;
+    const map = mapRef.current;
+    if (!map) return;
+    if (!me) {
+      meLayer.current?.ring.remove();
+      meLayer.current?.dot.remove();
+      meLayer.current = null;
+      return;
+    }
+    const at: [number, number] = [me.latitude, me.longitude];
+    const radius = Math.max(5, Math.min(500, Number(me.accuracy) || 0));
+    if (meLayer.current) {
+      meLayer.current.ring.setLatLng(at).setRadius(radius);
+      meLayer.current.dot.setLatLng(at);
+      return;
+    }
+    let cancelled = false;
+    void import("leaflet").then((L) => {
+      if (cancelled || !mapRef.current || meLayer.current) return;
+      const ring = L.circle(at, {
+        radius,
+        color: "#1a73e8",
+        weight: 1,
+        opacity: 0.5,
+        fillColor: "#1a73e8",
+        fillOpacity: 0.15,
+        interactive: false,
+      }).addTo(mapRef.current);
+      const dot = L.circleMarker(at, {
+        radius: 8,
+        color: "#ffffff",
+        weight: 3,
+        fillColor: "#1a73e8",
+        fillOpacity: 1,
+        interactive: false,
+      }).addTo(mapRef.current);
+      dot.bringToFront();
+      meLayer.current = { ring, dot };
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [me, ready]);
+
+  async function locate() {
+    if (locating) return;
+    const known = visitorRef.current || meNow.current;
+    if (known) {
+      centerOnVisitor();
+      return;
+    }
+    if (!onLocate) return;
+    setLocating(true);
+    try {
+      const point = await onLocate();
+      const map = mapRef.current;
+      if (!point || !map) return;
+      userPanned.current = false;
+      setRecenter(false);
+      const target: [number, number] = [point.latitude, point.longitude];
+      map.setView(target, Math.max(map.getZoom(), 16), { animate: true });
+    } finally {
+      setLocating(false);
+    }
   }
 
   useEffect(() => {
@@ -210,6 +293,22 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
       {recenter && follow ? (
         <button type="button" className="lt-recenter" onClick={centerOnVisitor}>
           Center on me
+        </button>
+      ) : null}
+      {onLocate ? (
+        <button
+          type="button"
+          className={`lt-locate${locating ? " is-busy" : ""}`}
+          onClick={() => void locate()}
+          aria-label="Center the map on my location"
+          title="Center on my location"
+          disabled={locating}
+        >
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+            <circle cx="12" cy="12" r="3" fill="currentColor" />
+            <path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
         </button>
       ) : null}
     </div>

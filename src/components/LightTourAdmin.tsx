@@ -4,7 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { LightTourMap } from "./LightTourMap";
 import { LightTourSubmit } from "./LightTourSubmit";
-import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/deviceLocation";
+import {
+  geoErrorCode,
+  locationBlockedText,
+  nativeLocationReady,
+  readDeviceLocation,
+  watchNativeLocation,
+} from "@/lib/deviceLocation";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 
 type AdminPin = {
@@ -77,10 +83,6 @@ function locationHelp(err: unknown) {
     return "This browser does not share location. You can type the latitude and longitude instead.";
   }
   return "Location did not come through. You can type the latitude and longitude instead.";
-}
-
-function blankDraft(holiday: TourHoliday): Draft {
-  return { holiday, latitude: "", longitude: "", address: "", note: "", photoUrl: "" };
 }
 
 function WaitingHouses({
@@ -178,6 +180,11 @@ export function LightTourAdmin() {
   const [houseOpen, setHouseOpen] = useState(false);
   const [acceptances, setAcceptances] = useState<TermsAcceptance[]>([]);
   const [termsNote, setTermsNote] = useState("");
+  /** Live GPS for the blue dot. Accuracy is only known in the browser path. */
+  const [me, setMe] = useState<{ latitude: number; longitude: number; accuracy?: number } | null>(null);
+  const [toast, setToast] = useState<{ text: string; bad: boolean } | null>(null);
+  const toastTimer = useRef(0);
+  const [dropping, setDropping] = useState(false);
   const pinsRef = useRef(pins);
   const draftRef = useRef(draft);
   const holidayRef = useRef(holiday);
@@ -219,6 +226,42 @@ export function LightTourAdmin() {
     });
   }, []);
 
+  useEffect(() => {
+    let stopNative: (() => void) | null = null;
+    let webWatch: number | null = null;
+    if (nativeLocationReady()) {
+      stopNative = watchNativeLocation((point) => setMe({ ...point }));
+    } else if (typeof navigator !== "undefined" && navigator.geolocation) {
+      webWatch = navigator.geolocation.watchPosition(
+        (pos) =>
+          setMe({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          }),
+        () => undefined,
+        { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
+      );
+    }
+    return () => {
+      stopNative?.();
+      if (webWatch != null) navigator.geolocation.clearWatch(webWatch);
+      window.clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  function showToast(text: string, bad = false) {
+    window.clearTimeout(toastTimer.current);
+    setToast({ text, bad });
+    toastTimer.current = window.setTimeout(() => setToast(null), bad ? 6000 : 3500);
+  }
+
+  /** The freshest point we have: the live dot, or a one-off reading. */
+  async function hereNow(): Promise<{ latitude: number; longitude: number }> {
+    if (me) return { latitude: me.latitude, longitude: me.longitude };
+    return readDeviceLocation();
+  }
+
   const mapStops = useMemo(
     () =>
       pins
@@ -252,20 +295,70 @@ export function LightTourAdmin() {
     }
   }
 
+  /**
+   * Drop a pin at the phone's current GPS point and save it right away (same
+   * POST as Save pin). The card then opens so a photo or note can be added.
+   */
   async function dropPin() {
+    if (dropping) return;
     setError("");
     setNotice("");
-    setDraft(blankDraft(holiday));
+    setDropping(true);
+    let pos: { latitude: number; longitude: number };
     try {
-      const pos = await readDeviceLocation();
-      setDraft({
-        ...blankDraft(holiday),
-        latitude: pos.latitude.toFixed(6),
-        longitude: pos.longitude.toFixed(6),
-      });
+      pos = await hereNow();
     } catch (err) {
-      setError(locationHelp(err));
+      const text = locationHelp(err);
+      setError(text);
+      showToast(`Pin not dropped. ${text}`, true);
+      setDropping(false);
+      return;
     }
+    const forHoliday = holiday;
+    try {
+      const res = await fetch("/api/light-tour/pins", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          holiday: forHoliday,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          address: "",
+          note: "",
+          photoUrl: "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "The pin did not save.");
+      const saved = data.pin as AdminPin | undefined;
+      await load();
+      showToast("Pin dropped");
+      setNotice(`Pin dropped at ${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}.`);
+      if (saved?.id) editPin({ ...saved, holiday: saved.holiday || forHoliday });
+    } catch (err) {
+      const text = err instanceof Error ? err.message : "The pin did not save.";
+      setError(text);
+      showToast(`Pin not dropped. ${text}`, true);
+    } finally {
+      setDropping(false);
+    }
+  }
+
+  /** One tap: move the selected pin to the current GPS fix, saved like a drag. */
+  async function movePinHere(id: string) {
+    let pos: { latitude: number; longitude: number };
+    try {
+      pos = await hereNow();
+    } catch (err) {
+      const text = locationHelp(err);
+      setError(text);
+      showToast(`Pin not moved. ${text}`, true);
+      return;
+    }
+    const ok = await movePin(id, pos.latitude, pos.longitude);
+    if (ok) showToast("Pin moved to your location");
+    else showToast("Pin not moved. Try again.", true);
   }
 
   async function useHere() {
@@ -287,9 +380,9 @@ export function LightTourAdmin() {
     }
   }
 
-  async function movePin(id: string, latitude: number, longitude: number) {
+  async function movePin(id: string, latitude: number, longitude: number): Promise<boolean> {
     const pin = pinsRef.current.find((row) => row.id === id);
-    if (!pin) return;
+    if (!pin) return false;
     const token = (moveToken.current.get(id) || 0) + 1;
     moveToken.current.set(id, token);
     const form = draftRef.current?.id === id ? draftRef.current : null;
@@ -322,7 +415,7 @@ export function LightTourAdmin() {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (moveToken.current.get(id) !== token) return;
+      if (moveToken.current.get(id) !== token) return false;
       if (!res.ok) throw new Error(data.error || "The pin did not move.");
       const saved = data.pin as AdminPin | undefined;
       if (saved?.id) {
@@ -340,8 +433,9 @@ export function LightTourAdmin() {
           `${label} is saved at ${Number(saved.latitude).toFixed(6)}, ${Number(saved.longitude).toFixed(6)}.`
         );
       }
+      return true;
     } catch (err) {
-      if (moveToken.current.get(id) !== token) return;
+      if (moveToken.current.get(id) !== token) return false;
       setPins((current) =>
         current.map((row) => (row.id === id ? { ...row, latitude: pin.latitude, longitude: pin.longitude } : row))
       );
@@ -350,6 +444,7 @@ export function LightTourAdmin() {
       );
       setNotice("");
       setError(err instanceof Error ? err.message : "The pin did not move.");
+      return false;
     }
   }
 
@@ -403,9 +498,12 @@ export function LightTourAdmin() {
       setPendingDelete(null);
       if (draft?.id === id) setDraft(null);
       setNotice("Pin removed.");
+      showToast("Stop deleted");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "The pin did not delete.");
+      const text = err instanceof Error ? err.message : "The pin did not delete.";
+      setError(text);
+      showToast(text, true);
     } finally {
       setBusy(false);
     }
@@ -639,6 +737,15 @@ export function LightTourAdmin() {
           line={[]}
           stops={mapStops}
           activeId={draft?.id}
+          me={me}
+          onLocate={async () => {
+            try {
+              return await hereNow();
+            } catch (err) {
+              showToast(locationHelp(err), true);
+              return null;
+            }
+          }}
           onMoveStop={(id, latitude, longitude) => void movePin(id, latitude, longitude)}
           onOpenStop={(id) => {
             const pin = pinsRef.current.find((row) => row.id === id);
@@ -649,6 +756,12 @@ export function LightTourAdmin() {
         {draft ? (
           <div id="lt-pin-draft" className="about-panel lt-card">
             <h2>{draft.id ? `Edit pin ${mapStops.find((stop) => stop.id === draft.id)?.order ?? ""}`.trim() : "New pin"}</h2>
+            {draft.id ? (
+              <p className="lt-card-where">
+                {draft.address || "No street address yet"} · {Number(draft.latitude).toFixed(5)},{" "}
+                {Number(draft.longitude).toFixed(5)}
+              </p>
+            ) : null}
             <div className="lt-chips" role="radiogroup" aria-label="Pin holiday">
               {TOUR_HOLIDAYS.map((item) => (
                 <button
@@ -683,9 +796,22 @@ export function LightTourAdmin() {
                 />
               </div>
             </div>
-            <button type="button" className="btn btn-ghost lt-go" onClick={() => void useHere()}>
-              Use where I am
-            </button>
+            {draft.id ? (
+              <button
+                type="button"
+                className="btn btn-ghost lt-go"
+                disabled={busy}
+                onClick={() => {
+                  if (draft.id) void movePinHere(draft.id);
+                }}
+              >
+                Move pin to my location
+              </button>
+            ) : (
+              <button type="button" className="btn btn-ghost lt-go" onClick={() => void useHere()}>
+                Use where I am
+              </button>
+            )}
             <div className="field">
               <label htmlFor="lt-pin-address">Address</label>
               <input
@@ -744,6 +870,35 @@ export function LightTourAdmin() {
             <button type="button" className="btn btn-ghost lt-go" onClick={() => setDraft(null)}>
               Cancel
             </button>
+            {draft.id ? (
+              pendingDelete === draft.id ? (
+                <div className="lt-card-confirm" role="group" aria-label="Confirm delete">
+                  <p>Delete this stop?</p>
+                  <button
+                    type="button"
+                    className="btn btn-danger lt-go"
+                    disabled={busy}
+                    onClick={() => {
+                      if (draft.id) void removePin(draft.id);
+                    }}
+                  >
+                    {busy ? "Deleting…" : "Yes, delete"}
+                  </button>
+                  <button type="button" className="btn btn-ghost lt-go" onClick={() => setPendingDelete(null)}>
+                    Keep it
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-danger lt-go"
+                  disabled={busy}
+                  onClick={() => setPendingDelete(draft.id || null)}
+                >
+                  Delete
+                </button>
+              )
+            ) : null}
           </div>
         ) : null}
 
@@ -863,9 +1018,19 @@ export function LightTourAdmin() {
           </div>
         </details>
 
-        <button type="button" className="btn btn-primary lt-drop" onClick={() => void dropPin()}>
-          Drop pin
+        <button
+          type="button"
+          className="btn btn-primary lt-drop"
+          disabled={dropping}
+          onClick={() => void dropPin()}
+        >
+          {dropping ? "Dropping…" : "Drop pin"}
         </button>
+        {toast ? (
+          <div className={`lt-toast${toast.bad ? " is-bad" : ""}`} role={toast.bad ? "alert" : "status"}>
+            {toast.text}
+          </div>
+        ) : null}
         <LightTourSubmit
           open={houseOpen}
           holiday={holiday}

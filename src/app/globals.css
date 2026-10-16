@@ -17908,3 +17908,84 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
     padding-bottom: 4.75rem;
   }
 }
+
+/* Google Maps style locate button on the tour map. Bottom right, above the
+   OpenStreetMap credit line, clear of the zoom (top left) and Music (top right) controls. */
+.lt-locate {
+  position: absolute;
+  z-index: 3;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #1a73e8;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lt-locate:hover {
+  background: #f4f6f8;
+}
+
+.lt-locate:active {
+  background: #e8eaed;
+}
+
+.lt-locate:focus-visible {
+  outline: 3px solid #0c4a6e;
+  outline-offset: 2px;
+}
+
+.lt-locate.is-busy svg {
+  opacity: 0.45;
+}
+
+/* Admin: short toast for Drop pin / Move pin / Delete, above the floating Drop pin button. */
+.lt-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 90;
+  max-width: min(92vw, 420px);
+  padding: 0.7rem 1.1rem;
+  border-radius: 14px;
+  background: #1f6b4a;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(12, 20, 30, 0.3);
+}
+
+.lt-toast.is-bad {
+  background: #9f2d2d;
+}
+
+.lt-card-where {
+  margin: -0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.lt-card-confirm {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  border: 1px solid rgba(159, 45, 45, 0.35);
+  background: rgba(159, 45, 45, 0.06);
+}
+
+.lt-card-confirm p {
+  margin: 0 0 0.5rem;
+  font-weight: 800;
+  color: #9f2d2d;
+}
