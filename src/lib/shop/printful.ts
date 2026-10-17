@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { createHash } from "crypto";
 import { findVariant } from "./catalog";
-import { printfulApiKey } from "./config";
+import { printfulApiKey, siteUrl } from "./config";
 import { syncVariantIdFor } from "./printful-variants";
 
 /** Printful external_id is length-limited; derive a stable short id from the Stripe session id. */
@@ -22,11 +22,17 @@ export type ShopRecipient = {
   phone?: string;
 };
 
+type ItemBase = { quantity: number; external_id: string; name: string; retail_price: string };
+/** A Printful order item: either a synced store variant, or a catalog variant plus print files (+ options). */
+export type PrintfulItem =
+  | (ItemBase & { sync_variant_id: number })
+  | (ItemBase & { variant_id: number; files: { type: string; url: string }[]; options?: { id: string; value: string | string[] }[] });
+
 export type PrintfulOrder = {
   external_id: string;
   shipping: string;
   recipient: ShopRecipient;
-  items: { sync_variant_id: number; quantity: number; external_id: string; name: string; retail_price: string }[];
+  items: PrintfulItem[];
   retail_costs?: { currency: string; shipping: string };
 };
 
@@ -68,32 +74,70 @@ export function sessionDetails(session: Stripe.Checkout.Session): { lines: ShopO
   };
 }
 
+/** Public URL Printful downloads a print file from (production site, or this preview when Printful can reach it). */
+export function printFileUrl(path: string): string {
+  const base = (process.env.PRINTFUL_FILE_BASE_URL || siteUrl()).replace(/\/$/, "");
+  const url = base + path;
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if (!process.env.PRINTFUL_FILE_BASE_URL && process.env.VERCEL_ENV === "preview" && bypass) {
+    return `${url}${url.includes("?") ? "&" : "?"}x-vercel-protection-bypass=${encodeURIComponent(bypass)}`;
+  }
+  return url;
+}
+
+/**
+ * Decide how each line goes to Printful:
+ *  1. sync_variant_id from printful-variants.ts (preferred: product, placement and thread colors are set up in Printful), or
+ *  2. when allowCatalog is true: the catalog variant_id + our print files from public/shop/print (+ embroidery options).
+ * Lines that fit neither are returned in `missing`.
+ */
+export function planPrintfulItems(lines: ShopOrderLine[], opts: { allowCatalog: boolean }) {
+  const items: PrintfulItem[] = [];
+  const missing: string[] = [];
+  let usedCatalog = false;
+  for (const l of lines) {
+    const base = { quantity: l.quantity, external_id: l.sku, name: `${l.name} (${l.label})`, retail_price: (l.unitCents / 100).toFixed(2) };
+    const syncId = syncVariantIdFor(l.sku);
+    if (syncId !== null) {
+      items.push({ ...base, sync_variant_id: syncId });
+      continue;
+    }
+    const found = findVariant(l.sku);
+    if (opts.allowCatalog && found && found.variant.printfulVariantId > 0 && found.product.files.length) {
+      usedCatalog = true;
+      items.push({
+        ...base,
+        variant_id: found.variant.printfulVariantId,
+        files: found.product.files.map((f) => ({ type: f.type, url: printFileUrl(f.path) })),
+        ...(found.product.options ? { options: found.product.options } : {}),
+      });
+      continue;
+    }
+    missing.push(l.sku);
+  }
+  return { items, missing, usedCatalog };
+}
+
 /** SKUs in this order that have no Printful sync variant id in printful-variants.ts. */
 export function missingSyncVariants(lines: ShopOrderLine[]) {
   return lines.filter((l) => syncVariantIdFor(l.sku) === null).map((l) => l.sku);
 }
 
-/** Build the Printful order body. Call only after missingSyncVariants() returned an empty list. */
-export function buildPrintfulOrder(sessionId: string, lines: ShopOrderLine[], recipient: ShopRecipient, shippingCents: number): PrintfulOrder {
+/** Build the Printful v1 order body (POST https://api.printful.com/orders). */
+export function buildPrintfulOrder(sessionId: string, items: PrintfulItem[], recipient: ShopRecipient, shippingCents: number): PrintfulOrder {
   return {
     external_id: externalIdFor(sessionId),
     shipping: "STANDARD",
     recipient,
-    items: lines.map((l) => {
-      const id = syncVariantIdFor(l.sku);
-      if (id === null) throw new Error(`No Printful sync variant id for ${l.sku}`);
-      return {
-        sync_variant_id: id,
-        quantity: l.quantity,
-        external_id: l.sku,
-        name: `${l.name} (${l.label})`,
-        retail_price: (l.unitCents / 100).toFixed(2),
-      };
-    }),
+    items,
     retail_costs: { currency: "USD", shipping: (shippingCents / 100).toFixed(2) },
   };
 }
 
+/**
+ * Create the order with Printful API v1. confirm=false (the default, PRINTFUL_AUTO_CONFIRM unset) makes a DRAFT that
+ * someone reviews and confirms in the Printful dashboard; nothing is charged or printed until then.
+ */
 export async function createPrintfulOrder(order: PrintfulOrder, confirm: boolean, fetchImpl: typeof fetch = fetch) {
   const token = printfulApiKey();
   if (!token) throw new Error("PRINTFUL_API_KEY is not configured");

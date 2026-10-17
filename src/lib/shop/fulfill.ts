@@ -1,9 +1,9 @@
 import type Stripe from "stripe";
 import { adminNotifyEmail, sendOutboundEmail } from "@/lib/adminNotify";
 import { getDedupeStore, type DedupeStore } from "./idempotency";
-import { buildPrintfulOrder, createPrintfulOrder, missingSyncVariants, sessionDetails } from "./printful";
+import { buildPrintfulOrder, createPrintfulOrder, planPrintfulItems, sessionDetails } from "./printful";
 import { saveShopOrder, type ShopOrderRecord } from "./orders";
-import { autoConfirm, printfulApiKey, SHOP_SESSION_SOURCE } from "./config";
+import { autoConfirm, printfulApiKey, printfulCatalogFallback, SHOP_SESSION_SOURCE } from "./config";
 import { getShopStripe } from "./stripe";
 import { logError, logInfo } from "./log";
 
@@ -28,7 +28,7 @@ function escapeHtml(s: string) {
 export async function notifyAdminOfShopOrder(record: ShopOrderRecord) {
   const headline =
     record.status === "sent-to-printful"
-      ? `Sent to Printful${record.printfulOrderId ? ` (order ${record.printfulOrderId}, ${record.printfulStatus ?? "draft"})` : ""}.`
+      ? `Sent to Printful${record.printfulOrderId ? ` (order ${record.printfulOrderId}, ${record.printfulStatus ?? "draft"})` : ""}. ${record.printfulStatus === "draft" ? "It is a DRAFT: review and confirm it in Printful." : ""} ${record.reason ?? ""}`.trim()
       : `ACTION NEEDED: place this order by hand. ${record.reason ?? ""}`.trim();
   const r = record.recipient;
   const lines = record.lines.map((l) => `${l.quantity} x ${l.name} (${l.label}) [${l.sku}] @ ${money(l.unitCents)}`);
@@ -67,8 +67,8 @@ export async function notifyAdminOfShopOrder(record: ShopOrderRecord) {
  * Turn a paid shop Checkout Session into a fulfilled order. Idempotent by session id, so the webhook and the
  * success page can both call it. The session is always re-fetched from Stripe; nothing posted by a client is trusted.
  *
- * - PRINTFUL_API_KEY and every SKU's sync variant id present: create the Printful order (draft unless
- *   PRINTFUL_AUTO_CONFIRM=true), record it, and email the admin.
+ * - PRINTFUL_API_KEY present and every SKU has a sync variant id (or, for drafts, a catalog variant + print files):
+ *   create the Printful order (draft unless PRINTFUL_AUTO_CONFIRM=true), record it, and email the admin.
  * - Otherwise: record the order as needs-manual-fulfillment and email the admin. No crash.
  */
 export async function fulfillShopSession(sessionId: string, deps: Deps = {}): Promise<{ status: FulfillStatus; session?: Stripe.Checkout.Session }> {
@@ -100,18 +100,20 @@ export async function fulfillShopSession(sessionId: string, deps: Deps = {}): Pr
       lines,
       recipient,
     };
-    const missing = missingSyncVariants(lines);
+    const plan = planPrintfulItems(lines, { allowCatalog: printfulCatalogFallback() });
     if (!printfulApiKey()) {
       record.reason = "PRINTFUL_API_KEY is not set.";
-    } else if (missing.length) {
-      record.reason = `No Printful sync variant id configured for: ${missing.join(", ")}.`;
+    } else if (plan.missing.length) {
+      record.reason = `No Printful sync variant id configured for: ${plan.missing.join(", ")}.`;
     } else {
       try {
-        const order = buildPrintfulOrder(session.id, lines, recipient, shippingCents);
-        const result = await (deps.createOrder ?? createPrintfulOrder)(order, autoConfirm());
+        const order = buildPrintfulOrder(session.id, plan.items, recipient, shippingCents);
+        const confirm = autoConfirm() && !plan.usedCatalog; // catalog-file orders always stay drafts
+        const result = await (deps.createOrder ?? createPrintfulOrder)(order, confirm);
         record.status = "sent-to-printful";
         record.printfulOrderId = result?.id;
         record.printfulStatus = result?.status;
+        if (plan.usedCatalog) record.reason = "Draft built from catalog variants + print files: check placement in Printful, then confirm.";
       } catch (err) {
         record.status = "printful-failed";
         record.reason = err instanceof Error ? err.message.slice(0, 300) : "Printful order failed";

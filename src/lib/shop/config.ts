@@ -60,6 +60,15 @@ export function printfulApiKey(): string | null {
   return key && !key.includes("REPLACE_ME") ? key : null;
 }
 
+/**
+ * Without a sync variant id, send the Printful catalog variant + our print files instead. Allowed only for DRAFT
+ * orders (PRINTFUL_AUTO_CONFIRM not true), so a person checks placement before anything is printed.
+ * PRINTFUL_CATALOG_FALLBACK=false turns it off (then such orders are recorded for manual fulfillment).
+ */
+export function printfulCatalogFallback() {
+  return process.env.PRINTFUL_CATALOG_FALLBACK !== "false" && !autoConfirm();
+}
+
 /** Stripe Tax. Off unless STRIPE_AUTOMATIC_TAX=true (needs Stripe Tax set up with a registration first). */
 export function automaticTax() {
   return process.env.STRIPE_AUTOMATIC_TAX === "true";

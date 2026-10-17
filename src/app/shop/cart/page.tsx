@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CartView } from "./cart-view";
-import { checkoutMode, stripeKeyMode } from "@/lib/shop/config";
+import { automaticTax, checkoutMode, stripeKeyMode } from "@/lib/shop/config";
 import { ShopHero } from "@/components/shop/shop-hero";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default function CartPage() {
       <ShopHero kicker="Cart" title="Your golf cart" lede="Everything you picked, parked and ready. Shipping is added at checkout." mascot={false} />
       <section className="section">
         <div className="shell">
-          <CartView mode={checkoutMode()} chargeNotice={chargeNotice()} />
+          <CartView mode={checkoutMode()} chargeNotice={chargeNotice()} taxAtCheckout={automaticTax()} />
         </div>
       </section>
     </>

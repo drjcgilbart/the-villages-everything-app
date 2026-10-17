@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useCart } from "@/components/shop/cart";
 import { findVariant, formatPrice, variantImage } from "@/lib/shop/catalog";
 
-export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unavailable"; chargeNotice?: string | null }) {
+export function CartView({ mode, chargeNotice, taxAtCheckout = false }: { mode: "live" | "mock" | "unavailable"; chargeNotice?: string | null; taxAtCheckout?: boolean }) {
   const { items, setQty, remove, ready } = useCart();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
         <div>
           <p className="shop-mono">Subtotal</p>
           <p className="shop-price shop-price-lg" data-testid="subtotal">{formatPrice(subtotal)}</p>
-          <p className="shop-tag">Shipping is added at checkout. Sales tax is not collected yet.</p>
+          <p className="shop-tag">{taxAtCheckout ? "Shipping and any sales tax are added at checkout." : "Shipping is added at checkout."}</p>
         </div>
         {mode === "unavailable" ? (
           <p className="shop-soon" role="status" data-testid="checkout-unavailable">

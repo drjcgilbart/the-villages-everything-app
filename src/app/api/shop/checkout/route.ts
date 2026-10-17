@@ -16,6 +16,12 @@ import { logError, logInfo } from "@/lib/shop/log";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function isStripeTaxSetupError(err: unknown) {
+  const e = err as { type?: string; code?: string; param?: string; message?: string };
+  const text = `${e?.code ?? ""} ${e?.param ?? ""} ${e?.message ?? ""}`.toLowerCase();
+  return e?.type === "StripeInvalidRequestError" && (text.includes("automatic_tax") || text.includes("stripe tax") || text.includes("head office") || text.includes("origin address"));
+}
+
 const UNAVAILABLE = "Checkout is temporarily unavailable. Your cart is saved on this device, so please try again soon.";
 
 export async function POST(req: Request) {
@@ -28,45 +34,59 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   try {
-    const tax = automaticTax();
-    // Server-side catalog prices only. The client sends SKUs and quantities, never prices.
-    const { lineItems, subtotal } = buildLineItems(body?.items, { taxBehavior: tax ? "exclusive" : undefined });
+    const wantTax = automaticTax();
+    const base = process.env.VERCEL ? siteUrl() : new URL(req.url).origin;
+    const build = (tax: boolean) => {
+      // Server-side catalog prices only. The client sends SKUs and quantities, never prices.
+      const { lineItems, subtotal } = buildLineItems(body?.items, { taxBehavior: tax ? "exclusive" : undefined });
+      const skus = lineItems.map((l) => `${l.price_data.product_data.metadata.sku}x${l.quantity}`).join(",");
+      const params: Stripe.Checkout.SessionCreateParams = {
+        mode: "payment",
+        line_items: lineItems,
+        // Stripe Tax: computes sales tax from the shipping address. Needs Stripe Tax activated in the dashboard.
+        ...(tax ? { automatic_tax: { enabled: true } } : {}),
+        shipping_address_collection: {
+          allowed_countries: shipCountries() as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[],
+        },
+        shipping_options: [
+          {
+            shipping_rate_data: {
+              display_name: "Standard (printed on demand)",
+              type: "fixed_amount",
+              fixed_amount: { amount: shippingRateCents(), currency: "usd" },
+              tax_code: SHIPPING_TAX_CODE, // shipping is taxable where the state taxes it
+              ...(tax ? { tax_behavior: "exclusive" as const } : {}),
+              delivery_estimate: {
+                minimum: { unit: "business_day", value: 5 },
+                maximum: { unit: "business_day", value: 12 },
+              },
+            },
+          },
+        ],
+        phone_number_collection: { enabled: true },
+        success_url: `${base}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${base}/shop/cancel`,
+        metadata: { source: SHOP_SESSION_SOURCE, skus: skus.slice(0, 480), tax: tax ? "stripe" : "off" },
+        payment_intent_data: { metadata: { source: SHOP_SESSION_SOURCE } },
+      };
+      return { params, subtotal, lines: lineItems.length };
+    };
     if (mode === "mock") {
-      logInfo("shop-checkout", "mock checkout", { lines: lineItems.length, subtotal });
+      const { subtotal, lines } = build(false);
+      logInfo("shop-checkout", "mock checkout", { lines, subtotal });
       return NextResponse.json({ url: "/shop/success?mock=1", mock: true, subtotal }); // relative: stays on this host
     }
     const stripe = getShopStripe();
-    // On Vercel use the deployment URL (preview) or the canonical site; on this PC come back to the same host.
-    const base = process.env.VERCEL ? siteUrl() : new URL(req.url).origin;
-    const skus = lineItems.map((l) => `${l.price_data.product_data.metadata.sku}x${l.quantity}`).join(",");
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: lineItems,
-      ...(tax ? { automatic_tax: { enabled: true } } : {}),
-      shipping_address_collection: {
-        allowed_countries: shipCountries() as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[],
-      },
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            display_name: "Standard (printed on demand)",
-            type: "fixed_amount",
-            fixed_amount: { amount: shippingRateCents(), currency: "usd" },
-            tax_code: SHIPPING_TAX_CODE,
-            ...(tax ? { tax_behavior: "exclusive" as const } : {}),
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 5 },
-              maximum: { unit: "business_day", value: 12 },
-            },
-          },
-        },
-      ],
-      phone_number_collection: { enabled: true },
-      success_url: `${base}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/shop/cancel`,
-      metadata: { source: SHOP_SESSION_SOURCE, skus: skus.slice(0, 480) },
-      payment_intent_data: { metadata: { source: SHOP_SESSION_SOURCE } },
-    });
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create(build(wantTax).params);
+    } catch (err) {
+      // STRIPE_AUTOMATIC_TAX=true but Stripe Tax is not set up (no head office address / registration):
+      // keep selling without tax instead of breaking checkout, and log it.
+      if (!wantTax || !isStripeTaxSetupError(err)) throw err;
+      logError("shop-checkout", err, { note: "Stripe Tax not ready; retrying without automatic tax" });
+      session = await stripe.checkout.sessions.create(build(false).params);
+    }
     if (!session.url) throw new Error("Stripe returned no Checkout URL");
     return NextResponse.json({ url: session.url });
   } catch (err) {

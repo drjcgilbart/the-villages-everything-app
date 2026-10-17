@@ -1,7 +1,8 @@
 // Single source of truth for Villages Everything App merch: products, prices and Printful mapping.
 // Mirrors the All In On Musk shop. Prices are in cents and the server ONLY trusts prices from this file.
-// Printful variant ids come from the public catalog API (GET https://api.printful.com/products/{id}),
-// checked 2026-10-16. Re-verify before launch: Printful occasionally retires variants.
+// Printful catalog variant ids and file placement names come from the public catalog API
+// (GET https://api.printful.com/products/{id}). All ids below were re-checked on 2026-10-17 and were in stock.
+// Hat placements on Printful product 206 are "default" (front) and "back".
 
 export type Variant = {
   sku: string; // our id, sent by the client
@@ -37,7 +38,7 @@ export type Product = {
   printfulProduct: string; // human note
   variants: Variant[];
   files: PrintFile[];
-  taxCode: string; // Stripe product tax code
+  taxCode: string; // Stripe Tax product tax code (see TAX_CODES)
   // Printful item options. Embroidery REQUIRES thread colours.
   // Allowed: #FFFFFF #000000 #96A1A8 #A67843 #FFCC00 #E25C27 #CC3366 #CC3333 #660000 #333366 #005397 #3399FF #6B5294 #01784E #7BA35A
   options?: { id: string; value: string | string[] }[];
@@ -65,8 +66,16 @@ function tee(slug: string, code: string, colors: string[]): Pick<Product, "color
 }
 
 const TEE_NOTE = "Gildan 64000 Unisex Softstyle T-Shirt (catalog product 12), DTG front";
-const CLOTHING = "txcd_30011000";
-const GENERAL = "txcd_99999999";
+// Stripe Tax product codes (https://docs.stripe.com/tax/tax-codes). Used only when STRIPE_AUTOMATIC_TAX=true.
+// Note: txcd_20030000 is "General - Services" in Stripe's list, so it is NOT used for apparel here.
+export const TAX_CODES = {
+  apparel: "txcd_30011000", // Clothing & Footwear (tees)
+  hats: "txcd_30060006", // Hats (an apparel sub-category in Stripe's list)
+  general: "txcd_99999999", // General - Tangible Goods (mugs, totes, golf towels, stickers)
+} as const;
+const CLOTHING = TAX_CODES.apparel;
+const HATS = TAX_CODES.hats;
+const GENERAL = TAX_CODES.general;
 
 export const PRODUCTS: Product[] = [
   {
@@ -155,15 +164,15 @@ export const PRODUCTS: Product[] = [
       { sku: "hat-cpo-white", label: "White / One size", color: "white", size: "One size", printfulVariantId: 7853 },
     ],
     files: [
-      { type: "embroidery_front", path: "/shop/print/hat-cart-path-only.png" },
+      { type: "default", path: "/shop/print/hat-cart-path-only.png" },
       // Back, above the strap: homepage wordmark only, centered (Fraunces 700; "everything" italic). Front carries the mascot badge.
-      { type: "embroidery_back", path: "/shop/print/hat-cart-path-only-back.png" },
+      { type: "back", path: "/shop/print/hat-cart-path-only-back.png" },
     ],
     options: [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
       { id: "thread_colors_back", value: ["#000000", "#E25C27"] },
     ],
-    taxCode: CLOTHING,
+    taxCode: HATS,
   },
   {
     slug: "mug-coffee-pickleball-nap",
