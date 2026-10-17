@@ -251,14 +251,14 @@ export const PRODUCTS: Product[] = [
     description:
       "The same sunset golf-cart badge and ring of truth on a light cream background. For dark coolers, dark water bottles and dark golf carts.",
     priceCents: 500,
-    image: "/shop/mock/sticker-my-other-ride-light-v2--white.png",
+    image: "/shop/mock/sticker-my-other-ride-light-v3--white.png",
     printfulProduct: "Kiss-Cut Stickers (catalog product 358)",
     variants: [
       { sku: "stk-moric-light-3", label: "3 x 3 in", size: "3 x 3 in", printfulVariantId: 10163 },
       { sku: "stk-moric-light-4", label: "4 x 4 in", size: "4 x 4 in", printfulVariantId: 10164 },
     ],
-    // v2: adds two deep-green rings (inside the outer edge, and around the logo clear of the web address).
-    files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light-v2.png" }],
+    // v3: outer band deep green with white lettering; inner ring, cream centre and web address unchanged from v2.
+    files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light-v3.png" }],
     taxCode: GENERAL,
   },
 ];
