@@ -117,3 +117,11 @@
   background: radial-gradient(74.33% 74.33% at 50% 59.7%, #ffffff 0, #fff8ee 55%, #f3e6cf 100%);
 }
 .shop-card[href="/shop/towel-shanks-for-the-memories"] img { position: relative; transform: translateY(14.7%); clip-path: inset(0 0 14.7% 0); }
+
+/* Golf towels tile in Shop by type: same centring for its thumbnail, done inside the image box (object-position)
+   so the tile size and label don't move. 14.7cqw = 14.7% of the thumbnail width; the gap gets the mockup's own gradient. */
+.shop-type-tile[href="/shop?type=golf-towels"] { container-type: inline-size; }
+.shop-type-tile[href="/shop?type=golf-towels"] img {
+  object-position: 50% 14.7cqw;
+  background: radial-gradient(74.33% 74.33% at 50% 59.7%, #ffffff 0, #fff8ee 55%, #f3e6cf 100%);
+}

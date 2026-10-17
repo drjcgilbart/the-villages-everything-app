@@ -176,11 +176,22 @@ export const PRODUCTS: Product[] = [
     description:
       "A glossy white ceramic mug printed on both sides with the daily plan. Dishwasher and microwave safe, which is more than we can say for the 7 a.m. game.",
     priceCents: 1800,
-    image: "/shop/mock/mug-coffee-pickleball-nap--white.png",
+    image: "/shop/mock/mug-coffee-pickleball-nap-front--white.png",
+    // One colour with a back view so the product page shows the Front/Back toggle (same as the hat).
+    // Both mockups are slices of the real wrap print file: front = text side, back = pickleball + wordmark.
+    colors: [
+      {
+        id: "white",
+        label: "White",
+        hex: "#fbfbf9",
+        image: "/shop/mock/mug-coffee-pickleball-nap-front--white.png",
+        backImage: "/shop/mock/mug-coffee-pickleball-nap-back--white.png",
+      },
+    ],
     printfulProduct: "White Glossy Mug (catalog product 19)",
     variants: [
-      { sku: "mug-cpn-11", label: "11 oz", size: "11 oz", printfulVariantId: 1320 },
-      { sku: "mug-cpn-15", label: "15 oz", size: "15 oz", printfulVariantId: 4830 },
+      { sku: "mug-cpn-11", label: "11 oz", color: "white", size: "11 oz", printfulVariantId: 1320 },
+      { sku: "mug-cpn-15", label: "15 oz", color: "white", size: "15 oz", printfulVariantId: 4830 },
     ],
     // Art is laid out for the 11 oz wrap (2700x1050). TODO: check placement for 15 oz in Printful's mockup generator.
     files: [{ type: "default", path: "/shop/print/mug-coffee-pickleball-nap.png" }],
@@ -240,13 +251,14 @@ export const PRODUCTS: Product[] = [
     description:
       "The same sunset golf-cart badge and ring of truth on a light cream background. For dark coolers, dark water bottles and dark golf carts.",
     priceCents: 500,
-    image: "/shop/mock/sticker-my-other-ride-light--white.png",
+    image: "/shop/mock/sticker-my-other-ride-light-v2--white.png",
     printfulProduct: "Kiss-Cut Stickers (catalog product 358)",
     variants: [
       { sku: "stk-moric-light-3", label: "3 x 3 in", size: "3 x 3 in", printfulVariantId: 10163 },
       { sku: "stk-moric-light-4", label: "4 x 4 in", size: "4 x 4 in", printfulVariantId: 10164 },
     ],
-    files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light.png" }],
+    // v2: adds two deep-green rings (inside the outer edge, and around the logo clear of the web address).
+    files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light-v2.png" }],
     taxCode: GENERAL,
   },
 ];
