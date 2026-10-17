@@ -54,10 +54,11 @@ const TEE_IDS: Record<string, { label: string; hex: string; ids: number[] }> = {
   natural: { label: "Natural", hex: "#efe6d2", ids: [20415, 20409, 20412, 20406, 20403, 20400] },
 };
 
-function tee(slug: string, code: string, colors: string[]): Pick<Product, "colors" | "variants" | "image"> {
+// art = mockup file prefix; defaults to the slug (a redrawn design gets a new file name, the old files stay).
+function tee(slug: string, code: string, colors: string[], art = slug): Pick<Product, "colors" | "variants" | "image"> {
   return {
-    image: `/shop/mock/${slug}--${colors[0]}.png`,
-    colors: colors.map((c) => ({ id: c, label: TEE_IDS[c].label, hex: TEE_IDS[c].hex, image: `/shop/mock/${slug}--${c}.png` })),
+    image: `/shop/mock/${art}--${colors[0]}.png`,
+    colors: colors.map((c) => ({ id: c, label: TEE_IDS[c].label, hex: TEE_IDS[c].hex, image: `/shop/mock/${art}--${c}.png` })),
     variants: colors.flatMap((c) =>
       SIZES.map((s, i) => ({ sku: `${code}-${c}-${s}`, label: `${TEE_IDS[c].label} / ${s}`, color: c, size: s, printfulVariantId: TEE_IDS[c].ids[i] }))
     ),
@@ -77,9 +78,10 @@ export const PRODUCTS: Product[] = [
     description:
       "Sunshine, palm trees and a golf cart with somewhere to be. For the neighbor who pickleballs at 8, lunches at noon and protects the 2:00 nap like a tee time.",
     priceCents: 2800,
-    ...tee("tee-retired-not-tired", "rnt", ["white", "light-blue", "sand"]),
+    ...tee("tee-retired-not-tired", "rnt", ["white", "light-blue", "sand"], "tee-retired-not-tired-v3"),
     printfulProduct: TEE_NOTE,
-    files: [{ type: "default", path: "/shop/print/tee-retired-not-tired.png" }],
+    // v3 (2026-10-17): sun made smaller and lower so it no longer touches "RETIRED".
+    files: [{ type: "default", path: "/shop/print/tee-retired-not-tired-v3.png" }],
     taxCode: CLOTHING,
   },
   {
@@ -103,9 +105,10 @@ export const PRODUCTS: Product[] = [
     description:
       "A cocktail umbrella, a setting sun and a little music in the air. Band at 4, dancing till 7, home before the streetlights get any ideas.",
     priceCents: 2800,
-    ...tee("tee-happy-hour-lifestyle", "hhl", ["sand", "white"]),
+    ...tee("tee-happy-hour-lifestyle", "hhl", ["sand", "white"], "tee-happy-hour-lifestyle-v3"),
     printfulProduct: TEE_NOTE,
-    files: [{ type: "default", path: "/shop/print/tee-happy-hour-lifestyle.png" }],
+    // v3 (2026-10-17): sun + cocktail smaller, text lines spaced so nothing overlaps.
+    files: [{ type: "default", path: "/shop/print/tee-happy-hour-lifestyle-v3.png" }],
     taxCode: CLOTHING,
   },
   {
@@ -219,13 +222,31 @@ export const PRODUCTS: Product[] = [
     description:
       "The app's sunset golf-cart badge ringed with the truth. For the cooler, the water bottle, or the back of the actual golf cart.",
     priceCents: 500,
-    image: "/shop/mock/sticker-my-other-ride--white.png",
+    image: "/shop/mock/sticker-my-other-ride-straight--white.png",
     printfulProduct: "Kiss-Cut Stickers (catalog product 358)",
     variants: [
       { sku: "stk-moric-3", label: "3 x 3 in", size: "3 x 3 in", printfulVariantId: 10163 },
       { sku: "stk-moric-4", label: "4 x 4 in", size: "4 x 4 in", printfulVariantId: 10164 },
     ],
     files: [{ type: "default", path: "/shop/print/sticker-my-other-ride.png" }],
+    taxCode: GENERAL,
+  },
+  {
+    // Same sticker on a cream (--cream #fff8ee) field; lettering in the dark sticker's deep green so it stays legible.
+    slug: "sticker-my-other-ride-light",
+    type: "stickers",
+    name: "My Other Ride Is a Golf Cart (Light)",
+    tagline: "Kiss-cut sticker, light",
+    description:
+      "The same sunset golf-cart badge and ring of truth on a light cream background. For dark coolers, dark water bottles and dark golf carts.",
+    priceCents: 500,
+    image: "/shop/mock/sticker-my-other-ride-light--white.png",
+    printfulProduct: "Kiss-Cut Stickers (catalog product 358)",
+    variants: [
+      { sku: "stk-moric-light-3", label: "3 x 3 in", size: "3 x 3 in", printfulVariantId: 10163 },
+      { sku: "stk-moric-light-4", label: "4 x 4 in", size: "4 x 4 in", printfulVariantId: 10164 },
+    ],
+    files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light.png" }],
     taxCode: GENERAL,
   },
 ];

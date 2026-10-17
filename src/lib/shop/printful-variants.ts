@@ -12,7 +12,7 @@
 //
 // Tees: <code>-<color>-<size>, code = rnt | dink | hhl | ld | logo, size = S M L XL 2XL 3XL.
 // Others: hat-cpo-khaki, hat-cpo-stone, hat-cpo-white, mug-cpn-11, mug-cpn-15, tote-tar-oyster,
-//         towel-sftm-16x24, stk-moric-3, stk-moric-4.
+//         towel-sftm-16x24, stk-moric-3, stk-moric-4, stk-moric-light-3, stk-moric-light-4.
 export const PRINTFUL_SYNC_VARIANT_IDS: Readonly<Record<string, number>> = {
   // "rnt-white-M": 0,
 };

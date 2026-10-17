@@ -108,3 +108,12 @@
 .shop-warn { color: var(--sunset); font-weight: 600; margin-top: 10px; }
 .shop-receipt { margin-bottom: 20px; }
 .shop-receipt ul { margin: 8px 0 12px; padding-left: 1.2em; }
+
+/* Golf towel card: the towel art sits high in its square mockup, so shift it down to centre it (image file unchanged).
+   clip-path trims the shifted image's empty bottom; ::before continues the mockup's own background gradient into the gap. */
+.shop-card[href="/shop/towel-shanks-for-the-memories"] { position: relative; }
+.shop-card[href="/shop/towel-shanks-for-the-memories"]::before {
+  content: ""; position: absolute; inset: 0 0 auto; aspect-ratio: 1 / 1;
+  background: radial-gradient(74.33% 74.33% at 50% 59.7%, #ffffff 0, #fff8ee 55%, #f3e6cf 100%);
+}
+.shop-card[href="/shop/towel-shanks-for-the-memories"] img { position: relative; transform: translateY(14.7%); clip-path: inset(0 0 14.7% 0); }
