@@ -233,13 +233,13 @@ export const PRODUCTS: Product[] = [
     description:
       "The app's sunset golf-cart badge ringed with the truth. For the cooler, the water bottle, or the back of the actual golf cart.",
     priceCents: 500,
-    image: "/shop/mock/sticker-my-other-ride-straight--white.png",
+    image: "/shop/mock/sticker-my-other-ride-straight-v2--white.png",
     printfulProduct: "Kiss-Cut Stickers (catalog product 358)",
     variants: [
       { sku: "stk-moric-3", label: "3 x 3 in", size: "3 x 3 in", printfulVariantId: 10163 },
       { sku: "stk-moric-4", label: "4 x 4 in", size: "4 x 4 in", printfulVariantId: 10164 },
     ],
-    files: [{ type: "default", path: "/shop/print/sticker-my-other-ride.png" }],
+    files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-v2.png" }],
     taxCode: GENERAL,
   },
   {
