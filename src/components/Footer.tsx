@@ -56,6 +56,7 @@ export function Footer() {
                 Buy me a cup of Joe
               </Link>
               <Link href="/golf-cart-hero">Golf Cart Hero</Link>
+              <Link href="/shop">Merch shop</Link>
             </div>
           </div>
         </div>

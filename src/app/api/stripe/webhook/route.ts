@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fulfillPaidMembershipSession } from "@/lib/memberStripe";
 import { getStripe, stripeConfigured } from "@/lib/stripe";
+import { fulfillShopSession } from "@/lib/shop/fulfill";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
       const obj = event.data.object as { id?: string; mode?: string };
       sessionId = String(obj.id || "");
       if (obj.mode && obj.mode !== "subscription") {
+        if (obj.mode === "payment") return shopOrIgnore(sessionId);
         return NextResponse.json({ received: true, ignored: "not membership" });
       }
     } else {
@@ -64,8 +66,25 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Fulfill failed";
     if (message === "Not a membership checkout") {
-      return NextResponse.json({ received: true, ignored: "not membership" });
+      return shopOrIgnore(sessionId);
     }
     return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+/**
+ * Merch shop orders share this Stripe account. A paid shop session (metadata.source = villages-shop) goes to
+ * the shop fulfillment (Printful, or a recorded order plus an admin email). Tips and anything else stay ignored.
+ */
+async function shopOrIgnore(sessionId: string) {
+  try {
+    const { status } = await fulfillShopSession(sessionId);
+    if (status === "not-shop" || status === "ignored") {
+      return NextResponse.json({ received: true, ignored: "not membership" });
+    }
+    return NextResponse.json({ received: true, shop: status });
+  } catch (err) {
+    console.error("[stripe-webhook] shop fulfillment failed", err instanceof Error ? err.message : err);
+    return NextResponse.json({ error: "Shop fulfillment failed" }, { status: 500 });
   }
 }
