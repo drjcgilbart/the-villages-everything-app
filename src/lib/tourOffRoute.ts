@@ -7,16 +7,18 @@ export type LatLng = [number, number];
 type Point = { latitude: number; longitude: number };
 
 /** Farther than this from the drawn route counts as one off-route fix. */
-export const OFF_ROUTE_METERS = 60;
+export const OFF_ROUTE_METERS = 45;
 /** Far enough that two fixes in a row are clearly off the route (wrong road, not GPS drift). */
-export const OFF_ROUTE_FAR_METERS = 120;
+export const OFF_ROUTE_FAR_METERS = 100;
 /** Fixes in a row needed before a reroute. */
 export const OFF_ROUTE_FIXES = 3;
 export const OFF_ROUTE_FAR_FIXES = 2;
 /** Back within this distance resets the counter (hysteresis, so the edge does not flicker). */
-export const ON_ROUTE_METERS = 40;
+export const ON_ROUTE_METERS = 30;
 /** Never reroute more often than this. */
-export const REROUTE_COOLDOWN_MS = 20000;
+export const REROUTE_COOLDOWN_MS = 15000;
+/** Two off-route fixes spread over this long also count (sparse phone fixes). */
+export const OFF_ROUTE_HOLD_MS = 10000;
 /** Fixes reported worse than this accuracy are ignored for off-route checks. */
 export const MAX_FIX_ACCURACY_METERS = 75;
 
@@ -72,10 +74,11 @@ export type OffRouteState = {
   segment: number;
   lastRerouteAt: number;
   busy: boolean;
+  firstMissAt: number;
 };
 
 export function freshOffRouteState(): OffRouteState {
-  return { misses: 0, segment: 0, lastRerouteAt: 0, busy: false };
+  return { misses: 0, segment: 0, lastRerouteAt: 0, busy: false, firstMissAt: 0 };
 }
 
 /**
@@ -94,13 +97,16 @@ export function offRouteFix(
   const { meters, segment } = distanceToLine(point, line, state.segment);
   if (meters <= ON_ROUTE_METERS) {
     state.misses = 0;
+    state.firstMissAt = 0;
     state.segment = segment;
     return false;
   }
   if (meters <= OFF_ROUTE_METERS) return false; // in the hysteresis band: hold the count
   state.misses += 1;
+  if (state.misses === 1) state.firstMissAt = now;
   const needed = meters >= OFF_ROUTE_FAR_METERS ? OFF_ROUTE_FAR_FIXES : OFF_ROUTE_FIXES;
-  if (state.misses < needed) return false;
+  const heldLongEnough = state.misses >= 2 && now - state.firstMissAt >= OFF_ROUTE_HOLD_MS;
+  if (state.misses < needed && !heldLongEnough) return false;
   if (state.busy || now - state.lastRerouteAt < REROUTE_COOLDOWN_MS) return false;
   return true;
 }

@@ -18,7 +18,7 @@ import { speakTour, speakTourNow, stopTourSpeech } from "@/lib/tourSpeech";
 import { TOUR_MUSIC_STATE_EVENT, TOUR_MUSIC_TOGGLE_EVENT } from "@/lib/themeMusic";
 import {
   DEFAULT_STOPS,
-  GEOFENCE_METERS,
+  OFF_ROUTE_QUIET_METERS,
   HOLIDAY_LABELS,
   MAX_STOPS,
   TOUR_HOLIDAYS,
@@ -29,6 +29,7 @@ import {
 } from "@/lib/lightTourShared";
 import { buildTourSheetPdf } from "@/lib/tourSheetPdf";
 import { freshOffRouteState, offRouteFix } from "@/lib/tourOffRoute";
+import { ARRIVAL_METERS, arrivalFix, freshArrivalState } from "@/lib/tourArrival";
 import { HolidayLightsTermsGate } from "./HolidayLightsTermsGate";
 
 type Stop = {
@@ -138,6 +139,7 @@ export function LightTour({
   const houseOpenRef = useRef(false);
   const lineRef = useRef<[number, number][]>([]);
   const offRoute = useRef(freshOffRouteState());
+  const arrival = useRef(freshArrivalState());
   const rerouteAbort = useRef<AbortController | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
   const [musicOn, setMusicOn] = useState(false);
@@ -280,15 +282,22 @@ export function LightTour({
     };
   }, [visitor]);
 
-  function noteArrival() {
+  /**
+   * One live GPS fix. Arrival needs two fixes within ARRIVAL_METERS of the pin
+   * with usable accuracy, or driving past the pin. A heads-up plays at ~100 m.
+   */
+  function noteArrival(accuracy?: number) {
     if (phaseRef.current !== "tour" || houseOpenRef.current) return;
     const here = hereRef.current;
     const stop = stopsRef.current[indexRef.current];
     if (!here || !stop || seen.current.has(stop.id)) return;
-    if (haversineMeters(here, stop) <= GEOFENCE_METERS) {
+    const event = arrivalFix(arrival.current, stop, here, accuracy);
+    if (event === "arrive") {
       seen.current.add(stop.id);
       setPopup(true);
       showCue(`You have arrived at stop ${stop.order}.`, `arrive:${stop.id}`);
+    } else if (event === "approach") {
+      showCue(`Stop ${stop.order} is just ahead.`, `approach:${stop.id}`);
     }
   }
 
@@ -346,7 +355,7 @@ export function LightTour({
     const gen = (guideGen.current += 1);
     const stop = stopsRef.current[indexRef.current];
     if (!stop) return;
-    if (haversineMeters(here, stop) <= GEOFENCE_METERS) return;
+    if (seen.current.has(stop.id) || haversineMeters(here, stop) <= ARRIVAL_METERS) return;
     await loadLeg(here, stop);
     if (gen !== guideGen.current) return;
     if (phaseRef.current !== "tour" || stopsRef.current[indexRef.current]?.id !== stop.id) return;
@@ -368,7 +377,7 @@ export function LightTour({
   function rememberHere(here: Here, accuracy?: number) {
     hereRef.current = here;
     setVisitor((prev) => (prev && haversineMeters(prev, here) < 5 ? prev : here));
-    noteArrival();
+    noteArrival(accuracy);
     if (phaseRef.current === "tour") {
       void guide(here);
       checkOffRoute(here, accuracy);
@@ -380,7 +389,7 @@ export function LightTour({
     const stop = stopsRef.current[indexRef.current];
     if (!stop || houseOpenRef.current) return;
     // Pulling up to a house can leave the street line. That is not a wrong turn.
-    if (haversineMeters(here, stop) <= GEOFENCE_METERS) {
+    if (haversineMeters(here, stop) <= OFF_ROUTE_QUIET_METERS) {
       offRoute.current.misses = 0;
       return;
     }
@@ -400,8 +409,7 @@ export function LightTour({
     rerouteAbort.current?.abort();
     const ctrl = new AbortController();
     rerouteAbort.current = ctrl;
-    const next = ahead[0];
-    showCue(`Rerouting. Heading back to stop ${next.order}.`, `reroute:${state.lastRerouteAt}`);
+    showCue("Rerouting.", `reroute:${state.lastRerouteAt}`);
     try {
       const res = await fetch("/api/light-tour/reroute", {
         method: "POST",
@@ -428,8 +436,12 @@ export function LightTour({
       lineRef.current = fresh;
       setLine(fresh);
       state.misses = 0;
+      state.firstMissAt = 0;
       state.segment = 0;
       legRef.current = null;
+      // Let the first instruction on the new path speak even if its wording
+      // matches an earlier cue. speakTour queues it after "Rerouting".
+      spokenKeyRef.current = `rerouted:${state.lastRerouteAt}`;
       const latest = hereRef.current || here;
       void guide(latest);
     } catch {
@@ -612,6 +624,7 @@ export function LightTour({
     indexRef.current = 0;
     setPopup(false);
     seen.current = new Set();
+    arrival.current = freshArrivalState();
     legRef.current = null;
     spokenKeyRef.current = "";
     offRoute.current = freshOffRouteState();
@@ -631,7 +644,7 @@ export function LightTour({
     stopFollow();
     if (nativeLocationReady()) {
       nativeStop.current = watchNativeLocation(
-        (point) => rememberHere(point),
+        (point, accuracy) => rememberHere(point, accuracy),
         (err) => {
           if (geoErrorCode(err) === 1) setError(locationHelp(err));
         },
@@ -664,7 +677,6 @@ export function LightTour({
       followPhone(false);
     }
     if (here) void guide(here);
-    noteArrival();
   }
 
   function stopFollow() {
@@ -709,11 +721,6 @@ export function LightTour({
     if (here) void guide(here);
   }
 
-  useEffect(() => {
-    noteArrival();
-    // Recheck when the active stop changes. GPS ticks call noteArrival directly.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, phase]);
 
   function resetPick() {
     stopFollow();

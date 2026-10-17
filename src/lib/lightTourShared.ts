@@ -14,7 +14,14 @@ export const VILLAGES_CENTER = { latitude: 28.908, longitude: -81.985 };
 export const TOUR_START_MAX_METERS = 200 * 1609.34;
 /** Candidate pool sent to the driving table when a holiday has a long list. */
 export const DRIVING_CANDIDATE_CAP = 60;
-export const GEOFENCE_METERS = 150;
+/**
+ * Near a house, leaving the street line is pulling up, not a wrong turn, so
+ * off-route rerouting stays quiet inside this radius. Not used for arrival
+ * (see ARRIVAL_METERS in tourArrival.ts).
+ */
+export const OFF_ROUTE_QUIET_METERS = 150;
+/** @deprecated Kept for older imports. Use OFF_ROUTE_QUIET_METERS. */
+export const GEOFENCE_METERS = OFF_ROUTE_QUIET_METERS;
 
 export function haversineMeters(
   a: { latitude: number; longitude: number },

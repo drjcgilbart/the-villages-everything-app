@@ -9,6 +9,8 @@ type NativeLocationDetail = {
   code?: number;
   latitude?: number;
   longitude?: number;
+  /** Meters, 68% radius. App builds before this field send none. */
+  accuracy?: number;
 };
 
 type ShellWindow = Window & {
@@ -136,7 +138,7 @@ export async function readDeviceLocation(accept?: (point: DevicePoint) => boolea
 
 /** Driving follow for a phone build that can watch the GPS chip. Returns a stop function. */
 export function watchNativeLocation(
-  onPoint: (point: DevicePoint) => void,
+  onPoint: (point: DevicePoint, accuracy?: number) => void,
   onError?: (err: unknown) => void,
 ): () => void {
   if (typeof window === "undefined" || !nativeLocationReady()) return () => undefined;
@@ -146,7 +148,8 @@ export function watchNativeLocation(
     if (!detail?.watch || detail.requestId !== requestId) return;
     const point = finitePoint(detail.latitude, detail.longitude);
     if (detail.ok && point) {
-      onPoint(point);
+      const accuracy = Number(detail.accuracy);
+      onPoint(point, Number.isFinite(accuracy) && accuracy >= 0 ? accuracy : undefined);
       return;
     }
     onError?.(fail(detail.code === 1 ? 1 : 2, "Location did not come through."));

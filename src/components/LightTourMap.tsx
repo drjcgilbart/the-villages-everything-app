@@ -34,11 +34,20 @@ type Props = {
    * GPS ticks never redraw (or interrupt dragging) the numbered pins.
    */
   me?: { latitude: number; longitude: number; accuracy?: number } | null;
+  /**
+   * Admin only. Long-press (about half a second, touch or mouse) on a pin shows
+   * a small "Go to pin" popup at the pin; tapping it calls this with the pin id.
+   */
+  onGoToStop?: (id: string) => void;
 };
+
+const LONG_PRESS_MS = 500;
+/** Moving farther than this during the hold is a drag or pan, not a long-press. */
+const LONG_PRESS_SLOP_PX = 8;
 
 const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 
-export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null }: Props) {
+export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
@@ -53,6 +62,8 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
   const visitorRef = useRef(visitor);
   const moveRef = useRef(onMoveStop);
   const openRef = useRef(onOpenStop);
+  const goRef = useRef(onGoToStop);
+  const goPopup = useRef<{ popup: import("leaflet").Popup; openedAt: number } | null>(null);
   const [ready, setReady] = useState(false);
   const [recenter, setRecenter] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -62,6 +73,10 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
   visitorRef.current = visitor;
   moveRef.current = onMoveStop;
   openRef.current = onOpenStop;
+  const canGo = Boolean(onGoToStop);
+  useEffect(() => {
+    goRef.current = onGoToStop;
+  }, [onGoToStop]);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,11 +163,74 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
               openRef.current?.(stop.id);
             });
           }
+          if (goRef.current) {
+            let timer = 0;
+            let startX = 0;
+            let startY = 0;
+            const cancel = () => {
+              window.clearTimeout(timer);
+              timer = 0;
+            };
+            const showGo = () => {
+              timer = 0;
+              const button = document.createElement("button");
+              button.type = "button";
+              button.className = "lt-goto-btn";
+              button.textContent = "Go to pin";
+              button.setAttribute("aria-label", `Go to pin ${stop.order}`);
+              L.DomEvent.disableClickPropagation(button);
+              button.addEventListener("click", (event) => {
+                event.preventDefault();
+                map.closePopup();
+                goPopup.current = null;
+                goRef.current?.(stop.id);
+              });
+              const popup = L.popup({
+                className: "lt-goto-pop",
+                closeButton: false,
+                closeOnClick: false,
+                autoClose: true,
+                autoPan: false,
+                offset: [0, -14],
+              })
+                .setLatLng(marker.getLatLng())
+                .setContent(button);
+              map.openPopup(popup);
+              goPopup.current = { popup, openedAt: Date.now() };
+              marker.closeTooltip();
+              if (typeof navigator !== "undefined") navigator.vibrate?.(15);
+            };
+            const el = marker.getElement();
+            if (el) {
+              el.addEventListener("pointerdown", (event) => {
+                if (event.pointerType === "mouse" && event.button !== 0) return;
+                startX = event.clientX;
+                startY = event.clientY;
+                cancel();
+                timer = window.setTimeout(showGo, LONG_PRESS_MS);
+              });
+              el.addEventListener("pointermove", (event) => {
+                if (!timer) return;
+                if (Math.hypot(event.clientX - startX, event.clientY - startY) > LONG_PRESS_SLOP_PX) cancel();
+              });
+              el.addEventListener("pointerup", cancel);
+              el.addEventListener("pointercancel", cancel);
+              el.addEventListener("pointerleave", cancel);
+              // A phone long-press otherwise opens the browser's own menu.
+              el.addEventListener("contextmenu", (event) => event.preventDefault());
+            }
+            marker.on("dragstart", () => {
+              cancel();
+              if (goPopup.current) map.closePopup(goPopup.current.popup);
+              goPopup.current = null;
+            });
+          }
           const detail = [stop.address, stop.note].filter(Boolean).join(" — ");
           if (detail) marker.bindTooltip(detail, { sticky: true });
           bounds.push([stop.latitude, stop.longitude]);
         }
-        const routeKey = `${stops.map((stop) => stop.id).join(",")}:${line.length}`;
+        // On the admin map a Go to pin line must not re-zoom to every pin.
+        const routeKey = `${stops.map((stop) => stop.id).join(",")}:${openRef.current ? "" : line.length}`;
         const tracking = followRef.current && !!visitor && showVisitor && !userPanned.current;
         if (bounds.length && fitted.current !== routeKey) {
           fitted.current = routeKey;
@@ -170,7 +248,7 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
     };
     timer = window.setTimeout(draw, 180);
     return () => window.clearTimeout(timer);
-  }, [visitor, line, stops, activeId, ready, follow, draggable, editable]);
+  }, [visitor, line, stops, activeId, ready, follow, draggable, editable, canGo]);
 
   useEffect(() => {
     if (!follow) return;
@@ -186,9 +264,19 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
       userPanned.current = true;
       setRecenter(true);
     };
+    // The Go to pin popup closes on a tap elsewhere, but not on the release of
+    // the long-press that opened it.
+    const onMapClick = () => {
+      const open = goPopup.current;
+      if (!open || Date.now() - open.openedAt < 400) return;
+      map.closePopup(open.popup);
+      goPopup.current = null;
+    };
     map.on("dragstart", onDrag);
+    map.on("click", onMapClick);
     return () => {
       map.off("dragstart", onDrag);
+      map.off("click", onMapClick);
     };
   }, [ready]);
 
