@@ -4,8 +4,7 @@ import { buildLineItems, PricingError } from "@/lib/shop/pricing";
 import { getShopStripe } from "@/lib/shop/stripe";
 import {
   automaticTax,
-  checkoutEnabled,
-  mockCheckout,
+  checkoutMode,
   shipCountries,
   shippingRateCents,
   siteUrl,
@@ -17,11 +16,11 @@ import { logError, logInfo } from "@/lib/shop/log";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const UNAVAILABLE = "Checkout is temporarily unavailable. Your cart is saved on this device, so please try again soon.";
+
 export async function POST(req: Request) {
-  const mock = mockCheckout();
-  if (!checkoutEnabled() && !mock) {
-    return NextResponse.json({ error: "Checkout opens soon. The shop is open for browsing only right now." }, { status: 503 });
-  }
+  const mode = checkoutMode();
+  if (mode === "unavailable") return NextResponse.json({ error: UNAVAILABLE, unavailable: true }, { status: 503 });
   let body: { items?: unknown };
   try {
     body = (await req.json()) as { items?: unknown };
@@ -30,14 +29,16 @@ export async function POST(req: Request) {
   }
   try {
     const tax = automaticTax();
-    const { lineItems, subtotal } = buildLineItems(body?.items, { taxBehavior: tax ? "exclusive" : undefined }); // server-side prices only
-    if (mock) {
-      // Local test mode: no Stripe call, no charge, no Printful order.
+    // Server-side catalog prices only. The client sends SKUs and quantities, never prices.
+    const { lineItems, subtotal } = buildLineItems(body?.items, { taxBehavior: tax ? "exclusive" : undefined });
+    if (mode === "mock") {
       logInfo("shop-checkout", "mock checkout", { lines: lineItems.length, subtotal });
       return NextResponse.json({ url: "/shop/success?mock=1", mock: true, subtotal }); // relative: stays on this host
     }
     const stripe = getShopStripe();
-    const base = siteUrl();
+    // On Vercel use the deployment URL (preview) or the canonical site; on this PC come back to the same host.
+    const base = process.env.VERCEL ? siteUrl() : new URL(req.url).origin;
+    const skus = lineItems.map((l) => `${l.price_data.product_data.metadata.sku}x${l.quantity}`).join(",");
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       shipping_options: [
         {
           shipping_rate_data: {
-            display_name: "Standard (print on demand)",
+            display_name: "Standard (printed on demand)",
             type: "fixed_amount",
             fixed_amount: { amount: shippingRateCents(), currency: "usd" },
             tax_code: SHIPPING_TAX_CODE,
@@ -63,12 +64,14 @@ export async function POST(req: Request) {
       phone_number_collection: { enabled: true },
       success_url: `${base}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/shop/cancel`,
-      metadata: { source: SHOP_SESSION_SOURCE },
+      metadata: { source: SHOP_SESSION_SOURCE, skus: skus.slice(0, 480) },
+      payment_intent_data: { metadata: { source: SHOP_SESSION_SOURCE } },
     });
+    if (!session.url) throw new Error("Stripe returned no Checkout URL");
     return NextResponse.json({ url: session.url });
   } catch (err) {
     if (err instanceof PricingError) return NextResponse.json({ error: err.message }, { status: 400 });
     logError("shop-checkout", err);
-    return NextResponse.json({ error: "Checkout is unavailable right now. Please try again shortly." }, { status: 500 });
+    return NextResponse.json({ error: UNAVAILABLE }, { status: 503 });
   }
 }

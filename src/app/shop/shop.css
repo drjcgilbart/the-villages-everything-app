@@ -105,3 +105,6 @@
 .shop-view { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border-radius: 14px; border: 2px solid var(--line); background: white; font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer; min-height: 44px; }
 .shop-view img { width: 72px; height: 72px; object-fit: contain; border-radius: 10px; background: var(--cream); }
 .shop-view[aria-pressed="true"] { border-color: var(--palm); color: var(--palm); }
+.shop-warn { color: var(--sunset); font-weight: 600; margin-top: 10px; }
+.shop-receipt { margin-bottom: 20px; }
+.shop-receipt ul { margin: 8px 0 12px; padding-left: 1.2em; }

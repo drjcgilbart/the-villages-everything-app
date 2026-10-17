@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useCart } from "@/components/shop/cart";
 import { findVariant, formatPrice, variantImage } from "@/lib/shop/catalog";
 
-export function CartView({ mode }: { mode: "live" | "mock" | "off" }) {
+export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unavailable"; chargeNotice?: string | null }) {
   const { items, setQty, remove, ready } = useCart();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,17 +66,19 @@ export function CartView({ mode }: { mode: "live" | "mock" | "off" }) {
           <p className="shop-price shop-price-lg" data-testid="subtotal">{formatPrice(subtotal)}</p>
           <p className="shop-tag">Shipping is added at checkout. Sales tax is not collected yet.</p>
         </div>
-        {mode === "off" ? (
-          <p className="shop-soon" role="status">
-            <strong>Checkout opens soon.</strong> The shop is open for browsing while we finish setting up. Your cart is saved on this device.
+        {mode === "unavailable" ? (
+          <p className="shop-soon" role="status" data-testid="checkout-unavailable">
+            <strong>Checkout is temporarily unavailable.</strong> Your cart is saved on this device, so please check back soon.
           </p>
         ) : (
           <button type="button" className="btn btn-primary shop-checkout" onClick={checkout} disabled={busy}>
-            {busy ? "Warming up the cart…" : mode === "mock" ? "Test checkout (no charge)" : "Checkout"}
+            {busy ? "Warming up the cart\u2026" : mode === "mock" ? "Test checkout (no charge)" : "Checkout"}
           </button>
         )}
       </div>
       {mode === "mock" ? <p className="shop-tag">Test mode: no payment is taken and no order is sent to the printer.</p> : null}
+      {mode === "live" ? <p className="shop-tag">Secure checkout by Stripe. US shipping addresses only.</p> : null}
+      {mode === "live" && chargeNotice ? <p className="shop-tag shop-warn" role="note">{chargeNotice}</p> : null}
       {error ? <p className="msg msg-err" role="alert">{error}</p> : null}
     </div>
   );
