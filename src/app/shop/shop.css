@@ -80,7 +80,7 @@
 .shop-sizechart th, .shop-sizechart td { padding: 4px 18px 4px 0; text-align: left; }
 .shop-types { margin: 0 0 8px; }
 .shop-types-h { margin: 0 0 10px; color: var(--palm); }
-.shop-types-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.shop-types-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 1099px) { .shop-types-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) {
   .shop-types-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }

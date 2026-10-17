@@ -2,8 +2,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useCart } from "@/components/shop/cart";
-import { findVariant, formatPrice, variantImage } from "@/lib/shop/catalog";
+import { lineKey, useCart } from "@/components/shop/cart";
+import { BadgePreview } from "@/components/shop/badge-preview";
+import { findVariant, formatPrice, productHref, variantImage } from "@/lib/shop/catalog";
+import { BADGE_SIZES, badgeSavingsCents, themeFromSku } from "@/lib/shop/badges";
 
 export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unavailable"; chargeNotice?: string | null }) {
   const { items, setQty, remove, ready } = useCart();
@@ -11,9 +13,13 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
   const [error, setError] = useState<string | null>(null);
   const lines = items.flatMap((i) => {
     const f = findVariant(i.sku);
-    return f ? [{ ...i, ...f }] : [];
+    // A custom badge line without its text is unusable; drop it rather than send it to checkout.
+    if (!f || (f.product.badge?.kind === "custom" && !i.badge?.name)) return [];
+    return [{ ...i, ...f, key: lineKey(i) }];
   });
-  const subtotal = lines.reduce((n, l) => n + l.product.priceCents * l.qty, 0);
+  const badgeUnits = lines.reduce((n, l) => n + (l.product.type === "badges" ? l.qty : 0), 0);
+  const savings = badgeSavingsCents(badgeUnits);
+  const subtotal = lines.reduce((n, l) => n + l.product.priceCents * l.qty, 0) - savings;
 
   async function checkout() {
     setBusy(true);
@@ -22,7 +28,7 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
       const res = await fetch("/api/shop/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: lines.map(({ sku, qty }) => ({ sku, qty })) }),
+        body: JSON.stringify({ items: lines.map(({ sku, qty, badge }) => ({ sku, qty, ...(badge ? { badge } : {}) })) }),
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error || "Checkout failed");
@@ -44,26 +50,44 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
 
   return (
     <div className="shop-panel">
-      {lines.map((l) => (
-        <div className="shop-line" key={l.sku}>
-          <Image src={variantImage(l.product, l.variant)} alt="" width={84} height={84} />
-          <div>
-            <Link href={`/shop/${l.product.slug}`} className="shop-line-name">{l.product.name}</Link>
-            <div className="shop-mono">{l.variant.label} · {formatPrice(l.product.priceCents)}</div>
+      {lines.map((l) => {
+        const theme = themeFromSku(l.sku);
+        const title = theme ? `Custom Name Badge (${theme.label})` : l.product.name;
+        const detail = theme
+          ? `\u201c${l.badge?.name}\u201d${theme.usesVillage && l.badge?.village ? ` \u00b7 Village of ${l.badge.village}` : ""} \u00b7 ${BADGE_SIZES.custom.label}`
+          : l.product.badge?.kind === "ready"
+            ? `Ready-made \u00b7 ${BADGE_SIZES.ready.label}`
+            : l.variant.label;
+        return (
+          <div className="shop-line" key={l.key}>
+            {theme ? (
+              <BadgePreview theme={theme} text={{ name: l.badge?.name ?? "", village: l.badge?.village }} />
+            ) : (
+              <Image src={variantImage(l.product, l.variant)} alt="" width={84} height={84} />
+            )}
+            <div>
+              <Link href={productHref(l.product)} className="shop-line-name">{title}</Link>
+              <div className="shop-mono">{detail} · {formatPrice(l.product.priceCents)}</div>
+            </div>
+            <label className="shop-qty-wrap">
+              <span className="sr-only">Quantity for {title}</span>
+              <input className="shop-qty" type="number" min={1} max={10} value={l.qty} onChange={(e) => setQty(l.key, Number(e.target.value))} />
+            </label>
+            <button type="button" className="btn btn-ghost btn-sm shop-x" onClick={() => remove(l.key)} aria-label={`Remove ${title} (${detail})`}>
+              Remove
+            </button>
           </div>
-          <label className="shop-qty-wrap">
-            <span className="sr-only">Quantity for {l.product.name}</span>
-            <input className="shop-qty" type="number" min={1} max={10} value={l.qty} onChange={(e) => setQty(l.sku, Number(e.target.value))} />
-          </label>
-          <button type="button" className="btn btn-ghost btn-sm shop-x" onClick={() => remove(l.sku)} aria-label={`Remove ${l.product.name} (${l.variant.label})`}>
-            Remove
-          </button>
-        </div>
-      ))}
+        );
+      })}
       <div className="shop-row shop-total">
         <div>
           <p className="shop-mono">Subtotal</p>
           <p className="shop-price shop-price-lg" data-testid="subtotal">{formatPrice(subtotal)}</p>
+          {savings > 0 ? (
+            <p className="shop-tag shop-deal" data-testid="badge-savings">Name badge 2 for $28: you save {formatPrice(savings)}</p>
+          ) : badgeUnits === 1 ? (
+            <p className="shop-tag shop-deal">Add one more name badge and the pair is $28.</p>
+          ) : null}
           <p className="shop-tag">Shipping is added at checkout. Sales tax is not collected yet.</p>
         </div>
         {mode === "unavailable" ? (

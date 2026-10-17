@@ -3,6 +3,8 @@
 // Printful variant ids come from the public catalog API (GET https://api.printful.com/products/{id}),
 // checked 2026-10-16. Re-verify before launch: Printful occasionally retires variants.
 
+import { BADGE_THEMES, BADGE_UNIT_CENTS, customBadgeSku } from "./badges";
+
 export type Variant = {
   sku: string; // our id, sent by the client
   label: string; // e.g. "Sand / M" or "One size"
@@ -14,7 +16,7 @@ export type Variant = {
 export type ColorOption = { id: string; label: string; hex: string; image: string; backImage?: string };
 export type PrintFile = { type: string; path: string }; // path under /public
 
-export type ProductType = "tees" | "hats" | "mugs" | "totes" | "golf-towels" | "stickers";
+export type ProductType = "tees" | "hats" | "mugs" | "totes" | "golf-towels" | "stickers" | "badges";
 
 export const PRODUCT_TYPES: { id: ProductType; label: string }[] = [
   { id: "tees", label: "Tees" },
@@ -23,6 +25,7 @@ export const PRODUCT_TYPES: { id: ProductType; label: string }[] = [
   { id: "totes", label: "Totes" },
   { id: "golf-towels", label: "Golf towels" },
   { id: "stickers", label: "Stickers" },
+  { id: "badges", label: "Name badges" },
 ];
 
 export type Product = {
@@ -41,6 +44,14 @@ export type Product = {
   // Printful item options. Embroidery REQUIRES thread colours.
   // Allowed: #FFFFFF #000000 #96A1A8 #A67843 #FFCC00 #E25C27 #CC3366 #CC3333 #660000 #333366 #005397 #3399FF #6B5294 #01784E #7BA35A
   options?: { id: string; value: string | string[] }[];
+  /** "manual": made by hand from our own print file (name badges), never sent to Printful. Default printful. */
+  fulfillment?: "printful" | "manual";
+  /** false: orderable, but not shown in the /shop grid (ready-made badges live on the badge page). */
+  listed?: boolean;
+  /** Name badges: custom (buyer's text) or a fixed ready-made design with its own print file. */
+  badge?: { kind: "custom" } | { kind: "ready"; size: "3.5x2.25in"; file: string; alt: string };
+  /** Price text for cards/pages when it is not just priceCents (the badge pair deal). */
+  priceNote?: string;
 };
 
 export const CURRENCY = "usd";
@@ -261,7 +272,65 @@ export const PRODUCTS: Product[] = [
     files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light-v2.png" }],
     taxCode: GENERAL,
   },
+  // ---- Name badges: made by hand from our own print files (fulfillment "manual"), $16 each or 2 for $28 ----
+  {
+    slug: "custom-name-badge",
+    type: "badges",
+    name: "Custom Name Badge",
+    tagline: "Your name, your village",
+    description:
+      "A full-color 3\" x 1.5\" name badge with a no-holes magnet. Pick one of seven themes, type your name (and your village on the themes that print it), and watch the preview update as you type.",
+    priceCents: BADGE_UNIT_CENTS,
+    priceNote: "$16 each \u00b7 2 for $28",
+    image: "/shop/badges/card-custom-name-badge.png",
+    printfulProduct: "Not Printful: 3 x 1.5 in full-color magnetic name badge, printed from our rendered 300 dpi file",
+    variants: BADGE_THEMES.map((t) => ({ sku: customBadgeSku(t.id), label: t.label, size: '3" x 1.5"', printfulVariantId: 0 })),
+    files: [],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    badge: { kind: "custom" },
+  },
+  {
+    slug: "ready-badge-jonathan-edenfield",
+    type: "badges",
+    name: "Jonathan, Edenfield",
+    tagline: "Ready-made name badge",
+    description: "A ready-made Edenfield name badge for Jonathan. Larger 3.5\" x 2.25\" size.",
+    priceCents: BADGE_UNIT_CENTS,
+    priceNote: "$16 each \u00b7 2 for $28",
+    image: "/shop/badges/ready/jonathan-edenfield.png",
+    printfulProduct: "Not Printful: 3.5 x 2.25 in magnetic name badge, print-ready file supplied",
+    variants: [{ sku: "badge-ready-jonathan", label: '3.5" x 2.25"', size: '3.5" x 2.25"', printfulVariantId: 0 }],
+    files: [{ type: "default", path: "/shop/badges/ready/jonathan-edenfield.png" }],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    listed: false,
+    badge: { kind: "ready", size: "3.5x2.25in", file: "/shop/badges/ready/jonathan-edenfield.png", alt: "Edenfield name badge reading The Village of Edenfield, JONATHAN" },
+  },
+  {
+    slug: "ready-badge-lucy-edenfield",
+    type: "badges",
+    name: "Lucy, Edenfield",
+    tagline: "Ready-made name badge",
+    description: "A ready-made Edenfield name badge for Lucy. Larger 3.5\" x 2.25\" size.",
+    priceCents: BADGE_UNIT_CENTS,
+    priceNote: "$16 each \u00b7 2 for $28",
+    image: "/shop/badges/ready/lucy-edenfield.png",
+    printfulProduct: "Not Printful: 3.5 x 2.25 in magnetic name badge, print-ready file supplied",
+    variants: [{ sku: "badge-ready-lucy", label: '3.5" x 2.25"', size: '3.5" x 2.25"', printfulVariantId: 0 }],
+    files: [{ type: "default", path: "/shop/badges/ready/lucy-edenfield.png" }],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    listed: false,
+    badge: { kind: "ready", size: "3.5x2.25in", file: "/shop/badges/ready/lucy-edenfield.png", alt: "Edenfield name badge reading The Village of Edenfield, LUCY" },
+  },
 ];
+
+/** Products shown in the /shop grid. */
+export const LISTED_PRODUCTS = PRODUCTS.filter((p) => p.listed !== false);
+
+/** Product pages served by /shop/[slug] (the custom badge has its own page; ready-made badges live on it). */
+export const SLUG_PAGE_PRODUCTS = PRODUCTS.filter((p) => p.type !== "badges");
 
 export function getProduct(slug: string) {
   return PRODUCTS.find((p) => p.slug === slug);
@@ -278,6 +347,11 @@ export function findVariant(sku: string): { product: Product; variant: Variant }
 /** Mockup for a cart line: the colour-specific image when there is one. */
 export function variantImage(product: Product, variant: Variant) {
   return product.colors?.find((c) => c.id === variant.color)?.image ?? product.image;
+}
+
+/** Where a cart line links back to. */
+export function productHref(product: Product) {
+  return product.type === "badges" ? (product.badge?.kind === "ready" ? "/shop/custom-name-badge#ready-made" : "/shop/custom-name-badge") : `/shop/${product.slug}`;
 }
 
 export function formatPrice(cents: number) {

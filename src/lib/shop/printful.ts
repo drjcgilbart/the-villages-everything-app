@@ -9,7 +9,21 @@ export function externalIdFor(sessionId: string) {
   return "tvea_" + createHash("sha256").update(sessionId).digest("hex").slice(0, 27);
 }
 
-export type ShopOrderLine = { sku: string; name: string; label: string; quantity: number; unitCents: number };
+export type ShopOrderBadge = { kind: "custom" | "ready"; theme: string; name: string; village?: string; size: string };
+export type ShopOrderLine = {
+  sku: string;
+  name: string;
+  label: string;
+  quantity: number;
+  unitCents: number;
+  /** Name badges only: what to print (from the Stripe line item metadata the server wrote at checkout). */
+  badge?: ShopOrderBadge;
+};
+
+/** Lines made by hand (name badges), never sent to Printful. */
+export function isManualLine(line: Pick<ShopOrderLine, "sku">) {
+  return findVariant(line.sku)?.product.fulfillment === "manual";
+}
 export type ShopRecipient = {
   name: string;
   address1: string;
@@ -44,13 +58,25 @@ export function sessionDetails(session: Stripe.Checkout.Session): { lines: ShopO
     const sku = typeof product === "object" ? product?.metadata?.sku : undefined;
     const found = sku ? findVariant(sku) : undefined;
     if (!found) throw new Error(`Unmapped line item sku=${sku ?? "none"}`);
-    return {
+    const md = typeof product === "object" ? product?.metadata ?? {} : {};
+    const line: ShopOrderLine = {
       sku: found.variant.sku,
       name: found.product.name,
       label: found.variant.label,
       quantity: li.quantity ?? 1,
-      unitCents: found.product.priceCents,
+      unitCents: li.price?.unit_amount ?? found.product.priceCents,
     };
+    if (found.product.type === "badges" && md.badge_kind) {
+      line.badge = {
+        kind: md.badge_kind === "ready" ? "ready" : "custom",
+        theme: md.badge_theme || "",
+        name: md.badge_name || "",
+        village: md.badge_village || undefined,
+        size: md.badge_size || "",
+      };
+      line.label = (typeof product === "object" ? product?.description : null) || line.label;
+    }
+    return line;
   });
   return {
     lines,
@@ -70,7 +96,7 @@ export function sessionDetails(session: Stripe.Checkout.Session): { lines: ShopO
 
 /** SKUs in this order that have no Printful sync variant id in printful-variants.ts. */
 export function missingSyncVariants(lines: ShopOrderLine[]) {
-  return lines.filter((l) => syncVariantIdFor(l.sku) === null).map((l) => l.sku);
+  return lines.filter((l) => !isManualLine(l) && syncVariantIdFor(l.sku) === null).map((l) => l.sku);
 }
 
 /** Build the Printful order body. Call only after missingSyncVariants() returned an empty list. */

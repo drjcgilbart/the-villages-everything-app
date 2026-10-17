@@ -27,7 +27,11 @@ async function confirm(sessionId: string): Promise<View> {
     const { status, session } = await fulfillShopSession(sessionId);
     if (!session || status === "not-shop" || status === "ignored") return pending;
     if (status === "unpaid") return pending;
-    const lines = (session.line_items?.data ?? []).map((li) => `${li.quantity ?? 1} \u00d7 ${li.description ?? "Item"}`);
+    const lines = (session.line_items?.data ?? []).map((li) => {
+      const product = li.price?.product;
+      const badge = typeof product === "object" && product && "metadata" in product && product.metadata?.badge_kind ? product.description : null;
+      return `${li.quantity ?? 1} \u00d7 ${li.description ?? "Item"}${badge ? `: ${badge}` : ""}`;
+    });
     return {
       kicker: "Order received",
       title: "Thanks, neighbor!",

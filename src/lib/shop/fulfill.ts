@@ -1,7 +1,8 @@
 import type Stripe from "stripe";
 import { adminNotifyEmail, sendOutboundEmail } from "@/lib/adminNotify";
 import { getDedupeStore, type DedupeStore } from "./idempotency";
-import { buildPrintfulOrder, createPrintfulOrder, missingSyncVariants, sessionDetails } from "./printful";
+import { buildPrintfulOrder, createPrintfulOrder, isManualLine, missingSyncVariants, sessionDetails } from "./printful";
+import { badgeAttachments, badgeEmailLines, badgeJobs, storeBadgeFiles } from "./badge-files";
 import { saveShopOrder, type ShopOrderRecord } from "./orders";
 import { autoConfirm, printfulApiKey, SHOP_SESSION_SOURCE } from "./config";
 import { getShopStripe } from "./stripe";
@@ -24,12 +25,25 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
-/** Email the site admin about a shop order. Never throws. */
-export async function notifyAdminOfShopOrder(record: ShopOrderRecord) {
+/** Build the admin order email (subject, text, html, attachments). Exported so it can be checked without sending. */
+export async function buildShopOrderEmail(record: ShopOrderRecord, opts: { storeFiles?: boolean } = {}) {
+  const hasBadges = record.lines.some((l) => l.badge);
+  const printfulPart = record.lines.some((l) => !isManualLine(l));
   const headline =
     record.status === "sent-to-printful"
-      ? `Sent to Printful${record.printfulOrderId ? ` (order ${record.printfulOrderId}, ${record.printfulStatus ?? "draft"})` : ""}.`
-      : `ACTION NEEDED: place this order by hand. ${record.reason ?? ""}`.trim();
+      ? `Sent to Printful${record.printfulOrderId ? ` (order ${record.printfulOrderId}, ${record.printfulStatus ?? "draft"})` : ""}.${hasBadges ? " ACTION NEEDED for the name badges below: make them by hand." : ""}`
+      : printfulPart
+        ? `ACTION NEEDED: place this order by hand. ${record.reason ?? ""}`.trim()
+        : "ACTION NEEDED: make these name badges by hand. The print files are attached.";
+  let jobs: Awaited<ReturnType<typeof badgeJobs>> = [];
+  if (hasBadges) {
+    try {
+      jobs = await badgeJobs(record.lines);
+      if (opts.storeFiles !== false) await storeBadgeFiles(record.sessionId, jobs);
+    } catch (err) {
+      logError("shop-fulfill", err, { session: record.sessionId, op: "badge-files" });
+    }
+  }
   const r = record.recipient;
   const lines = record.lines.map((l) => `${l.quantity} x ${l.name} (${l.label}) [${l.sku}] @ ${money(l.unitCents)}`);
   const address = [r.name, r.address1, r.address2, `${r.city}, ${r.state_code ?? ""} ${r.zip}`, r.country_code].filter(Boolean);
@@ -39,6 +53,7 @@ export async function notifyAdminOfShopOrder(record: ShopOrderRecord) {
     "",
     "Items:",
     ...lines,
+    ...badgeEmailLines(jobs),
     "",
     `Total charged: ${money(record.amountTotalCents)} (shipping ${money(record.shippingCents)})`,
     "",
@@ -49,14 +64,16 @@ export async function notifyAdminOfShopOrder(record: ShopOrderRecord) {
     "",
     `Stripe Checkout session: ${record.sessionId}`,
   ].join("\n");
-  const subject = `${record.status === "sent-to-printful" ? "" : "[Action needed] "}Merch order ${money(record.amountTotalCents)}${record.livemode ? "" : " (test)"}`;
+  const subject = `${record.status === "sent-to-printful" && !hasBadges ? "" : "[Action needed] "}${hasBadges ? "Name badge" : "Merch"} order ${money(record.amountTotalCents)}${record.livemode ? "" : " (test)"}`;
+  const html = `<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">${escapeHtml(text)}</pre>`;
+  return { to: adminNotifyEmail(), subject, text, html, attachments: badgeAttachments(jobs), jobs };
+}
+
+/** Email the site admin about a shop order (with name badge print files attached). Never throws. */
+export async function notifyAdminOfShopOrder(record: ShopOrderRecord) {
   try {
-    const res = await sendOutboundEmail({
-      to: adminNotifyEmail(),
-      subject,
-      text,
-      html: `<pre style="font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap">${escapeHtml(text)}</pre>`,
-    });
+    const { to, subject, text, html, attachments } = await buildShopOrderEmail(record);
+    const res = await sendOutboundEmail({ to, subject, text, html, attachments: attachments.length ? attachments : undefined });
     if (!res.ok) logError("shop-fulfill", "admin email not sent", { session: record.sessionId });
   } catch (err) {
     logError("shop-fulfill", err, { session: record.sessionId, op: "notify" });
@@ -75,7 +92,16 @@ export async function fulfillShopSession(sessionId: string, deps: Deps = {}): Pr
   if (!/^cs_(test|live)_[A-Za-z0-9]+$/.test(sessionId)) return { status: "ignored" };
   const retrieve =
     deps.retrieveSession ??
-    ((id: string) => getShopStripe().checkout.sessions.retrieve(id, { expand: ["line_items.data.price.product"] }));
+    (async (id: string) => {
+      const stripe = getShopStripe();
+      const s = await stripe.checkout.sessions.retrieve(id, { expand: ["line_items.data.price.product"] });
+      // Expanded line_items is one page; badge orders can have more lines, so fetch them all when needed.
+      if (s.line_items?.has_more) {
+        const all = await stripe.checkout.sessions.listLineItems(id, { limit: 100, expand: ["data.price.product"] });
+        s.line_items = all;
+      }
+      return s;
+    });
   const session = await retrieve(sessionId);
   if (session.metadata?.source !== SHOP_SESSION_SOURCE) return { status: "not-shop", session };
   if (session.payment_status !== "paid") return { status: "unpaid", session };
@@ -100,14 +126,17 @@ export async function fulfillShopSession(sessionId: string, deps: Deps = {}): Pr
       lines,
       recipient,
     };
-    const missing = missingSyncVariants(lines);
-    if (!printfulApiKey()) {
+    const printLines = lines.filter((l) => !isManualLine(l));
+    const missing = missingSyncVariants(printLines);
+    if (!printLines.length) {
+      record.reason = "Name badges only: made by hand from the attached print files.";
+    } else if (!printfulApiKey()) {
       record.reason = "PRINTFUL_API_KEY is not set.";
     } else if (missing.length) {
       record.reason = `No Printful sync variant id configured for: ${missing.join(", ")}.`;
     } else {
       try {
-        const order = buildPrintfulOrder(session.id, lines, recipient, shippingCents);
+        const order = buildPrintfulOrder(session.id, printLines, recipient, shippingCents);
         const result = await (deps.createOrder ?? createPrintfulOrder)(order, autoConfirm());
         record.status = "sent-to-printful";
         record.printfulOrderId = result?.id;

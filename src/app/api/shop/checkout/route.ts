@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { buildLineItems, PricingError } from "@/lib/shop/pricing";
+import { badgeSessionMetadata, buildLineItems, PricingError } from "@/lib/shop/pricing";
 import { getShopStripe } from "@/lib/shop/stripe";
 import {
   automaticTax,
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   try {
     const tax = automaticTax();
     // Server-side catalog prices only. The client sends SKUs and quantities, never prices.
-    const { lineItems, subtotal } = buildLineItems(body?.items, { taxBehavior: tax ? "exclusive" : undefined });
+    const { lineItems, subtotal, badges } = buildLineItems(body?.items, { taxBehavior: tax ? "exclusive" : undefined });
     if (mode === "mock") {
       logInfo("shop-checkout", "mock checkout", { lines: lineItems.length, subtotal });
       return NextResponse.json({ url: "/shop/success?mock=1", mock: true, subtotal }); // relative: stays on this host
@@ -64,13 +64,13 @@ export async function POST(req: Request) {
       phone_number_collection: { enabled: true },
       success_url: `${base}/shop/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/shop/cancel`,
-      metadata: { source: SHOP_SESSION_SOURCE, skus: skus.slice(0, 480) },
+      metadata: { source: SHOP_SESSION_SOURCE, skus: skus.slice(0, 480), ...badgeSessionMetadata(badges) },
       payment_intent_data: { metadata: { source: SHOP_SESSION_SOURCE } },
     });
     if (!session.url) throw new Error("Stripe returned no Checkout URL");
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    if (err instanceof PricingError) return NextResponse.json({ error: err.message }, { status: 400 });
+    if (err instanceof PricingError) return NextResponse.json({ error: err.message, fields: err.fields }, { status: 400 });
     logError("shop-checkout", err);
     return NextResponse.json({ error: UNAVAILABLE }, { status: 503 });
   }

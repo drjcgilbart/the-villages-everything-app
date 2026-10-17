@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { PRODUCTS, PRODUCT_TYPES, type ProductType } from "@/lib/shop/catalog";
+import { LISTED_PRODUCTS as PRODUCTS, PRODUCT_TYPES, type ProductType } from "@/lib/shop/catalog";
 import { ProductCard } from "@/components/shop/product-card";
 import { ShopHero } from "@/components/shop/shop-hero";
 

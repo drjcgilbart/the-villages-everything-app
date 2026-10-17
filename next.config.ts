@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
   // Ship JSON seeds + any bundled uploads with serverless functions
   outputFileTracingIncludes: {
     "/*": ["./data/**/*", "./certs/apple/**/*"],
+    // Name badge print renderer (order email): fonts, art plates and ready-made badge art.
+    "/api/shop/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates/*.png", "./public/shop/badges/ready/*.png"],
+    "/api/stripe/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates/*.png", "./public/shop/badges/ready/*.png"],
+    "/shop/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates/*.png", "./public/shop/badges/ready/*.png"],
   },
   // Allow large direct video uploads in Studio (local / Node host)
   experimental: {

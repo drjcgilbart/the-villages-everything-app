@@ -1,7 +1,14 @@
 "use client";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-export type CartItem = { sku: string; qty: number };
+/** badge: the buyer's text for a custom name badge (the theme is in the sku). Same sku + different text = new line. */
+export type CartBadge = { name: string; village?: string };
+export type CartItem = { sku: string; qty: number; badge?: CartBadge };
+
+/** Identity of a cart line. */
+export function lineKey(i: { sku: string; badge?: CartBadge }) {
+  return i.badge ? `${i.sku}|${i.badge.name}|${i.badge.village ?? ""}` : i.sku;
+}
 const KEY = "tvea-shop-cart-v1";
 const MAX = 10;
 const EMPTY: CartItem[] = [];
@@ -22,7 +29,11 @@ function read(): CartItem[] {
     if (Array.isArray(parsed)) {
       items = parsed
         .filter((i): i is CartItem => typeof i?.sku === "string" && Number.isInteger(i?.qty))
-        .map((i) => ({ sku: i.sku, qty: Math.max(1, Math.min(MAX, i.qty)) }));
+        .map((i) => {
+          const b = (i as { badge?: unknown }).badge as { name?: unknown; village?: unknown } | undefined;
+          const badge = b && typeof b.name === "string" ? { name: b.name.slice(0, 40), ...(typeof b.village === "string" && b.village ? { village: b.village.slice(0, 40) } : {}) } : undefined;
+          return { sku: i.sku, qty: Math.max(1, Math.min(MAX, i.qty)), ...(badge ? { badge } : {}) };
+        });
     }
   } catch {
     items = EMPTY;
@@ -57,16 +68,18 @@ export function useCart() {
   const items = useSyncExternalStore(subscribe, read, () => EMPTY);
   const ready = useSyncExternalStore(subscribe, () => true, () => false);
 
-  const add = useCallback((sku: string, qty = 1) => {
+  // `key` is lineKey(item); for ordinary products that is just the sku, so existing callers are unchanged.
+  const add = useCallback((sku: string, qty = 1, badge?: CartBadge) => {
     const cur = read();
-    const found = cur.find((i) => i.sku === sku);
-    write(found ? cur.map((i) => (i.sku === sku ? { ...i, qty: Math.min(MAX, i.qty + qty) } : i)) : [...cur, { sku, qty }]);
+    const key = lineKey({ sku, badge });
+    const found = cur.find((i) => lineKey(i) === key);
+    write(found ? cur.map((i) => (lineKey(i) === key ? { ...i, qty: Math.min(MAX, i.qty + qty) } : i)) : [...cur, { sku, qty, ...(badge ? { badge } : {}) }]);
   }, []);
-  const setQty = useCallback((sku: string, qty: number) => {
+  const setQty = useCallback((key: string, qty: number) => {
     const n = Number.isFinite(qty) ? Math.round(qty) : 1;
-    write(read().map((i) => (i.sku === sku ? { ...i, qty: Math.max(1, Math.min(MAX, n)) } : i)));
+    write(read().map((i) => (lineKey(i) === key ? { ...i, qty: Math.max(1, Math.min(MAX, n)) } : i)));
   }, []);
-  const remove = useCallback((sku: string) => write(read().filter((i) => i.sku !== sku)), []);
+  const remove = useCallback((key: string) => write(read().filter((i) => lineKey(i) !== key)), []);
   const clear = useCallback(() => write([]), []);
   const count = useMemo(() => items.reduce((n, i) => n + i.qty, 0), [items]);
 
