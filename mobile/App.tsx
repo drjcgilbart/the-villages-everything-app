@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   AppState,
   BackHandler,
   PermissionsAndroid,
@@ -233,6 +234,8 @@ function Shell() {
   const watchRequest = useRef("");
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
+  /** On the Holiday Lights pages a downward map drag must not pull-to-refresh the page away. */
+  const [onMapPage, setOnMapPage] = useState(false);
   const [offline, setOffline] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -355,7 +358,12 @@ function Shell() {
         webRef.current.goBack();
         return true;
       }
-      return false;
+      // At the first page, back used to close the app (mid-drive, too). Ask first.
+      Alert.alert("Leave the app?", "Your Holiday Lights progress is saved on this phone.", [
+        { text: "Stay", style: "cancel" },
+        { text: "Leave", style: "destructive", onPress: () => BackHandler.exitApp() },
+      ]);
+      return true;
     });
     return () => sub.remove();
   }, [canGoBack]);
@@ -586,6 +594,7 @@ function Shell() {
 
   const onNavChange = useCallback((nav: WebViewNavigation) => {
     setCanGoBack(nav.canGoBack);
+    setOnMapPage(/\/tour(\/|\?|#|$)/.test(nav.url || ""));
   }, []);
 
   if (offline) {
@@ -721,7 +730,7 @@ function Shell() {
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         allowsBackForwardNavigationGestures
-        pullToRefreshEnabled
+        pullToRefreshEnabled={!onMapPage}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
         incognito={false}
