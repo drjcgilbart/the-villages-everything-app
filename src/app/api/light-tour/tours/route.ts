@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { holidayFrom, logTour } from "@/lib/lightTour";
+import { isAdminAuthenticated } from "@/lib/auth";
+import { getSessionMember } from "@/lib/memberAuth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,7 +20,14 @@ export async function POST(req: Request) {
   if (!holiday || !sessionId) {
     return NextResponse.json({ error: "Need a tour id." }, { status: 400 });
   }
+  // An Admin Center tour is tied to the admin's account.
+  let admin: { id: string; name: string } | null = null;
+  if (body?.admin === true && (await isAdminAuthenticated())) {
+    const member = await getSessionMember();
+    admin = { id: member?.id || "admin", name: member?.name || member?.email || "Site owner" };
+  }
   await logTour({
+    admin,
     sessionId,
     holiday,
     stopCount,

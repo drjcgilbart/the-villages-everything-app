@@ -13,6 +13,7 @@ import {
 import { tourStartProblem } from "@/lib/lightTourShared";
 import { buildDrivingRoute } from "@/lib/lightTourRoute";
 import { hasHolidayLightsAcceptance, termsUserIdForRequest } from "@/lib/holidayLightsTermsStore";
+import { isAdminAuthenticated } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,8 +24,11 @@ export async function POST(req: Request) {
   const limited = rateLimitResponse(req, "light-tour-route", 30, 10 * 60 * 1000);
   if (limited) return limited;
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
-  const termsUserId = await termsUserIdForRequest();
-  if (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId))) {
+  // The site owner builds tours from the Admin Center without the member terms step,
+  // the same as the admin Go to pin reroute and leg routes.
+  const admin = await isAdminAuthenticated();
+  const termsUserId = admin ? "" : await termsUserIdForRequest();
+  if (!admin && (!termsUserId || !(await hasHolidayLightsAcceptance(termsUserId)))) {
     return NextResponse.json(
       { error: "Accept the Holiday Lights terms before a route can start." },
       { status: 403 }

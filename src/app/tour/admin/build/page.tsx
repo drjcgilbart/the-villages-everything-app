@@ -11,9 +11,9 @@ export const metadata = {
 };
 
 /**
- * Admin Center entry to the Holiday Lights tour. It wraps the same member flow
- * as /tour (same terms, same route builder, same tour log), so a tour made here
- * is saved the same way. isAdmin is passed through for admin-only powers later.
+ * Admin Center entry to the Holiday Lights tour. It wraps the member flow at
+ * /tour (same route builder, same tour log). With isAdmin the terms step is
+ * skipped and the tour log records the admin's account (public, no approval).
  */
 export default async function AdminBuildTourPage() {
   const admin = await isAdminAuthenticated();
@@ -25,8 +25,8 @@ export default async function AdminBuildTourPage() {
           <span className="kicker">Site owner</span>
           <h1>Build a Holiday Lights tour</h1>
           <p>
-            The same tour members build. Accept the warning with your member account, pick a holiday and a start, then
-            drive it.
+            The same tour members build, without the warning step. Pick a holiday and a start, then drive it. Tours you
+            run here are logged under your admin account.
           </p>
         </div>
       </div>

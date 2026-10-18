@@ -61,6 +61,11 @@ export type LightTourLog = {
   stopCount: number;
   startedAt: string;
   completedAt: string;
+  /** Set when the site owner ran the tour from the Admin Center. */
+  adminId?: string;
+  adminName?: string;
+  /** Admin tours are public by default and need no approval. */
+  public?: boolean;
 };
 
 type Store = { pins: LightPin[]; tours: LightTourLog[] };
@@ -466,6 +471,7 @@ export function logTour(input: {
   stopCount: number;
   startedAt?: string;
   completedAt?: string;
+  admin?: { id: string; name: string } | null;
 }): Promise<void> {
   return enqueue(async () => {
     const store = await readLightTourForWrite();
@@ -482,6 +488,9 @@ export function logTour(input: {
         stopCount: input.stopCount,
         startedAt: input.startedAt || new Date().toISOString(),
         completedAt: input.completedAt || "",
+        ...(input.admin
+          ? { adminId: clip(input.admin.id, 80), adminName: clip(input.admin.name, 120), public: true }
+          : {}),
       });
     }
     await writeStore(store);

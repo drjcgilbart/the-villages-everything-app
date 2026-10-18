@@ -103,7 +103,8 @@ export function LightTour({
   memberStatus?: "pending" | "approved" | "rejected" | "suspended" | null;
   /**
    * The site owner opened the tour from the Admin Center (/tour/admin/build).
-   * Today the flow is exactly the member flow. Admin-only powers can key off this later.
+   * Same flow as members, except the terms step is skipped and the tour log
+   * is tied to the admin's account. Further admin powers can key off this.
    */
   isAdmin?: boolean;
 }) {
@@ -154,7 +155,9 @@ export function LightTour({
   const [sheetError, setSheetError] = useState("");
   const sheetLock = useRef(false);
   const [termsTry, setTermsTry] = useState(0);
-  const [termsState, setTermsState] = useState<"checking" | "signin" | "blocked" | "confirm" | "needed" | "unavailable" | "accepted">("checking");
+  const [termsState, setTermsState] = useState<"checking" | "signin" | "blocked" | "confirm" | "needed" | "unavailable" | "accepted">(
+    isAdmin ? "accepted" : "checking",
+  );
   const [termsBusy, setTermsBusy] = useState(false);
   const [termsError, setTermsError] = useState("");
   const [termsNotice, setTermsNotice] = useState("");
@@ -168,6 +171,7 @@ export function LightTour({
   houseOpenRef.current = houseOpen;
 
   useEffect(() => {
+    if (isAdmin) return;
     let cancel = false;
     let settled = false;
     const slow = window.setTimeout(() => {
@@ -212,7 +216,7 @@ export function LightTour({
       cancel = true;
       window.clearTimeout(slow);
     };
-  }, [termsTry]);
+  }, [termsTry, isAdmin]);
 
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine);
@@ -614,6 +618,7 @@ export function LightTour({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sessionId: sessionId(),
+        admin: isAdmin,
         holiday,
         stopCount: stops.length,
         startedAt: new Date().toISOString(),
