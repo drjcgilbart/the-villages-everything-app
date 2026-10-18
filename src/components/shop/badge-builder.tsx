@@ -5,22 +5,45 @@ import Image from "next/image";
 import { useCart } from "./cart";
 import { BadgePreview } from "./badge-preview";
 import {
-  BADGE_SIZES,
+  BADGE_MATERIALS,
+  BADGE_SIZE,
   BADGE_THEMES,
+  DEFAULT_BADGE_MATERIAL,
   NAME_MAX,
   VILLAGE_MAX,
-  badgeTotalCents,
+  badgeMaterialOrDefault,
   cleanBadgeText,
   cleanVillage,
   customBadgeSku,
   getBadgeTheme,
   validateBadgeText,
   type BadgeFieldErrors,
+  type BadgeMaterialId,
   type BadgeThemeId,
 } from "@/lib/shop/badges";
 import { formatPrice, type Product } from "@/lib/shop/catalog";
 
 const QTYS = Array.from({ length: 10 }, (_, i) => i + 1);
+
+/** White Acrylic (standard) or White Aluminum (premium). Prices come from BADGE_MATERIALS, the same config checkout uses. */
+function MaterialPicker({ value, onChange, name, compact }: { value: BadgeMaterialId; onChange: (id: BadgeMaterialId) => void; name: string; compact?: boolean }) {
+  return (
+    <div className={`badge-materials${compact ? " badge-materials-compact" : ""}`} role="radiogroup" aria-label="Badge material">
+      {BADGE_MATERIALS.map((m) => (
+        <label key={m.id} className="badge-material" data-material={m.id}>
+          <input type="radio" name={name} value={m.id} checked={value === m.id} onChange={() => onChange(m.id)} />
+          <span className="badge-material-top">
+            <span className="badge-material-name">{m.label}</span>
+            <span className="badge-material-price" data-testid={`price-${name}-${m.id}`}>{formatPrice(m.priceCents)}</span>
+          </span>
+          <span className="badge-material-spec">
+            {m.spec} &middot; {m.tier}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
 
 export function BadgeBuilder() {
   const [themeId, setThemeId] = useState<BadgeThemeId>("brand");
@@ -28,6 +51,8 @@ export function BadgeBuilder() {
   const [name, setName] = useState("");
   const [village, setVillage] = useState("");
   const [qty, setQty] = useState(1);
+  const [material, setMaterial] = useState<BadgeMaterialId>(DEFAULT_BADGE_MATERIAL);
+  const mat = badgeMaterialOrDefault(material);
   const [touched, setTouched] = useState({ name: false, village: false });
   const [serverErrors, setServerErrors] = useState<BadgeFieldErrors>({});
   const [busy, setBusy] = useState(false);
@@ -56,8 +81,8 @@ export function BadgeBuilder() {
         setServerErrors(data.fields && (data.fields.name || data.fields.village) ? data.fields : { name: data.error || "Please check the badge text." });
         return;
       }
-      add(customBadgeSku(themeId), qty, data.text);
-      setAdded(`${qty} ${theme.label} badge${qty > 1 ? "s" : ""} for ${data.text.name}`);
+      add(customBadgeSku(themeId), qty, data.text, mat.id);
+      setAdded(`${qty} ${theme.label} badge${qty > 1 ? "s" : ""} (${mat.label}) for ${data.text.name}`);
     } catch {
       setServerErrors({ name: "Could not reach the shop. Please try again." });
     } finally {
@@ -71,7 +96,7 @@ export function BadgeBuilder() {
         <div className="badge-stage">
           <div className="badge-stage-tags">
             <span>Live preview</span>
-            <span>Prints at {BADGE_SIZES.custom.label}</span>
+            <span>Prints at {BADGE_SIZE.label}</span>
           </div>
           <BadgePreview theme={theme} text={previewText.name || previewText.village ? previewText : theme.sample} />
         </div>
@@ -79,12 +104,13 @@ export function BadgeBuilder() {
       </div>
 
       <div className="shop-buy">
-        <p className="shop-mono">Custom name badge &middot; {BADGE_SIZES.custom.long}</p>
-        <div className="badge-deal">
-          <p className="shop-price shop-price-lg" data-testid="badge-price">$16 each</p>
-          <span className="badge-deal-pill" data-testid="badge-deal">2 for $28</span>
-        </div>
-        <p className="shop-tag">Every pair is $28, mixed any way you like: custom and ready-made badges count together.</p>
+        <p className="shop-mono">Custom name badge &middot; {BADGE_SIZE.long}</p>
+        <p className="shop-price shop-price-lg" data-testid="badge-price">
+          {formatPrice(mat.priceCents)} <span className="badge-price-each">each &middot; {mat.label}</span>
+        </p>
+        <p className="shop-tag">
+          {BADGE_MATERIALS.map((m) => `${m.label} ${formatPrice(m.priceCents)}`).join(" \u00b7 ")}. {BADGE_SIZE.label} with a {BADGE_SIZE.backing}, no pin holes.
+        </p>
 
         <p className="badge-step">1 &middot; Pick a theme <span>{theme.label}</span></p>
         <div className="badge-themes" role="group" aria-label="Badge theme">
@@ -161,6 +187,9 @@ export function BadgeBuilder() {
           <p className="badge-hint">This theme prints your name only.</p>
         )}
 
+        <p className="badge-step">{theme.usesVillage ? 4 : 3} &middot; Material <span>{mat.label}</span></p>
+        <MaterialPicker value={material} onChange={(id) => { setMaterial(id); setAdded(null); }} name="custom" />
+
         <div className="badge-buyrow">
           <label>
             <span className="sr-only">Quantity</span>
@@ -171,7 +200,7 @@ export function BadgeBuilder() {
             </select>
           </label>
           <button type="button" className="btn btn-primary" onClick={addToCart} disabled={busy} data-testid="badge-add">
-            {busy ? "Checking\u2026" : `Add to cart \u00b7 ${formatPrice(badgeTotalCents(qty))}`}
+            {busy ? "Checking\u2026" : `Add to cart \u00b7 ${formatPrice(mat.priceCents * qty)}`}
           </button>
         </div>
         {added ? (
@@ -191,28 +220,49 @@ export function BadgeBuilder() {
 export function ReadyBadges({ products }: { products: Product[] }) {
   const { add } = useCart();
   const [added, setAdded] = useState<string | null>(null);
+  const [materials, setMaterials] = useState<Record<string, BadgeMaterialId>>({});
   return (
     <div className="badge-ready-grid">
-      {products.map((p) => (
-        <div className="badge-ready-card" key={p.slug} id={p.slug}>
-          <Image src={p.image} alt={p.badge?.kind === "ready" ? p.badge.alt : p.name} width={1050} height={675} sizes="(max-width: 760px) 100vw, 50vw" />
-          <div className="badge-ready-body">
-            <span className="badge-size">{BADGE_SIZES.ready.label} &middot; larger size</span>
-            <h3>{p.name}</h3>
-            <div className="shop-row">
-              <span className="shop-tag">{BADGE_SIZES.ready.long}</span>
-              <span className="shop-price">$16 &middot; 2 for $28</span>
+      {products.map((p) => {
+        const mat = badgeMaterialOrDefault(materials[p.slug]);
+        return (
+          <div className="badge-ready-card" key={p.slug} id={p.slug}>
+            <Image src={p.image} alt={p.badge?.kind === "ready" ? p.badge.alt : p.name} width={900} height={600} sizes="(max-width: 760px) 100vw, 50vw" />
+            <div className="badge-ready-body">
+              <span className="badge-size">{BADGE_SIZE.label}</span>
+              <h3>{p.name}</h3>
+              <div className="shop-row">
+                <span className="shop-tag">{BADGE_SIZE.long}, {BADGE_SIZE.backing}</span>
+                <span className="shop-price" data-testid={`ready-price-${p.slug}`}>{formatPrice(mat.priceCents)}</span>
+              </div>
+              <MaterialPicker
+                value={mat.id}
+                onChange={(id) => {
+                  setMaterials((m) => ({ ...m, [p.slug]: id }));
+                  setAdded(null);
+                }}
+                name={p.slug}
+                compact
+              />
+              <div className="shop-actions" style={{ marginTop: 12 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  data-testid={`add-${p.slug}`}
+                  onClick={() => {
+                    add(p.variants[0].sku, 1, undefined, mat.id);
+                    setAdded(p.slug);
+                  }}
+                >
+                  Add to cart &middot; {formatPrice(mat.priceCents)}
+                </button>
+                {added === p.slug ? <Link className="btn btn-ghost" href="/shop/cart">View cart</Link> : null}
+              </div>
+              {added === p.slug ? <p className="shop-ok" role="status">Added {p.name} ({mat.label}).</p> : null}
             </div>
-            <div className="shop-actions" style={{ marginTop: 12 }}>
-              <button type="button" className="btn btn-primary" data-testid={`add-${p.slug}`} onClick={() => { add(p.variants[0].sku, 1); setAdded(p.slug); }}>
-                Add to cart
-              </button>
-              {added === p.slug ? <Link className="btn btn-ghost" href="/shop/cart">View cart</Link> : null}
-            </div>
-            {added === p.slug ? <p className="shop-ok" role="status">Added {p.name}.</p> : null}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
