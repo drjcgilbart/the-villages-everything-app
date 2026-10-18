@@ -209,6 +209,29 @@ export function usePinNavigation() {
     [drawLine, guide, stop],
   );
 
+  /**
+   * The pin being driven to was moved (or edited) on the map: keep going, to
+   * its new spot, without restarting the spoken opening.
+   */
+  const retarget = useCallback(
+    (to: NavTarget) => {
+      if (targetRef.current?.id !== to.id) return;
+      targetRef.current = to;
+      setTarget(to);
+      legRef.current = null;
+      lineRef.current = [];
+      setLine([]);
+      arrival.current = freshArrivalState(to.id);
+      setArrived(false);
+      const here = hereRef.current;
+      if (here) {
+        void drawLine(here, to);
+        void guide(here);
+      }
+    },
+    [drawLine, guide],
+  );
+
   useEffect(() => {
     return () => {
       legAbort.current?.abort();
@@ -217,5 +240,5 @@ export function usePinNavigation() {
     };
   }, []);
 
-  return { target, line, cue, arrived, start, stop, feed };
+  return { target, line, cue, arrived, start, stop, feed, retarget };
 }

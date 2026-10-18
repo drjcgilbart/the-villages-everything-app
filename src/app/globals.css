@@ -18212,3 +18212,107 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Hold a pin on the admin maps: Go to pin, Edit pin, Delete pin. */
+.lt-goto-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+}
+.lt-goto-pop:has(.lt-goto-menu > :nth-child(2)) .leaflet-popup-content-wrapper {
+  border-radius: 14px;
+}
+.lt-goto-menu .lt-goto-btn {
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+  border-radius: 10px;
+  text-align: left;
+}
+.lt-goto-btn.is-danger,
+.lt-danger {
+  color: #9f2d2d;
+}
+.lt-pin-edit .lt-pop {
+  width: min(100%, 26rem);
+}
+.lt-pin-edit textarea {
+  width: 100%;
+}
+
+/* Site owner's running tour (Build a tour). Members never get these classes. */
+@media (orientation: portrait) and (max-width: 720px) {
+  body:has(.lt-admin-live) .page-hero,
+  .lt-admin-live .lt-view-terms {
+    display: none;
+  }
+  /* Tall map, with the written turn still in view under it. */
+  .lt-admin-live .lt-map {
+    height: 56dvh;
+    min-height: 340px;
+  }
+}
+
+/* Sideways: the map takes the screen. The rail keeps only the written turn,
+   Spoken directions, Next stop, Skip, End tour and Add a lit house. */
+@media (orientation: landscape) and (max-height: 500px) {
+  body:has(.lt-admin-live) .site-header,
+  body:has(.lt-admin-live) .site-footer,
+  body:has(.lt-admin-live) .page-hero,
+  body:has(.lt-admin-live) .theme-music,
+  body:has(.lt-admin-live) .floating-nav-stack,
+  body:has(.lt-admin-live) .mascot-quip-toggle,
+  body:has(.lt-admin-live) .mascot-quip-popup,
+  body:has(.lt-admin-live) .donate-mascot-float {
+    display: none !important;
+  }
+  .lt-admin-live.section {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .lt-admin-live .lt-view-terms,
+  .lt-admin-live .lt-live-hide,
+  .lt-admin-live .lt-music-fab,
+  .lt-admin-live .lt-map-col .lt-banner,
+  .lt-admin-live .lt-tour-tools .lt-chip[aria-pressed] {
+    display: none !important;
+  }
+  .lt-admin-live .lt-map {
+    height: calc(100dvh - 8px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    border-radius: 10px;
+  }
+  .lt-admin-live .lt-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 24%);
+    gap: 0.4rem;
+  }
+  .lt-admin-live .lt-sheet {
+    top: calc(4px + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 8px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  .lt-admin-live .lt-sheet .lt-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.45rem;
+  }
+  .lt-admin-live .lt-sheet .lt-go {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+  }
+  .lt-admin-live .lt-cue {
+    margin: 0;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.9rem;
+    line-height: 1.3;
+  }
+  .lt-admin-live .lt-tour-tools {
+    margin: 0;
+  }
+  .lt-admin-live .lt-tour-tools .lt-chip {
+    width: 100%;
+    min-height: 44px;
+  }
+}

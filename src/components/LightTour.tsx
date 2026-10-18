@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LightTourMap } from "./LightTourMap";
+import { LightTourMap, type PinMenuItem } from "./LightTourMap";
 import { LightTourMine, type MemberHouse } from "./LightTourMine";
 import { LightTourSubmit } from "./LightTourSubmit";
 import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
@@ -46,6 +46,16 @@ type Stop = {
 };
 
 type Phase = "pick" | "route" | "tour" | "done";
+
+function cleanLine(value: unknown): [number, number][] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (pair): pair is [number, number] =>
+      Array.isArray(pair) && pair.length >= 2 && Number.isFinite(pair[0]) && Number.isFinite(pair[1]),
+  );
+}
+
+type PinSaved = { id?: string; holiday?: TourHoliday; latitude?: number; longitude?: number; address?: string; note?: string; photoUrl?: string };
 type Here = { latitude: number; longitude: number };
 
 function distanceLabel(meters: number) {
@@ -150,6 +160,16 @@ export function LightTour({
   const rerouteAbort = useRef<AbortController | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
   const [musicOn, setMusicOn] = useState(false);
+  /** Admin live editing: the pin card that is open, and a short status line. */
+  const [pinEdit, setPinEdit] = useState<{ id: string; address: string; note: string } | null>(null);
+  const [pinBusy, setPinBusy] = useState(false);
+  const [pinMsg, setPinMsg] = useState<{ text: string; bad: boolean } | null>(null);
+  const pinMsgTimer = useRef(0);
+  const liveRef = useRef<{
+    move: (id: string, latitude: number, longitude: number) => void;
+    open: (id: string) => void;
+    remove: (id: string) => void;
+  } | null>(null);
   const [cue, setCue] = useState("");
   const [sheetMode, setSheetMode] = useState<"" | "print" | "save">("");
   const [sheetError, setSheetError] = useState("");
@@ -283,6 +303,19 @@ export function LightTour({
   }, [line]);
 
   const current = stops[index] || null;
+  /** Site owner only: edit, move, delete and drop pins while the route or tour is up. */
+  const liveEdit = isAdmin && (phase === "route" || phase === "tour");
+  const adminLive = isAdmin && phase === "tour";
+  const pinMenu = useMemo<PinMenuItem[] | undefined>(
+    () =>
+      liveEdit
+        ? [
+            { label: "Edit pin", onPick: (id) => liveRef.current?.open(id) },
+            { label: "Delete pin", danger: true, onPick: (id) => liveRef.current?.remove(id) },
+          ]
+        : undefined,
+    [liveEdit],
+  );
   const musicTracks = useMemo(() => holidayTracksFor(holiday), [holiday]);
   const mapVisitor = useMemo(() => {
     if (!visitor) return null;
@@ -733,6 +766,273 @@ export function LightTour({
   }
 
 
+  function flashPin(text: string, bad = false) {
+    window.clearTimeout(pinMsgTimer.current);
+    setPinMsg({ text, bad });
+    pinMsgTimer.current = window.setTimeout(() => setPinMsg(null), bad ? 6000 : 3500);
+  }
+
+  /** Admin live edit: renumber the stops, keep the place in the tour, and redraw the route ahead. */
+  function applyStops(next: Stop[], nextIndex = indexRef.current, redraw = true) {
+    const numbered = next.map((stop, at) => ({
+      ...stop,
+      order: at + 1,
+      metersFromPrevious: at > 0 ? haversineMeters(next[at - 1], stop) : stop.metersFromPrevious,
+    }));
+    stopsRef.current = numbered;
+    setStops(numbered);
+    const clamped = Math.max(0, Math.min(nextIndex, numbered.length - 1));
+    indexRef.current = clamped;
+    setIndex(clamped);
+    if (!redraw) return;
+    legRef.current = null;
+    void redrawRoute();
+  }
+
+  async function redrawRoute() {
+    const list = stopsRef.current;
+    const ahead = phaseRef.current === "tour" ? list.slice(indexRef.current) : list;
+    const from = hereRef.current || ahead[0];
+    if (!ahead.length || !from) return;
+    rerouteAbort.current?.abort();
+    const ctrl = new AbortController();
+    rerouteAbort.current = ctrl;
+    offRoute.current.busy = true;
+    try {
+      const res = await fetch("/api/light-tour/reroute", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          from: { latitude: from.latitude, longitude: from.longitude },
+          stops: ahead.map((stop) => ({ latitude: stop.latitude, longitude: stop.longitude })),
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { line?: unknown } | null;
+      if (ctrl.signal.aborted || !res.ok) return;
+      const fresh = cleanLine(data?.line);
+      if (fresh.length < 2) return;
+      lineRef.current = fresh;
+      setLine(fresh);
+      offRoute.current.misses = 0;
+      offRoute.current.firstMissAt = 0;
+      offRoute.current.segment = 0;
+      spokenKeyRef.current = `edited:${Date.now()}`;
+      const here = hereRef.current;
+      if (here && phaseRef.current === "tour") void guide(here);
+    } catch {
+      /* Keep the old line. */
+    } finally {
+      if (rerouteAbort.current === ctrl) {
+        offRoute.current.busy = false;
+        offRoute.current.lastRerouteAt = Date.now();
+      }
+    }
+  }
+
+  async function putPin(body: Record<string, unknown>): Promise<PinSaved | null> {
+    const res = await fetch("/api/light-tour/pins", {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, keepAddress: true }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { pin?: PinSaved; error?: string };
+    if (!res.ok) throw new Error(data.error || "The pin did not save.");
+    return data.pin || null;
+  }
+
+  /** Drag on the map: saved right away, and the route ahead follows the pin. */
+  async function moveStop(id: string, latitude: number, longitude: number) {
+    const before = stopsRef.current.find((stop) => stop.id === id);
+    if (!before) return;
+    const isCurrent = stopsRef.current[indexRef.current]?.id === id;
+    applyStops(stopsRef.current.map((stop) => (stop.id === id ? { ...stop, latitude, longitude } : stop)));
+    if (isCurrent && phaseRef.current === "tour") {
+      arrival.current = freshArrivalState();
+      seen.current.delete(id);
+    }
+    try {
+      await putPin({ id, holiday: before.holiday, latitude, longitude });
+      flashPin(`Stop ${before.order} moved and saved.`);
+    } catch (err) {
+      applyStops(
+        stopsRef.current.map((stop) =>
+          stop.id === id ? { ...stop, latitude: before.latitude, longitude: before.longitude } : stop,
+        ),
+      );
+      flashPin(err instanceof Error ? err.message : "The pin did not move.", true);
+    }
+  }
+
+  function openPinEdit(id: string) {
+    const stop = stopsRef.current.find((row) => row.id === id);
+    if (!stop) return;
+    setPopup(false);
+    setPinEdit({ id, address: stop.address, note: stop.note });
+  }
+
+  async function savePinEdit() {
+    const form = pinEdit;
+    if (!form || pinBusy) return;
+    const stop = stopsRef.current.find((row) => row.id === form.id);
+    if (!stop) {
+      setPinEdit(null);
+      return;
+    }
+    setPinBusy(true);
+    try {
+      const saved = await putPin({
+        id: stop.id,
+        holiday: stop.holiday,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        address: form.address.trim(),
+        note: form.note.trim(),
+      });
+      applyStops(
+        stopsRef.current.map((row) =>
+          row.id === stop.id
+            ? { ...row, address: saved?.address ?? form.address.trim(), note: saved?.note ?? form.note.trim() }
+            : row,
+        ),
+        indexRef.current,
+        false,
+      );
+      setPinEdit(null);
+      flashPin(`Stop ${stop.order} saved.`);
+    } catch (err) {
+      flashPin(err instanceof Error ? err.message : "The pin did not save.", true);
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
+  async function deleteStop(id: string) {
+    const at = stopsRef.current.findIndex((row) => row.id === id);
+    if (at < 0) return;
+    const stop = stopsRef.current[at];
+    const name = stop.address ? `, ${stop.address}` : "";
+    if (!window.confirm(`Delete stop ${stop.order}${name}? The pin comes off the map for everyone.`)) return;
+    setPinBusy(true);
+    try {
+      const res = await fetch(`/api/light-tour/pins?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok && res.status !== 404) throw new Error(data.error || "The pin did not delete.");
+      setPinEdit((open) => (open?.id === id ? null : open));
+      seen.current.delete(id);
+      const next = stopsRef.current.filter((row) => row.id !== id);
+      if (!next.length) {
+        flashPin("Stop deleted. No stops are left.");
+        endTour();
+        return;
+      }
+      const cur = indexRef.current;
+      const wasCurrent = at === cur;
+      const nextIndex = at < cur ? cur - 1 : Math.min(cur, next.length - 1);
+      if (wasCurrent) {
+        setPopup(false);
+        arrival.current = freshArrivalState();
+      }
+      applyStops(next, nextIndex);
+      flashPin(`Stop ${stop.order} deleted.`);
+      const upNext = next[nextIndex];
+      if (wasCurrent && upNext && phaseRef.current === "tour" && voiceOnRef.current) {
+        const spoken = `Stop removed. Next stop. ${upNext.address || "Saved house"}.`;
+        spokenKeyRef.current = `next:${upNext.id}`;
+        cueRef.current = spoken;
+        setCue(spoken);
+        speakTourNow(spoken);
+      }
+    } catch (err) {
+      flashPin(err instanceof Error ? err.message : "The pin did not delete.", true);
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
+  /**
+   * Admin "Add a lit house" mid-tour: drop a pin at the phone, saved and
+   * approved at once. At the house you are passing it counts as passed;
+   * otherwise it slots into the stops ahead where it adds the least driving.
+   */
+  async function dropPinHere() {
+    if (pinBusy) return;
+    setPinBusy(true);
+    try {
+      const here = hereRef.current || (await readDeviceLocation());
+      const res = await fetch("/api/light-tour/pins", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ holiday, latitude: here.latitude, longitude: here.longitude, address: "", note: "", photoUrl: "" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { pin?: PinSaved; error?: string };
+      if (!res.ok || !data.pin?.id) throw new Error(data.error || "The pin did not save.");
+      const pin = data.pin;
+      const stop: Stop = {
+        id: String(pin.id),
+        order: 0,
+        holiday: pin.holiday || holiday,
+        latitude: Number(pin.latitude ?? here.latitude),
+        longitude: Number(pin.longitude ?? here.longitude),
+        address: pin.address || "",
+        photoUrl: pin.photoUrl || "",
+        note: pin.note || "",
+        metersFromPrevious: 0,
+        secondsFromPrevious: 0,
+      };
+      const list = stopsRef.current;
+      const touring = phaseRef.current === "tour";
+      const cur = touring ? indexRef.current : 0;
+      let next: Stop[];
+      let nextIndex = indexRef.current;
+      if (touring && haversineMeters(here, stop) <= ARRIVAL_METERS * 2) {
+        next = [...list.slice(0, cur), stop, ...list.slice(cur)];
+        seen.current.add(stop.id);
+        nextIndex = cur + 1;
+      } else {
+        let best = list.length;
+        let bestCost = Infinity;
+        for (let at = cur; at <= list.length; at += 1) {
+          const prev: Here = at === cur && touring ? here : at > 0 ? list[at - 1] : here;
+          const after = list[at];
+          const cost =
+            haversineMeters(prev, stop) + (after ? haversineMeters(stop, after) - haversineMeters(prev, after) : 0);
+          if (cost < bestCost) {
+            bestCost = cost;
+            best = at;
+          }
+        }
+        next = [...list.slice(0, best), stop, ...list.slice(best)];
+        if (touring && best === cur) arrival.current = freshArrivalState();
+      }
+      applyStops(next, nextIndex);
+      const order = next.findIndex((row) => row.id === stop.id) + 1;
+      flashPin(`Pin dropped and saved as stop ${order}.`);
+      setPinEdit({ id: stop.id, address: stop.address, note: stop.note });
+    } catch (err) {
+      const code = err && typeof err === "object" && "code" in err ? Number((err as { code: number }).code) : 0;
+      flashPin(code ? locationHelp(err) : err instanceof Error ? err.message : "The pin did not save.", true);
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    liveRef.current = {
+      move: (id, latitude, longitude) => void moveStop(id, latitude, longitude),
+      open: openPinEdit,
+      remove: (id) => void deleteStop(id),
+    };
+  });
+
+  useEffect(() => () => window.clearTimeout(pinMsgTimer.current), []);
+
   function resetPick() {
     stopFollow();
     legAbort.current?.abort();
@@ -744,6 +1044,7 @@ export function LightTour({
     cueRef.current = "";
     setPhase("pick");
     phaseRef.current = "pick";
+    setPinEdit(null);
     setStops([]);
     setLine([]);
     setPopup(false);
@@ -916,7 +1217,17 @@ export function LightTour({
     );
   }
 
-  const addHouseButton = (
+  const addHouseButton = liveEdit ? (
+    <button
+      type="button"
+      className="btn btn-ghost lt-go"
+      disabled={pinBusy}
+      title="Drops a pin at your location, saved at once"
+      onClick={() => void dropPinHere()}
+    >
+      Add a lit house
+    </button>
+  ) : (
     <button type="button" className="btn btn-ghost lt-go" onClick={openHouseForm}>
       Add a lit house
     </button>
@@ -988,10 +1299,10 @@ export function LightTour({
 
       {phase === "tour" && current ? (
         <div className="about-panel lt-card">
-          <p className="lt-progress">
+          <p className="lt-progress lt-live-hide">
             {index + 1} of {stops.length}
           </p>
-          <h2>Stop {current.order}</h2>
+          <h2 className="lt-live-hide">Stop {current.order}</h2>
           {cue ? (
             <p className="lt-cue" aria-live="polite">
               {cue}
@@ -999,18 +1310,21 @@ export function LightTour({
           ) : (
             <p className="panel-hint">The next turn shows here as soon as the phone has a fix.</p>
           )}
-          <p>{current.address || "Saved house"}</p>
+          <p className="lt-live-hide">{current.address || "Saved house"}</p>
           {viewTermsLink()}
-          {current.note ? <p>{current.note}</p> : null}
+          {current.note ? <p className="lt-live-hide">{current.note}</p> : null}
           {current.photoUrl ? (
-            <img src={current.photoUrl} alt={current.note || `Stop ${current.order}`} loading="lazy" className="lt-photo" />
+            <img src={current.photoUrl} alt={current.note || `Stop ${current.order}`} loading="lazy" className="lt-photo lt-live-hide" />
           ) : null}
-          {sheetActions()}
+          <div className="lt-live-hide">{sheetActions()}</div>
           <div className="lt-tour-tools">
             {voiceSwitch()}
             {musicSwitch()}
           </div>
-          <p className="panel-hint">A card pops up within about 150 meters. Spoken directions and music use the phone volume.</p>
+          <p className="panel-hint lt-live-hide">A card pops up within about 150 meters. Spoken directions and music use the phone volume.</p>
+          {isAdmin ? (
+            <p className="panel-hint lt-live-hide">Drag a pin to move it. Hold a pin to edit or delete it. Add a lit house drops a pin where you are.</p>
+          ) : null}
           <button type="button" className="btn btn-primary lt-go" onClick={() => advance(false)}>
             {index >= stops.length - 1 ? "Finish tour" : "Next stop"}
           </button>
@@ -1107,7 +1421,7 @@ export function LightTour({
   }
 
   return (
-    <section className="section" data-tour-admin={isAdmin ? "1" : undefined}>
+    <section className={adminLive ? "section lt-admin-live" : "section"} data-tour-admin={isAdmin ? "1" : undefined}>
       <div className="shell lt-wrap">
         {viewTermsLink()}
         {offline ? (
@@ -1235,6 +1549,9 @@ export function LightTour({
                 activeId={current?.id}
                 follow={phase === "tour"}
                 onLocate={locateMe}
+                onMoveStop={liveEdit ? (id, latitude, longitude) => liveRef.current?.move(id, latitude, longitude) : undefined}
+                onOpenStop={liveEdit ? (id) => liveRef.current?.open(id) : undefined}
+                pinMenu={pinMenu}
               />
               <button
                 type="button"
@@ -1292,6 +1609,51 @@ export function LightTour({
                 </button>
               </div>
             </div>
+          </div>
+        ) : null}
+        {pinEdit && liveEdit ? (
+          <div className="lt-pop-scrim lt-pop-front lt-pin-edit">
+            <div className="lt-pop" role="dialog" aria-modal="true" aria-labelledby="lt-pin-edit-title">
+              <h3 id="lt-pin-edit-title">
+                Edit stop {stops.find((row) => row.id === pinEdit.id)?.order ?? ""}
+              </h3>
+              <div className="field">
+                <label htmlFor="lt-pin-address">Address</label>
+                <input
+                  id="lt-pin-address"
+                  type="text"
+                  autoComplete="off"
+                  value={pinEdit.address}
+                  onChange={(e) => setPinEdit({ ...pinEdit, address: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="lt-pin-note">Note</label>
+                <textarea
+                  id="lt-pin-note"
+                  rows={2}
+                  value={pinEdit.note}
+                  onChange={(e) => setPinEdit({ ...pinEdit, note: e.target.value })}
+                />
+              </div>
+              <div className="lt-pop-actions">
+                <button type="button" className="btn btn-primary lt-go" disabled={pinBusy} onClick={() => void savePinEdit()}>
+                  {pinBusy ? "Saving" : "Save"}
+                </button>
+                <button type="button" className="btn btn-ghost lt-go" onClick={() => setPinEdit(null)}>
+                  Close
+                </button>
+                <button type="button" className="btn btn-ghost lt-go lt-danger" disabled={pinBusy} onClick={() => void deleteStop(pinEdit.id)}>
+                  Delete pin
+                </button>
+              </div>
+              <p className="panel-hint">To move the pin, drag it on the map. It saves when you let go.</p>
+            </div>
+          </div>
+        ) : null}
+        {pinMsg && liveEdit ? (
+          <div className={`lt-toast${pinMsg.bad ? " is-bad" : ""}`} role={pinMsg.bad ? "alert" : "status"}>
+            {pinMsg.text}
           </div>
         ) : null}
         {yourHouses}

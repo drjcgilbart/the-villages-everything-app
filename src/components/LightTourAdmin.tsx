@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { LightTourMap, type MapView } from "./LightTourMap";
+import { LightTourMap, type MapView, type PinMenuItem } from "./LightTourMap";
 import { LightTourSubmit } from "./LightTourSubmit";
 import {
   geoErrorCode,
@@ -237,6 +237,15 @@ export function LightTourAdmin() {
   const nav = usePinNavigation();
   const navFeed = useRef(nav.feed);
   navFeed.current = nav.feed;
+  /** Hold a pin: Go to pin, Edit pin, Delete pin. Works while directions run. */
+  const menuActs = useRef<{ edit: (id: string) => void; remove: (id: string) => void } | null>(null);
+  const pinMenu = useMemo<PinMenuItem[]>(
+    () => [
+      { label: "Edit pin", onPick: (id) => menuActs.current?.edit(id) },
+      { label: "Delete pin", danger: true, onPick: (id) => menuActs.current?.remove(id) },
+    ],
+    [],
+  );
   pinsRef.current = pins;
   draftRef.current = draft;
   holidayRef.current = holiday;
@@ -328,6 +337,20 @@ export function LightTourAdmin() {
       window.removeEventListener("beforeunload", onUnload);
     };
   }, [signedIn]);
+
+  useEffect(() => {
+    menuActs.current = {
+      edit: (id) => {
+        const pin = pinsRef.current.find((row) => row.id === id);
+        if (pin) editPin(pin);
+      },
+      remove: (id) => {
+        const order = mapStops.find((row) => row.id === id)?.order;
+        if (!window.confirm(`Delete pin${order ? ` ${order}` : ""}? It comes off the map for everyone.`)) return;
+        void removePin(id);
+      },
+    };
+  });
 
   function startFresh() {
     if (!window.confirm("Start fresh? This clears the open pin card and map view on this phone. Saved pins stay saved.")) return;
@@ -545,6 +568,13 @@ export function LightTourAdmin() {
       if (moveToken.current.get(id) !== token) return false;
       if (!res.ok) throw new Error(data.error || "The pin did not move.");
       const saved = data.pin as AdminPin | undefined;
+      if (nav.target?.id === id) {
+        nav.retarget({
+          ...nav.target,
+          latitude: saved?.id ? Number(saved.latitude) : latitude,
+          longitude: saved?.id ? Number(saved.longitude) : longitude,
+        });
+      }
       if (saved?.id) {
         setPins((current) => current.map((row) => (row.id === id ? { ...row, ...saved } : row)));
         setDraft((current) => {
@@ -624,6 +654,7 @@ export function LightTourAdmin() {
       if (!res.ok) throw new Error(data.error || "The pin did not delete.");
       setPendingDelete(null);
       if (draft?.id === id) setDraft(null);
+      if (nav.target?.id === id) nav.stop();
       setNotice("Pin removed.");
       showToast("Stop deleted");
       await load();
@@ -915,6 +946,7 @@ export function LightTourAdmin() {
             const pin = pinsRef.current.find((row) => row.id === id);
             if (pin) editPin(pin);
           }}
+          pinMenu={pinMenu}
           onGoToStop={(id) => {
             const stop = mapStops.find((row) => row.id === id);
             if (!stop) return;

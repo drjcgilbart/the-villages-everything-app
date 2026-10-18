@@ -40,6 +40,11 @@ type Props = {
    */
   onGoToStop?: (id: string) => void;
   /**
+   * Admin only. More buttons in the same long-press popup, for example Edit pin
+   * and Delete pin during a live tour. Long-press works when either is set.
+   */
+  pinMenu?: PinMenuItem[];
+  /**
    * Extra floating buttons (for example the admin Drop pin). They stack in the
    * bottom-right corner under the locate button, so the two never overlap.
    */
@@ -53,6 +58,8 @@ type Props = {
 };
 
 export type MapView = { latitude: number; longitude: number; zoom: number };
+
+export type PinMenuItem = { label: string; danger?: boolean; onPick: (id: string) => void };
 
 /** Google Maps style navigation arrow: a slim chevron, notched base. Points up (north) at 0 degrees. */
 const ARROW_SVG =
@@ -82,7 +89,7 @@ const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 const LANDSCAPE_PHONE = "(orientation: landscape) and (max-height: 500px)";
 const PORTRAIT_PHONE = "(orientation: portrait) and (max-width: 720px)";
 
-export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, actions, fabsRef, initialView = null, onViewChange }: Props) {
+export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, pinMenu, actions, fabsRef, initialView = null, onViewChange }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
@@ -111,10 +118,15 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
   visitorRef.current = visitor;
   moveRef.current = onMoveStop;
   openRef.current = onOpenStop;
-  const canGo = Boolean(onGoToStop);
+  const menuRef = useRef(pinMenu);
+  const dragging = useRef(false);
+  const canGo = Boolean(onGoToStop) || Boolean(pinMenu?.length);
   useEffect(() => {
     goRef.current = onGoToStop;
   }, [onGoToStop]);
+  useEffect(() => {
+    menuRef.current = pinMenu;
+  }, [pinMenu]);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,6 +168,11 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
     if (!map || !group) return;
     let timer = 0;
     const draw = () => {
+      // A live tour redraws on GPS ticks. Never pull a pin out from under a drag.
+      if (dragging.current) {
+        timer = window.setTimeout(draw, 400);
+        return;
+      }
       void import("leaflet").then((L) => {
         map.invalidateSize();
         group.clearLayers();
@@ -190,7 +207,11 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
               : `Stop ${stop.order}`,
           }).addTo(group);
           if (canDrag) {
+            marker.on("dragstart", () => {
+              dragging.current = true;
+            });
             marker.on("dragend", () => {
+              dragging.current = false;
               const at = marker.getLatLng();
               moveRef.current?.(stop.id, at.lat, at.lng);
             });
@@ -201,7 +222,7 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
               openRef.current?.(stop.id);
             });
           }
-          if (goRef.current) {
+          if (goRef.current || menuRef.current?.length) {
             let timer = 0;
             let startX = 0;
             let startY = 0;
@@ -211,17 +232,26 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
             };
             const showGo = () => {
               timer = 0;
-              const button = document.createElement("button");
-              button.type = "button";
-              button.className = "lt-goto-btn";
-              button.textContent = "Go to pin";
-              button.setAttribute("aria-label", `Go to pin ${stop.order}`);
-              L.DomEvent.disableClickPropagation(button);
-              button.addEventListener("click", (event) => {
-                event.preventDefault();
-                map.closePopup();
-                goPopup.current = null;
-                goRef.current?.(stop.id);
+              const box = document.createElement("div");
+              box.className = "lt-goto-menu";
+              const add = (label: string, danger: boolean, run: () => void) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = danger ? "lt-goto-btn is-danger" : "lt-goto-btn";
+                button.textContent = label;
+                button.setAttribute("aria-label", `${label} ${stop.order}`);
+                L.DomEvent.disableClickPropagation(button);
+                button.addEventListener("click", (event) => {
+                  event.preventDefault();
+                  map.closePopup();
+                  goPopup.current = null;
+                  run();
+                });
+                box.appendChild(button);
+              };
+              if (goRef.current) add("Go to pin", false, () => goRef.current?.(stop.id));
+              (menuRef.current || []).forEach((item, at) => {
+                add(item.label, Boolean(item.danger), () => menuRef.current?.[at]?.onPick(stop.id));
               });
               const popup = L.popup({
                 className: "lt-goto-pop",
@@ -232,7 +262,7 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
                 offset: [0, -14],
               })
                 .setLatLng(marker.getLatLng())
-                .setContent(button);
+                .setContent(box);
               map.openPopup(popup);
               goPopup.current = { popup, openedAt: Date.now() };
               marker.closeTooltip();
