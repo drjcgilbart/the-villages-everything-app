@@ -17956,6 +17956,70 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(28, 36, 48, 0.25);
 }
 
+/* Holiday Lights on a phone held sideways (the driving view). The map fills
+   the screen once scrolled to (the map scrolls itself into view on rotate),
+   the route sheet becomes a narrow side rail, and the site's sticky header and
+   floating Back / Home stop covering the map. Only the Holiday Lights pages
+   change: every rule is scoped to the lt- classes or to a page with the map. */
+@media (orientation: landscape) and (max-height: 500px) {
+  body:has(.lt-map-fabs) .site-header {
+    position: relative;
+  }
+
+  body:has(.lt-map-fabs) .floating-nav-stack {
+    display: none !important;
+  }
+
+  .lt-wrap {
+    padding-left: max(0px, calc(env(safe-area-inset-left, 0px) - 0.75rem));
+    padding-right: max(0px, calc(env(safe-area-inset-right, 0px) - 0.75rem));
+  }
+
+  .lt-map {
+    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: 220px;
+    border-radius: 14px;
+  }
+
+  .lt-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 30%);
+    align-items: start;
+    gap: 0.6rem;
+  }
+
+  .lt-sheet {
+    position: sticky;
+    top: calc(6px + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Secondary text steps aside; the map is the point. */
+  .lt-map-hint {
+    display: none;
+  }
+
+  .lt-map-fabs {
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+
+  .lt-map-fabs .lt-drop {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+  }
+
+  .lt-pop-scrim.lt-pop-arrive {
+    justify-content: flex-start;
+    padding-left: calc(0.6rem + env(safe-area-inset-left, 0px));
+  }
+
+  .lt-pop-arrive .lt-pop {
+    width: min(60vw, 26rem);
+  }
+}
+
 /* Google Maps style locate button on the tour map. */
 .lt-locate {
   flex: none;

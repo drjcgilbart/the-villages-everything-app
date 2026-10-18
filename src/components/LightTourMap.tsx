@@ -54,6 +54,10 @@ const LONG_PRESS_SLOP_PX = 8;
 
 const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 
+/** A phone on its side. Matches the Holiday Lights landscape rules in globals.css. */
+const LANDSCAPE_PHONE = "(orientation: landscape) and (max-height: 500px)";
+const PORTRAIT_PHONE = "(orientation: portrait) and (max-width: 720px)";
+
 export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, actions, fabsRef }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
@@ -342,6 +346,42 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
       cancelled = true;
     };
   }, [me, ready]);
+
+  // Turning a phone on its side (or starting the drive while it is sideways)
+  // brings the whole map into view, since landscape is the driving view. On a
+  // phone held upright, starting the drive lifts the map above the stop card.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const sideways = window.matchMedia(LANDSCAPE_PHONE);
+    const upright = window.matchMedia(PORTRAIT_PHONE);
+    let settle = 0;
+    const scrollToMap = (behavior: ScrollBehavior) => {
+      const wrap = host.current?.parentElement;
+      if (!wrap) return;
+      const header = document.querySelector<HTMLElement>(".site-header");
+      const stuck = header && getComputedStyle(header).position === "sticky" ? header.getBoundingClientRect().height : 0;
+      const off = wrap.getBoundingClientRect().top - stuck - 6;
+      if (Math.abs(off) > 3) window.scrollTo({ top: Math.max(0, window.scrollY + off), behavior });
+    };
+    const fill = () => {
+      scrollToMap("smooth");
+      // The page can still be settling (a new sheet, the rotation itself), so check once more.
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => {
+        mapRef.current?.invalidateSize();
+        scrollToMap("auto");
+      }, 600);
+    };
+    const onTurn = () => {
+      if (sideways.matches) fill();
+    };
+    if (follow && (sideways.matches || upright.matches)) fill();
+    sideways.addEventListener("change", onTurn);
+    return () => {
+      window.clearTimeout(settle);
+      sideways.removeEventListener("change", onTurn);
+    };
+  }, [follow]);
 
   async function locate() {
     if (locating) return;

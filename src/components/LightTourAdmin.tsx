@@ -761,7 +761,12 @@ export function LightTourAdmin() {
           ))}
         </div>
 
-        <p className="panel-hint">
+        {mapStops.length === 0 ? (
+          <p className="lt-banner" role="status">
+            No {HOLIDAY_LABELS[holiday]} houses are on the map yet. Pick another holiday above to see its numbers.
+          </p>
+        ) : null}
+        <p className="panel-hint lt-map-hint">
           Drag a number onto the house. The middle of the number is the GPS point. Letting go saves it. The street
           address stays the same. Double-click a number to edit that house. The scroll wheel still zooms the map.
         </p>
