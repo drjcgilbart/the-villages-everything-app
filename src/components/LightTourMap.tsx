@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import "leaflet/dist/leaflet.css";
 import { TOUR_START_MAX_METERS, haversineMeters } from "@/lib/lightTourShared";
 
@@ -39,6 +39,13 @@ type Props = {
    * a small "Go to pin" popup at the pin; tapping it calls this with the pin id.
    */
   onGoToStop?: (id: string) => void;
+  /**
+   * Extra floating buttons (for example the admin Drop pin). They stack in the
+   * bottom-right corner under the locate button, so the two never overlap.
+   */
+  actions?: ReactNode;
+  /** The bottom-right button stack, so a page can tell when it is on screen. */
+  fabsRef?: Ref<HTMLDivElement>;
 };
 
 const LONG_PRESS_MS = 500;
@@ -47,7 +54,7 @@ const LONG_PRESS_SLOP_PX = 8;
 
 const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 
-export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop }: Props) {
+export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, actions, fabsRef }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
@@ -383,21 +390,26 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
           Center on me
         </button>
       ) : null}
-      {onLocate ? (
-        <button
-          type="button"
-          className={`lt-locate${locating ? " is-busy" : ""}`}
-          onClick={() => void locate()}
-          aria-label="Center the map on my location"
-          title="Center on my location"
-          disabled={locating}
-        >
-          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
-            <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
-            <circle cx="12" cy="12" r="3" fill="currentColor" />
-            <path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
+      {onLocate || actions ? (
+        <div className="lt-map-fabs" ref={fabsRef}>
+          {onLocate ? (
+            <button
+              type="button"
+              className={`lt-locate${locating ? " is-busy" : ""}`}
+              onClick={() => void locate()}
+              aria-label="Center the map on my location"
+              title="Center on my location"
+              disabled={locating}
+            >
+              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+                <circle cx="12" cy="12" r="3" fill="currentColor" />
+                <path d="M12 1.5v3.5M12 19v3.5M1.5 12H5M19 12h3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+          ) : null}
+          {actions}
+        </div>
       ) : null}
     </div>
   );
