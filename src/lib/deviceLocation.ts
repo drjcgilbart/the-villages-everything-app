@@ -84,7 +84,10 @@ export async function readWebLocation(accept?: (point: DevicePoint) => boolean):
 /** True only in an app build that answers tvea-location. Older installs leave this unset. */
 export function nativeLocationReady(): boolean {
   if (typeof window === "undefined") return false;
-  return Boolean((window as ShellWindow).__TVEA_NATIVE_LOCATION__);
+  const shell = window as ShellWindow;
+  if (shell.__TVEA_NATIVE_LOCATION__) return true;
+  // Android WebView can drop the flag the app injects as the page starts.
+  return Boolean(shell.ReactNativeWebView) && isNativeAppShell() && /Android/i.test(navigator.userAgent);
 }
 
 function postToApp(type: string, requestId: string) {

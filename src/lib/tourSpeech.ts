@@ -10,6 +10,8 @@ let nativePending = "";
 let nativeBusy = false;
 let speechToken = 0;
 let listening = false;
+let nativeWatchdog: number | undefined;
+let browserWatchdog: number | undefined;
 const kept: SpeechSynthesisUtterance[] = [];
 
 function shell(): SpeechWindow | null {
@@ -17,9 +19,18 @@ function shell(): SpeechWindow | null {
   return window as SpeechWindow;
 }
 
+/**
+ * The Android app speaks for the page. Its flag is injected as the page starts,
+ * and Android WebView can drop that early script, so the app's user agent and
+ * message bridge also count. The Android WebView has no working browser voice.
+ * iOS keeps the browser voice, which WKWebView supports.
+ */
 function nativeSpeechReady() {
   const w = shell();
-  return !!w?.__TVEA_NATIVE_SPEECH__ && !!w.ReactNativeWebView;
+  if (!w?.ReactNativeWebView) return false;
+  if (w.__TVEA_NATIVE_SPEECH__) return true;
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  return /VillagesEverythingApp/i.test(ua) && /Android/i.test(ua);
 }
 
 function voices() {
@@ -36,23 +47,30 @@ function englishVoice(synth: SpeechSynthesis) {
   );
 }
 
+/** About how long a line takes to say, with room to spare. */
+function lineMs(text: string) {
+  return Math.min(30000, 4000 + text.length * 110);
+}
+
 function postNative(type: "tvea-speak" | "tvea-speak-stop", text: string, token: number) {
   shell()?.ReactNativeWebView?.postMessage(JSON.stringify({ type, text, token }));
+}
+
+function nativeFinished(token: number) {
+  if (token !== speechToken) return;
+  window.clearTimeout(nativeWatchdog);
+  nativeBusy = false;
+  if (!nativePending) return;
+  const next = nativePending;
+  nativePending = "";
+  speakNative(next);
 }
 
 function ensureNativeListener() {
   if (listening || typeof window === "undefined") return;
   listening = true;
   window.addEventListener("tvea-native-speech-done", (event) => {
-    const token = Number((event as CustomEvent<{ token?: number }>).detail?.token);
-    if (token !== speechToken) return;
-    nativeBusy = false;
-    if (!nativePending) return;
-    const next = nativePending;
-    nativePending = "";
-    nativeBusy = true;
-    speechToken += 1;
-    postNative("tvea-speak", next, speechToken);
+    nativeFinished(Number((event as CustomEvent<{ token?: number }>).detail?.token));
   });
 }
 
@@ -60,10 +78,15 @@ function speakNative(text: string) {
   ensureNativeListener();
   nativeBusy = true;
   speechToken += 1;
-  postNative("tvea-speak", text, speechToken);
+  const token = speechToken;
+  postNative("tvea-speak", text, token);
+  // If the app never reports the line done, do not hold every later turn back.
+  window.clearTimeout(nativeWatchdog);
+  nativeWatchdog = window.setTimeout(() => nativeFinished(token), lineMs(text));
 }
 
 function stopNative() {
+  window.clearTimeout(nativeWatchdog);
   speechToken += 1;
   nativePending = "";
   nativeBusy = false;
@@ -79,20 +102,32 @@ function utter(text: string) {
   const voice = englishVoice(synth);
   if (voice) line.voice = voice;
   kept.push(line);
-  line.onend = () => {
+  const finish = () => {
+    window.clearTimeout(browserWatchdog);
     const index = kept.indexOf(line);
-    if (index >= 0) kept.splice(index, 1);
+    if (index < 0) return;
+    kept.splice(index, 1);
     if (!pending) return;
     const next = pending;
     pending = "";
     utter(next);
   };
-  line.onerror = () => {
-    const index = kept.indexOf(line);
-    if (index >= 0) kept.splice(index, 1);
-  };
+  line.onend = finish;
+  line.onerror = finish;
   synth.speak(line);
   synth.resume();
+  // Chrome on Android can leave "speaking" stuck with no end event, which
+  // silenced every later turn. Move on after a generous wait.
+  window.clearTimeout(browserWatchdog);
+  browserWatchdog = window.setTimeout(() => {
+    if (kept.indexOf(line) < 0) return;
+    kept.splice(kept.indexOf(line), 1);
+    if (!pending) return;
+    const next = pending;
+    pending = "";
+    synth.cancel();
+    utter(next);
+  }, lineMs(text));
 }
 
 export function canSpeakTour() {
@@ -114,7 +149,7 @@ export function speakTour(text: string) {
   }
   const synth = voices();
   if (!synth) return;
-  if (synth.speaking || synth.pending) {
+  if (kept.length && (synth.speaking || synth.pending)) {
     pending = line;
     return;
   }
@@ -134,6 +169,7 @@ export function speakTourNow(text: string) {
   const synth = voices();
   if (!synth) return;
   pending = "";
+  kept.length = 0;
   synth.cancel();
   utter(line);
 }
@@ -144,5 +180,7 @@ export function stopTourSpeech() {
     stopNative();
     return;
   }
+  window.clearTimeout(browserWatchdog);
+  kept.length = 0;
   voices()?.cancel();
 }
