@@ -17373,12 +17373,16 @@ html.privacy-mode [data-privacy-block]::after {
   background: #e7eef2;
 }
 
+/* Top centre: clear of zoom (top left), Music (top right), the locate stack
+   (bottom right) and the site's floating Back / Home buttons (bottom left). */
 .lt-recenter {
   position: absolute;
   z-index: 2;
-  left: 12px;
-  bottom: 12px;
-  min-height: 2.6rem;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 44px;
+  white-space: nowrap;
   padding: 0.35rem 0.85rem;
   border: 0;
   border-radius: 999px;
@@ -17861,15 +17865,20 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
 }
 
 .lt-drop {
-  position: fixed;
-  right: 0.85rem;
-  bottom: 1.25rem;
-  z-index: 82;
   width: auto;
+  min-width: 44px;
   min-height: 3.4rem;
   padding: 0.85rem 1.25rem;
   border-radius: 999px;
   box-shadow: 0 12px 28px rgba(28, 36, 48, 0.2);
+}
+
+/* Off the map (the map corner is scrolled away), Drop pin floats on the page. */
+.lt-drop.lt-drop-float {
+  position: fixed;
+  right: calc(0.85rem + env(safe-area-inset-right, 0px));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  z-index: 82;
 }
 
 .lt-wrap input[type="file"] {
@@ -17877,8 +17886,8 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
 }
 
 @media (max-width: 1280px) {
-  .lt-drop {
-    bottom: 5.4rem;
+  .lt-drop.lt-drop-float {
+    bottom: calc(5.4rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -17909,13 +17918,47 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   }
 }
 
-/* Google Maps style locate button on the tour map. Bottom right, above the
-   OpenStreetMap credit line, clear of the zoom (top left) and Music (top right) controls. */
-.lt-locate {
+/* Bottom-right map buttons: the round locate button, then Drop pin on the admin map.
+   One column with a gap, so neither covers the other. It sits above the
+   OpenStreetMap credit line and clear of the zoom (top left) and Music (top right)
+   controls. Only the buttons take taps; the gap between them still pans the map. */
+.lt-map-fabs {
   position: absolute;
   z-index: 3;
-  right: calc(12px + env(safe-area-inset-right, 0px));
-  bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.lt-map-fabs > * {
+  pointer-events: auto;
+}
+
+/* On a Holiday Lights map page the site's corner extras (golf-ball quips, the
+   site music button, the donate mascot) would sit on the map's own buttons on
+   a phone. The map has its own Music button, so they step aside there. */
+@media (max-width: 960px) {
+  body:has(.lt-map-fabs) .mascot-quip-toggle,
+  body:has(.lt-map-fabs) .mascot-quip-popup,
+  body:has(.lt-map-fabs) .donate-mascot-float,
+  body:has(.lt-map-fabs) .theme-music:not(.theme-music-tour) {
+    display: none !important;
+  }
+}
+
+.lt-map-fabs .lt-drop {
+  min-height: 48px;
+  padding: 0.7rem 1.15rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 6px 16px rgba(28, 36, 48, 0.25);
+}
+
+/* Google Maps style locate button on the tour map. */
+.lt-locate {
+  flex: none;
   width: 48px;
   height: 48px;
   padding: 0;

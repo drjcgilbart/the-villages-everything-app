@@ -186,6 +186,9 @@ export function LightTourAdmin() {
   const [toast, setToast] = useState<{ text: string; bad: boolean } | null>(null);
   const toastTimer = useRef(0);
   const [dropping, setDropping] = useState(false);
+  /** The map's own Drop pin is on screen, so the floating copy stays hidden. */
+  const [mapFabsSeen, setMapFabsSeen] = useState(false);
+  const mapFabs = useRef<HTMLDivElement>(null);
   const pinsRef = useRef(pins);
   const draftRef = useRef(draft);
   const holidayRef = useRef(holiday);
@@ -229,6 +232,16 @@ export function LightTourAdmin() {
       setReady(true);
     });
   }, []);
+
+  useEffect(() => {
+    const node = mapFabs.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const watch = new IntersectionObserver(([entry]) => setMapFabsSeen(Boolean(entry?.isIntersecting)), {
+      threshold: 0,
+    });
+    watch.observe(node);
+    return () => watch.disconnect();
+  }, [ready, signedIn]);
 
   useEffect(() => {
     let stopNative: (() => void) | null = null;
@@ -617,6 +630,20 @@ export function LightTourAdmin() {
     );
   }
 
+  /** The map corner holds Drop pin under the locate button. Off the map, a floating copy shows. */
+  function dropButton(place: "lt-drop-map" | "lt-drop-float") {
+    return (
+      <button
+        type="button"
+        className={`btn btn-primary lt-drop ${place}`}
+        disabled={dropping}
+        onClick={() => void dropPin()}
+      >
+        {dropping ? "Dropping…" : "Drop pin"}
+      </button>
+    );
+  }
+
   if (!ready) {
     return (
       <section className="section">
@@ -744,6 +771,8 @@ export function LightTourAdmin() {
           stops={mapStops}
           activeId={draft?.id}
           me={me}
+          fabsRef={mapFabs}
+          actions={dropButton("lt-drop-map")}
           onLocate={async () => {
             try {
               return await hereNow();
@@ -1041,14 +1070,7 @@ export function LightTourAdmin() {
           </div>
         </details>
 
-        <button
-          type="button"
-          className="btn btn-primary lt-drop"
-          disabled={dropping}
-          onClick={() => void dropPin()}
-        >
-          {dropping ? "Dropping…" : "Drop pin"}
-        </button>
+        {mapFabsSeen ? null : dropButton("lt-drop-float")}
         {toast ? (
           <div className={`lt-toast${toast.bad ? " is-bad" : ""}`} role={toast.bad ? "alert" : "status"}>
             {toast.text}
