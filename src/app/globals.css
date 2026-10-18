@@ -17948,6 +17948,58 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   body:has(.lt-map-fabs) .theme-music:not(.theme-music-tour) {
     display: none !important;
   }
+
+  /* The floating Back / Home pair sat just under a thumb on the map and left
+     the page mid-drive. The header still has every link. */
+  body:has(.lt-map-fabs) .floating-nav-stack {
+    display: none !important;
+  }
+}
+
+/* "You are here": a Google Maps style arrow that turns with the car. */
+.lt-nav-marker {
+  background: transparent;
+  border: 0;
+}
+
+.lt-nav-arrow {
+  display: block;
+  width: 30px;
+  height: 30px;
+  transform-origin: 50% 50%;
+  transition: transform 0.3s ease-out;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  cursor: pointer;
+}
+
+.lt-nav-arrow svg {
+  display: block;
+}
+
+.lt-resume {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lt-resume span {
+  flex: 1 1 12rem;
+}
+
+.lt-resume .btn,
+.lt-resume-ok {
+  min-height: 44px;
+}
+
+.lt-resume-ok {
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .lt-map-fabs .lt-drop {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { LightTourMap } from "./LightTourMap";
+import { LightTourMap, type MapView } from "./LightTourMap";
 import { LightTourSubmit } from "./LightTourSubmit";
 import {
   geoErrorCode,
@@ -39,6 +39,37 @@ type Draft = {
 };
 
 const PAGE = 15;
+
+/** The admin map's working state on this phone, so a reload, back or app restart resumes it. */
+const SESSION_KEY = "tvea-lt-admin-session-v1";
+type Session = { holiday?: TourHoliday; draft?: Draft | null; view?: MapView | null; savedAt?: string };
+const LEAVE_TEXT = "Leave the map? Your progress is saved.";
+
+function readSession(): Session | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Session;
+    const holiday = data.holiday && TOUR_HOLIDAYS.includes(data.holiday) ? data.holiday : undefined;
+    const v = data.view;
+    const view =
+      v && Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && Number.isFinite(v.zoom) ? v : null;
+    const draft = data.draft && typeof data.draft === "object" ? data.draft : null;
+    if (!holiday && !view && !draft) return null;
+    return { holiday, view, draft, savedAt: data.savedAt };
+  } catch {
+    return null;
+  }
+}
+
+function writeSession(session: Session) {
+  try {
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, savedAt: new Date().toISOString() }));
+  } catch {
+    /* storage full or blocked: the map still works */
+  }
+}
 
 type TermsAcceptance = {
   userId: string;
@@ -167,11 +198,15 @@ function combineImportFiles(parts: string[]) {
 }
 
 export function LightTourAdmin() {
+  // Read once on the client. The first paint is "Loading pins…" either way, so this cannot mismatch.
+  const [saved] = useState(readSession);
+  const [resumed, setResumed] = useState(Boolean(saved));
+  const viewNow = useRef<MapView | null>(saved?.view ?? null);
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [pins, setPins] = useState<AdminPin[]>([]);
-  const [holiday, setHoliday] = useState<TourHoliday>("halloween");
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [holiday, setHoliday] = useState<TourHoliday>(saved?.holiday ?? "halloween");
+  const [draft, setDraft] = useState<Draft | null>(saved?.draft ?? null);
   const [importText, setImportText] = useState("");
   const [shown, setShown] = useState<Record<TourHoliday, number>>({ halloween: PAGE, christmas: PAGE, other: PAGE });
   const [error, setError] = useState("");
@@ -182,7 +217,13 @@ export function LightTourAdmin() {
   const [acceptances, setAcceptances] = useState<TermsAcceptance[]>([]);
   const [termsNote, setTermsNote] = useState("");
   /** Live GPS for the blue dot. Accuracy is only known in the browser path. */
-  const [me, setMe] = useState<{ latitude: number; longitude: number; accuracy?: number } | null>(null);
+  const [me, setMe] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    heading?: number | null;
+    speed?: number | null;
+  } | null>(null);
   const [toast, setToast] = useState<{ text: string; bad: boolean } | null>(null);
   const toastTimer = useRef(0);
   const [dropping, setDropping] = useState(false);
@@ -233,6 +274,73 @@ export function LightTourAdmin() {
     });
   }, []);
 
+  // Save the working state on every change.
+  useEffect(() => {
+    writeSession({ holiday, draft, view: viewNow.current });
+  }, [holiday, draft]);
+
+  // Leaving the map by accident (Back, Home, a header link, the phone's back
+  // gesture) asks first. An unsaved pin card also warns on reload or close.
+  useEffect(() => {
+    if (!signedIn) return;
+    let leaving = false;
+    const guard = { ...(window.history.state || {}), ltAdminGuard: true };
+    if (!window.history.state?.ltAdminGuard) window.history.pushState(guard, "");
+    const onPop = (event: PopStateEvent) => {
+      if (leaving || event.state?.ltAdminGuard) return;
+      if (window.confirm(LEAVE_TEXT)) {
+        leaving = true;
+        window.history.back();
+      } else {
+        window.history.pushState(guard, "");
+      }
+    };
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      const link = target?.closest?.("a[href]") as HTMLAnchorElement | null;
+      const back = target?.closest?.(".floating-back-btn");
+      let leavesPage = false;
+      if (link && !link.closest(".lt-map") && link.target !== "_blank") {
+        const url = new URL(link.href, window.location.href);
+        leavesPage = url.origin !== window.location.origin || url.pathname !== window.location.pathname;
+      } else if (back && !back.closest(".lt-map")) {
+        leavesPage = (back.getAttribute("aria-label") || "").startsWith("Go back");
+      }
+      if (!leavesPage) return;
+      if (window.confirm(LEAVE_TEXT)) {
+        leaving = true;
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    const onUnload = (event: BeforeUnloadEvent) => {
+      if (!draftRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("popstate", onPop);
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("beforeunload", onUnload);
+    };
+  }, [signedIn]);
+
+  function startFresh() {
+    if (!window.confirm("Start fresh? This clears the open pin card and map view on this phone. Saved pins stay saved.")) return;
+    try {
+      window.localStorage.removeItem(SESSION_KEY);
+    } catch {
+      /* ignore */
+    }
+    viewNow.current = null;
+    setResumed(false);
+    window.location.reload();
+  }
+
   useEffect(() => {
     const node = mapFabs.current;
     if (!node || typeof IntersectionObserver === "undefined") return;
@@ -255,7 +363,7 @@ export function LightTourAdmin() {
       webWatch = navigator.geolocation.watchPosition(
         (pos) => {
           const point = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-          setMe({ ...point, accuracy: pos.coords.accuracy });
+          setMe({ ...point, accuracy: pos.coords.accuracy, heading: pos.coords.heading, speed: pos.coords.speed });
           navFeed.current(point, pos.coords.accuracy);
         },
         () => undefined,
@@ -676,6 +784,17 @@ export function LightTourAdmin() {
         <p className="panel-hint">
           <Link href="/tour">Back to the tour</Link> · <Link href="/tour/admin/build">Build a tour</Link>
         </p>
+        {resumed ? (
+          <div className="lt-banner lt-resume" role="status">
+            <span>Resumed where you left off.</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={startFresh}>
+              Start fresh
+            </button>
+            <button type="button" className="lt-resume-ok" aria-label="Hide this note" onClick={() => setResumed(false)}>
+              OK
+            </button>
+          </div>
+        ) : null}
         {termsNote ? (
           <p className="lt-error" role="alert">
             {termsNote}
@@ -777,6 +896,11 @@ export function LightTourAdmin() {
           activeId={draft?.id}
           me={me}
           fabsRef={mapFabs}
+          initialView={saved?.view ?? null}
+          onViewChange={(view) => {
+            viewNow.current = view;
+            writeSession({ holiday: holidayRef.current, draft: draftRef.current, view });
+          }}
           actions={dropButton("lt-drop-map")}
           onLocate={async () => {
             try {
