@@ -33,7 +33,7 @@ type Props = {
    * Live "you are here" blue dot with an accuracy ring. Drawn on its own layer so
    * GPS ticks never redraw (or interrupt dragging) the numbered pins.
    */
-  me?: { latitude: number; longitude: number; accuracy?: number } | null;
+  me?: { latitude: number; longitude: number; accuracy?: number; heading?: number | null; speed?: number | null } | null;
   /**
    * Admin only. Long-press (about half a second, touch or mouse) on a pin shows
    * a small "Go to pin" popup at the pin; tapping it calls this with the pin id.
@@ -46,7 +46,31 @@ type Props = {
   actions?: ReactNode;
   /** The bottom-right button stack, so a page can tell when it is on screen. */
   fabsRef?: Ref<HTMLDivElement>;
+  /** Open on this view instead of fitting the pins (a restored admin session). */
+  initialView?: MapView | null;
+  /** Called after the map is panned or zoomed. */
+  onViewChange?: (view: MapView) => void;
 };
+
+export type MapView = { latitude: number; longitude: number; zoom: number };
+
+/** Google Maps style navigation arrow: a slim chevron, notched base. Points up (north) at 0 degrees. */
+const ARROW_SVG =
+  '<svg viewBox="0 0 30 30" width="30" height="30" aria-hidden="true" focusable="false">' +
+  '<path d="M15 3 L24.5 26 L15 20.5 L5.5 26 Z" fill="#1a73e8" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"/>' +
+  "</svg>";
+
+/** Below this the fix is GPS jitter, not movement. */
+const HEADING_MIN_METERS = 6;
+
+function bearingDegrees(from: { latitude: number; longitude: number }, to: { latitude: number; longitude: number }) {
+  const rad = Math.PI / 180;
+  const y = Math.sin((to.longitude - from.longitude) * rad) * Math.cos(to.latitude * rad);
+  const x =
+    Math.cos(from.latitude * rad) * Math.sin(to.latitude * rad) -
+    Math.sin(from.latitude * rad) * Math.cos(to.latitude * rad) * Math.cos((to.longitude - from.longitude) * rad);
+  return ((Math.atan2(y, x) / rad) + 360) % 360;
+}
 
 const LONG_PRESS_MS = 500;
 /** Moving farther than this during the hold is a drag or pan, not a long-press. */
@@ -58,16 +82,19 @@ const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 const LANDSCAPE_PHONE = "(orientation: landscape) and (max-height: 500px)";
 const PORTRAIT_PHONE = "(orientation: portrait) and (max-width: 720px)";
 
-export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, actions, fabsRef }: Props) {
+export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, actions, fabsRef, initialView = null, onViewChange }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
-  const meLayer = useRef<{
-    ring: import("leaflet").Circle;
-    dot: import("leaflet").CircleMarker;
-  } | null>(null);
   const meNow = useRef<{ latitude: number; longitude: number } | null>(null);
   const fitted = useRef("");
+  const startView = useRef(initialView);
+  const viewRef = useRef(onViewChange);
+  useEffect(() => {
+    viewRef.current = onViewChange;
+  }, [onViewChange]);
+  const arrow = useRef<{ marker: import("leaflet").Marker; ring: import("leaflet").Circle | null } | null>(null);
+  const heading = useRef({ angle: 0, shown: 0, last: null as { latitude: number; longitude: number } | null });
   const followRef = useRef(follow);
   const userPanned = useRef(false);
   const visitorRef = useRef(visitor);
@@ -98,7 +125,12 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
       const map = L.map(host.current, {
         zoomControl: true,
         attributionControl: true,
-      }).setView([VILLAGES.latitude, VILLAGES.longitude], 12);
+      }).setView(
+        startView.current
+          ? [startView.current.latitude, startView.current.longitude]
+          : [VILLAGES.latitude, VILLAGES.longitude],
+        startView.current?.zoom ?? 12,
+      );
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -106,6 +138,10 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
       groupRef.current = L.layerGroup().addTo(map);
       map.zoomControl.getContainer()?.setAttribute("aria-label", "Map zoom controls");
       mapRef.current = map;
+      map.on("moveend", () => {
+        const c = map.getCenter();
+        viewRef.current?.({ latitude: c.lat, longitude: c.lng, zoom: map.getZoom() });
+      });
       setReady(true);
       window.setTimeout(() => map.invalidateSize(), 200);
     });
@@ -132,15 +168,6 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
           L.polyline(localLine, { color: "#0c4a6e", weight: 4, opacity: 0.95 }).addTo(group);
         }
         const showVisitor = !!visitor && nearHouses(visitor.latitude, visitor.longitude);
-        if (visitor && showVisitor) {
-          L.circleMarker([visitor.latitude, visitor.longitude], {
-            radius: 8,
-            color: "#ffffff",
-            weight: 3,
-            fillColor: "#1f6b4a",
-            fillOpacity: 1,
-          }).addTo(group);
-        }
         const bounds: [number, number][] = [];
         if (visitor && showVisitor) bounds.push([visitor.latitude, visitor.longitude]);
         for (const stop of stops) {
@@ -243,6 +270,11 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
         // On the admin map a Go to pin line must not re-zoom to every pin.
         const routeKey = `${stops.map((stop) => stop.id).join(",")}:${openRef.current ? "" : line.length}`;
         const tracking = followRef.current && !!visitor && showVisitor && !userPanned.current;
+        if (bounds.length && startView.current) {
+          // A restored session keeps the view it had; later route changes fit as usual.
+          fitted.current = routeKey;
+          startView.current = null;
+        }
         if (bounds.length && fitted.current !== routeKey) {
           fitted.current = routeKey;
           if (!followRef.current) {
@@ -302,50 +334,107 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
     else map.panTo(target, { animate: true });
   }
 
+  // One navigation arrow for "you are here": the live GPS (me) on the admin map,
+  // or the tour's visitor point. It turns with the direction of travel.
+  const here = me || visitor;
+  const showHere = Boolean(
+    here &&
+      (me ||
+        !stops.length ||
+        stops.some((stop) => haversineMeters(stop, here) <= TOUR_START_MAX_METERS)),
+  );
+  const hereKey = here && showHere ? `${here.latitude},${here.longitude},${me?.accuracy ?? ""},${me?.heading ?? ""},${me?.speed ?? ""}` : "";
   useEffect(() => {
     meNow.current = me ? { latitude: me.latitude, longitude: me.longitude } : null;
     const map = mapRef.current;
     if (!map) return;
-    if (!me) {
-      meLayer.current?.ring.remove();
-      meLayer.current?.dot.remove();
-      meLayer.current = null;
+    if (!here || !showHere) {
+      arrow.current?.marker.remove();
+      arrow.current?.ring?.remove();
+      arrow.current = null;
       return;
     }
-    const at: [number, number] = [me.latitude, me.longitude];
-    const radius = Math.max(5, Math.min(500, Number(me.accuracy) || 0));
-    if (meLayer.current) {
-      meLayer.current.ring.setLatLng(at).setRadius(radius);
-      meLayer.current.dot.setLatLng(at);
+    const at: [number, number] = [here.latitude, here.longitude];
+    // Direction: the compass heading while really moving, else the bearing from
+    // the last fix that is far enough away to be movement. Stopped: keep it.
+    const h = heading.current;
+    const gpsHeading = me?.heading;
+    const moving = Number(me?.speed) > 1;
+    let target: number | null = null;
+    if (gpsHeading != null && Number.isFinite(gpsHeading) && moving) target = gpsHeading;
+    else if (h.last && haversineMeters(h.last, here) >= HEADING_MIN_METERS) target = bearingDegrees(h.last, here);
+    if (!h.last || haversineMeters(h.last, here) >= HEADING_MIN_METERS) h.last = { latitude: here.latitude, longitude: here.longitude };
+    if (target != null) {
+      // Shortest turn, so 359 -> 2 turns 3 degrees, not 357 back.
+      const delta = ((((target - (h.shown % 360)) % 360) + 540) % 360) - 180;
+      h.shown += delta;
+      h.angle = target;
+    }
+    const radius = me?.accuracy ? Math.max(5, Math.min(500, Number(me.accuracy))) : 0;
+    const turn = () => {
+      const el = arrow.current?.marker.getElement()?.querySelector<HTMLElement>(".lt-nav-arrow");
+      if (el) el.style.transform = `rotate(${h.shown}deg)`;
+    };
+    const keepClear = () => {
+      // Never leave the arrow under the corner buttons: nudge the map if it is.
+      const fabs = host.current?.parentElement?.querySelector<HTMLElement>(".lt-map-fabs");
+      const box = host.current?.getBoundingClientRect();
+      if (!fabs || !box) return;
+      const r = fabs.getBoundingClientRect();
+      const p = map.latLngToContainerPoint(at);
+      const left = r.left - box.left - 24;
+      const top = r.top - box.top - 24;
+      if (p.x > left && p.y > top) map.panBy([p.x - left + 8, 0], { animate: true });
+    };
+    if (arrow.current) {
+      arrow.current.marker.setLatLng(at);
+      if (arrow.current.ring) {
+        if (radius) arrow.current.ring.setLatLng(at).setRadius(radius);
+        else {
+          arrow.current.ring.remove();
+          arrow.current.ring = null;
+        }
+      }
+      turn();
+      keepClear();
       return;
     }
     let cancelled = false;
     void import("leaflet").then((L) => {
-      if (cancelled || !mapRef.current || meLayer.current) return;
-      const ring = L.circle(at, {
-        radius,
-        color: "#1a73e8",
-        weight: 1,
-        opacity: 0.5,
-        fillColor: "#1a73e8",
-        fillOpacity: 0.15,
-        interactive: false,
+      if (cancelled || !mapRef.current || arrow.current) return;
+      const ring = radius
+        ? L.circle(at, {
+            radius,
+            color: "#1a73e8",
+            weight: 1,
+            opacity: 0.5,
+            fillColor: "#1a73e8",
+            fillOpacity: 0.15,
+            interactive: false,
+          }).addTo(mapRef.current)
+        : null;
+      const marker = L.marker(at, {
+        icon: L.divIcon({
+          className: "lt-nav-marker",
+          html: `<span class="lt-nav-arrow">${ARROW_SVG}</span>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        }),
+        keyboard: false,
+        zIndexOffset: 1000,
+        title: "You are here",
       }).addTo(mapRef.current);
-      const dot = L.circleMarker(at, {
-        radius: 8,
-        color: "#ffffff",
-        weight: 3,
-        fillColor: "#1a73e8",
-        fillOpacity: 1,
-        interactive: false,
-      }).addTo(mapRef.current);
-      dot.bringToFront();
-      meLayer.current = { ring, dot };
+      marker.on("click", () => centerOnVisitor());
+      arrow.current = { marker, ring };
+      turn();
+      keepClear();
     });
     return () => {
       cancelled = true;
     };
-  }, [me, ready]);
+    // hereKey covers every field of here/me that matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hereKey, ready]);
 
   // Turning a phone on its side (or starting the drive while it is sideways)
   // brings the whole map into view, since landscape is the driving view. On a
