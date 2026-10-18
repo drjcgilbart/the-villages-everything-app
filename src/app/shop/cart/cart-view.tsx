@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { lineKey, useCart } from "@/components/shop/cart";
 import { BadgePreview } from "@/components/shop/badge-preview";
-import { findVariant, formatPrice, productHref, variantImage } from "@/lib/shop/catalog";
+import { findVariant, formatPrice, isOrderable, productHref, variantImage } from "@/lib/shop/catalog";
 import { BADGE_SIZE, badgeMaterialOrDefault, themeFromSku } from "@/lib/shop/badges";
 
 export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unavailable"; chargeNotice?: string | null }) {
@@ -14,13 +14,21 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
   const lines = items.flatMap((i) => {
     const f = findVariant(i.sku);
     // A custom badge line without its text is unusable; drop it rather than send it to checkout.
-    if (!f || (f.product.badge?.kind === "custom" && !i.badge?.name)) return [];
+    // Hidden products (e.g. ready-made badges while READY_MADE_ENABLED is false) are dropped too; checkout rejects them.
+    if (!f || !isOrderable(f.product) || (f.product.badge?.kind === "custom" && !i.badge?.name)) return [];
     // Name badges are priced by material (one config in badges.ts); the server prices checkout the same way.
     const material = f.product.type === "badges" ? badgeMaterialOrDefault(i.material) : undefined;
     const unitCents = material ? material.priceCents : f.product.priceCents;
     return [{ ...i, ...f, material: material?.id, materialInfo: material, unitCents, key: lineKey(i) }];
   });
-  const subtotal = lines.reduce((n, l) => n + l.unitCents * l.qty, 0);
+  // Clear hidden items out of a saved cart so the cart count matches what is shown.
+  useEffect(() => {
+    for (const i of items) {
+      const f = findVariant(i.sku);
+      if (f && !isOrderable(f.product)) remove(lineKey(i));
+    }
+  }, [items, remove]);
+    const subtotal = lines.reduce((n, l) => n + l.unitCents * l.qty, 0);
 
   async function checkout() {
     setBusy(true);

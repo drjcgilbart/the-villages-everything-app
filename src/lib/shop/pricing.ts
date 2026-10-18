@@ -1,4 +1,4 @@
-import { CURRENCY, findVariant, type Product, type Variant } from "./catalog";
+import { CURRENCY, findVariant, isOrderable, type Product, type Variant } from "./catalog";
 import {
   BADGE_SIZE,
   badgeMaterialOrDefault,
@@ -77,6 +77,7 @@ export function buildLineItems(input: unknown, opts: { taxBehavior?: "exclusive"
     const qty = Number(r.qty);
     const found = typeof sku === "string" ? findVariant(sku) : undefined;
     if (typeof sku !== "string" || !found) throw new PricingError(`Unknown item: ${String(sku).slice(0, 40)}`);
+    if (!isOrderable(found.product)) throw new PricingError(`${found.product.name} is not available right now. Please remove it from your cart.`);
     if (!Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) throw new PricingError("Invalid quantity");
     let text: BadgeText | undefined;
     let material: BadgeMaterial | undefined;

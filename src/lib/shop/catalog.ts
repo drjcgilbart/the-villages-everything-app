@@ -48,6 +48,8 @@ export type Product = {
   fulfillment?: "printful" | "manual";
   /** false: orderable, but not shown in the /shop grid (ready-made badges live on the badge page). */
   listed?: boolean;
+  /** true: unlisted everywhere and not orderable (checkout rejects it, carts drop it). Art, print files and config stay. */
+  hidden?: boolean;
   /** Name badges: custom (buyer's text) or a fixed ready-made design with its own print file. */
   /** file: the 3" x 2" trim art (shown on the page); bleedFile: the same art with 1/8" bleed (976 x 676) for the printer. */
   badge?: { kind: "custom" } | { kind: "ready"; size: "3x2in"; file: string; bleedFile: string; alt: string };
@@ -56,6 +58,10 @@ export type Product = {
 };
 
 export const CURRENCY = "usd";
+
+/** Ready-made name badges (Jonathan / Lucy, Edenfield). false: hidden from every page and rejected at checkout.
+ *  Set back to true to bring the #ready-made section on /shop/custom-name-badge back; nothing else needs changing. */
+export const READY_MADE_ENABLED = false;
 const SIZES = ["S", "M", "L", "XL", "2XL", "3XL"] as const;
 
 // Gildan 64000 Softstyle tee (Printful catalog product 12) variant ids by colour, in SIZES order.
@@ -307,6 +313,7 @@ export const PRODUCTS: Product[] = [
     taxCode: GENERAL,
     fulfillment: "manual",
     listed: false,
+    hidden: !READY_MADE_ENABLED,
     badge: { kind: "ready", size: "3x2in", file: "/shop/badges/ready/jonathan-edenfield-3x2.png", bleedFile: "/shop/badges/ready/jonathan-edenfield-3x2-bleed.png", alt: "Edenfield name badge reading The Village of Edenfield, JONATHAN" },
   },
   {
@@ -324,15 +331,30 @@ export const PRODUCTS: Product[] = [
     taxCode: GENERAL,
     fulfillment: "manual",
     listed: false,
+    hidden: !READY_MADE_ENABLED,
     badge: { kind: "ready", size: "3x2in", file: "/shop/badges/ready/lucy-edenfield-3x2.png", bleedFile: "/shop/badges/ready/lucy-edenfield-3x2-bleed.png", alt: "Edenfield name badge reading The Village of Edenfield, LUCY" },
   },
 ];
 
+/** Products that can be shown, added to a cart and checked out. */
+export function isOrderable(product: Product) {
+  return product.hidden !== true;
+}
+
+/** True when the sku belongs to a product that is not hidden. */
+export function isOrderableSku(sku: string) {
+  const found = findVariant(sku);
+  return !!found && isOrderable(found.product);
+}
+
 /** Products shown in the /shop grid. */
-export const LISTED_PRODUCTS = PRODUCTS.filter((p) => p.listed !== false);
+export const LISTED_PRODUCTS = PRODUCTS.filter((p) => p.listed !== false && isOrderable(p));
+
+/** Ready-made badges shown on the badge page (none while READY_MADE_ENABLED is false). */
+export const READY_BADGE_PRODUCTS = PRODUCTS.filter((p) => p.badge?.kind === "ready" && isOrderable(p));
 
 /** Product pages served by /shop/[slug] (the custom badge has its own page; ready-made badges live on it). */
-export const SLUG_PAGE_PRODUCTS = PRODUCTS.filter((p) => p.type !== "badges");
+export const SLUG_PAGE_PRODUCTS = PRODUCTS.filter((p) => p.type !== "badges" && isOrderable(p));
 
 export function getProduct(slug: string) {
   return PRODUCTS.find((p) => p.slug === slug);
@@ -353,7 +375,7 @@ export function variantImage(product: Product, variant: Variant) {
 
 /** Where a cart line links back to. */
 export function productHref(product: Product) {
-  return product.type === "badges" ? (product.badge?.kind === "ready" ? "/shop/custom-name-badge#ready-made" : "/shop/custom-name-badge") : `/shop/${product.slug}`;
+  return product.type === "badges" ? (product.badge?.kind === "ready" && isOrderable(product) ? "/shop/custom-name-badge#ready-made" : "/shop/custom-name-badge") : `/shop/${product.slug}`;
 }
 
 export function formatPrice(cents: number) {

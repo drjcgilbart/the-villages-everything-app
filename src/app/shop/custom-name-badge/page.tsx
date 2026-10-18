@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PRODUCTS, formatPrice, getProduct } from "@/lib/shop/catalog";
+import { READY_BADGE_PRODUCTS, formatPrice, getProduct } from "@/lib/shop/catalog";
 import { BADGE_MATERIALS, BADGE_SIZE } from "@/lib/shop/badges";
 import { ShopBar } from "@/components/shop/shop-bar";
 import { BadgeBuilder, ReadyBadges } from "@/components/shop/badge-builder";
@@ -15,7 +15,8 @@ export const metadata: Metadata = {
 };
 
 export default function CustomNameBadgePage() {
-  const ready = PRODUCTS.filter((p) => p.badge?.kind === "ready");
+  // Empty while READY_MADE_ENABLED is false (catalog.ts): the whole section is left out.
+  const ready = READY_BADGE_PRODUCTS;
   return (
     <section className="section shop-pdp badge-page">
       <div className="shell">
@@ -30,6 +31,7 @@ export default function CustomNameBadgePage() {
         </div>
         <BadgeBuilder />
 
+        {ready.length > 0 && (
         <section className="badge-ready" id="ready-made" aria-labelledby="ready-made-h">
           <p className="shop-mono">Ready-made &middot; nothing to type</p>
           <h2 id="ready-made-h">Ready-made name badges</h2>
@@ -38,6 +40,7 @@ export default function CustomNameBadgePage() {
           </p>
           <ReadyBadges products={ready} />
         </section>
+        )}
         <p className="shop-note">Made to order by hand &middot; ships in about 5&ndash;7 business days plus shipping</p>
       </div>
     </section>
