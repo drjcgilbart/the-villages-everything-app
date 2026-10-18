@@ -910,6 +910,8 @@ function Shell() {
         }}
         injectedJavaScript={`
           (function () {
+            // Android can drop the start-of-page script; set the bridge flags again once the page loads.
+            ${Platform.OS === "android" ? "window.VillagesAndroidAlarm=true;window.__TVEA_NATIVE_LOCATION__=true;window.__TVEA_NATIVE_SPEECH__=true;" : ""}
             document.documentElement.style.webkitTouchCallout = 'default';
             // Hide site floats that clutter the phone app (Quips + theme music)
             if (!document.getElementById('vea-hide-floats')) {
