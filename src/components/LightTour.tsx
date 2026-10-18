@@ -98,8 +98,14 @@ function blockedLocationNote() {
 
 export function LightTour({
   memberStatus = null,
+  isAdmin = false,
 }: {
   memberStatus?: "pending" | "approved" | "rejected" | "suspended" | null;
+  /**
+   * The site owner opened the tour from the Admin Center (/tour/admin/build).
+   * Today the flow is exactly the member flow. Admin-only powers can key off this later.
+   */
+  isAdmin?: boolean;
 }) {
   const [holiday, setHoliday] = useState<TourHoliday>("halloween");
   const [countText, setCountText] = useState(String(DEFAULT_STOPS));
@@ -1065,7 +1071,7 @@ export function LightTour({
 
   if (termsState !== "accepted") {
     return (
-      <section className="section">
+      <section className="section" data-tour-admin={isAdmin ? "1" : undefined}>
         <div className="shell lt-wrap">
           <HolidayLightsTermsGate
             inline
@@ -1096,7 +1102,7 @@ export function LightTour({
   }
 
   return (
-    <section className="section">
+    <section className="section" data-tour-admin={isAdmin ? "1" : undefined}>
       <div className="shell lt-wrap">
         {viewTermsLink()}
         {offline ? (

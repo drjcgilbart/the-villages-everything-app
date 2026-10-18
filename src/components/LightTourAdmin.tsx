@@ -674,7 +674,7 @@ export function LightTourAdmin() {
     <section className="section">
       <div className="shell lt-wrap">
         <p className="panel-hint">
-          <Link href="/tour">Back to the tour</Link>
+          <Link href="/tour">Back to the tour</Link> · <Link href="/tour/admin/build">Build a tour</Link>
         </p>
         {termsNote ? (
           <p className="lt-error" role="alert">

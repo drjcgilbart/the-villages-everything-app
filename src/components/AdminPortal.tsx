@@ -207,6 +207,9 @@ export function AdminPortal() {
             <Link href="/tour/admin" className="btn btn-ghost btn-sm">
               Holiday Lights
             </Link>
+            <Link href="/tour/admin/build" className="btn btn-ghost btn-sm">
+              Build a tour
+            </Link>
             <Link href="/studio" className="btn btn-ghost btn-sm">
               Creator Studio
             </Link>
@@ -352,6 +355,7 @@ export function AdminPortal() {
             Site access
           </button>
           <Link href="/tour/admin">Holiday Lights</Link>
+          <Link href="/tour/admin/build">Build a tour</Link>
         </div>
 
         {tab === "pending" && (

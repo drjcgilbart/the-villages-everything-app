@@ -66,7 +66,8 @@ export function ThemeMusicPlayer({
   const pathname = usePathname();
   const catalog = tracks && tracks.length ? tracks : THEME_TRACKS;
   const custom = Boolean(tracks && tracks.length);
-  const hideForTour = !custom && pathname === "/tour";
+  // The tour brings its own holiday music, on the member page and the Admin Center copy of it.
+  const hideForTour = !custom && (pathname === "/tour" || pathname === "/tour/admin/build");
   const keys = useMemo(() => storageKeys(storagePrefix), [storagePrefix]);
   const noun = custom ? "song" : "mood";
   const catalogKey = catalog.map((track) => track.id).join("|");
