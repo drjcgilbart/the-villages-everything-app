@@ -38,7 +38,7 @@ const plateCache = new Map<string, Promise<string>>();
 function loadPlate(id: string) {
   let p = plateCache.get(id);
   if (!p) {
-    p = fs.readFile(/*turbopackIgnore: true*/ path.join(ROOT(), "plates", `${id}.png`)).then((b) => `data:image/png;base64,${b.toString("base64")}`);
+    p = fs.readFile(/*turbopackIgnore: true*/ path.join(ROOT(), "plates-3x2", `${id}.png`)).then((b) => `data:image/png;base64,${b.toString("base64")}`);
     plateCache.set(id, p);
   }
   return p;
@@ -148,8 +148,8 @@ export function withDpi(png: Buffer, dpi = 300): Buffer {
 }
 
 /**
- * Render the print PNG. bleed=true: 976 x 526 (3.25" x 1.75", 1/8" bleed each side, trim marked by the layout);
- * bleed=false: the 900 x 450 trim only (3" x 1.5" at 300 dpi). Text must already be validated.
+ * Render the print PNG. bleed=true: 976 x 676 (3.25" x 2.25", 1/8" bleed each side, trim marked by the layout);
+ * bleed=false: the 900 x 600 trim only (3" x 2" at 300 dpi). Text must already be validated.
  */
 export async function renderBadgePng(theme: BadgeTheme, text: BadgeText, opts: { bleed?: boolean } = {}): Promise<Buffer> {
   const bleed = opts.bleed !== false;

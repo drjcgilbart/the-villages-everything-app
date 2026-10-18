@@ -9,7 +9,7 @@ export function externalIdFor(sessionId: string) {
   return "tvea_" + createHash("sha256").update(sessionId).digest("hex").slice(0, 27);
 }
 
-export type ShopOrderBadge = { kind: "custom" | "ready"; theme: string; name: string; village?: string; size: string };
+export type ShopOrderBadge = { kind: "custom" | "ready"; theme: string; name: string; village?: string; size: string; material?: string; materialLabel?: string };
 export type ShopOrderLine = {
   sku: string;
   name: string;
@@ -73,6 +73,8 @@ export function sessionDetails(session: Stripe.Checkout.Session): { lines: ShopO
         name: md.badge_name || "",
         village: md.badge_village || undefined,
         size: md.badge_size || "",
+        material: md.badge_material || undefined,
+        materialLabel: md.badge_material_label || undefined,
       };
       line.label = (typeof product === "object" ? product?.description : null) || line.label;
     }

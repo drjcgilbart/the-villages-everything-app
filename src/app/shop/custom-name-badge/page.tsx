@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PRODUCTS, getProduct } from "@/lib/shop/catalog";
-import { BADGE_SIZES } from "@/lib/shop/badges";
+import { PRODUCTS, formatPrice, getProduct } from "@/lib/shop/catalog";
+import { BADGE_MATERIALS, BADGE_SIZE } from "@/lib/shop/badges";
 import { ShopBar } from "@/components/shop/shop-bar";
 import { BadgeBuilder, ReadyBadges } from "@/components/shop/badge-builder";
 
@@ -9,7 +9,7 @@ const product = getProduct("custom-name-badge")!;
 
 export const metadata: Metadata = {
   title: "Custom Name Badge \u00b7 Shop",
-  description: "A 3\" x 1.5\" magnetic name badge with your name (and your village) in one of seven Villages themes. $16 each, 2 for $28.",
+  description: `A 3" x 2" magnetic name badge with your name (and your village) in one of seven Villages themes. ${BADGE_MATERIALS.map((m) => `${m.label} ${formatPrice(m.priceCents)}`).join(", ")}.`,
   alternates: { canonical: "/shop/custom-name-badge" },
   openGraph: { images: [product.image] },
 };
@@ -34,7 +34,7 @@ export default function CustomNameBadgePage() {
           <p className="shop-mono">Ready-made &middot; nothing to type</p>
           <h2 id="ready-made-h">Ready-made name badges</h2>
           <p className="shop-tag">
-            Finished Edenfield designs in the larger {BADGE_SIZES.ready.label} size. Same price, and they count toward 2 for $28 with custom badges.
+            Finished Edenfield designs, the same {BADGE_SIZE.label} magnetic badge and the same material choice and prices as the custom badges.
           </p>
           <ReadyBadges products={ready} />
         </section>

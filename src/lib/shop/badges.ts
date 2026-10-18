@@ -1,20 +1,41 @@
-// Custom name badges: themes, text rules, pair pricing and the auto-shrink fit. Shared by the product page (client)
+// Custom name badges: themes, text rules, materials + prices and the auto-shrink fit. Shared by the product page (client)
 // and the checkout + print renderer (server), so the preview and the print file use the same layout numbers.
-// Layout units are print pixels on the 3" x 1.5" trim at 300 dpi (900 x 450). Print files add a 1/8" bleed.
-// Art plates (everything except the buyer's text) live in public/shop/badges/plates/<theme>.png (976 x 526 with bleed).
+// Every badge is a Lasercraft Executive 3" x 2" (thelasercraft.co) with a magnetic two-post backing.
+// Layout units are print pixels on the 3" x 2" trim at 300 dpi (900 x 600). Print files add a 1/8" bleed.
+// Art plates (everything except the buyer's text) live in public/shop/badges/plates-3x2/<theme>.png (976 x 676 with bleed).
 
-export const BADGE_TRIM = { w: 900, h: 450 } as const;
+export const BADGE_TRIM = { w: 900, h: 600 } as const;
 export const BADGE_BLEED = 38; // 1/8 in at 300 dpi (37.5, rounded up)
 export const BADGE_PRINT = { w: BADGE_TRIM.w + 2 * BADGE_BLEED, h: BADGE_TRIM.h + 2 * BADGE_BLEED } as const;
 
-export const BADGE_UNIT_CENTS = 1600; // $16 each
-export const BADGE_PAIR_CENTS = 2800; // 2 for $28
-export const BADGE_PAIR_UNIT_CENTS = BADGE_PAIR_CENTS / 2;
-
-export const BADGE_SIZES = {
-  custom: { id: "3x1.5in", label: '3" x 1.5"', long: '3" x 1.5" magnetic badge' },
-  ready: { id: "3.5x2.25in", label: '3.5" x 2.25"', long: '3.5" x 2.25" magnetic badge (larger size)' },
+/** One size for every badge (custom and ready-made). */
+export const BADGE_SIZE = {
+  id: "3x2in",
+  label: '3" x 2"',
+  blank: "Lasercraft Executive 3\" x 2\"",
+  long: '3" x 2" magnetic badge',
+  backing: "magnetic two-post backing",
 } as const;
+
+// ---------- materials and prices: the ONE place badge prices live (server checkout and the page both read this) ----------
+export type BadgeMaterialId = "white-acrylic" | "white-aluminum";
+export type BadgeMaterial = { id: BadgeMaterialId; label: string; spec: string; tier: "Standard" | "Premium"; priceCents: number };
+export const BADGE_MATERIALS: BadgeMaterial[] = [
+  { id: "white-acrylic", label: "White Acrylic", spec: '1/8" cast acrylic', tier: "Standard", priceCents: 2000 },
+  { id: "white-aluminum", label: "White Aluminum", spec: '.025" gloss white aluminum', tier: "Premium", priceCents: 2500 },
+];
+export const DEFAULT_BADGE_MATERIAL: BadgeMaterialId = "white-acrylic";
+export function getBadgeMaterial(id: unknown): BadgeMaterial | undefined {
+  return BADGE_MATERIALS.find((m) => m.id === id);
+}
+/** Unknown or missing material falls back to the standard one (old carts saved before materials existed). */
+export function badgeMaterialOrDefault(id: unknown): BadgeMaterial {
+  return getBadgeMaterial(id) ?? getBadgeMaterial(DEFAULT_BADGE_MATERIAL)!;
+}
+export const BADGE_FROM_CENTS = Math.min(...BADGE_MATERIALS.map((m) => m.priceCents));
+export function badgeUnitCents(material: unknown) {
+  return badgeMaterialOrDefault(material).priceCents;
+}
 
 export const NAME_MAX = 16;
 export const VILLAGE_MAX = 26;
@@ -61,8 +82,9 @@ export type BadgeTheme = {
   village?: TextSlot;
 };
 
-// Positions follow the approved concepts (src/badges.js + badges-v2.js). Themes 2-6 take a name only, so their
-// name sits centred in the space the concept gave to name + village line.
+// Positions follow the approved concepts (src/badges.js + badges-v2.js), re-laid out for the 3:2 face. Themes 2-6 take a
+// name only, so their name sits centred in the space the concept gave to name + village line. Edenfield matches the
+// ready-made 3x2 Edenfield badges (same canvas and type sizes).
 export const BADGE_THEMES: BadgeTheme[] = [
   {
     id: "brand",
@@ -70,8 +92,8 @@ export const BADGE_THEMES: BadgeTheme[] = [
     blurb: "Our wordmark and golf-ball mascot, with your name and village.",
     usesVillage: true,
     sample: { name: "Linda", village: "Fenney" },
-    name: { left: 250, top: 118, width: 616, height: 132, font: "fraunces700", size: 132, min: 30, lineHeight: 1, color: "#1c2430", align: "left", letterSpacing: -0.03 },
-    village: { left: 250, top: 286, width: 616, height: 60, font: "dmsans700", size: 44, min: 24, lineHeight: 1.3, color: "#1f6b4a", align: "left", prefix: "Village of " },
+    name: { left: 262, top: 166, width: 604, height: 150, font: "fraunces700", size: 140, min: 30, lineHeight: 1, color: "#1c2430", align: "left", letterSpacing: -0.03 },
+    village: { left: 262, top: 340, width: 604, height: 66, font: "dmsans700", size: 46, min: 18, lineHeight: 1.3, color: "#1f6b4a", align: "left", prefix: "Village of " },
   },
   {
     id: "golf",
@@ -79,7 +101,7 @@ export const BADGE_THEMES: BadgeTheme[] = [
     blurb: "Mowed-stripe green with a flag on the green.",
     usesVillage: false,
     sample: { name: "Linda" },
-    name: { left: 54, top: 122, width: 606, height: 146, font: "fraunces700", size: 140, min: 30, lineHeight: 1, color: "#ffffff", align: "left", shadow: "0 3px 0 rgba(0,0,0,0.18)" },
+    name: { left: 54, top: 210, width: 640, height: 170, font: "fraunces700", size: 150, min: 30, lineHeight: 1, color: "#ffffff", align: "left", shadow: "0 3px 0 rgba(0,0,0,0.18)" },
   },
   {
     id: "pickle",
@@ -87,7 +109,7 @@ export const BADGE_THEMES: BadgeTheme[] = [
     blurb: "Court blue, paddle and an optic-yellow ball.",
     usesVillage: false,
     sample: { name: "Barb" },
-    name: { left: 54, top: 126, width: 496, height: 140, font: "lilita", size: 130, min: 30, lineHeight: 1, color: "#ffffff", align: "left", letterSpacing: 0.01 },
+    name: { left: 54, top: 206, width: 490, height: 160, font: "lilita", size: 138, min: 30, lineHeight: 1, color: "#ffffff", align: "left", letterSpacing: 0.01 },
   },
   {
     id: "sunset",
@@ -95,7 +117,7 @@ export const BADGE_THEMES: BadgeTheme[] = [
     blurb: "Gold-to-plum sunset with palm silhouettes.",
     usesVillage: false,
     sample: { name: "Carol" },
-    name: { left: 54, top: 104, width: 546, height: 170, font: "pacifico", size: 120, min: 30, lineHeight: 1.25, color: "#ffffff", align: "left", shadow: "0 4px 0 rgba(90,43,85,0.35)" },
+    name: { left: 54, top: 186, width: 546, height: 200, font: "pacifico", size: 128, min: 30, lineHeight: 1.25, color: "#ffffff", align: "left", shadow: "0 4px 0 rgba(90,43,85,0.35)" },
   },
   {
     id: "coastal",
@@ -103,7 +125,7 @@ export const BADGE_THEMES: BadgeTheme[] = [
     blurb: "Sea-glass, waves, a shell and two gulls.",
     usesVillage: false,
     sample: { name: "Ron" },
-    name: { left: 54, top: 110, width: 606, height: 140, font: "fraunces600", size: 136, min: 30, lineHeight: 1, color: "#1f4e66", align: "left", letterSpacing: -0.02 },
+    name: { left: 54, top: 180, width: 616, height: 160, font: "fraunces600", size: 146, min: 30, lineHeight: 1, color: "#1f4e66", align: "left", letterSpacing: -0.02 },
   },
   {
     id: "navy",
@@ -111,7 +133,7 @@ export const BADGE_THEMES: BadgeTheme[] = [
     blurb: "Navy with a double gold frame. The formal one.",
     usesVillage: false,
     sample: { name: "Robert" },
-    name: { left: 60, top: 140, width: 780, height: 132, font: "fraunces600", size: 128, min: 30, lineHeight: 1, color: "#f0cf7a", align: "center", letterSpacing: 0.02 },
+    name: { left: 60, top: 210, width: 780, height: 150, font: "fraunces600", size: 136, min: 30, lineHeight: 1, color: "#f0cf7a", align: "center", letterSpacing: 0.02 },
   },
   {
     id: "edenfield",
@@ -119,8 +141,8 @@ export const BADGE_THEMES: BadgeTheme[] = [
     blurb: "Garden hills and a golf cart. Prints \u201cThe Village of\u201d for you.",
     usesVillage: true,
     sample: { name: "Mary", village: "Fenney" },
-    village: { left: 150, top: 72, width: 600, height: 96, font: "greatvibes", size: 68, min: 30, lineHeight: 96 / 68, color: "#1c3826", align: "center" },
-    name: { left: 180, top: 150, width: 540, height: 124, font: "playfairsc", size: 106, min: 30, lineHeight: 124 / 106, color: "#1c3826", align: "center", upper: true },
+    village: { left: 130, top: 102, width: 640, height: 100, font: "greatvibes", size: 86, min: 30, lineHeight: 100 / 86, color: "#1c3826", align: "center" },
+    name: { left: 103, top: 211, width: 694, height: 160, font: "playfairsc", size: 154, min: 30, lineHeight: 160 / 154, color: "#1c3826", align: "center", upper: true },
   },
 ];
 
@@ -128,7 +150,7 @@ export function getBadgeTheme(id: string): BadgeTheme | undefined {
   return BADGE_THEMES.find((t) => t.id === id);
 }
 
-export const badgePlate = (id: BadgeThemeId) => `/shop/badges/plates/${id}.png`;
+export const badgePlate = (id: BadgeThemeId) => `/shop/badges/plates-3x2/${id}.png`;
 
 // SKUs. Custom: badge-custom-<theme>. Ready-made fixed designs: badge-ready-<first name>.
 export const customBadgeSku = (id: BadgeThemeId) => `badge-custom-${id}`;
@@ -203,14 +225,4 @@ export function fitSize(slot: TextSlot, text: string, measure: (text: string, si
   let s = slot.size;
   while (s > slot.min && measure(text, s) + ls * s > slot.width) s -= 2;
   return Math.max(slot.min, s);
-}
-
-// ---------- pricing: $16 each, every pair $28 (custom and ready-made mix) ----------
-
-export function badgeTotalCents(units: number) {
-  const n = Math.max(0, Math.floor(units));
-  return Math.floor(n / 2) * BADGE_PAIR_CENTS + (n % 2) * BADGE_UNIT_CENTS;
-}
-export function badgeSavingsCents(units: number) {
-  return units * BADGE_UNIT_CENTS - badgeTotalCents(units);
 }

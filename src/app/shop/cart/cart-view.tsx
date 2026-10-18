@@ -5,7 +5,7 @@ import Image from "next/image";
 import { lineKey, useCart } from "@/components/shop/cart";
 import { BadgePreview } from "@/components/shop/badge-preview";
 import { findVariant, formatPrice, productHref, variantImage } from "@/lib/shop/catalog";
-import { BADGE_SIZES, badgeSavingsCents, themeFromSku } from "@/lib/shop/badges";
+import { BADGE_SIZE, badgeMaterialOrDefault, themeFromSku } from "@/lib/shop/badges";
 
 export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unavailable"; chargeNotice?: string | null }) {
   const { items, setQty, remove, ready } = useCart();
@@ -15,11 +15,12 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
     const f = findVariant(i.sku);
     // A custom badge line without its text is unusable; drop it rather than send it to checkout.
     if (!f || (f.product.badge?.kind === "custom" && !i.badge?.name)) return [];
-    return [{ ...i, ...f, key: lineKey(i) }];
+    // Name badges are priced by material (one config in badges.ts); the server prices checkout the same way.
+    const material = f.product.type === "badges" ? badgeMaterialOrDefault(i.material) : undefined;
+    const unitCents = material ? material.priceCents : f.product.priceCents;
+    return [{ ...i, ...f, material: material?.id, materialInfo: material, unitCents, key: lineKey(i) }];
   });
-  const badgeUnits = lines.reduce((n, l) => n + (l.product.type === "badges" ? l.qty : 0), 0);
-  const savings = badgeSavingsCents(badgeUnits);
-  const subtotal = lines.reduce((n, l) => n + l.product.priceCents * l.qty, 0) - savings;
+  const subtotal = lines.reduce((n, l) => n + l.unitCents * l.qty, 0);
 
   async function checkout() {
     setBusy(true);
@@ -28,7 +29,7 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
       const res = await fetch("/api/shop/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: lines.map(({ sku, qty, badge }) => ({ sku, qty, ...(badge ? { badge } : {}) })) }),
+        body: JSON.stringify({ items: lines.map(({ sku, qty, badge, material }) => ({ sku, qty, ...(badge ? { badge } : {}), ...(material ? { material } : {}) })) }),
       });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error || "Checkout failed");
@@ -53,10 +54,11 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
       {lines.map((l) => {
         const theme = themeFromSku(l.sku);
         const title = theme ? `Custom Name Badge (${theme.label})` : l.product.name;
+        const mat = l.materialInfo ? ` \u00b7 ${l.materialInfo.label} \u00b7 ${BADGE_SIZE.label}` : "";
         const detail = theme
-          ? `\u201c${l.badge?.name}\u201d${theme.usesVillage && l.badge?.village ? ` \u00b7 Village of ${l.badge.village}` : ""} \u00b7 ${BADGE_SIZES.custom.label}`
+          ? `\u201c${l.badge?.name}\u201d${theme.usesVillage && l.badge?.village ? ` \u00b7 Village of ${l.badge.village}` : ""}${mat}`
           : l.product.badge?.kind === "ready"
-            ? `Ready-made \u00b7 ${BADGE_SIZES.ready.label}`
+            ? `Ready-made${mat}`
             : l.variant.label;
         return (
           <div className="shop-line" key={l.key}>
@@ -67,7 +69,7 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
             )}
             <div>
               <Link href={productHref(l.product)} className="shop-line-name">{title}</Link>
-              <div className="shop-mono">{detail} · {formatPrice(l.product.priceCents)}</div>
+              <div className="shop-mono" data-testid="cart-line-detail">{detail} · {formatPrice(l.unitCents)}</div>
             </div>
             <label className="shop-qty-wrap">
               <span className="sr-only">Quantity for {title}</span>
@@ -83,11 +85,6 @@ export function CartView({ mode, chargeNotice }: { mode: "live" | "mock" | "unav
         <div>
           <p className="shop-mono">Subtotal</p>
           <p className="shop-price shop-price-lg" data-testid="subtotal">{formatPrice(subtotal)}</p>
-          {savings > 0 ? (
-            <p className="shop-tag shop-deal" data-testid="badge-savings">Name badge 2 for $28: you save {formatPrice(savings)}</p>
-          ) : badgeUnits === 1 ? (
-            <p className="shop-tag shop-deal">Add one more name badge and the pair is $28.</p>
-          ) : null}
           <p className="shop-tag">Shipping is added at checkout. Sales tax is not collected yet.</p>
         </div>
         {mode === "unavailable" ? (

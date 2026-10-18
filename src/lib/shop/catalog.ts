@@ -3,7 +3,7 @@
 // Printful variant ids come from the public catalog API (GET https://api.printful.com/products/{id}),
 // checked 2026-10-16. Re-verify before launch: Printful occasionally retires variants.
 
-import { BADGE_THEMES, BADGE_UNIT_CENTS, customBadgeSku } from "./badges";
+import { BADGE_FROM_CENTS, BADGE_SIZE, BADGE_THEMES, customBadgeSku } from "./badges";
 
 export type Variant = {
   sku: string; // our id, sent by the client
@@ -49,8 +49,9 @@ export type Product = {
   /** false: orderable, but not shown in the /shop grid (ready-made badges live on the badge page). */
   listed?: boolean;
   /** Name badges: custom (buyer's text) or a fixed ready-made design with its own print file. */
-  badge?: { kind: "custom" } | { kind: "ready"; size: "3.5x2.25in"; file: string; alt: string };
-  /** Price text for cards/pages when it is not just priceCents (the badge pair deal). */
+  /** file: the 3" x 2" trim art (shown on the page); bleedFile: the same art with 1/8" bleed (976 x 676) for the printer. */
+  badge?: { kind: "custom" } | { kind: "ready"; size: "3x2in"; file: string; bleedFile: string; alt: string };
+  /** Price text for cards/pages when it is not just priceCents (name badges: price depends on the material). */
   priceNote?: string;
 };
 
@@ -272,19 +273,20 @@ export const PRODUCTS: Product[] = [
     files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light-v2.png" }],
     taxCode: GENERAL,
   },
-  // ---- Name badges: made by hand from our own print files (fulfillment "manual"), $16 each or 2 for $28 ----
+  // ---- Name badges: Lasercraft Executive 3" x 2", made from our own print files (fulfillment "manual").
+  //      Price is per badge and depends on the material (BADGE_MATERIALS in badges.ts); priceCents is the "from" price. ----
   {
     slug: "custom-name-badge",
     type: "badges",
     name: "Custom Name Badge",
     tagline: "Your name, your village",
     description:
-      "A full-color 3\" x 1.5\" name badge with a no-holes magnet. Pick one of seven themes, type your name (and your village on the themes that print it), and watch the preview update as you type.",
-    priceCents: BADGE_UNIT_CENTS,
-    priceNote: "$16 \u00b7 2 for $28",
-    image: "/shop/badges/card-custom-name-badge.png",
-    printfulProduct: "Not Printful: 3 x 1.5 in full-color magnetic name badge, printed from our rendered 300 dpi file",
-    variants: BADGE_THEMES.map((t) => ({ sku: customBadgeSku(t.id), label: t.label, size: '3" x 1.5"', printfulVariantId: 0 })),
+      "A full-color 3\" x 2\" name badge with a magnetic two-post backing (no pin holes). Pick one of seven themes, type your name (and your village on the themes that print it), choose White Acrylic or White Aluminum, and watch the preview update as you type.",
+    priceCents: BADGE_FROM_CENTS,
+    priceNote: `From ${formatPrice(BADGE_FROM_CENTS)}`,
+    image: "/shop/badges/card-custom-name-badge-3x2.png",
+    printfulProduct: "Not Printful: Lasercraft Executive 3 x 2 in magnetic name badge (two-post), printed from our rendered 300 dpi file",
+    variants: BADGE_THEMES.map((t) => ({ sku: customBadgeSku(t.id), label: t.label, size: BADGE_SIZE.label, printfulVariantId: 0 })),
     files: [],
     taxCode: GENERAL,
     fulfillment: "manual",
@@ -295,34 +297,34 @@ export const PRODUCTS: Product[] = [
     type: "badges",
     name: "Jonathan, Edenfield",
     tagline: "Ready-made name badge",
-    description: "A ready-made Edenfield name badge for Jonathan. Larger 3.5\" x 2.25\" size.",
-    priceCents: BADGE_UNIT_CENTS,
-    priceNote: "$16 \u00b7 2 for $28",
-    image: "/shop/badges/ready/jonathan-edenfield.png",
-    printfulProduct: "Not Printful: 3.5 x 2.25 in magnetic name badge, print-ready file supplied",
-    variants: [{ sku: "badge-ready-jonathan", label: '3.5" x 2.25"', size: '3.5" x 2.25"', printfulVariantId: 0 }],
-    files: [{ type: "default", path: "/shop/badges/ready/jonathan-edenfield.png" }],
+    description: "A ready-made Edenfield name badge for Jonathan. 3\" x 2\" with a magnetic two-post backing.",
+    priceCents: BADGE_FROM_CENTS,
+    priceNote: `From ${formatPrice(BADGE_FROM_CENTS)}`,
+    image: "/shop/badges/ready/jonathan-edenfield-3x2.png",
+    printfulProduct: "Not Printful: Lasercraft Executive 3 x 2 in magnetic name badge (two-post), print-ready file supplied",
+    variants: [{ sku: "badge-ready-jonathan", label: BADGE_SIZE.label, size: BADGE_SIZE.label, printfulVariantId: 0 }],
+    files: [{ type: "default", path: "/shop/badges/ready/jonathan-edenfield-3x2-bleed.png" }],
     taxCode: GENERAL,
     fulfillment: "manual",
     listed: false,
-    badge: { kind: "ready", size: "3.5x2.25in", file: "/shop/badges/ready/jonathan-edenfield.png", alt: "Edenfield name badge reading The Village of Edenfield, JONATHAN" },
+    badge: { kind: "ready", size: "3x2in", file: "/shop/badges/ready/jonathan-edenfield-3x2.png", bleedFile: "/shop/badges/ready/jonathan-edenfield-3x2-bleed.png", alt: "Edenfield name badge reading The Village of Edenfield, JONATHAN" },
   },
   {
     slug: "ready-badge-lucy-edenfield",
     type: "badges",
     name: "Lucy, Edenfield",
     tagline: "Ready-made name badge",
-    description: "A ready-made Edenfield name badge for Lucy. Larger 3.5\" x 2.25\" size.",
-    priceCents: BADGE_UNIT_CENTS,
-    priceNote: "$16 \u00b7 2 for $28",
-    image: "/shop/badges/ready/lucy-edenfield.png",
-    printfulProduct: "Not Printful: 3.5 x 2.25 in magnetic name badge, print-ready file supplied",
-    variants: [{ sku: "badge-ready-lucy", label: '3.5" x 2.25"', size: '3.5" x 2.25"', printfulVariantId: 0 }],
-    files: [{ type: "default", path: "/shop/badges/ready/lucy-edenfield.png" }],
+    description: "A ready-made Edenfield name badge for Lucy. 3\" x 2\" with a magnetic two-post backing.",
+    priceCents: BADGE_FROM_CENTS,
+    priceNote: `From ${formatPrice(BADGE_FROM_CENTS)}`,
+    image: "/shop/badges/ready/lucy-edenfield-3x2.png",
+    printfulProduct: "Not Printful: Lasercraft Executive 3 x 2 in magnetic name badge (two-post), print-ready file supplied",
+    variants: [{ sku: "badge-ready-lucy", label: BADGE_SIZE.label, size: BADGE_SIZE.label, printfulVariantId: 0 }],
+    files: [{ type: "default", path: "/shop/badges/ready/lucy-edenfield-3x2-bleed.png" }],
     taxCode: GENERAL,
     fulfillment: "manual",
     listed: false,
-    badge: { kind: "ready", size: "3.5x2.25in", file: "/shop/badges/ready/lucy-edenfield.png", alt: "Edenfield name badge reading The Village of Edenfield, LUCY" },
+    badge: { kind: "ready", size: "3x2in", file: "/shop/badges/ready/lucy-edenfield-3x2.png", bleedFile: "/shop/badges/ready/lucy-edenfield-3x2-bleed.png", alt: "Edenfield name badge reading The Village of Edenfield, LUCY" },
   },
 ];
 

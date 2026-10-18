@@ -2,7 +2,7 @@
 // Attached to the admin order email, and copied to Vercel Blob when BLOB_READ_WRITE_TOKEN is set.
 import type { MailAttachment } from "@/lib/adminNotify";
 import { findVariant } from "./catalog";
-import { BADGE_SIZES, getBadgeTheme } from "./badges";
+import { BADGE_PRINT, BADGE_SIZE, BADGE_TRIM, badgeMaterialOrDefault, getBadgeTheme } from "./badges";
 import { readReadyBadge, renderBadgePng } from "./badge-render";
 import type { ShopOrderLine } from "./printful";
 import { logError } from "./log";
@@ -15,18 +15,19 @@ export type BadgeJob = {
   theme: string;
   name: string;
   village?: string;
-  size: string; // e.g. 3" x 1.5"
+  size: string; // e.g. Lasercraft Executive 3" x 2"
+  material: string; // e.g. White Aluminum (.025" gloss white aluminum)
   files: { filename: string; note: string; bytes?: Buffer; url?: string; error?: string }[];
 };
 
 const slug = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "badge";
 
-/** Group badge lines (a pair-priced and a single-priced line can be the same badge) and attach their files. */
+/** Group badge lines (same design + material) and attach their files. */
 export async function badgeJobs(lines: ShopOrderLine[]): Promise<BadgeJob[]> {
   const groups = new Map<string, { line: ShopOrderLine; quantity: number }>();
   for (const l of lines) {
     if (!l.badge) continue;
-    const key = [l.sku, l.badge.name, l.badge.village ?? ""].join("|");
+    const key = [l.sku, l.badge.name, l.badge.village ?? "", l.badge.material ?? ""].join("|");
     const g = groups.get(key);
     if (g) g.quantity += l.quantity;
     else groups.set(key, { line: l, quantity: l.quantity });
@@ -45,21 +46,27 @@ export async function badgeJobs(lines: ShopOrderLine[]): Promise<BadgeJob[]> {
       theme: b.kind === "custom" ? getBadgeTheme(b.theme)?.label ?? b.theme : "Edenfield (ready-made)",
       name: b.name,
       village: b.village,
-      size: b.kind === "ready" ? BADGE_SIZES.ready.label : BADGE_SIZES.custom.label,
+      size: BADGE_SIZE.blank,
+      material: b.materialLabel || `${badgeMaterialOrDefault(b.material).label} (${badgeMaterialOrDefault(b.material).spec})`,
       files: [],
     };
     try {
+      const mat = badgeMaterialOrDefault(b.material).id;
+      const bleedNote = `3.25" x 2.25" at 300 dpi (${BADGE_PRINT.w} x ${BADGE_PRINT.h}): 3" x 2" trim plus 1/8" bleed each side`;
+      const trimNote = `3" x 2" at 300 dpi (${BADGE_TRIM.w} x ${BADGE_TRIM.h}), no bleed`;
       if (b.kind === "ready") {
-        const art = found?.product.badge?.kind === "ready" ? found.product.badge.file : "";
-        const base = art.split("/").pop()!.replace(/\.png$/, "");
-        job.files.push({ filename: `badge-${n}-${base}-3.5x2.25in-print.png`, note: '3.5" x 2.25" at 300 dpi (1050 x 675), supplied print-ready art', bytes: await readReadyBadge(art) });
+        const ready = found?.product.badge?.kind === "ready" ? found.product.badge : undefined;
+        if (!ready) throw new Error(`No ready-made art for ${line.sku}`);
+        const base = `badge-${n}-${ready.file.split("/").pop()!.replace(/\.png$/, "").replace(/-3x2$/, "")}`;
+        job.files.push({ filename: `${base}-3x2in-${mat}-print-bleed.png`, note: `${bleedNote}, supplied print-ready art`, bytes: await readReadyBadge(ready.bleedFile) });
+        job.files.push({ filename: `${base}-3x2in-${mat}-trim.png`, note: `${trimNote}, supplied print-ready art`, bytes: await readReadyBadge(ready.file) });
       } else {
         const theme = getBadgeTheme(b.theme);
         if (!theme) throw new Error(`Unknown badge theme ${b.theme}`);
         const text = { name: b.name, village: theme.usesVillage ? b.village : undefined };
         const base = `badge-${n}-${theme.id}-${slug(b.name)}`;
-        job.files.push({ filename: `${base}-3x1.5in-print-bleed.png`, note: '3.25" x 1.75" at 300 dpi (976 x 526): 3" x 1.5" trim plus 1/8" bleed each side', bytes: await renderBadgePng(theme, text, { bleed: true }) });
-        job.files.push({ filename: `${base}-3x1.5in-trim.png`, note: '3" x 1.5" at 300 dpi (900 x 450), no bleed', bytes: await renderBadgePng(theme, text, { bleed: false }) });
+        job.files.push({ filename: `${base}-3x2in-${mat}-print-bleed.png`, note: bleedNote, bytes: await renderBadgePng(theme, text, { bleed: true }) });
+        job.files.push({ filename: `${base}-3x2in-${mat}-trim.png`, note: trimNote, bytes: await renderBadgePng(theme, text, { bleed: false }) });
       }
     } catch (err) {
       logError("shop-badge-files", err, { sku: line.sku });
@@ -99,7 +106,8 @@ export function badgeEmailLines(jobs: BadgeJob[]): string[] {
   for (const j of jobs) {
     out.push(
       `#${j.n}  ${j.quantity} x ${j.kind === "ready" ? `${j.product} (ready-made)` : `Custom name badge, theme: ${j.theme}`}`,
-      `    Blank / size: ${j.size} magnetic badge`,
+      `    Blank / size: ${j.size} badge, ${BADGE_SIZE.backing} (thelasercraft.co)`,
+      `    Material: ${j.material}`,
       `    Name: ${j.name}${j.village ? `   Village: ${j.village}` : ""}`
     );
     for (const f of j.files) out.push(f.error ? `    PRINT FILE FAILED: ${f.error}` : `    File: ${f.filename}  [${f.note}]${f.url ? `  ${f.url}` : ""}`);

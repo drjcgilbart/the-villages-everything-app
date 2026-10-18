@@ -30,9 +30,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["./data/**/*", "./certs/apple/**/*"],
     // Name badge print renderer (order email): fonts, art plates and ready-made badge art.
-    "/api/shop/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates/*.png", "./public/shop/badges/ready/*.png"],
-    "/api/stripe/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates/*.png", "./public/shop/badges/ready/*.png"],
-    "/shop/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates/*.png", "./public/shop/badges/ready/*.png"],
+    "/api/shop/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates-3x2/*.png", "./public/shop/badges/ready/*-3x2*.png"],
+    "/api/stripe/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates-3x2/*.png", "./public/shop/badges/ready/*-3x2*.png"],
+    "/shop/**": ["./public/shop/badges/fonts/*.ttf", "./public/shop/badges/plates-3x2/*.png", "./public/shop/badges/ready/*-3x2*.png"],
   },
   // Allow large direct video uploads in Studio (local / Node host)
   experimental: {
