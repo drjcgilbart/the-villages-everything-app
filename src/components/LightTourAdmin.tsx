@@ -13,7 +13,7 @@ import {
   readGeoPermission,
   watchNativeLocation,
 } from "@/lib/deviceLocation";
-import { isFiveDigitZip, splitHouseAddress } from "@/lib/houseAddress";
+import { isFiveDigitZip, isVillageName, splitHouseAddress } from "@/lib/houseAddress";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 import { usePinNavigation } from "@/lib/usePinNavigation";
 import { setTourScreenAwake } from "@/lib/tourWake";
@@ -216,6 +216,8 @@ export function LightTourAdmin() {
   const [termsNote, setTermsNote] = useState("");
   const [approvedZips, setApprovedZips] = useState<string[]>([]);
   const [pendingZips, setPendingZips] = useState<{ zip: string; createdAt: string }[]>([]);
+  const [approvedVillages, setApprovedVillages] = useState<string[]>([]);
+  const [pendingVillages, setPendingVillages] = useState<{ name: string; createdAt: string }[]>([]);
   /** Live GPS for the blue dot. Accuracy is only known in the browser path. */
   const [me, setMe] = useState<{
     latitude: number;
@@ -274,6 +276,22 @@ export function LightTourAdmin() {
       }
     } catch {
       /* The house list still shows. ZIP choices fall back to the four built-in codes. */
+    }
+    try {
+      const villageRes = await fetch("/api/light-tour/villages?admin=1", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const villageData = (await villageRes.json().catch(() => null)) as {
+        villages?: string[];
+        pending?: { name: string; createdAt: string }[];
+      } | null;
+      if (villageRes.ok) {
+        setApprovedVillages(Array.isArray(villageData?.villages) ? villageData.villages : []);
+        setPendingVillages(Array.isArray(villageData?.pending) ? villageData.pending : []);
+      }
+    } catch {
+      /* Built-in village names still show. A new name can be typed. */
     }
     try {
       const termsRes = await fetch("/api/light-tour/terms?admin=1", { credentials: "same-origin" });
@@ -657,6 +675,10 @@ export function LightTourAdmin() {
       setError("Type a 5-digit ZIP code, or pick one from the list.");
       return;
     }
+    if (parts.street && !isVillageName(parts.village)) {
+      setError(parts.village ? "Type the village name." : "Choose a village, or add one.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -672,6 +694,7 @@ export function LightTourAdmin() {
           address: draft.address,
           street: parts.street,
           zip: parts.street ? parts.zip : "",
+          village: parts.street ? parts.village : "",
           note: draft.note,
           photoUrl: draft.photoUrl,
         }),
@@ -728,6 +751,27 @@ export function LightTourAdmin() {
     window.setTimeout(() => {
       document.getElementById("lt-pin-draft")?.scrollIntoView({ behavior: "auto", block: "start" });
     }, 50);
+  }
+
+  async function reviewVillage(name: string, decision: "approved" | "declined") {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/light-tour/villages", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, decision }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "The village did not update.");
+      setNotice(decision === "approved" ? `${name} is on the village list.` : `${name} was declined.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The village did not update.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function reviewZip(zip: string, decision: "approved" | "declined") {
@@ -972,6 +1016,41 @@ export function LightTourAdmin() {
           </div>
         ) : null}
 
+        {pendingVillages.length > 0 ? (
+          <div className="about-panel lt-card">
+            <h2>Villages waiting ({pendingVillages.length})</h2>
+            <p className="panel-hint">
+              A neighbor asked to use a village that is not on the list yet. Approving it adds that village to the dropdown
+              for everyone. Declining it does not remove the house.
+            </p>
+            <ul className="lt-list">
+              {pendingVillages.map((row) => (
+                <li key={row.name} className="lt-pin">
+                  <strong>{row.name}</strong>
+                  <div className="lt-pin-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={busy}
+                      onClick={() => void reviewVillage(row.name, "approved")}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={busy}
+                      onClick={() => void reviewVillage(row.name, "declined")}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         {pins.some((pin) => pin.status === "pending") ? (
           <WaitingHouses
             pins={pins.filter((pin) => pin.status === "pending")}
@@ -1121,9 +1200,11 @@ export function LightTourAdmin() {
               address={draft.address}
               resetKey={draft.id || "new-pin"}
               approvedZips={approvedZips}
+              approvedVillages={approvedVillages}
               onAddress={(next) => setDraft((current) => (current ? { ...current, address: next } : current))}
               idPrefix="lt-pin"
               otherHint="A new ZIP is added for everyone when you save this pin."
+              villageHint="A new village is added for everyone when you save this pin."
             />
             <p className="panel-hint">Leave the street blank to keep the address the map fills in.</p>
             <div className="field">

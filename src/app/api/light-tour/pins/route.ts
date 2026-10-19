@@ -92,6 +92,7 @@ export async function POST(req: Request) {
     note: String(body?.note || ""),
     createdBy: await createdBy(),
     approveZip: place.explicitZip,
+    approveVillage: place.explicitVillage,
   });
   return NextResponse.json({ pin });
 }
@@ -120,12 +121,15 @@ export async function PUT(req: Request) {
     address: String(body?.address ?? existing.address).trim(),
     zip: "",
     explicitZip: false,
+    village: "",
+    explicitVillage: false,
   };
   if (!keepAddress) {
     try {
       place = houseAddressFromInput({
         street: body?.street,
         zip: body?.zip,
+        village: body?.village,
         address: body?.address ?? existing.address,
       });
     } catch (err) {
@@ -148,6 +152,7 @@ export async function PUT(req: Request) {
     createdBy: existing.createdBy,
     status,
     approveZip: place.explicitZip || approving || body?.approveZip === true,
+    approveVillage: place.explicitVillage || approving || body?.approveZip === true,
   });
   return NextResponse.json({ pin });
 }

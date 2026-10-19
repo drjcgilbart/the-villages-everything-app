@@ -10989,15 +10989,24 @@ button.text-link {
   opacity: 1;
 }
 
-.lt-address-grid {
+.lt-address-grid,
+.lt-address-street-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
 }
 
+.lt-address-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.lt-address-street-row {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
 @media (max-width: 520px) {
-  .lt-address-grid {
-    grid-template-columns: 1fr;
+  .lt-address-grid,
+  .lt-address-street-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

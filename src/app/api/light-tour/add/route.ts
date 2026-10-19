@@ -67,6 +67,7 @@ export async function POST(req: Request) {
       createdBy: member?.email || "admin",
       status: "approved",
       zip: place.explicitZip ? place.zip : "",
+      village: place.explicitVillage ? place.village : "",
     });
     return NextResponse.json({ ok: true, id: pin.id, status: pin.status });
   } catch (err) {

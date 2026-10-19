@@ -112,6 +112,7 @@ export async function PUT(req: Request) {
       latitude: num(body?.latitude),
       longitude: num(body?.longitude),
       zip: place.explicitZip ? place.zip : "",
+      village: place.explicitVillage ? place.village : "",
     });
     return NextResponse.json({ ok: true, id: pin.id, status: pin.status });
   } catch (err) {

@@ -9,7 +9,15 @@ import {
   writeJsonFileAsync,
 } from "./dataFs";
 import { haversineMeters, type TourHoliday } from "./lightTourShared";
-import { isBuiltinZip, isFiveDigitZip, zipFromAddress } from "./houseAddress";
+import {
+  isBuiltinVillage,
+  isBuiltinZip,
+  isFiveDigitZip,
+  isVillageName,
+  canonicalVillageName,
+  villageFromAddress,
+  zipFromAddress,
+} from "./houseAddress";
 
 export {
   DRIVING_CANDIDATE_CAP,
@@ -75,12 +83,18 @@ export type TourZip = {
   createdAt: string;
 };
 
-type Store = { pins: LightPin[]; tours: LightTourLog[]; zips: TourZip[] };
+export type TourVillage = {
+  name: string;
+  status: PinStatus;
+  createdAt: string;
+};
+
+type Store = { pins: LightPin[]; tours: LightTourLog[]; zips: TourZip[]; villages: TourVillage[] };
 
 export type PublicPin = Omit<LightPin, "createdBy" | "ownerId" | "status">;
 
 function emptyStore(): Store {
-  return { pins: [], tours: [], zips: [] };
+  return { pins: [], tours: [], zips: [], villages: [] };
 }
 
 function asHoliday(value: unknown): TourHoliday | null {
@@ -175,10 +189,40 @@ function normalizeZips(raw: unknown): TourZip[] {
   return [...byZip.values()];
 }
 
+function normalizeVillage(raw: unknown): TourVillage | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Partial<TourVillage>;
+  const name = canonicalVillageName(String(row.name || ""));
+  if (!isVillageName(name) || isBuiltinVillage(name)) return null;
+  return {
+    name,
+    status: row.status === "approved" ? "approved" : "pending",
+    createdAt: clip(row.createdAt, 40) || new Date().toISOString(),
+  };
+}
+
+function normalizeVillages(raw: unknown): TourVillage[] {
+  if (!Array.isArray(raw)) return [];
+  const byName = new Map<string, TourVillage>();
+  for (const item of raw) {
+    const row = normalizeVillage(item);
+    if (!row) continue;
+    const key = row.name.toLowerCase();
+    const prev = byName.get(key);
+    if (!prev || (prev.status !== "approved" && row.status === "approved")) byName.set(key, row);
+  }
+  return [...byName.values()];
+}
+
 function parseStore(raw: Partial<Store> | null): Store {
   const pins = Array.isArray(raw?.pins) ? raw.pins.map(normalizePin).filter((pin): pin is LightPin => !!pin) : [];
   const tours = Array.isArray(raw?.tours) ? raw.tours.filter((row) => row && typeof row === "object") as LightTourLog[] : [];
-  return { pins, tours: tours.slice(-400), zips: normalizeZips(raw?.zips) };
+  return {
+    pins,
+    tours: tours.slice(-400),
+    zips: normalizeZips(raw?.zips),
+    villages: normalizeVillages(raw?.villages),
+  };
 }
 
 /** A built-in ZIP is ignored. An approved ZIP is never sent back to pending. */
@@ -187,6 +231,19 @@ function rememberZip(store: Store, zip: string, status: PinStatus) {
   const existing = store.zips.find((row) => row.zip === zip);
   if (!existing) {
     store.zips.push({ zip, status, createdAt: new Date().toISOString() });
+    return;
+  }
+  if (existing.status !== "approved" && status === "approved") existing.status = "approved";
+}
+
+/** A built-in village is ignored. An approved village is never sent back to pending. */
+function rememberVillage(store: Store, name: string, status: PinStatus) {
+  const cleaned = canonicalVillageName(name);
+  if (!isVillageName(cleaned) || isBuiltinVillage(cleaned)) return;
+  const key = cleaned.toLowerCase();
+  const existing = store.villages.find((row) => row.name.toLowerCase() === key);
+  if (!existing) {
+    store.villages.push({ name: cleaned, status, createdAt: new Date().toISOString() });
     return;
   }
   if (existing.status !== "approved" && status === "approved") existing.status = "approved";
@@ -230,6 +287,39 @@ export async function readTourZips(): Promise<{
     .filter((row) => row.status === "pending")
     .map((row) => ({ zip: row.zip, createdAt: row.createdAt }));
   return { zips: approved, pending };
+}
+
+export async function readTourVillages(): Promise<{
+  villages: string[];
+  pending: { name: string; createdAt: string }[];
+}> {
+  const store = await readLightTour();
+  const villages = store.villages.filter((row) => row.status === "approved").map((row) => row.name);
+  villages.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+  const pending = store.villages
+    .filter((row) => row.status === "pending")
+    .map((row) => ({ name: row.name, createdAt: row.createdAt }));
+  pending.sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+  return { villages, pending };
+}
+
+/** Approve adds the village to every dropdown. Decline removes a waiting village only. */
+export function reviewTourVillage(name: string, decision: "approved" | "declined"): Promise<void> {
+  return enqueue(async () => {
+    const cleaned = canonicalVillageName(String(name || ""));
+    if (!isVillageName(cleaned)) throw new Error("Type the village name.");
+    if (isBuiltinVillage(cleaned)) throw new Error("That village is already on the list.");
+    const store = await readLightTourForWrite();
+    const key = cleaned.toLowerCase();
+    if (decision === "declined") {
+      const next = store.villages.filter((row) => !(row.name.toLowerCase() === key && row.status === "pending"));
+      if (next.length === store.villages.length) throw new Error("That village is not waiting.");
+      store.villages = next;
+    } else {
+      rememberVillage(store, cleaned, "approved");
+    }
+    await writeStore(store);
+  });
 }
 
 /** Approve adds the ZIP to every dropdown. Decline removes a waiting ZIP only. */
@@ -283,6 +373,7 @@ async function writeStore(store: Store) {
     pins: store.pins,
     tours: store.tours.slice(-400),
     zips: store.zips,
+    villages: store.villages,
   });
 }
 
@@ -302,6 +393,8 @@ export function savePin(input: {
   status?: PinStatus;
   /** Admin save or house approval. A new ZIP then joins the dropdown for everyone. */
   approveZip?: boolean;
+  /** Admin save or house approval. A new village then joins the dropdown for everyone. */
+  approveVillage?: boolean;
 }): Promise<LightPin> {
   return enqueue(async () => {
     const store = await readLightTourForWrite();
@@ -326,6 +419,7 @@ export function savePin(input: {
       ? store.pins.map((row) => (row.id === pin.id ? pin : row))
       : [pin, ...store.pins];
     if (input.approveZip) rememberZip(store, zipFromAddress(pin.address), "approved");
+    if (input.approveVillage) rememberVillage(store, villageFromAddress(pin.address), "approved");
     await writeStore(store);
     return pin;
   });
@@ -394,6 +488,8 @@ export async function submitMemberHouse(input: {
   status?: PinStatus;
   /** Set when the form sent a ZIP. Built-in codes are ignored. */
   zip?: string;
+  /** Set when the form sent a village. Built-in names are ignored. */
+  village?: string;
 }): Promise<LightPin> {
   const point = await resolveHousePoint(input);
   const holiday = input.holiday;
@@ -429,6 +525,7 @@ export async function submitMemberHouse(input: {
     };
     store.pins = [pin, ...store.pins];
     rememberZip(store, input.zip || "", status);
+    rememberVillage(store, input.village || "", status);
     await writeStore(store);
     return pin;
   });
@@ -458,6 +555,8 @@ export async function updateOwnedHouse(input: {
   longitude: number | null;
   /** Set when the form sent a ZIP. A new code stays pending until an admin approves it. */
   zip?: string;
+  /** Set when the form sent a village. A new name stays pending until an admin approves it. */
+  village?: string;
 }): Promise<LightPin> {
   const id = clip(input.id, 80);
   const member = { id: input.memberId, email: input.email };
@@ -498,6 +597,7 @@ export async function updateOwnedHouse(input: {
     };
     store.pins = store.pins.map((row) => (row.id === id ? pin : row));
     rememberZip(store, input.zip || "", "pending");
+    rememberVillage(store, input.village || "", "pending");
     await writeStore(store);
     return pin;
   });

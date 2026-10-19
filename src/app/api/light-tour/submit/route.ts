@@ -64,6 +64,7 @@ export async function POST(req: Request) {
       createdBy: member ? `${member.name} · ${member.email}` : "Neighbor",
       ownerId: canOwn && member ? member.id : "",
       zip: place.explicitZip ? place.zip : "",
+      village: place.explicitVillage ? place.village : "",
     });
     void notifyAdminOfApprovalRequest({
       topic: "Holiday Lights",

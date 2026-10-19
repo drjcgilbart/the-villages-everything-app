@@ -282,3 +282,14 @@ export function cddLabel(cdd: Village["cdd"]) {
   if (cdd === "lady-lake") return "Lady Lake / Lake County";
   return `VCDD District ${cdd}`;
 }
+
+/** Bare residential village names, A to Z. Region labels are not villages. */
+export const VILLAGE_NAMES: readonly string[] = [...new Set(VILLAGES.map((row) => row.name))].sort((a, b) =>
+  a.localeCompare(b, "en", { sensitivity: "base" })
+);
+
+/** Map areas that show up beside a village name and are not villages themselves. */
+export const VILLAGE_AREA_LABELS: readonly string[] = VILLAGE_REGIONS.flatMap((region) => [
+  region.shortLabel,
+  region.label,
+]);

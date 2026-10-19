@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { prepareUploadImageFile } from "@/lib/browserImage";
 import { locationFailureText, readDeviceLocation } from "@/lib/deviceLocation";
-import { isFiveDigitZip, splitHouseAddress, zipChoices } from "@/lib/houseAddress";
+import { isFiveDigitZip, isVillageName, splitHouseAddress, villageChoices, zipChoices } from "@/lib/houseAddress";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 import { HouseAddressFields } from "./HouseAddressFields";
 import type { MemberHouse } from "./LightTourMine";
@@ -28,6 +28,46 @@ function sendFailure(err: unknown, saving: boolean, editing: boolean): string {
     return err.message;
   }
   return saving ? "The house did not save." : "The house did not send.";
+}
+
+function savedHouseNote(input: {
+  editing: boolean;
+  approvedHouse: boolean;
+  direct: boolean;
+  newZip: boolean;
+  newVillage: boolean;
+  zip: string;
+  village: string;
+}): string {
+  if (input.editing) {
+    if (!input.approvedHouse) return "This house stays off the tour until it is approved.";
+    if (input.newZip && input.newVillage) {
+      return "This house stays on the tour. The new ZIP and village wait for an admin before they show in the list.";
+    }
+    if (input.newZip) return "This house stays on the tour. The new ZIP waits for an admin before it shows in the list.";
+    if (input.newVillage) {
+      return "This house stays on the tour. The new village waits for an admin before it shows in the list.";
+    }
+    return "This house stays on the tour.";
+  }
+  if (input.direct) {
+    if (input.newZip && input.newVillage) {
+      return `This house is on the tour. ZIP ${input.zip} and ${input.village} are on the list for everyone.`;
+    }
+    if (input.newZip) return `This house is on the tour. ZIP ${input.zip} is on the list for everyone.`;
+    if (input.newVillage) return `This house is on the tour. ${input.village} is on the list for everyone.`;
+    return "This house is on the tour.";
+  }
+  if (input.newZip && input.newVillage) {
+    return "This house was sent. It stays off the public tour until it is approved. The new ZIP and village stay off the list until then too.";
+  }
+  if (input.newZip) {
+    return "This house was sent. It stays off the public tour until it is approved. The new ZIP stays off the list until then too.";
+  }
+  if (input.newVillage) {
+    return "This house was sent. It stays off the public tour until it is approved. The new village stays off the list until then too.";
+  }
+  return "This house was sent. It stays off the public tour until it is approved. On the admin page, look for Waiting for approval.";
 }
 
 export function LightTourSubmit({
@@ -63,6 +103,7 @@ export function LightTourSubmit({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [approvedZips, setApprovedZips] = useState<string[]>([]);
+  const [approvedVillages, setApprovedVillages] = useState<string[]>([]);
   const addressRef = useRef<HTMLInputElement>(null);
   const wasOpen = useRef(false);
   const sending = useRef(false);
@@ -86,6 +127,13 @@ export function LightTourSubmit({
       .then((data: { zips?: unknown }) => {
         if (cancel || !Array.isArray(data.zips)) return;
         setApprovedZips(data.zips.filter((zip): zip is string => typeof zip === "string"));
+      })
+      .catch(() => undefined);
+    fetch("/api/light-tour/villages", { credentials: "same-origin", cache: "no-store" })
+      .then((res) => res.json())
+      .then((data: { villages?: unknown }) => {
+        if (cancel || !Array.isArray(data.villages)) return;
+        setApprovedVillages(data.villages.filter((name): name is string => typeof name === "string"));
       })
       .catch(() => undefined);
     return () => {
@@ -197,6 +245,14 @@ export function LightTourSubmit({
       });
       return;
     }
+    if (place && !isVillageName(parts.village)) {
+      setNotice({
+        title: saving ? "Not saved" : "Not sent",
+        body: parts.village ? "Type the village name." : "Choose a village, or add one.",
+        tone: "bad",
+      });
+      return;
+    }
     sending.current = true;
     setError("");
     setBusy(true);
@@ -224,6 +280,7 @@ export function LightTourSubmit({
           address,
           street: place,
           zip: place ? parts.zip : "",
+          village: place ? parts.village : "",
           note,
           photoUrl,
           latitude: here?.latitude,
@@ -245,21 +302,22 @@ export function LightTourSubmit({
       setSent(true);
       onSaved?.(picked);
       const newZip = isFiveDigitZip(parts.zip) && !zipChoices(approvedZips).includes(parts.zip);
+      const newVillage =
+        Boolean(parts.village) &&
+        !villageChoices(approvedVillages).some(
+          (name) => name.localeCompare(parts.village, "en", { sensitivity: "base" }) === 0
+        );
       setNotice({
         title: house ? "Saved" : direct ? "Added" : "Sent for approval",
-        body: house
-          ? house.status === "approved"
-            ? newZip
-              ? "This house stays on the tour. The new ZIP waits for an admin before it shows in the list."
-              : "This house stays on the tour."
-            : "This house stays off the tour until it is approved."
-          : direct
-            ? newZip
-              ? `This house is on the tour. ZIP ${parts.zip} is on the list for everyone.`
-              : "This house is on the tour."
-            : newZip
-              ? "This house was sent. It stays off the public tour until it is approved. The new ZIP stays off the list until then too."
-              : "This house was sent. It stays off the public tour until it is approved. On the admin page, look for Waiting for approval.",
+        body: savedHouseNote({
+          editing: Boolean(house),
+          approvedHouse: house?.status === "approved",
+          direct,
+          newZip,
+          newVillage,
+          zip: parts.zip,
+          village: parts.village,
+        }),
         tone: "ok",
       });
     } catch (err) {
@@ -339,6 +397,7 @@ export function LightTourSubmit({
               address={address}
               resetKey={house?.id || (open ? "new" : "closed")}
               approvedZips={approvedZips}
+              approvedVillages={approvedVillages}
               onAddress={setAddress}
               idPrefix="lt-add"
               streetRef={addressRef}
@@ -346,6 +405,11 @@ export function LightTourSubmit({
                 direct
                   ? "A new ZIP is added for everyone when you save this house."
                   : "A new ZIP stays off the list until an admin approves it."
+              }
+              villageHint={
+                direct
+                  ? "A new village is added for everyone when you save this house."
+                  : "A new village stays off the list until an admin approves it."
               }
             />
             <div className="field">
