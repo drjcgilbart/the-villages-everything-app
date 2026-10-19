@@ -28,6 +28,7 @@ import type {
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import * as Network from "expo-network";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
@@ -415,6 +416,8 @@ function Shell() {
       latitude?: number;
       longitude?: number;
       accuracy?: number;
+      heading?: number | null;
+      speed?: number | null;
     }) => {
       const json = JSON.stringify(detail);
       webRef.current?.injectJavaScript(
@@ -503,6 +506,8 @@ function Shell() {
               latitude: pos.coords.latitude,
               longitude: pos.coords.longitude,
               accuracy: pos.coords.accuracy ?? undefined,
+              heading: pos.coords.heading,
+              speed: pos.coords.speed,
             });
           },
         );
@@ -776,6 +781,7 @@ function Shell() {
             requestId?: string;
             text?: string;
             token?: number;
+            on?: boolean;
           };
           let msg: ShellMsg | null = null;
           try {
@@ -819,6 +825,11 @@ function Shell() {
           }
           if (msg.type === "tvea-alarm-done-ack" && Platform.OS === "android") {
             ackAndroidDone(Number(msg.at));
+            return;
+          }
+          if (msg.type === "tvea-keep-awake") {
+            if (msg.on) activateKeepAwakeAsync("holiday-lights").catch(() => undefined);
+            else deactivateKeepAwake("holiday-lights").catch(() => undefined);
             return;
           }
           if (msg.type === "tvea-speak" || msg.type === "tvea-speak-stop") {

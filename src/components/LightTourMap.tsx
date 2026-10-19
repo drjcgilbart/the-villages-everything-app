@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import "leaflet/dist/leaflet.css";
 import { TOUR_START_MAX_METERS, haversineMeters } from "@/lib/lightTourShared";
+import { angleBetween, bearingDegrees } from "@/lib/tourHeading";
 
 type Stop = {
   id: string;
@@ -20,6 +21,10 @@ type Props = {
   activeId?: string;
   /** During a live tour, keep the green dot in view until the neighbor drags the map. */
   follow?: boolean;
+  /** Rotate the map so travel points at the top of the screen. Off keeps north up. */
+  headingUp?: boolean;
+  /** Latest direction of travel, degrees clockwise from north. */
+  travelHeading?: number | null;
   /** Admin only. Called with the pin id and the new GPS point after a drag. */
   onMoveStop?: (id: string, latitude: number, longitude: number) => void;
   /** Admin only. Called when a pin is double-clicked so its edit card can open. */
@@ -70,15 +75,6 @@ const ARROW_SVG =
 /** Below this the fix is GPS jitter, not movement. */
 const HEADING_MIN_METERS = 6;
 
-function bearingDegrees(from: { latitude: number; longitude: number }, to: { latitude: number; longitude: number }) {
-  const rad = Math.PI / 180;
-  const y = Math.sin((to.longitude - from.longitude) * rad) * Math.cos(to.latitude * rad);
-  const x =
-    Math.cos(from.latitude * rad) * Math.sin(to.latitude * rad) -
-    Math.sin(from.latitude * rad) * Math.cos(to.latitude * rad) * Math.cos((to.longitude - from.longitude) * rad);
-  return ((Math.atan2(y, x) / rad) + 360) % 360;
-}
-
 const LONG_PRESS_MS = 500;
 /** Moving farther than this during the hold is a drag or pan, not a long-press. */
 const LONG_PRESS_SLOP_PX = 8;
@@ -89,7 +85,32 @@ const VILLAGES = { latitude: 28.908, longitude: -81.985 };
 const LANDSCAPE_PHONE = "(orientation: landscape) and (max-height: 500px)";
 const PORTRAIT_PHONE = "(orientation: portrait) and (max-width: 720px)";
 
-export function LightTourMap({ visitor, line, stops, activeId, follow = false, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, pinMenu, actions, fabsRef, initialView = null, onViewChange }: Props) {
+type RotatingMap = import("leaflet").Map & {
+  setBearing?: (degrees: number) => void;
+  getBearing?: () => number;
+};
+
+let rotateLoad: Promise<void> | null = null;
+
+function loadMapRotate(): Promise<void> {
+  const proto = (window as unknown as { L?: { Map?: { prototype?: { setBearing?: unknown } } } }).L?.Map?.prototype;
+  if (proto && "setBearing" in proto) return Promise.resolve();
+  if (rotateLoad) return rotateLoad;
+  rotateLoad = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "/vendor/leaflet-rotate.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      rotateLoad = null;
+      reject(new Error("The map rotation script did not load."));
+    };
+    document.head.appendChild(script);
+  });
+  return rotateLoad;
+}
+
+export function LightTourMap({ visitor, line, stops, activeId, follow = false, headingUp = false, travelHeading = null, onMoveStop, onOpenStop, onLocate, me = null, onGoToStop, pinMenu, actions, fabsRef, initialView = null, onViewChange }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const groupRef = useRef<import("leaflet").LayerGroup | null>(null);
@@ -101,7 +122,9 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
     viewRef.current = onViewChange;
   }, [onViewChange]);
   const arrow = useRef<{ marker: import("leaflet").Marker; ring: import("leaflet").Circle | null } | null>(null);
-  const heading = useRef({ angle: 0, shown: 0, last: null as { latitude: number; longitude: number } | null });
+  const heading = useRef({ angle: 0, shown: 0, known: false, last: null as { latitude: number; longitude: number } | null });
+  const headingUpRef = useRef(headingUp);
+  headingUpRef.current = headingUp;
   const followRef = useRef(follow);
   const userPanned = useRef(false);
   const visitorRef = useRef(visitor);
@@ -132,12 +155,24 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
     let cancelled = false;
     const node = host.current;
     if (!node || mapRef.current) return;
-    void import("leaflet").then((L) => {
+    void import("leaflet").then(async (L) => {
+      if (cancelled || !host.current || mapRef.current) return;
+      (window as unknown as { L: typeof L }).L = L;
+      try {
+        await loadMapRotate();
+      } catch {
+        /* North-up still works if the rotation script does not load. */
+      }
       if (cancelled || !host.current || mapRef.current) return;
       const map = L.map(host.current, {
         zoomControl: true,
         attributionControl: true,
-      }).setView(
+        rotate: true,
+        bearing: 0,
+        touchRotate: false,
+        shiftKeyRotate: false,
+        rotateControl: false,
+      } as import("leaflet").MapOptions).setView(
         startView.current
           ? [startView.current.latitude, startView.current.longitude]
           : [VILLAGES.latitude, VILLAGES.longitude],
@@ -399,11 +434,22 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
       const delta = ((((target - (h.shown % 360)) % 360) + 540) % 360) - 180;
       h.shown += delta;
       h.angle = target;
+      h.known = true;
+    }
+    const rotatable = map as RotatingMap;
+    const bearing = headingUpRef.current && h.known ? h.angle : 0;
+    if (typeof rotatable.setBearing === "function") {
+      const now = rotatable.getBearing?.() ?? 0;
+      if (angleBetween(now, bearing) > 3) rotatable.setBearing(bearing);
     }
     const radius = me?.accuracy ? Math.max(5, Math.min(500, Number(me.accuracy))) : 0;
     const turn = () => {
       const el = arrow.current?.marker.getElement()?.querySelector<HTMLElement>(".lt-nav-arrow");
-      if (el) el.style.transform = `rotate(${h.shown}deg)`;
+      if (!el) return;
+      const mapBearing = typeof rotatable.getBearing === "function" ? rotatable.getBearing() : 0;
+      // The arrow stays upright on the screen. Subtract the map rotation so
+      // direction-up points it at the top, and north-up points it along the road.
+      el.style.transform = `rotate(${h.shown - mapBearing}deg)`;
     };
     const keepClear = () => {
       // Never leave the arrow under the corner buttons: nudge the map if it is.
@@ -462,9 +508,10 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, o
     return () => {
       cancelled = true;
     };
-    // hereKey covers every field of here/me that matters.
+    // hereKey covers every field of here/me that matters. travelHeading
+    // rotates the map when the direction changes without a new position.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hereKey, ready]);
+  }, [hereKey, ready, headingUp, travelHeading]);
 
   // Turning a phone on its side (or starting the drive while it is sideways)
   // brings the whole map into view, since landscape is the driving view. On a

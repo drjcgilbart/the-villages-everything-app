@@ -4,20 +4,17 @@ import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { tourStartProblem } from "@/lib/lightTourShared";
 import { hasHolidayLightsAcceptance, termsUserIdForRequest } from "@/lib/holidayLightsTermsStore";
-import type { DrivingStep } from "@/lib/tourDirections";
+import { drivingChoice } from "@/lib/tourForward";
+import { cleanHeading } from "@/lib/tourHeading";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type OsrmStep = {
-  distance?: number;
-  name?: string;
-  maneuver?: { type?: string; modifier?: string; location?: [number, number] };
-};
-
 /**
  * One driving leg for the phone that is already on a tour.
  * The browser must not call the router itself. This stays inside The Villages area.
+ * When the phone sends the direction of travel, the leg continues forward
+ * unless the only way back is a turn-around of more than a mile.
  */
 export async function POST(req: Request) {
   const blocked = rejectIfCrossOrigin(req);
@@ -39,35 +36,6 @@ export async function POST(req: Request) {
   if (tourStartProblem(from) || tourStartProblem(to)) {
     return NextResponse.json({ error: "That leg is outside the tour area." }, { status: 400 });
   }
-  const path = `${from.longitude},${from.latitude};${to.longitude},${to.latitude}`;
-  const url = `https://router.project-osrm.org/route/v1/driving/${path}?overview=false&steps=true`;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
-    if (!res.ok) return NextResponse.json({ steps: [], fallback: true });
-    const data = (await res.json()) as {
-      code?: string;
-      routes?: { legs?: { steps?: OsrmStep[] }[] }[];
-    };
-    const raw = data.code === "Ok" ? data.routes?.[0]?.legs?.[0]?.steps || [] : [];
-    const steps: DrivingStep[] = [];
-    for (const step of raw) {
-      const loc = step.maneuver?.location;
-      if (!loc || loc.length < 2) continue;
-      const latitude = loc[1];
-      const longitude = loc[0];
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
-      steps.push({
-        type: step.maneuver?.type || "continue",
-        modifier: step.maneuver?.modifier || "",
-        name: step.name || "",
-        latitude,
-        longitude,
-        meters: Math.round(step.distance || 0),
-      });
-      if (steps.length >= 40) break;
-    }
-    return NextResponse.json({ steps, fallback: steps.length === 0 });
-  } catch {
-    return NextResponse.json({ steps: [], fallback: true });
-  }
+  const drawn = await drivingChoice([from, to], cleanHeading(body?.heading));
+  return NextResponse.json({ steps: drawn.steps, fallback: drawn.fallback, turnAround: drawn.turnAround });
 }

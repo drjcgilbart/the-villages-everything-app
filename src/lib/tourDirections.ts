@@ -81,12 +81,19 @@ function turnPhrase(modifier: string): string {
     case "sharp right":
       return "Make a sharp right";
     case "uturn":
-      return "Make a U-turn";
+      return "Turn around";
     case "straight":
       return "Continue straight";
     default:
       return modifier ? `Turn ${modifier}` : "Continue";
   }
+}
+
+/** Say "turn around" out loud and on the card when the route has to reverse. */
+export function spokenTurn(text: string, turnAround: boolean): string {
+  if (!turnAround || !text) return text;
+  if (/^turn around\b/i.test(text)) return text;
+  return `Turn around. ${text}`;
 }
 
 export function phraseStep(step: DrivingStep, meters: number): string {

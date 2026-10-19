@@ -3,7 +3,8 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
 import { MAX_STOPS, tourStartProblem } from "@/lib/lightTourShared";
-import { drivingLineThrough } from "@/lib/lightTourRoute";
+import { drivingChoice } from "@/lib/tourForward";
+import { cleanHeading } from "@/lib/tourHeading";
 import { hasHolidayLightsAcceptance, termsUserIdForRequest } from "@/lib/holidayLightsTermsStore";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,11 @@ export async function POST(req: Request) {
   if (points.some((point) => tourStartProblem(point))) {
     return NextResponse.json({ error: "That reroute is outside the tour area." }, { status: 400 });
   }
-  const drawn = await drivingLineThrough(points);
-  return NextResponse.json({ line: drawn.line, legs: drawn.legs, fallback: drawn.fallback });
+  const drawn = await drivingChoice(points, cleanHeading(body?.heading));
+  return NextResponse.json({
+    line: drawn.line,
+    legs: drawn.legs,
+    fallback: drawn.fallback,
+    turnAround: drawn.turnAround,
+  });
 }

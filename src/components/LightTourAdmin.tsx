@@ -13,6 +13,7 @@ import {
 } from "@/lib/deviceLocation";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 import { usePinNavigation } from "@/lib/usePinNavigation";
+import { setTourScreenAwake } from "@/lib/tourWake";
 
 type AdminPin = {
   id: string;
@@ -378,16 +379,16 @@ export function LightTourAdmin() {
     let stopNative: (() => void) | null = null;
     let webWatch: number | null = null;
     if (nativeLocationReady()) {
-      stopNative = watchNativeLocation((point, accuracy) => {
-        setMe({ ...point, accuracy });
-        navFeed.current(point, accuracy);
+      stopNative = watchNativeLocation((point, accuracy, motion) => {
+        setMe({ ...point, accuracy, heading: motion?.heading, speed: motion?.speed });
+        navFeed.current(point, accuracy, motion);
       });
     } else if (typeof navigator !== "undefined" && navigator.geolocation) {
       webWatch = navigator.geolocation.watchPosition(
         (pos) => {
           const point = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
           setMe({ ...point, accuracy: pos.coords.accuracy, heading: pos.coords.heading, speed: pos.coords.speed });
-          navFeed.current(point, pos.coords.accuracy);
+          navFeed.current(point, pos.coords.accuracy, { heading: pos.coords.heading, speed: pos.coords.speed });
         },
         () => undefined,
         { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
@@ -399,6 +400,20 @@ export function LightTourAdmin() {
       window.clearTimeout(toastTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    const driving = Boolean(nav.target);
+    setTourScreenAwake(driving);
+    if (!driving) return;
+    const onVis = () => {
+      if (document.visibilityState === "visible") setTourScreenAwake(true);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      setTourScreenAwake(false);
+    };
+  }, [nav.target]);
 
   function showToast(text: string, bad = false) {
     window.clearTimeout(toastTimer.current);

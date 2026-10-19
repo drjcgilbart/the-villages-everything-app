@@ -6,7 +6,9 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters, OFF_ROUTE_QUIET_METERS } from "./lightTourShared";
-import { nextCue, stepsFromPayload, straightCue, type DrivingStep } from "./tourDirections";
+import { nextCue, spokenTurn, stepsFromPayload, straightCue, type DrivingStep } from "./tourDirections";
+import { freshTravel, noteTravel } from "./tourHeading";
+import type { DeviceMotion } from "./deviceLocation";
 import { speakTour, speakTourNow, stopTourSpeech } from "./tourSpeech";
 import { freshOffRouteState, offRouteFix } from "./tourOffRoute";
 import { ARRIVAL_METERS, arrivalFix, freshArrivalState } from "./tourArrival";
@@ -14,7 +16,7 @@ import { ARRIVAL_METERS, arrivalFix, freshArrivalState } from "./tourArrival";
 type Point = { latitude: number; longitude: number };
 export type NavTarget = Point & { id: string; label: string };
 
-type Leg = { fetchedAt: Point; at: number; steps: DrivingStep[] };
+type Leg = { fetchedAt: Point; at: number; steps: DrivingStep[]; turnAround: boolean };
 
 function cleanLine(value: unknown): [number, number][] {
   if (!Array.isArray(value)) return [];
@@ -41,6 +43,7 @@ export function usePinNavigation() {
   const arrival = useRef(freshArrivalState());
   const gen = useRef(0);
   const guideRef = useRef<((here: Point) => Promise<void>) | null>(null);
+  const travel = useRef(freshTravel());
 
   const say = useCallback((text: string, key: string) => {
     setCue((prev) => (prev === text ? prev : text));
@@ -61,7 +64,11 @@ export function usePinNavigation() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         signal: ctrl.signal,
-        body: JSON.stringify({ from, stops: [{ latitude: to.latitude, longitude: to.longitude }] }),
+        body: JSON.stringify({
+          from,
+          stops: [{ latitude: to.latitude, longitude: to.longitude }],
+          heading: travel.current.heading,
+        }),
       });
       const data = (await res.json().catch(() => null)) as { line?: unknown } | null;
       if (ctrl.signal.aborted || targetRef.current?.id !== to.id) return;
@@ -105,13 +112,19 @@ export function usePinNavigation() {
           fromLongitude: here.longitude,
           toLatitude: to.latitude,
           toLongitude: to.longitude,
+          heading: travel.current.heading,
         }),
       });
-      const data = (await res.json().catch(() => null)) as { steps?: unknown } | null;
+      const data = (await res.json().catch(() => null)) as { steps?: unknown; turnAround?: boolean } | null;
       if (ctrl.signal.aborted) return;
-      legRef.current = { fetchedAt: here, at: Date.now(), steps: res.ok ? stepsFromPayload(data?.steps) : [] };
+      legRef.current = {
+        fetchedAt: here,
+        at: Date.now(),
+        steps: res.ok ? stepsFromPayload(data?.steps) : [],
+        turnAround: Boolean(data?.turnAround),
+      };
     } catch {
-      if (!ctrl.signal.aborted) legRef.current = { fetchedAt: here, at: Date.now(), steps: [] };
+      if (!ctrl.signal.aborted) legRef.current = { fetchedAt: here, at: Date.now(), steps: [], turnAround: false };
     } finally {
       if (legAbort.current === ctrl) legBusy.current = false;
     }
@@ -126,14 +139,15 @@ export function usePinNavigation() {
       await loadLeg(here, to);
       if (mine !== gen.current || targetRef.current?.id !== to.id || arrival.current.arrived) return;
       const steps = legRef.current?.steps || [];
+      const turnAround = Boolean(legRef.current?.turnAround);
       const spoken = steps.length ? nextCue(here, steps, to.id) : null;
       if (spoken) {
-        if (spoken.near) say(spoken.nearText, spoken.nearKey);
-        else say(spoken.text, spoken.key);
+        if (spoken.near) say(spokenTurn(spoken.nearText, turnAround), spoken.nearKey);
+        else say(spokenTurn(spoken.text, turnAround), spoken.key);
         return;
       }
       const straight = straightCue(here, to);
-      say(straight.text.replace("The next house", "The pin"), straight.key);
+      say(spokenTurn(straight.text.replace("The next house", "The pin"), turnAround), straight.key);
     },
     [loadLeg, say],
   );
@@ -144,7 +158,8 @@ export function usePinNavigation() {
 
   /** Feed every live GPS fix while navigating. */
   const feed = useCallback(
-    (here: Point, accuracy?: number) => {
+    (here: Point, accuracy?: number, motion?: DeviceMotion) => {
+      noteTravel(travel.current, here, motion);
       hereRef.current = here;
       const to = targetRef.current;
       if (!to || arrival.current.arrived) return;

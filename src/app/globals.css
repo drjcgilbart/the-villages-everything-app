@@ -18070,6 +18070,39 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   .lt-pop-arrive .lt-pop {
     width: min(60vw, 26rem);
   }
+
+  /* Side rail: Spoken directions, the map mode, Music, Next stop, Skip,
+     End tour, and Add a lit house all have to fit on a phone held sideways. */
+  .lt-sheet .lt-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+    padding: 0.35rem;
+  }
+
+  .lt-sheet .lt-go,
+  .lt-sheet .lt-chip {
+    width: 100%;
+    min-height: 30px;
+    margin: 0;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.76rem;
+    line-height: 1.15;
+  }
+
+  .lt-sheet .lt-tour-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+    margin: 0;
+  }
+
+  .lt-sheet .lt-cue {
+    margin: 0;
+    padding: 0.32rem 0.45rem;
+    font-size: 0.76rem;
+    line-height: 1.25;
+  }
 }
 
 /* Google Maps style locate button on the tour map. */
@@ -18253,8 +18286,9 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   }
 }
 
-/* Sideways: the map takes the screen. The rail keeps only the written turn,
-   Spoken directions, Next stop, Skip, End tour and Add a lit house. */
+/* Sideways: the map takes the screen. The rail keeps the written turn,
+   Spoken directions, North up / Direction up, Next stop, Skip, End tour
+   and Add a lit house. Music stays on the map button. */
 @media (orientation: landscape) and (max-height: 500px) {
   body:has(.lt-admin-live) .site-header,
   body:has(.lt-admin-live) .site-footer,
@@ -18292,27 +18326,30 @@ html[data-app-shell="native"] .lt-pop-arrive .lt-pop-actions .lt-go {
   .lt-admin-live .lt-sheet .lt-card {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.45rem;
+    gap: 0.22rem;
+    padding: 0.35rem;
   }
-  .lt-admin-live .lt-sheet .lt-go {
+  .lt-admin-live .lt-sheet .lt-go,
+  .lt-admin-live .lt-sheet .lt-chip {
     width: 100%;
-    min-height: 44px;
+    min-height: 30px;
     margin: 0;
-    padding: 0.4rem 0.6rem;
-    font-size: 0.9rem;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.76rem;
+    line-height: 1.15;
   }
   .lt-admin-live .lt-cue {
     margin: 0;
-    padding: 0.5rem 0.6rem;
-    font-size: 0.9rem;
-    line-height: 1.3;
+    padding: 0.32rem 0.45rem;
+    font-size: 0.76rem;
+    line-height: 1.25;
   }
   .lt-admin-live .lt-tour-tools {
     margin: 0;
+    gap: 0.22rem;
   }
   .lt-admin-live .lt-tour-tools .lt-chip {
     width: 100%;
-    min-height: 44px;
+    min-height: 30px;
   }
 }

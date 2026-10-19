@@ -13,7 +13,10 @@ import {
   watchNativeLocation,
 } from "@/lib/deviceLocation";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
-import { nextCue, stepsFromPayload, straightCue, type DrivingStep } from "@/lib/tourDirections";
+import { nextCue, spokenTurn, stepsFromPayload, straightCue, type DrivingStep } from "@/lib/tourDirections";
+import { freshTravel, noteTravel } from "@/lib/tourHeading";
+import { setTourScreenAwake } from "@/lib/tourWake";
+import type { DeviceMotion } from "@/lib/deviceLocation";
 import { speakTour, speakTourNow, stopTourSpeech } from "@/lib/tourSpeech";
 import { TOUR_MUSIC_STATE_EVENT, TOUR_MUSIC_TOGGLE_EVENT } from "@/lib/themeMusic";
 import {
@@ -149,7 +152,8 @@ export function LightTour({
   const voiceOnRef = useRef(true);
   const cueRef = useRef("");
   const spokenKeyRef = useRef("");
-  const legRef = useRef<{ stopId: string; fetchedAt: Here; at: number; steps: DrivingStep[] } | null>(null);
+  const legRef = useRef<{ stopId: string; fetchedAt: Here; at: number; steps: DrivingStep[]; turnAround: boolean } | null>(null);
+  const travel = useRef(freshTravel());
   const legAbort = useRef<AbortController | null>(null);
   const legBusy = useRef(false);
   const guideGen = useRef(0);
@@ -159,6 +163,9 @@ export function LightTour({
   const arrival = useRef(freshArrivalState());
   const rerouteAbort = useRef<AbortController | null>(null);
   const [voiceOn, setVoiceOn] = useState(true);
+  /** Direction-up rotates the map so the cart points at the top of the screen. */
+  const [headingUp, setHeadingUp] = useState(false);
+  const [travelHeading, setTravelHeading] = useState<number | null>(null);
   const [musicOn, setMusicOn] = useState(false);
   /** Admin live editing: the pin card that is open, and a short status line. */
   const [pinEdit, setPinEdit] = useState<{ id: string; address: string; note: string } | null>(null);
@@ -375,19 +382,21 @@ export function LightTour({
           fromLongitude: here.longitude,
           toLatitude: stop.latitude,
           toLongitude: stop.longitude,
+          heading: travel.current.heading,
         }),
       });
-      const data = (await res.json().catch(() => null)) as { steps?: unknown } | null;
+      const data = (await res.json().catch(() => null)) as { steps?: unknown; turnAround?: boolean } | null;
       if (ctrl.signal.aborted) return;
       legRef.current = {
         stopId: stop.id,
         fetchedAt: here,
         at: Date.now(),
         steps: res.ok ? stepsFromPayload(data?.steps) : [],
+        turnAround: Boolean(data?.turnAround),
       };
     } catch {
       if (ctrl.signal.aborted) return;
-      legRef.current = { stopId: stop.id, fetchedAt: here, at: Date.now(), steps: [] };
+      legRef.current = { stopId: stop.id, fetchedAt: here, at: Date.now(), steps: [], turnAround: false };
     } finally {
       if (legAbort.current === ctrl) legBusy.current = false;
     }
@@ -404,20 +413,28 @@ export function LightTour({
     if (phaseRef.current !== "tour" || stopsRef.current[indexRef.current]?.id !== stop.id) return;
     const leg = legRef.current;
     const steps = leg && leg.stopId === stop.id ? leg.steps : [];
+    const turnAround = Boolean(leg && leg.stopId === stop.id && leg.turnAround);
     const spoken = steps.length ? nextCue(here, steps, stop.id) : null;
     if (spoken) {
-      if (spoken.near) showCue(spoken.nearText, spoken.nearKey);
-      else showCue(spoken.text, spoken.key);
+      if (spoken.near) showCue(spokenTurn(spoken.nearText, turnAround), spoken.nearKey);
+      else showCue(spokenTurn(spoken.text, turnAround), spoken.key);
       return;
     }
     if (steps.length && leg && Date.now() - leg.at > 8000) {
       legRef.current = { ...leg, at: 0 };
     }
     const straight = straightCue(here, stop);
-    showCue(straight.text, straight.key);
+    showCue(spokenTurn(straight.text, turnAround), straight.key);
   }
 
-  function rememberHere(here: Here, accuracy?: number) {
+  function rememberHere(here: Here, accuracy?: number, motion?: DeviceMotion) {
+    const heading = noteTravel(travel.current, here, motion);
+    setTravelHeading((prev) => {
+      if (heading == null) return prev;
+      if (prev == null) return heading;
+      const gap = Math.abs(((((heading - prev) % 360) + 540) % 360) - 180);
+      return gap < 5 ? prev : heading;
+    });
     hereRef.current = here;
     setVisitor((prev) => (prev && haversineMeters(prev, here) < 5 ? prev : here));
     noteArrival(accuracy);
@@ -462,6 +479,7 @@ export function LightTour({
         body: JSON.stringify({
           from: { latitude: here.latitude, longitude: here.longitude },
           stops: ahead.map((stop) => ({ latitude: stop.latitude, longitude: stop.longitude })),
+          heading: travel.current.heading,
         }),
       });
       const data = (await res.json().catch(() => null)) as { line?: unknown } | null;
@@ -508,6 +526,32 @@ export function LightTour({
       setError(locationHelp(err));
       return null;
     }
+  }
+
+  function toggleMapMode() {
+    setHeadingUp((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem("tvea-light-tour-heading-up", next ? "1" : "0");
+      } catch {
+        /* The choice still applies for this drive. */
+      }
+      return next;
+    });
+  }
+
+  function mapModeSwitch() {
+    return (
+      <button
+        type="button"
+        className={`lt-chip ${headingUp ? "is-on" : ""}`}
+        role="switch"
+        aria-checked={headingUp}
+        onClick={toggleMapMode}
+      >
+        {headingUp ? "Direction up" : "North up"}
+      </button>
+    );
   }
 
   function toggleVoice() {
@@ -662,6 +706,7 @@ export function LightTour({
 
   function startTour() {
     if (termsState !== "accepted") return;
+    setTourScreenAwake(true);
     setPhase("tour");
     phaseRef.current = "tour";
     setIndex(0);
@@ -688,7 +733,7 @@ export function LightTour({
     stopFollow();
     if (nativeLocationReady()) {
       nativeStop.current = watchNativeLocation(
-        (point, accuracy) => rememberHere(point, accuracy),
+        (point, accuracy, motion) => rememberHere(point, accuracy, motion),
         (err) => {
           if (geoErrorCode(err) === 1) setError(locationHelp(err));
         },
@@ -702,6 +747,7 @@ export function LightTour({
             rememberHere(
               { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
               pos.coords.accuracy,
+              { heading: pos.coords.heading, speed: pos.coords.speed },
             );
             if (!accurate && !triedPrecise) {
               triedPrecise = true;
@@ -807,6 +853,7 @@ export function LightTour({
         body: JSON.stringify({
           from: { latitude: from.latitude, longitude: from.longitude },
           stops: ahead.map((stop) => ({ latitude: stop.latitude, longitude: stop.longitude })),
+          heading: travel.current.heading,
         }),
       });
       const data = (await res.json().catch(() => null)) as { line?: unknown } | null;
@@ -1032,6 +1079,30 @@ export function LightTour({
   });
 
   useEffect(() => () => window.clearTimeout(pinMsgTimer.current), []);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("tvea-light-tour-heading-up") === "1") setHeadingUp(true);
+    } catch {
+      /* The map stays north-up. */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "tour") {
+      setTourScreenAwake(false);
+      return;
+    }
+    setTourScreenAwake(true);
+    const onVis = () => {
+      if (document.visibilityState === "visible") setTourScreenAwake(true);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      setTourScreenAwake(false);
+    };
+  }, [phase]);
 
   function resetPick() {
     stopFollow();
@@ -1319,6 +1390,7 @@ export function LightTour({
           <div className="lt-live-hide">{sheetActions()}</div>
           <div className="lt-tour-tools">
             {voiceSwitch()}
+            {mapModeSwitch()}
             {musicSwitch()}
           </div>
           <p className="panel-hint lt-live-hide">A card pops up within about 150 meters. Spoken directions and music use the phone volume.</p>
@@ -1548,6 +1620,8 @@ export function LightTour({
                 stops={stops}
                 activeId={current?.id}
                 follow={phase === "tour"}
+                headingUp={phase === "tour" && headingUp}
+                travelHeading={travelHeading}
                 onLocate={locateMe}
                 onMoveStop={liveEdit ? (id, latitude, longitude) => liveRef.current?.move(id, latitude, longitude) : undefined}
                 onOpenStop={liveEdit ? (id) => liveRef.current?.open(id) : undefined}
