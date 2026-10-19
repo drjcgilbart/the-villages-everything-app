@@ -3,6 +3,7 @@ import { isAdminAuthenticated } from "@/lib/auth";
 import { getSessionMember } from "@/lib/memberAuth";
 import { rateLimitResponse } from "@/lib/authRateLimit";
 import { rejectIfCrossOrigin } from "@/lib/security";
+import { houseAddressFromInput } from "@/lib/houseAddress";
 import {
   deletePin,
   holidayFrom,
@@ -74,7 +75,13 @@ export async function POST(req: Request) {
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
     return NextResponse.json({ error: "That location is not on the map." }, { status: 400 });
   }
-  let address = String(body?.address || "").trim();
+  let place: ReturnType<typeof houseAddressFromInput>;
+  try {
+    place = houseAddressFromInput(body || {});
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Type the street address." }, { status: 400 });
+  }
+  let address = place.address;
   if (!address) address = await reverseGeocode(latitude, longitude);
   const pin = await savePin({
     holiday,
@@ -84,6 +91,7 @@ export async function POST(req: Request) {
     photoUrl: safePhoto(body?.photoUrl),
     note: String(body?.note || ""),
     createdBy: await createdBy(),
+    approveZip: place.explicitZip,
   });
   return NextResponse.json({ pin });
 }
@@ -106,10 +114,29 @@ export async function PUT(req: Request) {
   const existing = store.pins.find((pin) => pin.id === id);
   if (!existing) return NextResponse.json({ error: "That pin is gone." }, { status: 404 });
   const keepAddress = body?.keepAddress === true;
-  let address = String(body?.address ?? existing.address).trim();
-  const moved = Math.abs(existing.latitude - latitude) > 0.00001 || Math.abs(existing.longitude - longitude) > 0.00001;
-  if (!keepAddress && moved && !String(body?.address || "").trim()) address = await reverseGeocode(latitude, longitude);
   const status = body?.status === "pending" || body?.status === "approved" ? body.status : undefined;
+  const approving = status === "approved" && existing.status !== "approved";
+  let place: ReturnType<typeof houseAddressFromInput> = {
+    address: String(body?.address ?? existing.address).trim(),
+    zip: "",
+    explicitZip: false,
+  };
+  if (!keepAddress) {
+    try {
+      place = houseAddressFromInput({
+        street: body?.street,
+        zip: body?.zip,
+        address: body?.address ?? existing.address,
+      });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Type the street address." }, { status: 400 });
+    }
+  }
+  let address = place.address || existing.address;
+  const moved = Math.abs(existing.latitude - latitude) > 0.00001 || Math.abs(existing.longitude - longitude) > 0.00001;
+  if (!keepAddress && moved && !place.address && !String(body?.address || "").trim()) {
+    address = await reverseGeocode(latitude, longitude);
+  }
   const pin = await savePin({
     id,
     holiday,
@@ -120,6 +147,7 @@ export async function PUT(req: Request) {
     note: body?.note === undefined ? existing.note : String(body.note),
     createdBy: existing.createdBy,
     status,
+    approveZip: place.explicitZip || approving || body?.approveZip === true,
   });
   return NextResponse.json({ pin });
 }

@@ -31,8 +31,36 @@ export function geoErrorCode(err: unknown): number {
   if (code === 1 || code === 2 || code === 3) return code;
   const name = String((err as { name?: unknown }).name || "");
   if (name === "NotAllowedError" || name === "PermissionDeniedError") return 1;
-  if (name === "GeolocationPositionError" || name === "PositionError") return 1;
   return 0;
+}
+
+export type GeoPermission = "granted" | "denied" | "prompt" | "unknown";
+
+let permissionCache: GeoPermission = "unknown";
+
+export function cachedGeoPermission(): GeoPermission {
+  return permissionCache;
+}
+
+/** Chrome's site setting. Granted here can still fail when Windows location is off. */
+export async function readGeoPermission(): Promise<GeoPermission> {
+  if (typeof navigator === "undefined" || !navigator.permissions?.query) return permissionCache;
+  try {
+    const status = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+    if (status.state === "granted" || status.state === "denied" || status.state === "prompt") {
+      permissionCache = status.state;
+    }
+  } catch {
+    /* Some browsers reject this permission name. */
+  }
+  return permissionCache;
+}
+
+/** A desktop browser, not the phone app and not a phone. */
+export function isDesktopBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  if (isNativeAppShell()) return false;
+  return !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 function fail(code: number, message: string): Error {
@@ -76,14 +104,25 @@ function readFix(timeout: number, accurate: boolean): Promise<DevicePoint> {
   });
 }
 
-/** A hard deny stops. A miss, or a fix the caller rejects, tries a precise reading. */
+/**
+ * A phone tries a rough fix, then a precise one.
+ * A desktop stays on a network fix. High accuracy there often returns
+ * "denied" even after Chrome is set to Allow, because Windows location is off.
+ */
 export async function readWebLocation(accept?: (point: DevicePoint) => boolean): Promise<DevicePoint> {
+  const permission = await readGeoPermission();
+  const desktop = isDesktopBrowser();
   try {
-    const rough = await readFix(12000, false);
+    const rough = await readFix(desktop ? 20000 : 12000, false);
     if (!accept || accept(rough)) return rough;
   } catch (err) {
-    if (geoErrorCode(err) === 1) throw err;
+    if (desktop) {
+      if (geoErrorCode(err) === 1 && permission !== "granted") throw err;
+      throw fail(2, "This computer did not share a location.");
+    }
+    if (geoErrorCode(err) === 1 && permission !== "granted") throw err;
   }
+  if (desktop) throw fail(2, "This computer did not share a location.");
   return readFix(15000, true);
 }
 
@@ -181,4 +220,24 @@ export function locationBlockedText(orElse: string): string {
     return `Location is blocked for the app. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. On Android, turn Precise on too. ${orElse}`;
   }
   return `Location is blocked. Allow location for this site, then try again. ${orElse}`;
+}
+
+export function locationComputerText(orElse: string): string {
+  return `This computer did not share a location. This browser already allows this site. Open Windows Settings, then Privacy & security, then Location. Turn Location on, and turn on Let desktop apps access your location. ${orElse}`;
+}
+
+/** Site Allow plus a failed fix is a computer problem, not a blocked website. */
+export function locationFailureText(err: unknown, orElse: string): string {
+  const code = geoErrorCode(err);
+  const permission = cachedGeoPermission();
+  if (code === 1 && permission !== "granted") return locationBlockedText(orElse);
+  if (err instanceof Error && err.message === "This browser does not share location.") {
+    return `This browser does not share location. ${orElse}`;
+  }
+  if (permission === "granted" && isDesktopBrowser()) return locationComputerText(orElse);
+  if (permission === "granted") {
+    return `Location is allowed for this site, but the phone did not share a position. Turn location on for the phone, then try again. ${orElse}`;
+  }
+  if (isDesktopBrowser()) return locationComputerText(orElse);
+  return `Location did not come through. ${orElse}`;
 }

@@ -2,15 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { HouseAddressFields } from "./HouseAddressFields";
 import { LightTourMap, type MapView, type PinMenuItem } from "./LightTourMap";
 import { LightTourSubmit } from "./LightTourSubmit";
 import {
-  geoErrorCode,
-  locationBlockedText,
+  isDesktopBrowser,
+  locationFailureText,
   nativeLocationReady,
   readDeviceLocation,
+  readGeoPermission,
   watchNativeLocation,
 } from "@/lib/deviceLocation";
+import { isFiveDigitZip, splitHouseAddress } from "@/lib/houseAddress";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
 import { usePinNavigation } from "@/lib/usePinNavigation";
 import { setTourScreenAwake } from "@/lib/tourWake";
@@ -109,13 +112,7 @@ function deviceLabel(deviceType: string) {
 }
 
 function locationHelp(err: unknown) {
-  if (geoErrorCode(err) === 1) {
-    return locationBlockedText("You can type the latitude and longitude instead.");
-  }
-  if (err instanceof Error && err.message === "This browser does not share location.") {
-    return "This browser does not share location. You can type the latitude and longitude instead.";
-  }
-  return "Location did not come through. You can type the latitude and longitude instead.";
+  return locationFailureText(err, "You can type the latitude and longitude instead.");
 }
 
 function WaitingHouses({
@@ -217,6 +214,8 @@ export function LightTourAdmin() {
   const [houseOpen, setHouseOpen] = useState(false);
   const [acceptances, setAcceptances] = useState<TermsAcceptance[]>([]);
   const [termsNote, setTermsNote] = useState("");
+  const [approvedZips, setApprovedZips] = useState<string[]>([]);
+  const [pendingZips, setPendingZips] = useState<{ zip: string; createdAt: string }[]>([]);
   /** Live GPS for the blue dot. Accuracy is only known in the browser path. */
   const [me, setMe] = useState<{
     latitude: number;
@@ -263,6 +262,19 @@ export function LightTourAdmin() {
     setPins(data.pins || []);
     setSignedIn(true);
     setReady(true);
+    try {
+      const zipRes = await fetch("/api/light-tour/zips?admin=1", { credentials: "same-origin", cache: "no-store" });
+      const zipData = (await zipRes.json().catch(() => null)) as {
+        zips?: string[];
+        pending?: { zip: string; createdAt: string }[];
+      } | null;
+      if (zipRes.ok) {
+        setApprovedZips(Array.isArray(zipData?.zips) ? zipData.zips : []);
+        setPendingZips(Array.isArray(zipData?.pending) ? zipData.pending : []);
+      }
+    } catch {
+      /* The house list still shows. ZIP choices fall back to the four built-in codes. */
+    }
     try {
       const termsRes = await fetch("/api/light-tour/terms?admin=1", { credentials: "same-origin" });
       const termsData = (await termsRes.json().catch(() => null)) as { acceptances?: TermsAcceptance[]; error?: string } | null;
@@ -376,27 +388,39 @@ export function LightTourAdmin() {
   }, [ready, signedIn]);
 
   useEffect(() => {
-    let stopNative: (() => void) | null = null;
-    let webWatch: number | null = null;
-    if (nativeLocationReady()) {
-      stopNative = watchNativeLocation((point, accuracy, motion) => {
-        setMe({ ...point, accuracy, heading: motion?.heading, speed: motion?.speed });
-        navFeed.current(point, accuracy, motion);
-      });
-    } else if (typeof navigator !== "undefined" && navigator.geolocation) {
-      webWatch = navigator.geolocation.watchPosition(
+    const stopNative: { fn: (() => void) | null } = { fn: null };
+    const webWatch: { id: number | null } = { id: null };
+    let cancelled = false;
+    void (async () => {
+      await readGeoPermission();
+      if (cancelled) return;
+      if (nativeLocationReady()) {
+        stopNative.fn = watchNativeLocation((point, accuracy, motion) => {
+          setMe({ ...point, accuracy, heading: motion?.heading, speed: motion?.speed });
+          navFeed.current(point, accuracy, motion);
+        });
+        return;
+      }
+      if (typeof navigator === "undefined" || !navigator.geolocation) return;
+      const desktop = isDesktopBrowser();
+      webWatch.id = navigator.geolocation.watchPosition(
         (pos) => {
           const point = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
           setMe({ ...point, accuracy: pos.coords.accuracy, heading: pos.coords.heading, speed: pos.coords.speed });
           navFeed.current(point, pos.coords.accuracy, { heading: pos.coords.heading, speed: pos.coords.speed });
         },
         () => undefined,
-        { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
+        {
+          enableHighAccuracy: !desktop,
+          maximumAge: desktop ? 20000 : 3000,
+          timeout: desktop ? 30000 : 20000,
+        },
       );
-    }
+    })();
     return () => {
-      stopNative?.();
-      if (webWatch != null) navigator.geolocation.clearWatch(webWatch);
+      cancelled = true;
+      stopNative.fn?.();
+      if (webWatch.id != null) navigator.geolocation.clearWatch(webWatch.id);
       window.clearTimeout(toastTimer.current);
     };
   }, []);
@@ -628,6 +652,11 @@ export function LightTourAdmin() {
       setError("Need a latitude and longitude.");
       return;
     }
+    const parts = splitHouseAddress(draft.address);
+    if (parts.street && !isFiveDigitZip(parts.zip)) {
+      setError("Type a 5-digit ZIP code, or pick one from the list.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -641,6 +670,8 @@ export function LightTourAdmin() {
           latitude,
           longitude,
           address: draft.address,
+          street: parts.street,
+          zip: parts.street ? parts.zip : "",
           note: draft.note,
           photoUrl: draft.photoUrl,
         }),
@@ -699,6 +730,27 @@ export function LightTourAdmin() {
     }, 50);
   }
 
+  async function reviewZip(zip: string, decision: "approved" | "declined") {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/light-tour/zips", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zip, decision }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "The ZIP did not update.");
+      setNotice(decision === "approved" ? `${zip} is on the ZIP list.` : `${zip} was declined.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The ZIP did not update.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function approvePin(pin: AdminPin) {
     setBusy(true);
     setError("");
@@ -716,6 +768,7 @@ export function LightTourAdmin() {
           note: pin.note,
           photoUrl: pin.photoUrl,
           status: "approved",
+          approveZip: true,
         }),
       });
       const data = await res.json();
@@ -895,6 +948,30 @@ export function LightTourAdmin() {
           </p>
         ) : null}
 
+        {pendingZips.length > 0 ? (
+          <div className="about-panel lt-card">
+            <h2>ZIP codes waiting ({pendingZips.length})</h2>
+            <p className="panel-hint">
+              A neighbor asked to use a ZIP that is not on the list yet. Approving it adds that ZIP to the dropdown for everyone.
+            </p>
+            <ul className="lt-list">
+              {pendingZips.map((row) => (
+                <li key={row.zip} className="lt-pin">
+                  <strong>{row.zip}</strong>
+                  <div className="lt-pin-actions">
+                    <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void reviewZip(row.zip, "approved")}>
+                      Approve
+                    </button>
+                    <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void reviewZip(row.zip, "declined")}>
+                      Decline
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         {pins.some((pin) => pin.status === "pending") ? (
           <WaitingHouses
             pins={pins.filter((pin) => pin.status === "pending")}
@@ -1040,16 +1117,15 @@ export function LightTourAdmin() {
                 Use where I am
               </button>
             )}
-            <div className="field">
-              <label htmlFor="lt-pin-address">Address</label>
-              <input
-                id="lt-pin-address"
-                value={draft.address}
-                maxLength={180}
-                placeholder="Filled in from the map point when you save"
-                onChange={(e) => setDraft({ ...draft, address: e.target.value })}
-              />
-            </div>
+            <HouseAddressFields
+              address={draft.address}
+              resetKey={draft.id || "new-pin"}
+              approvedZips={approvedZips}
+              onAddress={(next) => setDraft((current) => (current ? { ...current, address: next } : current))}
+              idPrefix="lt-pin"
+              otherHint="A new ZIP is added for everyone when you save this pin."
+            />
+            <p className="panel-hint">Leave the street blank to keep the address the map fills in.</p>
             <div className="field">
               <label htmlFor="lt-pin-note">Note</label>
               <input

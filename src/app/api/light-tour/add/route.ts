@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { rateLimitResponse } from "@/lib/authRateLimit";
+import { houseAddressFromInput } from "@/lib/houseAddress";
 import { holidayFrom, submitMemberHouse } from "@/lib/lightTour";
 import { getSessionMember } from "@/lib/memberAuth";
 import { rejectIfCrossOrigin } from "@/lib/security";
@@ -49,16 +50,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pick Halloween, Christmas, or Other." }, { status: 400 });
   }
   const member = await getSessionMember();
+  let place: ReturnType<typeof houseAddressFromInput>;
+  try {
+    place = houseAddressFromInput(body || {});
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Type the street address." }, { status: 400 });
+  }
   try {
     const pin = await submitMemberHouse({
       holiday,
-      address: String(body?.address || ""),
+      address: place.address,
       note: String(body?.note || ""),
       photoUrl: safePhoto(body?.photoUrl),
       latitude: num(body?.latitude),
       longitude: num(body?.longitude),
       createdBy: member?.email || "admin",
       status: "approved",
+      zip: place.explicitZip ? place.zip : "",
     });
     return NextResponse.json({ ok: true, id: pin.id, status: pin.status });
   } catch (err) {

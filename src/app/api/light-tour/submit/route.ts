@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { notifyAdminOfApprovalRequest } from "@/lib/adminNotify";
 import { rateLimitResponse } from "@/lib/authRateLimit";
+import { houseAddressFromInput } from "@/lib/houseAddress";
 import { holidayFrom, submitMemberHouse } from "@/lib/lightTour";
 import { getSessionMember } from "@/lib/memberAuth";
 import { rejectIfCrossOrigin } from "@/lib/security";
@@ -46,16 +47,23 @@ export async function POST(req: Request) {
   if (!holiday) {
     return NextResponse.json({ error: "Pick Halloween, Christmas, or Other." }, { status: 400 });
   }
+  let place: ReturnType<typeof houseAddressFromInput>;
+  try {
+    place = houseAddressFromInput(body || {});
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Type the street address." }, { status: 400 });
+  }
   try {
     const pin = await submitMemberHouse({
       holiday,
-      address: String(body?.address || ""),
+      address: place.address,
       note: String(body?.note || ""),
       photoUrl: safePhoto(body?.photoUrl),
       latitude: num(body?.latitude),
       longitude: num(body?.longitude),
       createdBy: member ? `${member.name} · ${member.email}` : "Neighbor",
       ownerId: canOwn && member ? member.id : "",
+      zip: place.explicitZip ? place.zip : "",
     });
     void notifyAdminOfApprovalRequest({
       topic: "Holiday Lights",

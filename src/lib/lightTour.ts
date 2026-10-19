@@ -9,6 +9,7 @@ import {
   writeJsonFileAsync,
 } from "./dataFs";
 import { haversineMeters, type TourHoliday } from "./lightTourShared";
+import { isBuiltinZip, isFiveDigitZip, zipFromAddress } from "./houseAddress";
 
 export {
   DRIVING_CANDIDATE_CAP,
@@ -68,12 +69,18 @@ export type LightTourLog = {
   public?: boolean;
 };
 
-type Store = { pins: LightPin[]; tours: LightTourLog[] };
+export type TourZip = {
+  zip: string;
+  status: PinStatus;
+  createdAt: string;
+};
+
+type Store = { pins: LightPin[]; tours: LightTourLog[]; zips: TourZip[] };
 
 export type PublicPin = Omit<LightPin, "createdBy" | "ownerId" | "status">;
 
 function emptyStore(): Store {
-  return { pins: [], tours: [] };
+  return { pins: [], tours: [], zips: [] };
 }
 
 function asHoliday(value: unknown): TourHoliday | null {
@@ -144,10 +151,45 @@ function normalizePin(raw: unknown): LightPin | null {
   };
 }
 
+function normalizeZip(raw: unknown): TourZip | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Partial<TourZip>;
+  const zip = String(row.zip || "").trim();
+  if (!isFiveDigitZip(zip) || isBuiltinZip(zip)) return null;
+  return {
+    zip,
+    status: row.status === "approved" ? "approved" : "pending",
+    createdAt: clip(row.createdAt, 40) || new Date().toISOString(),
+  };
+}
+
+function normalizeZips(raw: unknown): TourZip[] {
+  if (!Array.isArray(raw)) return [];
+  const byZip = new Map<string, TourZip>();
+  for (const item of raw) {
+    const row = normalizeZip(item);
+    if (!row) continue;
+    const prev = byZip.get(row.zip);
+    if (!prev || (prev.status !== "approved" && row.status === "approved")) byZip.set(row.zip, row);
+  }
+  return [...byZip.values()];
+}
+
 function parseStore(raw: Partial<Store> | null): Store {
   const pins = Array.isArray(raw?.pins) ? raw.pins.map(normalizePin).filter((pin): pin is LightPin => !!pin) : [];
   const tours = Array.isArray(raw?.tours) ? raw.tours.filter((row) => row && typeof row === "object") as LightTourLog[] : [];
-  return { pins, tours: tours.slice(-400) };
+  return { pins, tours: tours.slice(-400), zips: normalizeZips(raw?.zips) };
+}
+
+/** A built-in ZIP is ignored. An approved ZIP is never sent back to pending. */
+function rememberZip(store: Store, zip: string, status: PinStatus) {
+  if (!isFiveDigitZip(zip) || isBuiltinZip(zip)) return;
+  const existing = store.zips.find((row) => row.zip === zip);
+  if (!existing) {
+    store.zips.push({ zip, status, createdAt: new Date().toISOString() });
+    return;
+  }
+  if (existing.status !== "approved" && status === "approved") existing.status = "approved";
 }
 
 function redisOverLimit(err: unknown) {
@@ -175,6 +217,37 @@ function parseStoreText(text: string): Store {
 
 function bundledStore(): Store {
   return parseStore(readJsonFile<Partial<Store>>(LIGHT_TOUR_FILE));
+}
+
+export async function readTourZips(): Promise<{
+  zips: string[];
+  pending: { zip: string; createdAt: string }[];
+}> {
+  const store = await readLightTour();
+  const approved = store.zips.filter((row) => row.status === "approved").map((row) => row.zip);
+  approved.sort();
+  const pending = store.zips
+    .filter((row) => row.status === "pending")
+    .map((row) => ({ zip: row.zip, createdAt: row.createdAt }));
+  return { zips: approved, pending };
+}
+
+/** Approve adds the ZIP to every dropdown. Decline removes a waiting ZIP only. */
+export function reviewTourZip(zip: string, decision: "approved" | "declined"): Promise<void> {
+  return enqueue(async () => {
+    const code = String(zip || "").trim();
+    if (!isFiveDigitZip(code)) throw new Error("Use a 5-digit ZIP code.");
+    if (isBuiltinZip(code)) throw new Error("That ZIP is already on the list.");
+    const store = await readLightTourForWrite();
+    if (decision === "declined") {
+      const next = store.zips.filter((row) => !(row.zip === code && row.status === "pending"));
+      if (next.length === store.zips.length) throw new Error("That ZIP is not waiting.");
+      store.zips = next;
+    } else {
+      rememberZip(store, code, "approved");
+    }
+    await writeStore(store);
+  });
 }
 
 export async function readLightTour(): Promise<Store> {
@@ -209,6 +282,7 @@ async function writeStore(store: Store) {
   await writeJsonFileAsync(LIGHT_TOUR_FILE, {
     pins: store.pins,
     tours: store.tours.slice(-400),
+    zips: store.zips,
   });
 }
 
@@ -226,6 +300,8 @@ export function savePin(input: {
   note?: string;
   createdBy: string;
   status?: PinStatus;
+  /** Admin save or house approval. A new ZIP then joins the dropdown for everyone. */
+  approveZip?: boolean;
 }): Promise<LightPin> {
   return enqueue(async () => {
     const store = await readLightTourForWrite();
@@ -249,6 +325,7 @@ export function savePin(input: {
     store.pins = existing
       ? store.pins.map((row) => (row.id === pin.id ? pin : row))
       : [pin, ...store.pins];
+    if (input.approveZip) rememberZip(store, zipFromAddress(pin.address), "approved");
     await writeStore(store);
     return pin;
   });
@@ -315,6 +392,8 @@ export async function submitMemberHouse(input: {
   createdBy: string;
   ownerId?: string;
   status?: PinStatus;
+  /** Set when the form sent a ZIP. Built-in codes are ignored. */
+  zip?: string;
 }): Promise<LightPin> {
   const point = await resolveHousePoint(input);
   const holiday = input.holiday;
@@ -349,6 +428,7 @@ export async function submitMemberHouse(input: {
       status,
     };
     store.pins = [pin, ...store.pins];
+    rememberZip(store, input.zip || "", status);
     await writeStore(store);
     return pin;
   });
@@ -376,6 +456,8 @@ export async function updateOwnedHouse(input: {
   photoUrl: string;
   latitude: number | null;
   longitude: number | null;
+  /** Set when the form sent a ZIP. A new code stays pending until an admin approves it. */
+  zip?: string;
 }): Promise<LightPin> {
   const id = clip(input.id, 80);
   const member = { id: input.memberId, email: input.email };
@@ -415,6 +497,7 @@ export async function updateOwnedHouse(input: {
       ownerId: existing.ownerId || input.memberId,
     };
     store.pins = store.pins.map((row) => (row.id === id ? pin : row));
+    rememberZip(store, input.zip || "", "pending");
     await writeStore(store);
     return pin;
   });

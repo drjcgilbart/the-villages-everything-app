@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { prepareUploadImageFile } from "@/lib/browserImage";
-import { geoErrorCode, locationBlockedText, readDeviceLocation } from "@/lib/deviceLocation";
+import { locationFailureText, readDeviceLocation } from "@/lib/deviceLocation";
+import { isFiveDigitZip, splitHouseAddress, zipChoices } from "@/lib/houseAddress";
 import { HOLIDAY_LABELS, TOUR_HOLIDAYS, type TourHoliday } from "@/lib/lightTourShared";
+import { HouseAddressFields } from "./HouseAddressFields";
 import type { MemberHouse } from "./LightTourMine";
 
 type Here = { latitude: number; longitude: number };
@@ -60,6 +62,7 @@ export function LightTourSubmit({
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [approvedZips, setApprovedZips] = useState<string[]>([]);
   const addressRef = useRef<HTMLInputElement>(null);
   const wasOpen = useRef(false);
   const sending = useRef(false);
@@ -74,6 +77,21 @@ export function LightTourSubmit({
     const timer = window.setTimeout(() => addressRef.current?.focus(), 0);
     return () => window.clearTimeout(timer);
   }, [open, canSubmit]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancel = false;
+    fetch("/api/light-tour/zips", { credentials: "same-origin", cache: "no-store" })
+      .then((res) => res.json())
+      .then((data: { zips?: unknown }) => {
+        if (cancel || !Array.isArray(data.zips)) return;
+        setApprovedZips(data.zips.filter((zip): zip is string => typeof zip === "string"));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancel = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -124,13 +142,7 @@ export function LightTourSubmit({
       setHere(point);
       setHereNote("Using where you are now. Add the street address if you know it.");
     } catch (err) {
-      if (geoErrorCode(err) === 1) {
-        setError(locationBlockedText("Or type the street address."));
-      } else if (err instanceof Error && err.message === "This browser does not share location.") {
-        setError("This browser does not share location. Type the street address instead.");
-      } else {
-        setError("Location did not come through. Type the street address instead.");
-      }
+      setError(locationFailureText(err, "Or type the street address."));
     } finally {
       setBusy(false);
     }
@@ -163,7 +175,8 @@ export function LightTourSubmit({
 
   async function send() {
     if (sending.current) return;
-    const place = address.trim();
+    const parts = splitHouseAddress(address);
+    const place = parts.street;
     if (!place && !here) {
       setNotice({
         title: saving ? "Not saved" : "Not sent",
@@ -172,6 +185,14 @@ export function LightTourSubmit({
           : house
             ? "Type the street address, or tap Use where I am, and then tap Save again."
             : "Type the street address, or tap Use where I am, and then send it again.",
+        tone: "bad",
+      });
+      return;
+    }
+    if (place && !isFiveDigitZip(parts.zip)) {
+      setNotice({
+        title: saving ? "Not saved" : "Not sent",
+        body: "Type a 5-digit ZIP code, or pick one from the list.",
         tone: "bad",
       });
       return;
@@ -201,6 +222,8 @@ export function LightTourSubmit({
           id: house?.id,
           holiday: picked,
           address,
+          street: place,
+          zip: place ? parts.zip : "",
           note,
           photoUrl,
           latitude: here?.latitude,
@@ -221,15 +244,22 @@ export function LightTourSubmit({
       if (!res.ok) throw new Error(data.error || (saving ? "The house did not save." : "The house did not send."));
       setSent(true);
       onSaved?.(picked);
+      const newZip = isFiveDigitZip(parts.zip) && !zipChoices(approvedZips).includes(parts.zip);
       setNotice({
         title: house ? "Saved" : direct ? "Added" : "Sent for approval",
         body: house
           ? house.status === "approved"
-            ? "This house stays on the tour."
+            ? newZip
+              ? "This house stays on the tour. The new ZIP waits for an admin before it shows in the list."
+              : "This house stays on the tour."
             : "This house stays off the tour until it is approved."
           : direct
-            ? "This house is on the tour."
-            : "This house was sent. It stays off the public tour until it is approved. On the admin page, look for Waiting for approval.",
+            ? newZip
+              ? `This house is on the tour. ZIP ${parts.zip} is on the list for everyone.`
+              : "This house is on the tour."
+            : newZip
+              ? "This house was sent. It stays off the public tour until it is approved. The new ZIP stays off the list until then too."
+              : "This house was sent. It stays off the public tour until it is approved. On the admin page, look for Waiting for approval.",
         tone: "ok",
       });
     } catch (err) {
@@ -305,18 +335,19 @@ export function LightTourSubmit({
                 </button>
               ))}
             </div>
-            <div className="field">
-              <label htmlFor="lt-add-address">Address</label>
-              <input
-                id="lt-add-address"
-                ref={addressRef}
-                value={address}
-                maxLength={180}
-                autoComplete="street-address"
-                placeholder="3129 Hutchinson Way, The Villages, FL"
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
+            <HouseAddressFields
+              address={address}
+              resetKey={house?.id || (open ? "new" : "closed")}
+              approvedZips={approvedZips}
+              onAddress={setAddress}
+              idPrefix="lt-add"
+              streetRef={addressRef}
+              otherHint={
+                direct
+                  ? "A new ZIP is added for everyone when you save this house."
+                  : "A new ZIP stays off the list until an admin approves it."
+              }
+            />
             <div className="field">
               <label htmlFor="lt-add-note">Note</label>
               <input

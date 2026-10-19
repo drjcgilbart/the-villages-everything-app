@@ -8,8 +8,11 @@ import { ThemeMusicPlayer } from "./ThemeMusicPlayer";
 import { holidayTracksFor } from "@/lib/holidayMusic";
 import {
   geoErrorCode,
+  isDesktopBrowser,
+  locationFailureText,
   nativeLocationReady,
   readDeviceLocation,
+  readGeoPermission,
   watchNativeLocation,
 } from "@/lib/deviceLocation";
 import { isNativeAppShell } from "@/lib/nativeAppShell";
@@ -88,11 +91,7 @@ function stopsFromText(text: string) {
 }
 
 function locationHelp(err: unknown) {
-  const code = err && typeof err === "object" && "code" in err ? Number((err as { code: number }).code) : 0;
-  if (code === 1) {
-    return "Location is blocked. Allow location for this site in the browser or phone settings, then try again.";
-  }
-  return "Location did not come through. Turn location on and try again.";
+  return locationFailureText(err, "Turn location on and try again.");
 }
 
 const VILLAGES_START = {
@@ -107,7 +106,7 @@ function blockedLocationNote() {
   if (typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
     return "Location is blocked on this phone, so the route starts in the middle of The Villages. Tap the lock icon in the address bar, set Location to Allow, then build the route again. Or turn off Use my location and type your street address.";
   }
-  return "This computer did not share a location, so the route starts in the middle of The Villages. Turn off Use my location and type your street address.";
+  return "This computer did not share a location, so the route starts in the middle of The Villages. This browser may already allow this site. Open Windows Settings, then Privacy & security, then Location. Turn Location on, and turn on Let desktop apps access your location. Or turn off Use my location and type your street address.";
 }
 
 export function LightTour({
@@ -197,6 +196,10 @@ export function LightTour({
   stopsRef.current = stops;
   phaseRef.current = phase;
   houseOpenRef.current = houseOpen;
+
+  useEffect(() => {
+    void readGeoPermission();
+  }, []);
 
   useEffect(() => {
     if (isAdmin) return;
@@ -773,7 +776,7 @@ export function LightTour({
               pos.coords.accuracy,
               { heading: pos.coords.heading, speed: pos.coords.speed },
             );
-            if (!accurate && !triedPrecise) {
+            if (!accurate && !triedPrecise && !isDesktopBrowser()) {
               triedPrecise = true;
               followPhone(true);
             }

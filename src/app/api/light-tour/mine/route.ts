@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { rateLimitResponse } from "@/lib/authRateLimit";
+import { houseAddressFromInput } from "@/lib/houseAddress";
 import {
   deleteOwnedHouse,
   holidayFrom,
@@ -93,17 +94,24 @@ export async function PUT(req: Request) {
   if (!holiday) {
     return NextResponse.json({ error: "Pick Halloween, Christmas, or Other." }, { status: 400 });
   }
+  let place: ReturnType<typeof houseAddressFromInput>;
+  try {
+    place = houseAddressFromInput(body || {});
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Type the street address." }, { status: 400 });
+  }
   try {
     const pin = await updateOwnedHouse({
       id: String(body?.id || ""),
       memberId: member.id,
       email: member.email,
       holiday,
-      address: String(body?.address || ""),
+      address: place.address,
       note: String(body?.note || ""),
       photoUrl: safePhoto(body?.photoUrl),
       latitude: num(body?.latitude),
       longitude: num(body?.longitude),
+      zip: place.explicitZip ? place.zip : "",
     });
     return NextResponse.json({ ok: true, id: pin.id, status: pin.status });
   } catch (err) {
