@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import "leaflet/dist/leaflet.css";
 import { TOUR_START_MAX_METERS, haversineMeters } from "@/lib/lightTourShared";
-import { angleBetween, bearingDegrees } from "@/lib/tourHeading";
+import { angleBetween, arrowScreenAngle, bearingDegrees, directionUpBearing, pickCourse } from "@/lib/tourHeading";
 
 type Stop = {
   id: string;
@@ -420,15 +420,14 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, h
       return;
     }
     const at: [number, number] = [here.latitude, here.longitude];
-    // Direction: the compass heading while really moving, else the bearing from
-    // the last fix that is far enough away to be movement. Stopped: keep it.
+    // The arrow follows the car. A device heading is used only when it agrees
+    // with the track between GPS fixes, so it cannot point backward.
     const h = heading.current;
-    const gpsHeading = me?.heading;
-    const moving = Number(me?.speed) > 1;
-    let target: number | null = null;
-    if (gpsHeading != null && Number.isFinite(gpsHeading) && moving) target = gpsHeading;
-    else if (h.last && haversineMeters(h.last, here) >= HEADING_MIN_METERS) target = bearingDegrees(h.last, here);
-    if (!h.last || haversineMeters(h.last, here) >= HEADING_MIN_METERS) h.last = { latitude: here.latitude, longitude: here.longitude };
+    const track =
+      h.last && haversineMeters(h.last, here) >= HEADING_MIN_METERS ? bearingDegrees(h.last, here) : null;
+    if (!h.last || track != null) h.last = { latitude: here.latitude, longitude: here.longitude };
+    const device = me?.heading ?? travelHeading;
+    const target = pickCourse(track, device ?? null, h.known ? h.angle : null);
     if (target != null) {
       // Shortest turn, so 359 -> 2 turns 3 degrees, not 357 back.
       const delta = ((((target - (h.shown % 360)) % 360) + 540) % 360) - 180;
@@ -437,7 +436,9 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, h
       h.known = true;
     }
     const rotatable = map as RotatingMap;
-    const bearing = headingUpRef.current && h.known ? h.angle : 0;
+    // Positive leaflet bearing rotates the map clockwise. Negate it so the
+    // direction of travel points at the top, and the arrow points that way too.
+    const bearing = headingUpRef.current && h.known ? directionUpBearing(h.angle) : 0;
     if (typeof rotatable.setBearing === "function") {
       const now = rotatable.getBearing?.() ?? 0;
       if (angleBetween(now, bearing) > 3) rotatable.setBearing(bearing);
@@ -447,9 +448,9 @@ export function LightTourMap({ visitor, line, stops, activeId, follow = false, h
       const el = arrow.current?.marker.getElement()?.querySelector<HTMLElement>(".lt-nav-arrow");
       if (!el) return;
       const mapBearing = typeof rotatable.getBearing === "function" ? rotatable.getBearing() : 0;
-      // The arrow stays upright on the screen. Subtract the map rotation so
-      // direction-up points it at the top, and north-up points it along the road.
-      el.style.transform = `rotate(${h.shown - mapBearing}deg)`;
+      // North up: the arrow turns with the car. Direction up: the map has been
+      // rotated the other way, so adding that rotation keeps the arrow on the road.
+      el.style.transform = `rotate(${arrowScreenAngle(h.shown, mapBearing)}deg)`;
     };
     const keepClear = () => {
       // Never leave the arrow under the corner buttons: nudge the map if it is.

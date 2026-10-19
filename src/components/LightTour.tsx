@@ -15,6 +15,7 @@ import {
 import { isNativeAppShell } from "@/lib/nativeAppShell";
 import { nextCue, spokenTurn, stepsFromPayload, straightCue, type DrivingStep } from "@/lib/tourDirections";
 import { freshTravel, noteTravel } from "@/lib/tourHeading";
+import { reorderRemaining, wantsReorder } from "@/lib/tourOrder";
 import { setTourScreenAwake } from "@/lib/tourWake";
 import type { DeviceMotion } from "@/lib/deviceLocation";
 import { speakTour, speakTourNow, stopTourSpeech } from "@/lib/tourSpeech";
@@ -31,7 +32,7 @@ import {
   type TourHoliday,
 } from "@/lib/lightTourShared";
 import { buildTourSheetPdf } from "@/lib/tourSheetPdf";
-import { freshOffRouteState, offRouteFix } from "@/lib/tourOffRoute";
+import { distanceToLine, freshOffRouteState, offRouteFix } from "@/lib/tourOffRoute";
 import { ARRIVAL_METERS, arrivalFix, freshArrivalState } from "@/lib/tourArrival";
 import { HolidayLightsTermsGate } from "./HolidayLightsTermsGate";
 
@@ -458,18 +459,41 @@ export function LightTour({
     }
   }
 
-  /** Redraw the line from here through the remaining stops, same order. */
+  /** Redraw the line from here. Far off the route, the remaining houses may be reordered. */
   async function reroute(here: Here) {
     const state = offRoute.current;
     const atIndex = indexRef.current;
-    const ahead = stopsRef.current.slice(atIndex);
+    let ahead = stopsRef.current.slice(atIndex);
     if (!ahead.length) return;
     state.busy = true;
     state.lastRerouteAt = Date.now();
+    const offMeters = distanceToLine(here, lineRef.current, state.segment).meters;
+    let reorganized = false;
+    if (
+      ahead.length >= 2 &&
+      wantsReorder(offMeters, here, travel.current.heading, ahead[0])
+    ) {
+      const ordered = reorderRemaining(here, travel.current.heading, ahead);
+      if (ordered.changed) {
+        const merged = [...stopsRef.current.slice(0, atIndex), ...ordered.stops];
+        const numbered = merged.map((stop, at) => ({
+          ...stop,
+          order: at + 1,
+          metersFromPrevious: at > 0 ? haversineMeters(merged[at - 1], stop) : stop.metersFromPrevious,
+        }));
+        stopsRef.current = numbered;
+        setStops(numbered);
+        ahead = numbered.slice(atIndex);
+        reorganized = true;
+      }
+    }
     rerouteAbort.current?.abort();
     const ctrl = new AbortController();
     rerouteAbort.current = ctrl;
-    showCue("Rerouting.", `reroute:${state.lastRerouteAt}`);
+    showCue(
+      reorganized ? "Reorganizing the remaining light tour houses." : "Rerouting.",
+      `reroute:${state.lastRerouteAt}`,
+    );
     try {
       const res = await fetch("/api/light-tour/reroute", {
         method: "POST",
