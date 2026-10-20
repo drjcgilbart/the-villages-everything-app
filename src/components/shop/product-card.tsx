@@ -14,6 +14,7 @@ export function ProductCard({ p, index }: { p: Product; index: number }) {
           {p.colors && p.colors.length > 1 ? ` · ${p.colors.length} colors` : ""}
         </p>
         <h2>{p.name}</h2>
+        {p.preorder ? <p className="shop-mono shop-preorder">{p.preorder}</p> : null}
         <div className="shop-row">
           <span className="shop-tag">{p.tagline}</span>
           <span className="shop-price">{p.priceNote ?? formatPrice(p.priceCents)}</span>

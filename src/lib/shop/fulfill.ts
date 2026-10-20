@@ -34,7 +34,9 @@ export async function buildShopOrderEmail(record: ShopOrderRecord, opts: { store
       ? `Sent to Printful${record.printfulOrderId ? ` (order ${record.printfulOrderId}, ${record.printfulStatus ?? "draft"})` : ""}.${hasBadges ? " ACTION NEEDED for the name badges below: make them by hand." : ""}`
       : printfulPart
         ? `ACTION NEEDED: place this order by hand. ${record.reason ?? ""}`.trim()
-        : "ACTION NEEDED: make these name badges by hand. The print files are attached.";
+        : hasBadges
+          ? "ACTION NEEDED: make these name badges by hand. The print files are attached."
+          : "ACTION NEEDED: mail these pre-order items by hand (enamel pins).";
   let jobs: Awaited<ReturnType<typeof badgeJobs>> = [];
   if (hasBadges) {
     try {
@@ -129,7 +131,9 @@ export async function fulfillShopSession(sessionId: string, deps: Deps = {}): Pr
     const printLines = lines.filter((l) => !isManualLine(l));
     const missing = missingSyncVariants(printLines);
     if (!printLines.length) {
-      record.reason = "Name badges only: made by hand from the attached print files.";
+      record.reason = lines.some((l) => l.badge)
+        ? "Name badges only: made by hand from the attached print files."
+        : "Hand-fulfilled items only (enamel pins): mail them by hand.";
     } else if (!printfulApiKey()) {
       record.reason = "PRINTFUL_API_KEY is not set.";
     } else if (missing.length) {

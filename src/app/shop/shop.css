@@ -125,3 +125,5 @@
   object-position: 50% 14.7cqw;
   background: radial-gradient(74.33% 74.33% at 50% 59.7%, #ffffff 0, #fff8ee 55%, #f3e6cf 100%);
 }
+.shop-preorder { color: var(--sunset); margin: 4px 0 6px; font-size: 12px; letter-spacing: .04em; }
+.shop-preorder-lg { font-size: 14px; margin: 8px 0 12px; }

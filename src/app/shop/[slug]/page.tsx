@@ -34,6 +34,7 @@ export default async function ProductPage({ params }: Props) {
           <span className="kicker">{p.tagline}</span>
           <h1 className="shop-ptitle">{p.name}</h1>
           <p className="shop-price shop-price-lg">{formatPrice(p.priceCents)}</p>
+          {p.preorder ? <p className="shop-mono shop-preorder shop-preorder-lg">{p.preorder}</p> : null}
           <p className="shop-lede">{p.description}</p>
         </div>
         <ProductBuy product={p} />

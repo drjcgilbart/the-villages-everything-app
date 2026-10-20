@@ -16,7 +16,7 @@ export type Variant = {
 export type ColorOption = { id: string; label: string; hex: string; image: string; backImage?: string };
 export type PrintFile = { type: string; path: string }; // path under /public
 
-export type ProductType = "tees" | "hats" | "mugs" | "totes" | "golf-towels" | "stickers" | "badges";
+export type ProductType = "tees" | "hats" | "mugs" | "totes" | "golf-towels" | "stickers" | "pins" | "badges";
 
 export const PRODUCT_TYPES: { id: ProductType; label: string }[] = [
   { id: "tees", label: "Tees" },
@@ -25,6 +25,7 @@ export const PRODUCT_TYPES: { id: ProductType; label: string }[] = [
   { id: "totes", label: "Totes" },
   { id: "golf-towels", label: "Golf towels" },
   { id: "stickers", label: "Stickers" },
+  { id: "pins", label: "Pins" },
   { id: "badges", label: "Name badges" },
 ];
 
@@ -46,6 +47,8 @@ export type Product = {
   options?: { id: string; value: string | string[] }[];
   /** "manual": made by hand from our own print file (name badges), never sent to Printful. Default printful. */
   fulfillment?: "printful" | "manual";
+  /** Shown on the card and product page, e.g. "Pre-order: ships in about 3 weeks". */
+  preorder?: string;
   /** false: orderable, but not shown in the /shop grid (ready-made badges live on the badge page). */
   listed?: boolean;
   /** true: unlisted everywhere and not orderable (checkout rejects it, carts drop it). Art, print files and config stay. */
@@ -58,6 +61,10 @@ export type Product = {
 };
 
 export const CURRENCY = "usd";
+
+// Enamel pins: made in bulk, mailed by hand. PRICE PENDING Jonathan's confirmation ($12 matches All In On Musk).
+export const PIN_PRICE_CENTS = 1200;
+export const PIN_PREORDER = "Pre-order: ships in about 3 weeks";
 
 /** Ready-made name badges (Jonathan / Lucy, Edenfield). false: hidden from every page and rejected at checkout.
  *  Set back to true to bring the #ready-made section on /shop/custom-name-badge back; nothing else needs changing. */
@@ -279,6 +286,97 @@ export const PRODUCTS: Product[] = [
     // v2: adds two deep-green rings (inside the outer edge, and around the logo clear of the web address).
     files: [{ type: "default", path: "/shop/print/sticker-my-other-ride-light-v2.png" }],
     taxCode: GENERAL,
+  },
+  // ---- Enamel pins (1 in hard enamel, fulfillment "manual", pre-order).
+  {
+    slug: "pin-out-of-office",
+    type: "pins",
+    name: "Out of Office, Permanently Pin",
+    tagline: "My alarm clock retired too",
+    description: "A sleepy, unplugged alarm clock in sunglasses on navy and sunset orange. For the neighbor whose only meeting is the 9 a.m. tee time. A 1 inch hard enamel pin with polished metal lines and a rubber clutch back.",
+    priceCents: PIN_PRICE_CENTS,
+    image: "/shop/pins/villages-pin-1-out-of-office-permanently-v2e.png",
+    printfulProduct: "Not Printful: hard enamel pin, made in bulk and mailed by us (fulfillment manual)",
+    variants: [{ sku: "pin-ooo-1in", label: "1 in", size: "1 in", printfulVariantId: 0 }],
+    files: [],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    preorder: PIN_PREORDER,
+  },
+  {
+    slug: "pin-band-starts-at-5",
+    type: "pins",
+    name: "Band Starts at 5 PM Pin",
+    tagline: "Lawn chair status",
+    description: "Two webbed lawn chairs and the only schedule that matters on the square. Worth it. Front row. A 1 inch hard enamel pin with polished metal lines and a rubber clutch back.",
+    priceCents: PIN_PRICE_CENTS,
+    image: "/shop/pins/villages-pin-2-band-starts-at-5-v2d.png",
+    printfulProduct: "Not Printful: hard enamel pin, made in bulk and mailed by us (fulfillment manual)",
+    variants: [{ sku: "pin-bs5-1in", label: "1 in", size: "1 in", printfulVariantId: 0 }],
+    files: [],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    preorder: PIN_PREORDER,
+  },
+  {
+    slug: "pin-speed-demon",
+    type: "pins",
+    name: "Speed Demon Pin",
+    tagline: "Golf cart division",
+    description: "A red shield with the speedometer pinned at 19.9 MPH. Pedal to the metal (sort of). A 1 inch hard enamel pin with polished metal lines and a rubber clutch back.",
+    priceCents: PIN_PRICE_CENTS,
+    image: "/shop/pins/villages-pin-3-speed-demon-shield.png",
+    printfulProduct: "Not Printful: hard enamel pin, made in bulk and mailed by us (fulfillment manual)",
+    variants: [{ sku: "pin-spd-1in", label: "1 in", size: "1 in", printfulVariantId: 0 }],
+    files: [],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    preorder: PIN_PREORDER,
+  },
+  {
+    slug: "pin-golden-hour",
+    type: "pins",
+    name: "Golden Hour Pin",
+    tagline: "The Villages, FL",
+    description: "A town-square clock tower and palms against a purple-to-peach sunset, ringed in turquoise. A 1 inch hard enamel pin with polished metal lines and a rubber clutch back.",
+    priceCents: PIN_PRICE_CENTS,
+    image: "/shop/pins/villages-pin-4-golden-hour-clock-tower-v2.png",
+    printfulProduct: "Not Printful: hard enamel pin, made in bulk and mailed by us (fulfillment manual)",
+    variants: [{ sku: "pin-gh-1in", label: "1 in", size: "1 in", printfulVariantId: 0 }],
+    files: [],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    preorder: PIN_PREORDER,
+  },
+  {
+    slug: "pin-everything-app-logo",
+    type: "pins",
+    name: "Everything App Logo Pin",
+    tagline: "The sunset cart badge",
+    description: "The app's full-color sunset golf-cart badge, flamingo and all, in a gold and deep green rim. A 1 inch hard enamel pin with polished metal lines and a rubber clutch back.",
+    priceCents: PIN_PRICE_CENTS,
+    image: "/shop/pins/villages-pin-5-everything-app-logo.png",
+    printfulProduct: "Not Printful: hard enamel pin, made in bulk and mailed by us (fulfillment manual)",
+    variants: [{ sku: "pin-logo-1in", label: "1 in", size: "1 in", printfulVariantId: 0 }],
+    files: [],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    preorder: PIN_PREORDER,
+  },
+  {
+    slug: "pin-everything-app-shield",
+    type: "pins",
+    name: "Everything App Shield Pin",
+    tagline: "Est. on the app",
+    description: "The sunset golf-cart badge ringed in coral on a cream shield with a coral and turquoise frame. A 1 inch hard enamel pin with polished metal lines and a rubber clutch back.",
+    priceCents: PIN_PRICE_CENTS,
+    image: "/shop/pins/villages-pin-6-everything-app-logo-shield-v2e.png",
+    printfulProduct: "Not Printful: hard enamel pin, made in bulk and mailed by us (fulfillment manual)",
+    variants: [{ sku: "pin-shld-1in", label: "1 in", size: "1 in", printfulVariantId: 0 }],
+    files: [],
+    taxCode: GENERAL,
+    fulfillment: "manual",
+    preorder: PIN_PREORDER,
   },
   // ---- Name badges: Lasercraft Executive 3" x 2", made from our own print files (fulfillment "manual").
   //      Price is per badge and depends on the material (BADGE_MATERIALS in badges.ts); priceCents is the "from" price. ----
