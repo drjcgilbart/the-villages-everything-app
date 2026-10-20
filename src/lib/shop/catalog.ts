@@ -62,7 +62,7 @@ export type Product = {
 
 export const CURRENCY = "usd";
 
-// Enamel pins: made in bulk, mailed by hand. PRICE PENDING Jonathan's confirmation ($12 matches All In On Musk).
+// Enamel pins: made in bulk, mailed by hand. $12 each, pre-order (confirmed 2026-10-20).
 export const PIN_PRICE_CENTS = 1200;
 export const PIN_PREORDER = "Pre-order: ships in about 3 weeks";
 
