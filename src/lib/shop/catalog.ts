@@ -150,9 +150,10 @@ export const PRODUCTS: Product[] = [
     description:
       "The app's sunset golf-cart badge, flamingo and all, on a soft tee. Neighbor-built, sunshine included.",
     priceCents: 3000,
-    ...tee("tee-everything-app-logo", "logo", ["white", "natural"]),
+    ...tee("tee-everything-app-logo", "logo", ["white", "natural"], "tee-everything-app-logo-v2"),
     printfulProduct: TEE_NOTE,
-    files: [{ type: "default", path: "/shop/print/tee-everything-app-logo.png" }],
+    // v2 (2026-10-20): thin coral ring (#f66d54) around the logo circle.
+    files: [{ type: "default", path: "/shop/print/tee-everything-app-logo-v2.png" }],
     taxCode: CLOTHING,
   },
   {
