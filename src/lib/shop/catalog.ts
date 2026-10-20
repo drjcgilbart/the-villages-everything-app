@@ -310,7 +310,7 @@ export const PRODUCTS: Product[] = [
     tagline: "Lawn chair status",
     description: "Two webbed lawn chairs and the only schedule that matters on the square. Worth it. Front row. A 1 inch hard enamel pin with polished metal lines and a rubber clutch back.",
     priceCents: PIN_PRICE_CENTS,
-    image: "/shop/pins/villages-pin-2-band-starts-at-5-v2d.png",
+    image: "/shop/pins/villages-pin-2-band-starts-at-5-v2f.png",
     printfulProduct: "Not Printful: hard enamel pin, made in bulk and mailed by us (fulfillment manual)",
     variants: [{ sku: "pin-bs5-1in", label: "1 in", size: "1 in", printfulVariantId: 0 }],
     files: [],
