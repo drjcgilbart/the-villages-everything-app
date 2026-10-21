@@ -195,6 +195,126 @@ export const PRODUCTS: Product[] = [
     taxCode: CLOTHING,
   },
   {
+    slug: "hat-pickleball-is-my-cardio",
+    type: "hats",
+    name: "Pickleball Is My Cardio",
+    tagline: "Embroidered dad hat",
+    description:
+      "The only workout plan that comes with a dink shot, stitched on a relaxed cotton dad hat with a little paddle and ball, plus a small The Villages Everything App mark on the back above the strap.",
+    priceCents: 3000,
+    image: "/shop/mock/hat-pickleball-is-my-cardio--khaki.png",
+    colors: [
+      { id: "khaki", label: "Khaki", hex: "#c8b07e", image: "/shop/mock/hat-pickleball-is-my-cardio--khaki.png", backImage: "/shop/mock/hat-pickleball-is-my-cardio-back--khaki.png" },
+      { id: "stone", label: "Stone", hex: "#d9d2c2", image: "/shop/mock/hat-pickleball-is-my-cardio--stone.png", backImage: "/shop/mock/hat-pickleball-is-my-cardio-back--stone.png" },
+      { id: "white", label: "White", hex: "#f6f6f4", image: "/shop/mock/hat-pickleball-is-my-cardio--white.png", backImage: "/shop/mock/hat-pickleball-is-my-cardio-back--white.png" },
+    ],
+    printfulProduct: "Yupoong 6245CM Classic Dad Hat (catalog product 206), embroidery front",
+    variants: [
+      { sku: "hat-pimc-khaki", label: "Khaki / One size", color: "khaki", size: "One size", printfulVariantId: 7855 },
+      { sku: "hat-pimc-stone", label: "Stone / One size", color: "stone", size: "One size", printfulVariantId: 7859 },
+      { sku: "hat-pimc-white", label: "White / One size", color: "white", size: "One size", printfulVariantId: 7853 },
+    ],
+    files: [
+      { type: "embroidery_front", path: "/shop/print/hat-pickleball-is-my-cardio.png" },
+      { type: "embroidery_back", path: "/shop/print/hat-pickleball-is-my-cardio-back.png" },
+    ],
+    options: [
+      { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] },
+      { id: "thread_colors_back", value: ["#01784E"] },
+    ],
+    taxCode: CLOTHING,
+  },
+  {
+    slug: "hat-happy-hour-starts-at-4",
+    type: "hats",
+    name: "Happy Hour Starts at 4",
+    tagline: "Embroidered dad hat",
+    description:
+      "Clock in, clock out, clock says 4. Stitched on a relaxed cotton dad hat with a little clock set to the most important time of day, plus a small The Villages Everything App mark on the back above the strap.",
+    priceCents: 3000,
+    image: "/shop/mock/hat-happy-hour-starts-at-4--khaki.png",
+    colors: [
+      { id: "khaki", label: "Khaki", hex: "#c8b07e", image: "/shop/mock/hat-happy-hour-starts-at-4--khaki.png", backImage: "/shop/mock/hat-happy-hour-starts-at-4-back--khaki.png" },
+      { id: "stone", label: "Stone", hex: "#d9d2c2", image: "/shop/mock/hat-happy-hour-starts-at-4--stone.png", backImage: "/shop/mock/hat-happy-hour-starts-at-4-back--stone.png" },
+      { id: "white", label: "White", hex: "#f6f6f4", image: "/shop/mock/hat-happy-hour-starts-at-4--white.png", backImage: "/shop/mock/hat-happy-hour-starts-at-4-back--white.png" },
+    ],
+    printfulProduct: "Yupoong 6245CM Classic Dad Hat (catalog product 206), embroidery front",
+    variants: [
+      { sku: "hat-hh4-khaki", label: "Khaki / One size", color: "khaki", size: "One size", printfulVariantId: 7855 },
+      { sku: "hat-hh4-stone", label: "Stone / One size", color: "stone", size: "One size", printfulVariantId: 7859 },
+      { sku: "hat-hh4-white", label: "White / One size", color: "white", size: "One size", printfulVariantId: 7853 },
+    ],
+    files: [
+      { type: "embroidery_front", path: "/shop/print/hat-happy-hour-starts-at-4.png" },
+      { type: "embroidery_back", path: "/shop/print/hat-happy-hour-starts-at-4-back.png" },
+    ],
+    options: [
+      { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] },
+      { id: "thread_colors_back", value: ["#01784E"] },
+    ],
+    taxCode: CLOTHING,
+  },
+  {
+    slug: "hat-golden-hour-patch",
+    type: "hats",
+    name: "Golden Hour Patch",
+    tagline: "Embroidered dad hat",
+    description:
+      "The app's sunset golf-cart badge, flamingo and all, stitched as a round patch with a gold ring on a relaxed cotton dad hat. On the back: a little striped sunset and palm above The Villages Everything App wordmark.",
+    priceCents: 3000,
+    image: "/shop/mock/hat-golden-hour-patch--khaki.png",
+    colors: [
+      { id: "khaki", label: "Khaki", hex: "#c8b07e", image: "/shop/mock/hat-golden-hour-patch--khaki.png", backImage: "/shop/mock/hat-golden-hour-patch-back--khaki.png" },
+      { id: "stone", label: "Stone", hex: "#d9d2c2", image: "/shop/mock/hat-golden-hour-patch--stone.png", backImage: "/shop/mock/hat-golden-hour-patch-back--stone.png" },
+      { id: "white", label: "White", hex: "#f6f6f4", image: "/shop/mock/hat-golden-hour-patch--white.png", backImage: "/shop/mock/hat-golden-hour-patch-back--white.png" },
+    ],
+    printfulProduct: "Yupoong 6245CM Classic Dad Hat (catalog product 206), embroidery front",
+    variants: [
+      { sku: "hat-ghp-khaki", label: "Khaki / One size", color: "khaki", size: "One size", printfulVariantId: 7855 },
+      { sku: "hat-ghp-stone", label: "Stone / One size", color: "stone", size: "One size", printfulVariantId: 7859 },
+      { sku: "hat-ghp-white", label: "White / One size", color: "white", size: "One size", printfulVariantId: 7853 },
+    ],
+    files: [
+      { type: "embroidery_front", path: "/shop/print/hat-golden-hour-patch.png" },
+      { type: "embroidery_back", path: "/shop/print/hat-golden-hour-patch-back.png" },
+    ],
+    options: [
+      { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
+      { id: "thread_colors_back", value: ["#000000", "#E25C27", "#01784E", "#FFCC00"] },
+    ],
+    taxCode: CLOTHING,
+  },
+  {
+    slug: "hat-town-square-cruiser",
+    type: "hats",
+    name: "Town Square Cruiser",
+    tagline: "Embroidered dad hat",
+    description:
+      "The app's sunset golf-cart badge stitched as a round patch with a palm-green ring on a relaxed cotton dad hat. On the back: a golden sun, a palm and a blue waterline above The Villages Everything App wordmark.",
+    priceCents: 3000,
+    image: "/shop/mock/hat-town-square-cruiser--khaki.png",
+    colors: [
+      { id: "khaki", label: "Khaki", hex: "#c8b07e", image: "/shop/mock/hat-town-square-cruiser--khaki.png", backImage: "/shop/mock/hat-town-square-cruiser-back--khaki.png" },
+      { id: "stone", label: "Stone", hex: "#d9d2c2", image: "/shop/mock/hat-town-square-cruiser--stone.png", backImage: "/shop/mock/hat-town-square-cruiser-back--stone.png" },
+      { id: "white", label: "White", hex: "#f6f6f4", image: "/shop/mock/hat-town-square-cruiser--white.png", backImage: "/shop/mock/hat-town-square-cruiser-back--white.png" },
+    ],
+    printfulProduct: "Yupoong 6245CM Classic Dad Hat (catalog product 206), embroidery front",
+    variants: [
+      { sku: "hat-tsc-khaki", label: "Khaki / One size", color: "khaki", size: "One size", printfulVariantId: 7855 },
+      { sku: "hat-tsc-stone", label: "Stone / One size", color: "stone", size: "One size", printfulVariantId: 7859 },
+      { sku: "hat-tsc-white", label: "White / One size", color: "white", size: "One size", printfulVariantId: 7853 },
+    ],
+    files: [
+      { type: "embroidery_front", path: "/shop/print/hat-town-square-cruiser.png" },
+      { type: "embroidery_back", path: "/shop/print/hat-town-square-cruiser-back.png" },
+    ],
+    options: [
+      { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
+      { id: "thread_colors_back", value: ["#000000", "#E25C27", "#01784E", "#FFCC00", "#3399FF"] },
+    ],
+    taxCode: CLOTHING,
+  },
+  {
     slug: "mug-coffee-pickleball-nap",
     type: "mugs",
     name: "Coffee. Pickleball. Nap. Repeat.",
