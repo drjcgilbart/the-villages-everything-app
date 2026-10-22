@@ -152,18 +152,24 @@ function letter(member: Member, url: string) {
   const rawFirst = member.name.trim().split(/\s+/)[0] || "Neighbor";
   const first = rawFirst.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const subject = "Confirm your email for The Villages Everything App";
+  const pendingOffer =
+    member.status === "pending"
+      ? "When your request is approved, you get 30 days of Square Royalty, the top membership, free. Press Confirm my email so the request can be reviewed."
+      : "";
   const text = [
     `Hello ${rawFirst},`,
     ``,
     `Confirm the email on your membership by opening this link and pressing Confirm my email:`,
     url,
     ``,
+    ...(pendingOffer ? [pendingOffer, ``] : []),
     `The link is good for 48 hours. Pressing the button confirms this inbox. A membership that is still waiting is sent to the admin only after that. The Holiday Lights warning is a separate Accept on the tour page.`,
     ``,
     `If you did not create this account, you can ignore this email.`,
   ].join("\n");
   const safeUrl = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  const html = `<p>Hello ${first},</p><p>Confirm the email on your membership. Open the link, then press <strong>Confirm my email</strong>.</p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link is good for 48 hours. Pressing the button confirms this inbox. A membership that is still waiting is sent to the admin only after that. The Holiday Lights warning is a separate Accept on the tour page.</p><p>If you did not create this account, you can ignore this email.</p>`;
+  const offerHtml = pendingOffer ? `<p>${pendingOffer}</p>` : "";
+  const html = `<p>Hello ${first},</p><p>Confirm the email on your membership. Open the link, then press <strong>Confirm my email</strong>.</p><p><a href="${safeUrl}">${safeUrl}</a></p>${offerHtml}<p>The link is good for 48 hours. Pressing the button confirms this inbox. A membership that is still waiting is sent to the admin only after that. The Holiday Lights warning is a separate Accept on the tour page.</p><p>If you did not create this account, you can ignore this email.</p>`;
   return { subject, text, html };
 }
 
