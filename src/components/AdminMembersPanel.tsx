@@ -91,6 +91,29 @@ export function AdminMembersPanel() {
     load().catch((err) => flash("err", err.message || "Load failed"));
   }, [load]);
 
+  async function resendConfirmation(id: string, name: string, email: string) {
+    const who = name || email || "this neighbor";
+    if (!window.confirm(`Send the confirmation email again to ${who}?\n\n${email}`)) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/members/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resendConfirmationEmail", id }),
+      });
+      const data = await res.json();
+      if (Array.isArray(data.members)) setMembers(data.members);
+      if (!res.ok) throw new Error(data.error || "Could not send the confirmation email");
+      flash("ok", `Confirmation email sent to ${email || who}.`);
+    } catch (err) {
+      flash("err", err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sendWelcome(id: string, name: string) {
     setBusy(true);
     try {
@@ -593,7 +616,8 @@ export function AdminMembersPanel() {
           </h3>
           <p className="panel-hint">
             These people asked to join, but they have not pressed Confirm my email.
-            Approve stays off until that inbox is confirmed.
+            Approve stays off until that inbox is confirmed. Resend confirmation
+            email sends the new letter again.
           </p>
           <div className="admin-list" style={{ marginBottom: "1.5rem" }}>
             {waitingEmail.map((m) => (
@@ -602,12 +626,14 @@ export function AdminMembersPanel() {
                 m={m}
                 tiers={tiers}
                 busy={busy}
+                showResend
                 onStatus={setMemberStatus}
                 onPlan={setMemberPlan}
                 onLoofah={toggleGoldenLoofah}
                 onPassword={resetMemberPassword}
                 onDelete={deleteMember}
                 onWelcome={sendWelcome}
+                onResendConfirm={resendConfirmation}
                 onSaveDetails={saveMemberDetails}
                 onTopTier={topTierAction}
                 onTrial={trialAction}
@@ -697,12 +723,15 @@ function MemberAdminRow({
   onTrial,
   onDelete,
   onWelcome,
+  onResendConfirm,
+  showResend,
   onSaveDetails,
 }: {
   m: AdminMember;
   tiers: TierOpt[];
   busy: boolean;
   emphasize?: boolean;
+  showResend?: boolean;
   onStatus: (id: string, status: string, name?: string) => void;
   onPlan: (id: string, plan: string) => void;
   onLoofah: (id: string, next: boolean) => void;
@@ -711,6 +740,7 @@ function MemberAdminRow({
   onTrial: (id: string, action: "grantTrial" | "endTrial") => void;
   onDelete: (id: string, name: string) => void;
   onWelcome: (id: string, name: string) => void;
+  onResendConfirm?: (id: string, name: string, email: string) => void;
   onSaveDetails: (
     id: string,
     fields: {
@@ -967,7 +997,17 @@ function MemberAdminRow({
             Approve
           </button>
         )}
-        {m.status === "pending" && !m.emailVerified && (
+        {m.status === "pending" && !m.emailVerified && showResend && onResendConfirm && (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={busy}
+            onClick={() => onResendConfirm(m.id, m.name, m.email)}
+          >
+            Resend confirmation email
+          </button>
+        )}
+        {m.status === "pending" && !m.emailVerified && !showResend && (
           <span className="panel-hint">Waiting for email confirmation</span>
         )}
         {m.status !== "rejected" && m.status !== "pending" && (

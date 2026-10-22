@@ -9,6 +9,7 @@ import {
   readJsonFile,
   writeJsonFileAsync,
 } from "./dataFs";
+import { isAppleReviewEmail } from "./appleReviewAccount";
 import { isSiteOwnerEmail } from "./siteOwner";
 import {
   getMemberById,
@@ -148,28 +149,50 @@ export async function notifyAdminOfConfirmedMemberRequest(member: Member) {
   }
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function letter(member: Member, url: string) {
   const rawFirst = member.name.trim().split(/\s+/)[0] || "Neighbor";
-  const first = rawFirst.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const subject = "Confirm your email for The Villages Everything App";
-  const pendingOffer =
-    member.status === "pending"
-      ? "When your request is approved, you get 30 days of Square Royalty, the top membership, free. Press Confirm my email so the request can be reviewed."
-      : "";
-  const text = [
-    `Hello ${rawFirst},`,
-    ``,
-    `Confirm the email on your membership by opening this link and pressing Confirm my email:`,
-    url,
-    ``,
-    ...(pendingOffer ? [pendingOffer, ``] : []),
-    `The link is good for 48 hours. Pressing the button confirms this inbox. A membership that is still waiting is sent to the admin only after that. The Holiday Lights warning is a separate Accept on the tour page.`,
-    ``,
-    `If you did not create this account, you can ignore this email.`,
-  ].join("\n");
+  const first = escapeHtml(rawFirst);
   const safeUrl = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  const offerHtml = pendingOffer ? `<p>${pendingOffer}</p>` : "";
-  const html = `<p>Hello ${first},</p><p>Confirm the email on your membership. Open the link, then press <strong>Confirm my email</strong>.</p><p><a href="${safeUrl}">${safeUrl}</a></p>${offerHtml}<p>The link is good for 48 hours. Pressing the button confirms this inbox. A membership that is still waiting is sent to the admin only after that. The Holiday Lights warning is a separate Accept on the tour page.</p><p>If you did not create this account, you can ignore this email.</p>`;
+  const pendingOffer = member.status === "pending" && !isAppleReviewEmail(member.email);
+  const subject = pendingOffer
+    ? "Confirm your email for 30 days of Square Royalty, free"
+    : "Confirm your email for The Villages Everything App";
+  const text = pendingOffer
+    ? [
+        `Hello ${rawFirst},`,
+        ``,
+        `Once you confirm this email, you get one month free of Square Royalty, the highest membership.`,
+        ``,
+        `That free month starts when the membership is approved. Approval happens only after you confirm this email.`,
+        ``,
+        `Every membership needs a confirmed email before you can fully use the site. That includes a free membership.`,
+        ``,
+        `Press Confirm my email:`,
+        url,
+        ``,
+        `The link lasts 48 hours. Opening this message is not enough. On the page, press Confirm my email.`,
+        ``,
+        `The Holiday Lights tour has its own Accept button. This email does not accept those terms.`,
+        ``,
+        `If you did not ask to join, you can ignore this email.`,
+      ].join("\n")
+    : [
+        `Hello ${rawFirst},`,
+        ``,
+        `Confirm the email on your membership by opening this link and pressing Confirm my email:`,
+        url,
+        ``,
+        `The link is good for 48 hours. Pressing the button confirms this inbox. The Holiday Lights warning is a separate Accept on the tour page.`,
+        ``,
+        `If you did not create this account, you can ignore this email.`,
+      ].join("\n");
+  const html = pendingOffer
+    ? `<p>Hello ${first},</p><p style="font-size:18px;line-height:1.4;"><strong>Once you confirm this email, you get one month free of Square Royalty, the highest membership.</strong></p><p>That free month starts when the membership is approved. Approval happens only after you confirm this email.</p><p><strong>Every membership needs a confirmed email before you can fully use the site. That includes a free membership.</strong></p><p><a href="${safeUrl}" style="display:inline-block;background:#1b5e45;color:#ffffff;padding:12px 18px;border-radius:8px;font-weight:700;text-decoration:none;">Confirm my email</a></p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link lasts 48 hours. Opening this message is not enough. On the page, press Confirm my email.</p><p>The Holiday Lights tour has its own Accept button. This email does not accept those terms.</p><p>If you did not ask to join, you can ignore this email.</p>`
+    : `<p>Hello ${first},</p><p>Confirm the email on your membership. Open the link, then press <strong>Confirm my email</strong>.</p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link is good for 48 hours. Pressing the button confirms this inbox. The Holiday Lights warning is a separate Accept on the tour page.</p><p>If you did not create this account, you can ignore this email.</p>`;
   return { subject, text, html };
 }
 

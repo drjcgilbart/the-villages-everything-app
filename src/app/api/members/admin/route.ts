@@ -25,7 +25,7 @@ import {
 } from "@/lib/memberSpace";
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
 import { deleteMemberAccount } from "@/lib/memberDelete";
-import { memberEmailIsVerified } from "@/lib/memberEmailVerify";
+import { memberEmailIsVerified, sendMemberVerificationEmail } from "@/lib/memberEmailVerify";
 import { isAppleReviewEmail } from "@/lib/appleReviewAccount";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import {
@@ -214,6 +214,46 @@ export async function POST(req: Request) {
         deleted: true,
         members: membersWithPlans(),
         durableStorage: durableConfigured(),
+      });
+    }
+
+    if (body.action === "resendConfirmationEmail") {
+      const id = String(body.id || "");
+      const mem = getMemberById(id);
+      if (!mem) {
+        return NextResponse.json({ error: "Member not found" }, { status: 404 });
+      }
+      if (memberEmailIsVerified(mem)) {
+        return NextResponse.json(
+          { error: "This email is already confirmed." },
+          { status: 400 }
+        );
+      }
+      const sent = await sendMemberVerificationEmail(id);
+      if (sent.ok && sent.already) {
+        return NextResponse.json(
+          { error: "This email is already confirmed.", members: membersWithPlans() },
+          { status: 400 }
+        );
+      }
+      appendAdminLog(
+        id,
+        sent.ok
+          ? "Confirmation email resent."
+          : `Confirmation email failed${sent.error ? `: ${sent.error}` : ""}.`
+      );
+      await persistAll();
+      if (!sent.ok) {
+        return NextResponse.json(
+          { error: sent.error, members: membersWithPlans() },
+          { status: 503 }
+        );
+      }
+      return NextResponse.json({
+        ok: true,
+        already: sent.already,
+        memberId: id,
+        members: membersWithPlans(),
       });
     }
 
