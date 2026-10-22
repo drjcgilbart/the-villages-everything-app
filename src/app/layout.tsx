@@ -79,6 +79,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             nextHost.hostname = "www.thevillageseverythingapp.com";
             location.replace(nextHost.href);
           }
+          try {
+            var ua = navigator.userAgent || "";
+            if (/VillagesEverythingApp/i.test(ua) && !/Android/i.test(ua)) {
+              document.documentElement.dataset.appShell = "native";
+              document.documentElement.dataset.appPlatform = "ios";
+            }
+          } catch (e) {}
         `}</Script>
         <AlarmPopup />
         <AlarmScheduleSync />

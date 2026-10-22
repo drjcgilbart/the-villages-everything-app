@@ -28,8 +28,14 @@ export default async function PhotosPage() {
               full image.
             </p>
             <p>
-              Want a private album that follows you on the website, iPhone, and
-              Android? Members add photos and short movies in{" "}
+              <span className="ios-shell-hide">
+                Want a private album that follows you on the website, iPhone, and
+                Android?{" "}
+              </span>
+              <span className="ios-shell-only">
+                Want a private album that follows you on this iPhone and the website?{" "}
+              </span>
+              Members add photos and short movies in{" "}
               <Link href="/my-space" className="text-link">
                 My Space → Photos
               </Link>

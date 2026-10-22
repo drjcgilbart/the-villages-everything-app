@@ -16,8 +16,9 @@ export default function PrivacyPage() {
         <h1>Privacy Policy</h1>
         <p style={{ color: "var(--muted)" }}>
           Last updated: September 3, 2026 · Applies to the website{" "}
-          <strong>{SITE_BRAND.domain}</strong> and the iPhone / Android apps
-          that open it.
+          <strong>{SITE_BRAND.domain}</strong>
+          <span className="ios-shell-hide"> and the iPhone / Android apps that open it.</span>
+          <span className="ios-shell-only"> and the iPhone and iPad app that opens it.</span>
         </p>
 
         <div className="about-panel" style={{ marginTop: "1.25rem" }}>

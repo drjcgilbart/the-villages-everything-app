@@ -101,7 +101,10 @@ const VILLAGES_START = {
 
 function blockedLocationNote() {
   if (typeof navigator !== "undefined" && isNativeAppShell()) {
-    return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. On Android, turn Precise on too. Or turn off Use my location and type your street address.";
+    if (!/Android/i.test(navigator.userAgent)) {
+      return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, tap The Villages Everything App, tap Location, and choose While Using the App. Or turn off Use my location and type your street address.";
+    }
+    return "Location is blocked for the app, so the route starts in the middle of The Villages. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. Turn Precise on too. Or turn off Use my location and type your street address.";
   }
   if (typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
     return "Location is blocked on this phone, so the route starts in the middle of The Villages. Tap the lock icon in the address bar, set Location to Allow, then build the route again. Or turn off Use my location and type your street address.";

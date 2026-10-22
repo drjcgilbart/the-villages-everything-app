@@ -39,6 +39,11 @@ html[data-app-shell="native"] .hide-in-native-app {
   display: none !important;
 }
 
+/* iPhone app: do not show other-phone install wording. */
+.ios-shell-only { display: none; }
+html[data-app-platform="ios"] .ios-shell-hide { display: none !important; }
+html[data-app-platform="ios"] .ios-shell-only { display: inline; }
+
 body {
   margin: 0;
   min-height: 100vh;

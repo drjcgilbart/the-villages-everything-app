@@ -87,9 +87,16 @@ export function LaunchPromo() {
                 </>
               ) : (
                 <>
-                  iPhone: Safari Share → Add to Home Screen. Android: Chrome
-                  menu → Install app / Add to Home screen. Feels like an app
-                  before the stores finish review.
+                  <span className="ios-shell-hide">
+                    iPhone: Safari Share → Add to Home Screen. Android: Chrome
+                    menu → Install app / Add to Home screen. Feels like an app
+                    before the stores finish review.
+                  </span>
+                  <span className="ios-shell-only">
+                    You are in the iPhone and iPad app. Holiday Lights can
+                    start from your location and keep the screen on while you
+                    drive.
+                  </span>
                 </>
               )}
             </span>

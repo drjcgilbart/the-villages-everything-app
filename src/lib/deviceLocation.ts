@@ -215,9 +215,16 @@ export function watchNativeLocation(
   };
 }
 
+function iosAppShell(): boolean {
+  return isNativeAppShell() && !/Android/i.test(navigator.userAgent || "");
+}
+
 export function locationBlockedText(orElse: string): string {
+  if (typeof navigator !== "undefined" && iosAppShell()) {
+    return `Location is blocked for the app. Open Settings, tap The Villages Everything App, tap Location, and choose While Using the App. ${orElse}`;
+  }
   if (typeof navigator !== "undefined" && isNativeAppShell()) {
-    return `Location is blocked for the app. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. On Android, turn Precise on too. ${orElse}`;
+    return `Location is blocked for the app. Open Settings, then Apps, The Villages Everything App, Permissions, Location, and choose Allow. Turn Precise on too. ${orElse}`;
   }
   return `Location is blocked. Allow location for this site, then try again. ${orElse}`;
 }

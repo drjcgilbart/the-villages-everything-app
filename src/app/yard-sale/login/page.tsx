@@ -11,8 +11,14 @@ export default function YardSaleLoginPage() {
           <span className="kicker">One Hub login</span>
           <h1>Member sign-in</h1>
           <p>
-            The same account works on PC, iPhone, and Android — My Space boards,
-            Marketplace tools, and membership travel with you.
+            <span className="ios-shell-hide">
+              The same account works on PC, iPhone, and Android — My Space boards,
+              Marketplace tools, and membership travel with you.
+            </span>
+            <span className="ios-shell-only">
+              The same account works on this iPhone and on the website. My Space
+              boards, Marketplace tools, and membership travel with you.
+            </span>
           </p>
         </div>
       </div>

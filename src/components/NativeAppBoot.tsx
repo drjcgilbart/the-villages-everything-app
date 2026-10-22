@@ -8,6 +8,9 @@ export function NativeAppBoot() {
   useEffect(() => {
     if (isNativeAppShell()) {
       document.documentElement.dataset.appShell = "native";
+      if (!/Android/i.test(navigator.userAgent || "")) {
+        document.documentElement.dataset.appPlatform = "ios";
+      }
     }
   }, []);
   return null;
