@@ -12,10 +12,11 @@ import {
 } from "@/lib/bestOfMonthTypes";
 import { BOM_MAX_UPLOAD_BYTES, prepareBomUploadFile } from "@/lib/bomUploadClient";
 
-type FeaturedCat = {
+type ShowcaseCat = {
   category: BomCategory;
-  winnerEntryId: string | null;
-  honorableMentionIds: string[];
+  holding: boolean;
+  open: boolean;
+  monthKey: string;
   winner: BomEntry | null;
   honorableMentions: BomEntry[];
 };
@@ -26,11 +27,7 @@ type Feed = {
   categoryIds: BomCategory[];
   entriesByCategory: Record<BomCategory, BomEntry[]>;
   myVotes: Partial<Record<BomCategory, string>>;
-  lastMonthResults: {
-    monthKey: string;
-    tabulatedAt: string;
-    categories: Record<string, FeaturedCat>;
-  } | null;
+  showcase: ShowcaseCat[];
 };
 
 function formatMonth(key: string) {
@@ -337,38 +334,32 @@ export function BestOfMonthClub() {
     return <div className="empty-state">Loading Best of the Month…</div>;
   }
 
-  const last = feed.lastMonthResults;
+  const showcase = feed.showcase || [];
+  const showChampGrid = showcase.some((item) => item.winner || item.open);
 
   return (
     <div className="bom-club">
       {note && <div className="bom-note about-panel">{note}</div>}
 
-      {/* —— Last month winners (featured this month) —— */}
       <section className="bom-section" id="winners">
         <div className="section-head">
           <div>
-            <h2>
-              {last
-                ? `Winners · ${formatMonth(last.monthKey)}`
-                : "Last month’s winners"}
-            </h2>
+            <h2>Current champs</h2>
             <p>
-              {last
-                ? "Champion plus two honorable mentions in each category — locked in when the month ended."
-                : "When last month’s voting closes, winners and honorable mentions appear here automatically."}
+              A champ stays on this page until a new neighbor is nominated in
+              that category. A quiet month does not clear the board.
             </p>
           </div>
         </div>
 
-        {!last ? (
+        {!showChampGrid ? (
           <div className="empty-state about-panel">
-            No completed month yet — be among the first to enter and vote this
-            month!
+            No champs yet. Be the first to enter a photo this month.
           </div>
         ) : (
           <div className="bom-winners-grid">
             {BOM_CATEGORIES.map((cat) => {
-              const block = last.categories[cat];
+              const block = showcase.find((item) => item.category === cat);
               const meta = BOM_CATEGORY_META[cat];
               if (!block?.winner) {
                 return (
@@ -377,7 +368,11 @@ export function BestOfMonthClub() {
                       <CategoryArt cat={cat} size="sm" />
                       <span className="pill">{meta.label}</span>
                     </div>
-                    <p className="bom-muted">No entries last month.</p>
+                    <p className="bom-muted">
+                      {block?.open
+                        ? "New nominees are open for votes below."
+                        : "No champ yet. Nominate one below."}
+                    </p>
                   </article>
                 );
               }
@@ -394,7 +389,11 @@ export function BestOfMonthClub() {
                       <>Submitted by {block.winner.submitterName} · </>
                     ) : null}
                     <strong>{block.winner.votes}</strong> votes
+                    {block.holding ? ` · ${formatMonth(block.monthKey)}` : ""}
                   </p>
+                  {block.holding ? (
+                    <p className="bom-muted">Stays until a new nominee.</p>
+                  ) : null}
                   {block.honorableMentions?.length > 0 && (
                     <div className="bom-hm">
                       <strong>Honorable mentions</strong>
@@ -423,15 +422,24 @@ export function BestOfMonthClub() {
             <p>
               One pick per category at a time — you can change your vote anytime
               until the month ends. Open a photo for the full picture and
-              description. Totals update live.
+              description. Totals update live. Categories with no new nominee
+              keep the champ above.
             </p>
           </div>
         </div>
+
+        {BOM_CATEGORIES.every((cat) => (feed.entriesByCategory[cat] || []).length === 0) ? (
+          <div className="empty-state about-panel">
+            No new nominees this month. The champs above stay until someone
+            enters.
+          </div>
+        ) : null}
 
         {BOM_CATEGORIES.map((cat) => {
           const meta = BOM_CATEGORY_META[cat];
           const entries = feed.entriesByCategory[cat] || [];
           const myPick = feed.myVotes[cat];
+          if (entries.length === 0) return null;
           return (
             <div key={cat} className="bom-category-block about-panel" id={`bom-${cat}`}>
               <div className="bom-cat-head">
@@ -449,12 +457,7 @@ export function BestOfMonthClub() {
                 )}
               </div>
 
-              {entries.length === 0 ? (
-                <p className="bom-muted">
-                  No approved entries yet this month — submit one below!
-                </p>
-              ) : (
-                <div className="bom-entry-grid">
+              <div className="bom-entry-grid">
                   {entries.map((entry) => {
                     const isMine = myPick === entry.id;
                     const hasOtherPick = Boolean(myPick) && !isMine;
@@ -521,7 +524,6 @@ export function BestOfMonthClub() {
                     );
                   })}
                 </div>
-              )}
             </div>
           );
         })}

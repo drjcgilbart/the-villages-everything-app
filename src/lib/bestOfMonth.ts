@@ -433,6 +433,7 @@ export async function tabulatePreviousMonthIfNeededAsync(): Promise<BomData> {
   return data;
 }
 
+/** Older helper. The public page uses showcaseForMonth so a quiet month keeps the last champ. */
 export function getResultsForFeaturedMonth(
   data: BomData,
   featuredMonthKey: string
@@ -444,6 +445,86 @@ export function getResultsForFeaturedMonth(
     ) ||
     null
   );
+}
+
+export type CategoryShowcase = {
+  category: BomCategory;
+  /** Older champ kept on the page because this month has no nominee. */
+  holding: boolean;
+  /** This month has an approved nominee, so voting is open. */
+  open: boolean;
+  monthKey: string;
+  winner: BomEntry | null;
+  honorableMentions: BomEntry[];
+};
+
+/**
+ * The public board for one month. A category with no new nominee keeps the
+ * latest approved champ. A new approved nominee replaces that champ.
+ */
+export function showcaseForMonth(data: BomData, monthKey: string): CategoryShowcase[] {
+  return BOM_CATEGORIES.map((category) => {
+    const current = listApprovedForMonth(data, monthKey, category);
+    if (current.length) {
+      return {
+        category,
+        holding: false,
+        open: true,
+        monthKey,
+        winner: null,
+        honorableMentions: [],
+      };
+    }
+
+    const pastMonths = [
+      ...new Set(
+        data.entries
+          .filter(
+            (e) =>
+              e.status === "approved" &&
+              e.category === category &&
+              e.monthKey < monthKey
+          )
+          .map((e) => e.monthKey)
+      ),
+    ].sort((a, b) => b.localeCompare(a));
+
+    for (const past of pastMonths) {
+      const entries = listApprovedForMonth(data, past, category);
+      if (!entries.length) continue;
+      const result = data.results.find((r) => r.monthKey === past);
+      const cat = result?.categories.find((c) => c.category === category);
+      const winner =
+        (cat?.winnerEntryId
+          ? entries.find((e) => e.id === cat.winnerEntryId)
+          : undefined) || entries[0];
+      const hmIds = cat?.honorableMentionIds || [];
+      const honorableMentions = (
+        hmIds.length
+          ? hmIds
+              .map((id) => entries.find((e) => e.id === id))
+              .filter((e): e is BomEntry => Boolean(e))
+          : entries.filter((e) => e.id !== winner.id).slice(0, 2)
+      ).map(publicBomEntry);
+      return {
+        category,
+        holding: true,
+        open: false,
+        monthKey: past,
+        winner: publicBomEntry(winner),
+        honorableMentions,
+      };
+    }
+
+    return {
+      category,
+      holding: false,
+      open: false,
+      monthKey,
+      winner: null,
+      honorableMentions: [],
+    };
+  });
 }
 
 export function getEntryById(

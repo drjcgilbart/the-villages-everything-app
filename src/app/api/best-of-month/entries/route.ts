@@ -11,11 +11,11 @@ import {
   bomMonthKey,
   castBomVoteAsync,
   ensurePastMonthsTabulatedAsync,
-  getResultsForFeaturedMonth,
   isBomCategory,
   listApprovedForMonth,
   publicBomEntry,
   setBomEntryStatusAsync,
+  showcaseForMonth,
   submitBomEntryAsync,
   voterChoicesThisMonth,
 } from "@/lib/bestOfMonth";
@@ -50,29 +50,7 @@ export async function GET() {
     ])
   ) as Record<BomCategory, ReturnType<typeof listApprovedForMonth>>;
 
-  const featured = getResultsForFeaturedMonth(data, monthKey);
-  const featuredEntries = featured
-    ? Object.fromEntries(
-        featured.categories.map((c) => {
-          return [
-            c.category,
-            {
-              ...c,
-              winner: c.winnerEntryId
-                ? (() => {
-                    const found = data.entries.find((e) => e.id === c.winnerEntryId);
-                    return found ? publicBomEntry(found) : null;
-                  })()
-                : null,
-              honorableMentions: c.honorableMentionIds
-                .map((id) => data.entries.find((e) => e.id === id))
-                .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
-                .map(publicBomEntry),
-            },
-          ];
-        })
-      )
-    : null;
+  const showcase = showcaseForMonth(data, monthKey);
 
   const pending = data.entries.filter((e) => e.status === "pending");
   const admin = await isAdminAuthenticated();
@@ -83,13 +61,7 @@ export async function GET() {
     categoryIds: BOM_CATEGORIES,
     entriesByCategory: byCategory,
     myVotes: voterChoicesThisMonth(data, voterKey, monthKey),
-    lastMonthResults: featured
-      ? {
-          monthKey: featured.monthKey,
-          tabulatedAt: featured.tabulatedAt,
-          categories: featuredEntries,
-        }
-      : null,
+    showcase,
     pendingCount: pending.length,
     // Admin cookie only — so the portal can list pendings even if /admin API fails
     pendingEntries: admin ? pending : undefined,
