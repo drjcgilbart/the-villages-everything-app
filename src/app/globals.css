@@ -13229,17 +13229,6 @@ body.theme-music-open .mascot-quip-popup {
   box-shadow: 0 12px 32px rgba(232, 184, 74, 0.15);
 }
 
-.bom-winner-card.is-nominee .bom-nominee + .bom-nominee {
-  margin-top: 0.85rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--line);
-}
-
-.bom-winner-card.is-nominee h3 {
-  margin: 0.55rem 0 0.15rem;
-  font-size: 1.05rem;
-}
-
 .bom-winner-head {
   display: flex;
   align-items: center;

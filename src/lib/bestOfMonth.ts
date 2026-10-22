@@ -459,39 +459,86 @@ export type CategoryShowcase = {
 };
 
 /**
- * The public board for one month. A category with no new nominee keeps the
- * latest approved champ. A new approved nominee replaces that champ.
+ * One champ stays on the card. A later entry in that same month is a nominee
+ * for the next month, so it does not replace the champ.
+ * Returns true when a month key changed and the caller should save.
+ */
+export function parkLaterNominees(data: BomData, monthKey = bomMonthKey()): boolean {
+  const next = nextMonthKey(monthKey);
+  let changed = false;
+  for (const category of BOM_CATEGORIES) {
+    const current = data.entries
+      .filter(
+        (e) =>
+          e.status === "approved" &&
+          e.category === category &&
+          e.monthKey === monthKey
+      )
+      .sort(
+        (a, b) =>
+          a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+      );
+    for (const extra of current.slice(1)) {
+      extra.monthKey = next;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+/** Month a new entry belongs to. The first champ uses this month. Later photos wait for next month. */
+export function monthKeyForNewEntry(
+  data: BomData,
+  category: BomCategory,
+  explicit?: string
+): string {
+  if (explicit) return explicit;
+  const now = bomMonthKey();
+  const hasChamp = data.entries.some(
+    (e) =>
+      e.status === "approved" &&
+      e.category === category &&
+      e.monthKey <= now
+  );
+  return hasChamp ? nextMonthKey(now) : now;
+}
+
+/**
+ * The public board. The champ is the standing entry for the latest month
+ * already underway. Next month's nominees stay off this card.
  */
 export function showcaseForMonth(data: BomData, monthKey: string): CategoryShowcase[] {
   return BOM_CATEGORIES.map((category) => {
-    const current = listApprovedForMonth(data, monthKey, category);
-    if (current.length) {
-      return {
-        category,
-        holding: false,
-        open: true,
-        monthKey,
-        winner: null,
-        honorableMentions: [],
-      };
-    }
-
-    const pastMonths = [
+    const months = [
       ...new Set(
         data.entries
           .filter(
             (e) =>
               e.status === "approved" &&
               e.category === category &&
-              e.monthKey < monthKey
+              e.monthKey <= monthKey
           )
           .map((e) => e.monthKey)
       ),
     ].sort((a, b) => b.localeCompare(a));
 
-    for (const past of pastMonths) {
+    for (const past of months) {
       const entries = listApprovedForMonth(data, past, category);
       if (!entries.length) continue;
+      if (past === monthKey) {
+        const standing = [...entries].sort(
+          (a, b) =>
+            a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+        )[0];
+        return {
+          category,
+          holding: false,
+          open: false,
+          monthKey: past,
+          winner: publicBomEntry(standing),
+          honorableMentions: [],
+        };
+      }
       const result = data.results.find((r) => r.monthKey === past);
       const cat = result?.categories.find((c) => c.category === category);
       const winner =
@@ -587,7 +634,7 @@ export function submitBomEntry(input: {
     imageUrl: input.imageUrl,
     fileType: input.fileType,
     status: "pending",
-    monthKey: input.monthKey || bomMonthKey(),
+    monthKey: monthKeyForNewEntry(data, input.category, input.monthKey),
     createdAt: new Date().toISOString(),
     votes: 0,
   };
@@ -629,7 +676,7 @@ export async function submitBomEntryAsync(input: {
     fileType: input.fileType,
     status,
     showSubmitterName: input.showSubmitterName === false ? false : undefined,
-    monthKey: input.monthKey || bomMonthKey(),
+    monthKey: monthKeyForNewEntry(data, input.category, input.monthKey),
     createdAt: new Date().toISOString(),
     votes: 0,
   };
@@ -793,7 +840,7 @@ export function castBomVote(input: {
   voterKey: string;
 }): { entry: BomEntry; votes: number; changed: boolean; message: string } {
   const data = ensurePastMonthsTabulated(loadBom());
-  const monthKey = bomMonthKey();
+  const monthKey = nextMonthKey(bomMonthKey());
   const voterKey = String(input.voterKey || "").trim().slice(0, 80);
   if (voterKey.length < 8) throw new Error("Missing voter id");
 
@@ -801,7 +848,7 @@ export function castBomVote(input: {
   if (!entry) throw new Error("Entry not found");
   if (entry.status !== "approved") throw new Error("Entry is not open for voting");
   if (entry.monthKey !== monthKey) {
-    throw new Error("Voting is only open for this month’s entries");
+    throw new Error("Voting is open on nominees for next month.");
   }
 
   const already = data.votes.find(
@@ -860,7 +907,7 @@ export async function castBomVoteAsync(input: {
   voterKey: string;
 }): Promise<{ entry: BomEntry; votes: number; changed: boolean; message: string }> {
   const data = await ensurePastMonthsTabulatedAsync();
-  const monthKey = bomMonthKey();
+  const monthKey = nextMonthKey(bomMonthKey());
   const voterKey = String(input.voterKey || "").trim().slice(0, 80);
   if (voterKey.length < 8) throw new Error("Missing voter id");
 
@@ -868,7 +915,7 @@ export async function castBomVoteAsync(input: {
   if (!entry) throw new Error("Entry not found");
   if (entry.status !== "approved") throw new Error("Entry is not open for voting");
   if (entry.monthKey !== monthKey) {
-    throw new Error("Voting is only open for this month’s entries");
+    throw new Error("Voting is open on nominees for next month.");
   }
 
   const already = data.votes.find(

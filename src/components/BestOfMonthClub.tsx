@@ -23,6 +23,7 @@ type ShowcaseCat = {
 
 type Feed = {
   monthKey: string;
+  nominationMonthKey?: string;
   categories: typeof BOM_CATEGORY_META;
   categoryIds: BomCategory[];
   entriesByCategory: Record<BomCategory, BomEntry[]>;
@@ -346,8 +347,8 @@ export function BestOfMonthClub() {
           <div>
             <h2>Current champs</h2>
             <p>
-              A champ stays on this page until a new neighbor is nominated in
-              that category. A quiet month does not clear the board.
+              The champ stays on this page. A new photo is nominated for the
+              next month and shows below.
             </p>
           </div>
         </div>
@@ -361,58 +362,6 @@ export function BestOfMonthClub() {
             {BOM_CATEGORIES.map((cat) => {
               const block = showcase.find((item) => item.category === cat);
               const meta = BOM_CATEGORY_META[cat];
-              const nominees = feed.entriesByCategory[cat] || [];
-              if (!block?.winner && nominees.length) {
-                const myPick = feed.myVotes[cat];
-                return (
-                  <article key={cat} className="about-panel bom-winner-card is-nominee">
-                    <div className="bom-winner-head">
-                      <CategoryArt cat={cat} size="sm" />
-                      <span className="pill">{meta.label}</span>
-                    </div>
-                    {nominees.map((entry) => {
-                      const isMine = myPick === entry.id;
-                      const hasOtherPick = Boolean(myPick) && !isMine;
-                      return (
-                        <div key={entry.id} className="bom-nominee">
-                          <button
-                            type="button"
-                            className="bom-entry-media-btn"
-                            onClick={() => setDetail(entry)}
-                            aria-label={`View full details for ${entry.title}`}
-                          >
-                            <EntryMedia entry={entry} large />
-                          </button>
-                          <h3>{entry.title}</h3>
-                          <p className="bom-muted">
-                            {entry.submitterName ? (
-                              <>Submitted by {entry.submitterName} · </>
-                            ) : null}
-                            <strong>{entry.votes}</strong> vote
-                            {entry.votes === 1 ? "" : "s"} · {formatMonth(feed.monthKey)} nominee
-                          </p>
-                          <div className="bom-entry-actions">
-                            <button
-                              type="button"
-                              className={`btn btn-sm ${isMine ? "btn-primary" : "btn-ghost"}`}
-                              disabled={busyVote === entry.id}
-                              onClick={() => vote(entry.id)}
-                            >
-                              {isMine
-                                ? "★ Your pick"
-                                : busyVote === entry.id
-                                  ? "Saving…"
-                                  : hasOtherPick
-                                    ? "Switch vote here"
-                                    : "Vote favorite"}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </article>
-                );
-              }
               if (!block?.winner) {
                 return (
                   <article key={cat} className="about-panel bom-winner-card">
@@ -437,7 +386,7 @@ export function BestOfMonthClub() {
                       <>Submitted by {block.winner.submitterName} · </>
                     ) : null}
                     <strong>{block.winner.votes}</strong> votes
-                    {block.holding ? ` · ${formatMonth(block.monthKey)}` : ""}
+                    {` · ${formatMonth(block.monthKey)}`}
                   </p>
                   {block.holding ? (
                     <p className="bom-muted">Stays until a new nominee.</p>
@@ -466,20 +415,19 @@ export function BestOfMonthClub() {
       <section className="bom-section" id="vote">
         <div className="section-head">
           <div>
-            <h2>Vote · {formatMonth(feed.monthKey)}</h2>
+            <h2>
+              Nominated for {formatMonth(feed.nominationMonthKey || feed.monthKey)}
+            </h2>
             <p>
-              One pick per category at a time — you can change your vote anytime
-              until the month ends. Open a photo for the full picture and
-              description. Totals update live. Categories with no new nominee
-              keep the champ above.
+              These photos are in line for the next crown. The champ above stays
+              until that month. One pick per category, and you can change it.
             </p>
           </div>
         </div>
 
         {BOM_CATEGORIES.every((cat) => (feed.entriesByCategory[cat] || []).length === 0) ? (
           <div className="empty-state about-panel">
-            No new nominees this month. The champs above stay until someone
-            enters.
+            No nominees for next month yet. The champs above stay up.
           </div>
         ) : null}
 
@@ -495,7 +443,9 @@ export function BestOfMonthClub() {
                   <CategoryArt cat={cat} />
                   <div>
                     <h3>{meta.label}</h3>
-                    <p className="bom-muted">{meta.blurb}</p>
+                    <p className="bom-muted">
+                      Nominated for the next {meta.label}.
+                    </p>
                   </div>
                 </div>
                 {myPick ? (
@@ -657,12 +607,13 @@ export function BestOfMonthClub() {
       <section className="bom-section" id="submit">
         <div className="section-head">
           <div>
-            <h2>Enter this month</h2>
+            <h2>Nominate a photo</h2>
             <p>
               Upload a <strong>JPG</strong> or <strong>PDF</strong>. Large phone
               photos (even 5–12 MB) are <strong>automatically resized</strong>{" "}
-              before upload so they always fit. Entries need admin approval
-              before they appear for voting.
+              before upload so they always fit. Entries need admin approval. If
+              that category already has a champ, the photo is nominated for the
+              next month and shows below.
             </p>
           </div>
         </div>

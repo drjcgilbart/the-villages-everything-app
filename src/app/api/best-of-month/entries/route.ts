@@ -13,7 +13,10 @@ import {
   ensurePastMonthsTabulatedAsync,
   isBomCategory,
   listApprovedForMonth,
+  nextMonthKey,
+  parkLaterNominees,
   publicBomEntry,
+  saveBomAsync,
   setBomEntryStatusAsync,
   showcaseForMonth,
   submitBomEntryAsync,
@@ -41,12 +44,20 @@ async function getOrCreateVoterKey(): Promise<{
 export async function GET() {
   let data = await ensurePastMonthsTabulatedAsync();
   const monthKey = bomMonthKey();
+  if (parkLaterNominees(data, monthKey)) {
+    try {
+      data = await saveBomAsync(data);
+    } catch (err) {
+      console.error("[bom] could not save next-month nominees", err);
+    }
+  }
+  const nominationMonthKey = nextMonthKey(monthKey);
   const { key: voterKey, setCookie } = await getOrCreateVoterKey();
 
   const byCategory = Object.fromEntries(
     BOM_CATEGORIES.map((cat) => [
       cat,
-      listApprovedForMonth(data, monthKey, cat).map(publicBomEntry),
+      listApprovedForMonth(data, nominationMonthKey, cat).map(publicBomEntry),
     ])
   ) as Record<BomCategory, ReturnType<typeof listApprovedForMonth>>;
 
@@ -57,10 +68,11 @@ export async function GET() {
 
   const res = NextResponse.json({
     monthKey,
+    nominationMonthKey,
     categories: BOM_CATEGORY_META,
     categoryIds: BOM_CATEGORIES,
     entriesByCategory: byCategory,
-    myVotes: voterChoicesThisMonth(data, voterKey, monthKey),
+    myVotes: voterChoicesThisMonth(data, voterKey, nominationMonthKey),
     showcase,
     pendingCount: pending.length,
     // Admin cookie only — so the portal can list pendings even if /admin API fails
@@ -129,8 +141,10 @@ export async function POST(req: Request) {
         ok: true,
         entry: { id: entry.id, status: entry.status, category: entry.category },
         message: admin
-          ? "Published. It's live on Best of the Month — no extra approval needed."
-          : "Thanks! Your entry is pending admin approval. Once approved, it appears for voting this month.",
+          ? entry.monthKey === bomMonthKey()
+            ? "Published. It is the champ for this month."
+            : "Published. It is nominated for the next month and shows below the champ."
+          : "Thanks! Your entry is pending admin approval. If that category already has a champ, it is nominated for the next month.",
       });
     }
 

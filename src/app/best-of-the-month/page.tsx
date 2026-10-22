@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Best of the Month Club",
   description:
-    "Pet, car, golf cart, villager, landscaping, house, and Best of the Rest — submit photos, vote once per category, and keep each champ up until a new nominee arrives.",
+    "Pet, car, golf cart, villager, landscaping, house, and Best of the Rest. The champ stays up, and a new photo is nominated for the next month.",
 };
 
 export default function BestOfTheMonthPage() {
@@ -20,16 +20,15 @@ export default function BestOfTheMonthPage() {
               Submit a JPG or PDF of your pet, car, golf cart, favorite
               villager, landscaping, house, or anything for Best of the Rest.
               After admin approval, neighbors vote — one pick per category each
-              month. Totals update live. When the month ends we crown a winner
-              and two honorable mentions. That champ stays here until a new
-              neighbor is nominated in the same category.
+              month. Totals update live. The champ stays on the page. A new
+              photo is nominated for the next month and shows below.
             </p>
             <div className="hero-actions" style={{ marginTop: "1rem" }}>
               <a href="#winners" className="btn btn-primary">
                 Current champs
               </a>
               <a href="#vote" className="btn btn-ghost">
-                Vote this month
+                Next nominees
               </a>
               <a href="#submit" className="btn btn-ghost">
                 Enter a photo
