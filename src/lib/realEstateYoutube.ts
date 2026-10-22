@@ -190,7 +190,7 @@ function parseAtomEntries(xml: string): RssEntry[] {
       (
         chunk.match(/<media:description>([\s\S]*?)<\/media:description>/i)?.[1] ||
         ""
-      ).slice(0, 1500)
+      ).slice(0, 4000)
     );
     const alternate =
       chunk.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i)?.[1] ||

@@ -525,6 +525,12 @@ export function resolveJsonPath(filename: string): string | null {
   return null;
 }
 
+/** True when this process already loaded the file from Redis, Blob, or a prior save. */
+export function hasCachedJson(filename: string): boolean {
+  const base = path.basename(filename);
+  return Boolean(base) && memoryJson.has(base);
+}
+
 export function readJsonFile<T>(filename: string): T | null {
   const base = path.basename(filename);
   if (!base || base.includes("..") || base.includes("/") || base.includes("\\")) {
