@@ -4,7 +4,7 @@
  */
 
 import { fetchChannelRss } from "./realEstateYoutube";
-import { readJsonFile, writeJsonFileAsync } from "./dataFs";
+import { readJsonFile, settleDurableHydrate, writeJsonFileAsync } from "./dataFs";
 import { isChannelShort, isDailyNewsRoundup } from "./newsVideoMatch";
 import { SITE_BRAND } from "./siteBrand";
 import type { Video } from "./types";
@@ -17,6 +17,8 @@ export type ChannelYoutubeVideo = {
   publishedAt: string;
   /** YouTube Short. Older cache rows omit this and are detected from the title. */
   short?: boolean;
+  /** Daily news roundup. Older rows omit this and are detected from the title. */
+  roundup?: boolean;
 };
 
 export type ChannelYoutubeCache = {
@@ -94,6 +96,7 @@ function mergeVideos(
       title: v.title || prev?.title || "Untitled video",
       publishedAt: v.publishedAt || prev?.publishedAt || new Date().toISOString(),
       short: Boolean(v.short || prev?.short),
+      roundup: Boolean(v.roundup || prev?.roundup),
     });
   }
   return [...byId.values()]
@@ -113,13 +116,14 @@ function mergeNewsKeep(
 ): ChannelYoutubeVideo[] {
   const byId = new Map<string, ChannelYoutubeVideo>();
   for (const v of [...previousKeep, ...previousVideos, ...incoming]) {
-    if (!isDailyNewsRoundup(v.title) && !isChannelShort(v)) continue;
+    if (!v.roundup && !isDailyNewsRoundup(v.title) && !isChannelShort(v)) continue;
     const prev = byId.get(v.videoId);
     byId.set(v.videoId, {
       videoId: v.videoId,
       title: v.title || prev?.title || "Untitled video",
       publishedAt: v.publishedAt || prev?.publishedAt || new Date().toISOString(),
       short: Boolean(v.short || prev?.short),
+      roundup: Boolean(v.roundup || prev?.roundup),
     });
   }
   const all = [...byId.values()];
@@ -145,6 +149,7 @@ export async function refreshChannelYoutube(opts?: {
       title: e.title,
       publishedAt: e.publishedAt,
       short: Boolean(e.short),
+      roundup: !e.short && isDailyNewsRoundup(e.title, e.description || ""),
     }));
     const next: ChannelYoutubeCache = {
       updatedAt: new Date().toISOString(),
@@ -172,6 +177,12 @@ export async function refreshChannelYoutube(opts?: {
 export async function ensureChannelYoutubeFresh(
   maxAgeHours = STALE_HOURS
 ): Promise<ChannelYoutubeCache> {
+  // The layout stops waiting on Redis after 2 seconds. A cold first visit
+  // would otherwise paint the empty bundle and only show the video on refresh.
+  await Promise.race([
+    settleDurableHydrate(),
+    new Promise<void>((resolve) => setTimeout(resolve, 8000)),
+  ]);
   const cache = loadChannelYoutubeCache();
   if (!isChannelYoutubeStale(cache, maxAgeHours)) return cache;
   try {
@@ -204,7 +215,7 @@ export function getChannelSiteVideos(
 
 export function newsRoundups(cache: ChannelYoutubeCache): ChannelYoutubeVideo[] {
   const source = cache.newsKeep?.length ? cache.newsKeep : cache.videos;
-  return source.filter((v) => isDailyNewsRoundup(v.title)).sort(byNewest);
+  return source.filter((v) => v.roundup || isDailyNewsRoundup(v.title)).sort(byNewest);
 }
 
 export function newsShorts(cache: ChannelYoutubeCache): ChannelYoutubeVideo[] {

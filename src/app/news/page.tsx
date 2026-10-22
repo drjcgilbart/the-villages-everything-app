@@ -21,7 +21,8 @@ export const metadata = {
 };
 
 export default async function NewsPage() {
-  const channel = await ensureChannelYoutubeFresh();
+  // Check YouTube on this visit so the newest roundup is in the first paint.
+  const channel = await ensureChannelYoutubeFresh(0);
   const roundups = newsRoundups(channel);
   const shorts = newsShorts(channel);
 

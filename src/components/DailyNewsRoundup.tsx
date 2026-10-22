@@ -35,6 +35,9 @@ export function DailyNewsRoundup({
 }) {
   const [latest] = roundups;
   const channel = SITE_BRAND.youtube;
+  const uploads = channel.channelId.startsWith("UC")
+    ? `UU${channel.channelId.slice(2)}`
+    : channel.channelId;
   const playerRef = useRef<HTMLDivElement>(null);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const playing =
@@ -78,7 +81,24 @@ export function DailyNewsRoundup({
           </p>
         ) : null}
 
-        {!playing && shorts.length === 0 && !loadFailed ? (
+        {!playing && uploads ? (
+          <div className="news-roundup-lead">
+            <div className="fd-video-frame">
+              <iframe
+                src={`https://www.youtube.com/embed/videoseries?list=${encodeURIComponent(uploads)}`}
+                title={`${channel.title} latest video`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+            <div className="news-roundup-copy">
+              <strong>Latest from {channel.title}</strong>
+              <em>Plays on this page</em>
+            </div>
+          </div>
+        ) : null}
+
+        {!playing && !uploads && shorts.length === 0 && !loadFailed ? (
           <div className="empty-state">
             The next daily roundup will show up here after it is posted on YouTube.
           </div>

@@ -80,6 +80,7 @@ type RssEntry = {
   videoId: string;
   title: string;
   publishedAt: string;
+  description?: string;
   /** True when the upload link is a YouTube Short. */
   short?: boolean;
 };
@@ -185,6 +186,12 @@ function parseAtomEntries(xml: string): RssEntry[] {
       chunk.match(/<updated>([^<]+)<\/updated>/i)?.[1]?.trim() ||
       new Date().toISOString();
     const decodedTitle = decodeXmlEntities(title);
+    const description = decodeXmlEntities(
+      (
+        chunk.match(/<media:description>([\s\S]*?)<\/media:description>/i)?.[1] ||
+        ""
+      ).slice(0, 1500)
+    );
     const alternate =
       chunk.match(/<link[^>]*rel="alternate"[^>]*href="([^"]+)"/i)?.[1] ||
       chunk.match(/<link[^>]*href="([^"]+)"[^>]*rel="alternate"/i)?.[1] ||
@@ -195,6 +202,7 @@ function parseAtomEntries(xml: string): RssEntry[] {
         videoId,
         title: decodedTitle,
         publishedAt,
+        description,
         short: /\/shorts\//i.test(alternate) || /#shorts\b/i.test(decodedTitle),
       });
     }
