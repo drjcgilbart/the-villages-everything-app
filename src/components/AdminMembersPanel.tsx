@@ -5,6 +5,7 @@ import type { PublicMember } from "@/lib/yardSaleTypes";
 import { formatDate } from "@/lib/format";
 import type { HubPlanId } from "@/lib/membershipTiers";
 import { MemberBadgesRow } from "@/components/MemberBadgesRow";
+import { isAppleReviewEmail } from "@/lib/appleReviewAccount";
 import type { BadgeDef } from "@/lib/memberBadgeTypes";
 
 type TopTierNom = {
@@ -198,6 +199,8 @@ export function AdminMembersPanel() {
             ? "Member approved — Square Royalty free month started"
             : "Member approved"
         );
+      } else if (status === "pending") {
+        flash("ok", "Set back to pending. They can sign in again. No free month was started.");
       } else {
         flash("ok", `Member ${status}`);
       }
@@ -753,6 +756,7 @@ function MemberAdminRow({
         </strong>
         <span>
           {m.email}
+          {isAppleReviewEmail(m.email) ? " · App Store review login" : ""}
           {m.phone ? ` · ${m.phone}` : ""}
           {m.village ? ` · ${m.village}` : ""}
           {" · "}
@@ -889,7 +893,10 @@ function MemberAdminRow({
         ) : null}
       </div>
       <div className="admin-actions">
-        {tiers.length > 0 && (
+        {isAppleReviewEmail(m.email) ? (
+          <span className="panel-hint">Leave this pending, on Porch Waver.</span>
+        ) : null}
+        {tiers.length > 0 && !isAppleReviewEmail(m.email) && (
           <label className="admin-plan-select">
             <span className="sr-only">My Space plan</span>
             <select
@@ -915,7 +922,7 @@ function MemberAdminRow({
           >
             End free month
           </button>
-        ) : (
+        ) : !isAppleReviewEmail(m.email) ? (
           <button
             type="button"
             className="btn btn-ghost btn-sm"
@@ -924,8 +931,10 @@ function MemberAdminRow({
           >
             Grant free month
           </button>
-        )}
-        {nom?.status === "pending" && (m.status !== "pending" || m.emailVerified) && (
+        ) : null}
+        {nom?.status === "pending" &&
+          (m.status !== "pending" || m.emailVerified) &&
+          !isAppleReviewEmail(m.email) && (
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -935,6 +944,7 @@ function MemberAdminRow({
             Approve Royalty (1 yr)
           </button>
         )}
+        {!(isAppleReviewEmail(m.email) && !m.goldenLoofah) && (
         <button
           type="button"
           className="btn btn-ghost btn-sm"
@@ -944,7 +954,10 @@ function MemberAdminRow({
         >
           {m.goldenLoofah ? "Remove Loofah" : "Grant Loofah"}
         </button>
-        {m.status !== "approved" && (m.status !== "pending" || m.emailVerified) && (
+        )}
+        {m.status !== "approved" &&
+          (m.status !== "pending" || m.emailVerified) &&
+          !isAppleReviewEmail(m.email) && (
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -975,6 +988,26 @@ function MemberAdminRow({
             onClick={() => onStatus(m.id, "rejected", m.name)}
           >
             Reject
+          </button>
+        )}
+        {m.status === "rejected" && (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={busy}
+            onClick={() => {
+              const who = m.name || "this neighbor";
+              if (
+                !window.confirm(
+                  `Set ${who} back to pending?\n\nThey can sign in again. This does not approve them and does not start a free month.`
+                )
+              ) {
+                return;
+              }
+              onStatus(m.id, "pending", m.name);
+            }}
+          >
+            Set back to pending
           </button>
         )}
         {m.status === "approved" && (

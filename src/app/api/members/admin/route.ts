@@ -26,6 +26,7 @@ import {
 import { HUB_TIERS, normalizePlan } from "@/lib/membershipTiers";
 import { deleteMemberAccount } from "@/lib/memberDelete";
 import { memberEmailIsVerified } from "@/lib/memberEmailVerify";
+import { isAppleReviewEmail } from "@/lib/appleReviewAccount";
 import { isSiteOwnerEmail } from "@/lib/siteOwner";
 import {
   appendAdminLog,
@@ -273,6 +274,16 @@ export async function POST(req: Request) {
     if (body.action === "setPlan") {
       const id = String(body.id || "");
       const plan = normalizePlan(body.plan);
+      const planMember = getMemberById(id);
+      if (planMember && isAppleReviewEmail(planMember.email) && plan !== "porch_waver") {
+        return NextResponse.json(
+          {
+            error:
+              "The App Store review account must stay on Porch Waver. Set it back to pending instead of upgrading it.",
+          },
+          { status: 400 }
+        );
+      }
       updateMemberSpace(id, {
         plan,
         // Manual plan set is open-ended unless clearing royalty
@@ -291,6 +302,16 @@ export async function POST(req: Request) {
 
     if (body.action === "setGoldenLoofah") {
       const id = String(body.id || "");
+      const loofahMember = getMemberById(id);
+      if (body.goldenLoofah !== false && loofahMember && isAppleReviewEmail(loofahMember.email)) {
+        return NextResponse.json(
+          {
+            error:
+              "The App Store review account must stay a pending Porch Waver. Do not grant a Loofah on it.",
+          },
+          { status: 400 }
+        );
+      }
       if (body.goldenLoofah === false) {
         const space = getMemberSpace(id);
         const badges = (space.donationBadges || []).filter(
@@ -320,6 +341,15 @@ export async function POST(req: Request) {
     if (body.action === "approveTopTier") {
       const id = String(body.id || "");
       const mem = getMemberById(id);
+      if (mem && isAppleReviewEmail(mem.email)) {
+        return NextResponse.json(
+          {
+            error:
+              "The App Store review account must stay a pending Porch Waver. Set it back to pending instead of approving it.",
+          },
+          { status: 400 }
+        );
+      }
       const becameApproved = mem?.status === "pending";
       if (becameApproved && mem && !memberEmailIsVerified(mem)) {
         return NextResponse.json(
@@ -355,6 +385,16 @@ export async function POST(req: Request) {
 
     if (body.action === "grantTrial") {
       const id = String(body.id || "");
+      const trialMember = getMemberById(id);
+      if (trialMember && isAppleReviewEmail(trialMember.email)) {
+        return NextResponse.json(
+          {
+            error:
+              "The App Store review account must stay a pending Porch Waver. Do not start a free month on it.",
+          },
+          { status: 400 }
+        );
+      }
       try {
         startRoyaltyTrial(id, "admin");
       } catch {
@@ -417,6 +457,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
     const before = getMemberById(String(body.id || ""));
+    if (status === "approved" && before && isAppleReviewEmail(before.email)) {
+      return NextResponse.json(
+        {
+          error:
+            "The App Store review account must stay a pending Porch Waver. Set it back to pending instead of approving it.",
+        },
+        { status: 400 }
+      );
+    }
     if (
       status === "approved" &&
       before?.status === "pending" &&
