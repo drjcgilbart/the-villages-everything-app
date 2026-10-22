@@ -361,6 +361,58 @@ export function BestOfMonthClub() {
             {BOM_CATEGORIES.map((cat) => {
               const block = showcase.find((item) => item.category === cat);
               const meta = BOM_CATEGORY_META[cat];
+              const nominees = feed.entriesByCategory[cat] || [];
+              if (!block?.winner && nominees.length) {
+                const myPick = feed.myVotes[cat];
+                return (
+                  <article key={cat} className="about-panel bom-winner-card is-nominee">
+                    <div className="bom-winner-head">
+                      <CategoryArt cat={cat} size="sm" />
+                      <span className="pill">{meta.label}</span>
+                    </div>
+                    {nominees.map((entry) => {
+                      const isMine = myPick === entry.id;
+                      const hasOtherPick = Boolean(myPick) && !isMine;
+                      return (
+                        <div key={entry.id} className="bom-nominee">
+                          <button
+                            type="button"
+                            className="bom-entry-media-btn"
+                            onClick={() => setDetail(entry)}
+                            aria-label={`View full details for ${entry.title}`}
+                          >
+                            <EntryMedia entry={entry} large />
+                          </button>
+                          <h3>{entry.title}</h3>
+                          <p className="bom-muted">
+                            {entry.submitterName ? (
+                              <>Submitted by {entry.submitterName} · </>
+                            ) : null}
+                            <strong>{entry.votes}</strong> vote
+                            {entry.votes === 1 ? "" : "s"} · {formatMonth(feed.monthKey)} nominee
+                          </p>
+                          <div className="bom-entry-actions">
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${isMine ? "btn-primary" : "btn-ghost"}`}
+                              disabled={busyVote === entry.id}
+                              onClick={() => vote(entry.id)}
+                            >
+                              {isMine
+                                ? "★ Your pick"
+                                : busyVote === entry.id
+                                  ? "Saving…"
+                                  : hasOtherPick
+                                    ? "Switch vote here"
+                                    : "Vote favorite"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </article>
+                );
+              }
               if (!block?.winner) {
                 return (
                   <article key={cat} className="about-panel bom-winner-card">
@@ -368,11 +420,7 @@ export function BestOfMonthClub() {
                       <CategoryArt cat={cat} size="sm" />
                       <span className="pill">{meta.label}</span>
                     </div>
-                    <p className="bom-muted">
-                      {block?.open
-                        ? "New nominees are open for votes below."
-                        : "No champ yet. Nominate one below."}
-                    </p>
+                    <p className="bom-muted">No champ yet. Nominate one below.</p>
                   </article>
                 );
               }
