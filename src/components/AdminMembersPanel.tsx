@@ -619,7 +619,7 @@ export function AdminMembersPanel() {
             Waiting on email{" "}
             <span className="pill">{waitingEmail.length}</span>
           </h3>
-          <p className="waiting-email-note">
+          <p className="panel-hint">
             These people asked to join, but they have not pressed Confirm my email.
             Approve stays off until that inbox is confirmed. Resend confirmation
             email sends the new letter again.

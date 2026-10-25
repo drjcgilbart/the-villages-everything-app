@@ -10472,7 +10472,9 @@ a.ts-square-card:hover .ts-square-card-img {
 }
 
 .email-unconfirmed-flag,
-.email-confirmed-flag {
+.email-confirmed-flag,
+.admin-item span.email-unconfirmed-flag,
+.admin-item span.email-confirmed-flag {
   display: inline-block;
   margin-left: 0.45rem;
   padding: 0.38rem 0.8rem;
@@ -10486,30 +10488,18 @@ a.ts-square-card:hover .ts-square-card-img {
   vertical-align: middle;
 }
 
-.email-unconfirmed-flag {
+.email-unconfirmed-flag,
+.admin-item span.email-unconfirmed-flag {
   background: #b42318;
   color: #fff;
   box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.28);
 }
 
-.email-confirmed-flag {
+.email-confirmed-flag,
+.admin-item span.email-confirmed-flag {
   background: #1b7a45;
   color: #fff;
   box-shadow: 0 0 0 3px rgba(27, 122, 69, 0.28);
-}
-
-.waiting-email-note {
-  display: block;
-  margin: 0.75rem 0 1rem;
-  padding: 0.7rem 0.9rem;
-  border-radius: 8px;
-  background: #b42318;
-  color: #fff;
-  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.28);
-  font-family: var(--font-body), system-ui, sans-serif;
-  font-size: 1.2rem;
-  font-weight: 900;
-  line-height: 1.35;
 }
 
 .status-approved {
