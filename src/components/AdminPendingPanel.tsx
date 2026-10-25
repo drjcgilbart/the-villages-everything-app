@@ -178,6 +178,8 @@ export function AdminPendingPanel({
                   {item.title}{" "}
                   {item.emailUnconfirmed ? (
                     <span className="email-unconfirmed-flag">Email not confirmed</span>
+                  ) : item.kind === "member" ? (
+                    <span className="email-confirmed-flag">Email confirmed</span>
                   ) : null}
                 </h3>
                 <p className="admin-pending-summary">

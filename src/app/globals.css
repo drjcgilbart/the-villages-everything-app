@@ -10492,14 +10492,9 @@ a.ts-square-card:hover .ts-square-card-img {
 }
 
 .email-confirmed-flag {
-  background: rgba(31, 107, 74, 0.12);
-  color: #1b5e45;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 0.16rem 0.5rem;
-  text-transform: none;
-  letter-spacing: 0.02em;
-  box-shadow: none;
+  background: #1b7a45;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(27, 122, 69, 0.28);
 }
 
 .status-approved {
