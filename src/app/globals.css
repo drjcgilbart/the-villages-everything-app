@@ -10498,8 +10498,18 @@ a.ts-square-card:hover .ts-square-card-img {
   box-shadow: 0 0 0 3px rgba(27, 122, 69, 0.28);
 }
 
-.waiting-email-title .email-unconfirmed-flag {
-  margin-left: 0;
+.waiting-email-note {
+  display: block;
+  margin: 0.75rem 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  background: #b42318;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.28);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1.35;
 }
 
 .status-approved {
