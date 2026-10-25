@@ -124,7 +124,8 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/api/entertainment/refresh") ||
       pathname.startsWith("/api/calendar/refresh") ||
       pathname.startsWith("/api/best-of-month/tabulate") ||
-      pathname.startsWith("/api/members/trial-lifecycle")) &&
+      pathname.startsWith("/api/members/trial-lifecycle") ||
+      pathname.startsWith("/api/members/email-confirm-reminder")) &&
     (req.headers.get("x-vercel-cron") === "1" ||
       req.headers.get("authorization")?.startsWith("Bearer "))
   ) {

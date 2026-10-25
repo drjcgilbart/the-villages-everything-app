@@ -10471,6 +10471,33 @@ a.ts-square-card:hover .ts-square-card-img {
   color: #7a4d00;
 }
 
+.email-unconfirmed-flag,
+.email-confirmed-flag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.email-unconfirmed-flag {
+  background: #fde8e4;
+  color: #9b2c1a;
+}
+
+.email-confirmed-flag {
+  background: rgba(31, 107, 74, 0.12);
+  color: #1b5e45;
+}
+
+.email-unconfirmed-text {
+  color: #9b2c1a;
+  font-weight: 800;
+}
+
 .status-approved {
   background: rgba(31, 107, 74, 0.15);
   color: #0f3d2c;

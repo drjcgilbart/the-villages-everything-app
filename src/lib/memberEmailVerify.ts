@@ -153,18 +153,24 @@ function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function letter(member: Member, url: string) {
+function letter(member: Member, url: string, reminder = false) {
   const rawFirst = member.name.trim().split(/\s+/)[0] || "Neighbor";
   const first = escapeHtml(rawFirst);
   const safeUrl = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
   const pendingOffer = member.status === "pending" && !isAppleReviewEmail(member.email);
   const subject = pendingOffer
-    ? "Confirm your email for 30 days of Square Royalty, free"
-    : "Confirm your email for The Villages Everything App";
+    ? reminder
+      ? "Reminder: confirm your email for 30 days of Square Royalty, free"
+      : "Confirm your email for 30 days of Square Royalty, free"
+    : reminder
+      ? "Reminder: confirm your email for The Villages Everything App"
+      : "Confirm your email for The Villages Everything App";
+  const reminderLine = "This is a reminder. Your request to join is still waiting on this confirmation.";
   const text = pendingOffer
     ? [
         `Hello ${rawFirst},`,
         ``,
+        ...(reminder ? [reminderLine, ``] : []),
         `Once you confirm this email, you get one month free of Square Royalty, the highest membership.`,
         ``,
         `That free month starts when the membership is approved. Approval happens only after you confirm this email.`,
@@ -191,7 +197,7 @@ function letter(member: Member, url: string) {
         `If you did not create this account, you can ignore this email.`,
       ].join("\n");
   const html = pendingOffer
-    ? `<p>Hello ${first},</p><p style="font-size:18px;line-height:1.4;"><strong>Once you confirm this email, you get one month free of Square Royalty, the highest membership.</strong></p><p>That free month starts when the membership is approved. Approval happens only after you confirm this email.</p><p><strong>Every membership needs a confirmed email before you can fully use the site. That includes a free membership.</strong></p><p><a href="${safeUrl}" style="display:inline-block;background:#1b5e45;color:#ffffff;padding:12px 18px;border-radius:8px;font-weight:700;text-decoration:none;">Confirm my email</a></p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link lasts 48 hours. Opening this message is not enough. On the page, press Confirm my email.</p><p>The Holiday Lights tour has its own Accept button. This email does not accept those terms.</p><p>If you did not ask to join, you can ignore this email.</p>`
+    ? `<p>Hello ${first},</p>${reminder ? `<p><strong>${escapeHtml(reminderLine)}</strong></p>` : ""}<p style="font-size:18px;line-height:1.4;"><strong>Once you confirm this email, you get one month free of Square Royalty, the highest membership.</strong></p><p>That free month starts when the membership is approved. Approval happens only after you confirm this email.</p><p><strong>Every membership needs a confirmed email before you can fully use the site. That includes a free membership.</strong></p><p><a href="${safeUrl}" style="display:inline-block;background:#1b5e45;color:#ffffff;padding:12px 18px;border-radius:8px;font-weight:700;text-decoration:none;">Confirm my email</a></p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link lasts 48 hours. Opening this message is not enough. On the page, press Confirm my email.</p><p>The Holiday Lights tour has its own Accept button. This email does not accept those terms.</p><p>If you did not ask to join, you can ignore this email.</p>`
     : `<p>Hello ${first},</p><p>Confirm the email on your membership. Open the link, then press <strong>Confirm my email</strong>.</p><p><a href="${safeUrl}">${safeUrl}</a></p><p>The link is good for 48 hours. Pressing the button confirms this inbox. The Holiday Lights warning is a separate Accept on the tour page.</p><p>If you did not create this account, you can ignore this email.</p>`;
   return { subject, text, html };
 }
@@ -202,7 +208,7 @@ const LINK_UNREADABLE = "The confirmation list did not load. Press the button ag
 const LINK_EMPTY = "The confirmation did not include the link. Press the button again.";
 
 /** Sends a fresh link. A mail-scanner fetch of the link does not confirm the inbox. */
-export function sendMemberVerificationEmail(memberId: string) {
+export function sendMemberVerificationEmail(memberId: string, options?: { reminder?: boolean }) {
   return enqueue(async () => {
     await hydrateYardSale();
     const member = getMemberById(memberId);
@@ -225,7 +231,7 @@ export function sendMemberVerificationEmail(memberId: string) {
       console.error("[email-verify] token file", err);
     }
     const url = `${siteBase()}/yard-sale/verify?token=${encodeURIComponent(raw)}`;
-    const sent = await sendOutboundEmail({ to: member.email, ...letter(member, url) });
+    const sent = await sendOutboundEmail({ to: member.email, ...letter(member, url, Boolean(options?.reminder)) });
     if (!sent.ok) return { ok: false as const, error: memberMailError(sent) };
     return { ok: true as const, already: false };
   });

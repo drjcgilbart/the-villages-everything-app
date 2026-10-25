@@ -781,6 +781,13 @@ function MemberAdminRow({
           <span className="member-name-text">
             {m.name}{" "}
             <span className={`status-tag status-${m.status}`}>{m.status}</span>
+            {m.status === "pending" ? (
+              m.emailVerified ? (
+                <span className="email-confirmed-flag">Email confirmed</span>
+              ) : (
+                <span className="email-unconfirmed-flag">Email not confirmed</span>
+              )
+            ) : null}
           </span>
           <MemberBadgesRow badges={m.badges || []} />
         </strong>
@@ -790,11 +797,13 @@ function MemberAdminRow({
           {m.phone ? ` · ${m.phone}` : ""}
           {m.village ? ` · ${m.village}` : ""}
           {" · "}
-          {m.emailVerified
-            ? m.emailVerifiedAt
+          {m.emailVerified ? (
+            m.emailVerifiedAt
               ? `Email confirmed ${formatDate(m.emailVerifiedAt)}`
               : "Email confirmed"
-            : "Email not confirmed"}
+          ) : (
+            <strong className="email-unconfirmed-text">Email not confirmed</strong>
+          )}
           {" · "}
           {formatDate(m.createdAt)}
           {m.planLabel ? (

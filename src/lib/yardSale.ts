@@ -321,6 +321,7 @@ export function updateMemberDetails(
     emailVerifiedAt: emailChanged ? null : prev.emailVerifiedAt,
     emailVerifyTokenHash: emailChanged ? null : prev.emailVerifyTokenHash,
     emailVerifyExpiresAt: emailChanged ? null : prev.emailVerifyExpiresAt,
+    emailConfirmReminderSentAt: emailChanged ? null : prev.emailConfirmReminderSentAt,
     phone:
       input.phone !== undefined
         ? String(input.phone).trim().slice(0, 40) || undefined
@@ -351,6 +352,23 @@ export async function saveMemberEmailChallenge(memberId: string, tokenHash: stri
     ...data.members[idx],
     emailVerifyTokenHash: tokenHash,
     emailVerifyExpiresAt: expiresAt,
+  };
+  await saveYardSaleAsync(data);
+  return data.members[idx];
+}
+
+/** Records the one next-day confirmation reminder so the daily job does not send it again. */
+export async function markEmailConfirmReminderSent(memberId: string) {
+  await hydrateYardSale();
+  const data = loadYardSale();
+  const idx = data.members.findIndex((m) => m.id === memberId);
+  if (idx < 0) return null;
+  const now = new Date().toISOString();
+  const prev = Array.isArray(data.members[idx].adminLog) ? data.members[idx].adminLog! : [];
+  data.members[idx] = {
+    ...data.members[idx],
+    emailConfirmReminderSentAt: now,
+    adminLog: [...prev, { at: now, text: "Confirmation reminder emailed." }].slice(-60),
   };
   await saveYardSaleAsync(data);
   return data.members[idx];
