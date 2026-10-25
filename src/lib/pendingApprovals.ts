@@ -16,6 +16,7 @@ import {
   loadPickleballClubAsync,
   savePickleballClubAsync,
 } from "./pickleballClub";
+import { isSiteOwnerEmail } from "./siteOwner";
 import {
   getListingById,
   loadYardSale,
@@ -66,6 +67,8 @@ export type PendingItem = {
   summary: string;
   details: PendingDetail[];
   editFields: PendingEditField[];
+  /** Pending member who has not pressed Confirm my email. */
+  emailUnconfirmed?: boolean;
 };
 
 function field(
@@ -130,6 +133,7 @@ export async function listPendingApprovals(): Promise<PendingItem[]> {
       submittedBy: m.name,
       createdAt: m.createdAt,
       summary: `${m.email}${m.village ? ` · ${m.village}` : ""}`,
+      emailUnconfirmed: !m.emailVerifiedAt && !isSiteOwnerEmail(m.email),
       details: details([
         d("Name", m.name),
         d("Email", m.email),

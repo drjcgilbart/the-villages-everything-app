@@ -796,14 +796,14 @@ function MemberAdminRow({
           {isAppleReviewEmail(m.email) ? " · App Store review login" : ""}
           {m.phone ? ` · ${m.phone}` : ""}
           {m.village ? ` · ${m.village}` : ""}
-          {" · "}
           {m.emailVerified ? (
-            m.emailVerifiedAt
-              ? `Email confirmed ${formatDate(m.emailVerifiedAt)}`
-              : "Email confirmed"
-          ) : (
-            <strong className="email-unconfirmed-text">Email not confirmed</strong>
-          )}
+            <>
+              {" · "}
+              {m.emailVerifiedAt
+                ? `Email confirmed ${formatDate(m.emailVerifiedAt)}`
+                : "Email confirmed"}
+            </>
+          ) : null}
           {" · "}
           {formatDate(m.createdAt)}
           {m.planLabel ? (

@@ -174,7 +174,12 @@ export function AdminPendingPanel({
                     {formatDate(item.createdAt)}
                   </span>
                 </div>
-                <h3>{item.title}</h3>
+                <h3>
+                  {item.title}{" "}
+                  {item.emailUnconfirmed ? (
+                    <span className="email-unconfirmed-flag">Email not confirmed</span>
+                  ) : null}
+                </h3>
                 <p className="admin-pending-summary">
                   {item.submittedBy ? `${item.submittedBy} · ` : ""}
                   {item.summary}

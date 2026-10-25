@@ -10474,28 +10474,32 @@ a.ts-square-card:hover .ts-square-card-img {
 .email-unconfirmed-flag,
 .email-confirmed-flag {
   display: inline-block;
-  margin-left: 0.35rem;
-  padding: 0.12rem 0.45rem;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  margin-left: 0.45rem;
+  padding: 0.38rem 0.8rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-transform: uppercase;
   vertical-align: middle;
 }
 
 .email-unconfirmed-flag {
-  background: #fde8e4;
-  color: #9b2c1a;
+  background: #b42318;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.28);
 }
 
 .email-confirmed-flag {
   background: rgba(31, 107, 74, 0.12);
   color: #1b5e45;
-}
-
-.email-unconfirmed-text {
-  color: #9b2c1a;
+  font-size: 0.72rem;
   font-weight: 800;
+  padding: 0.16rem 0.5rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  box-shadow: none;
 }
 
 .status-approved {
