@@ -10477,6 +10477,7 @@ a.ts-square-card:hover .ts-square-card-img {
   margin-left: 0.45rem;
   padding: 0.38rem 0.8rem;
   border-radius: 8px;
+  font-family: var(--font-body), system-ui, sans-serif;
   font-size: 1.2rem;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -10495,6 +10496,10 @@ a.ts-square-card:hover .ts-square-card-img {
   background: #1b7a45;
   color: #fff;
   box-shadow: 0 0 0 3px rgba(27, 122, 69, 0.28);
+}
+
+.waiting-email-title .email-unconfirmed-flag {
+  margin-left: 0;
 }
 
 .status-approved {
@@ -17331,9 +17336,14 @@ html.privacy-mode [data-privacy-block]::after {
   display: none;
 }
 
-.lt-fold-summary h2 {
+.lt-fold-summary h2,
+.lt-fold-summary h3 {
   margin: 0;
   flex: 1;
+}
+
+.add-member-fold {
+  margin-bottom: 1.25rem;
 }
 
 .lt-fold-arrow {

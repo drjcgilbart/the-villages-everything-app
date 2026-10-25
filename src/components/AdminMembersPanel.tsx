@@ -459,8 +459,12 @@ export function AdminMembersPanel() {
         Golden Loofah / Custom Star Loofah donations.
       </p>
 
-      <form className="about-panel cruise-desk" style={{ marginBottom: "1.25rem" }} onSubmit={(event) => void addMember(event)}>
-        <h3 style={{ margin: 0 }}>Add a member</h3>
+      <details className="about-panel lt-fold add-member-fold">
+        <summary className="lt-fold-summary">
+          <span className="lt-fold-arrow" aria-hidden="true" />
+          <h3>Add a member</h3>
+        </summary>
+        <form className="cruise-desk lt-fold-body" onSubmit={(event) => void addMember(event)}>
         <p className="panel-hint" style={{ margin: 0 }}>
           Approved the moment you save. They sign in with this email and password. No request, and no second approve step.
         </p>
@@ -520,7 +524,8 @@ export function AdminMembersPanel() {
             {busy ? "Saving…" : "Add member"}
           </button>
         </div>
-      </form>
+        </form>
+      </details>
 
       <div className="dining-summary-stats" style={{ marginBottom: "1.25rem" }}>
         <div className="stat">
@@ -610,9 +615,10 @@ export function AdminMembersPanel() {
 
       {waitingEmail.length > 0 && (
         <>
-          <h3>
-            Waiting on email{" "}
-            <span className="pill">{waitingEmail.length}</span>
+          <h3 className="waiting-email-title">
+            <span className="email-unconfirmed-flag">
+              Waiting on email {waitingEmail.length}
+            </span>
           </h3>
           <p className="panel-hint">
             These people asked to join, but they have not pressed Confirm my email.
