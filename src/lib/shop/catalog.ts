@@ -260,7 +260,7 @@ export const PRODUCTS: Product[] = [
     name: "Golden Hour Patch",
     tagline: "Embroidered dad hat",
     description:
-      "The app's sunset golf-cart badge, flamingo and all, stitched as a round patch with a gold ring on a relaxed cotton dad hat. On the back: a little striped sunset and palm above The Villages Everything App wordmark.",
+      "The app's sunset golf-cart badge, flamingo and all, stitched as a round patch with a gold ring on a relaxed cotton dad hat. On the back: The Villages Everything App wordmark above the strap.",
     priceCents: 3000,
     image: "/shop/mock/hat-golden-hour-patch--khaki.png",
     colors: [
@@ -280,7 +280,7 @@ export const PRODUCTS: Product[] = [
     ],
     options: [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
-      { id: "thread_colors_back", value: ["#000000", "#E25C27", "#01784E", "#FFCC00"] },
+      { id: "thread_colors_back", value: ["#000000", "#E25C27"] },
     ],
     taxCode: CLOTHING,
   },
@@ -290,7 +290,7 @@ export const PRODUCTS: Product[] = [
     name: "Town Square Cruiser",
     tagline: "Embroidered dad hat",
     description:
-      "The app's sunset golf-cart badge stitched as a round patch with a palm-green ring on a relaxed cotton dad hat. On the back: a golden sun, a palm and a blue waterline above The Villages Everything App wordmark.",
+      "The app's sunset golf-cart badge stitched as a round patch with a palm-green ring on a relaxed cotton dad hat. On the back: The Villages Everything App wordmark above the strap.",
     priceCents: 3000,
     image: "/shop/mock/hat-town-square-cruiser--khaki.png",
     colors: [
@@ -310,7 +310,7 @@ export const PRODUCTS: Product[] = [
     ],
     options: [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
-      { id: "thread_colors_back", value: ["#000000", "#E25C27", "#01784E", "#FFCC00", "#3399FF"] },
+      { id: "thread_colors_back", value: ["#000000", "#E25C27"] },
     ],
     taxCode: CLOTHING,
   },
