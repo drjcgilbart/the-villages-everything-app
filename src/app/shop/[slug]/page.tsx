@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SLUG_PAGE_PRODUCTS, getProduct, formatPrice } from "@/lib/shop/catalog";
+import { SLUG_PAGE_PRODUCTS, getProduct, formatPrice, isOrderable } from "@/lib/shop/catalog";
 import { ProductBuy } from "@/components/shop/product-buy";
 import { ShopBar } from "@/components/shop/shop-bar";
 
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const p = getProduct((await params).slug);
-  if (!p || p.type === "badges") notFound();
+  if (!p || p.type === "badges" || !isOrderable(p)) notFound();
   return (
     <section className="section shop-pdp">
       <div className="shell">

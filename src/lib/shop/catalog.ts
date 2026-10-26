@@ -192,6 +192,7 @@ export const PRODUCTS: Product[] = [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
       { id: "thread_colors_back", value: ["#000000", "#E25C27"] },
     ],
+    hidden: true,
     taxCode: CLOTHING,
   },
   {
@@ -222,6 +223,7 @@ export const PRODUCTS: Product[] = [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] },
       { id: "thread_colors_back", value: ["#01784E"] },
     ],
+    hidden: true,
     taxCode: CLOTHING,
   },
   {
@@ -252,6 +254,7 @@ export const PRODUCTS: Product[] = [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF"] },
       { id: "thread_colors_back", value: ["#01784E"] },
     ],
+    hidden: true,
     taxCode: CLOTHING,
   },
   {
@@ -282,6 +285,7 @@ export const PRODUCTS: Product[] = [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
       { id: "thread_colors_back", value: ["#000000", "#E25C27"] },
     ],
+    hidden: true,
     taxCode: CLOTHING,
   },
   {
@@ -312,6 +316,7 @@ export const PRODUCTS: Product[] = [
       { id: "thread_colors", value: ["#01784E", "#E25C27", "#FFFFFF", "#7BA35A", "#FFCC00", "#000000"] },
       { id: "thread_colors_back", value: ["#000000", "#E25C27"] },
     ],
+    hidden: true,
     taxCode: CLOTHING,
   },
   {

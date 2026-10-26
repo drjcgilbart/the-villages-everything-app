@@ -48,7 +48,7 @@ export default async function ShopPage({ searchParams }: Props) {
 
           <nav className="shop-filters" aria-label="Filter by type">
             <Link href="/shop" className="shop-chip" aria-current={!active ? "page" : undefined} scroll={false}>All</Link>
-            {PRODUCT_TYPES.map((t) => (
+            {PRODUCT_TYPES.filter((t) => PRODUCTS.some((p) => p.type === t.id)).map((t) => (
               <Link key={t.id} href={`/shop?type=${t.id}`} className="shop-chip" aria-current={active === t.id ? "page" : undefined} scroll={false}>
                 {t.label}
               </Link>
